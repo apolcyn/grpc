@@ -166,6 +166,23 @@ class TestTarget < Grpc::Testing::TestService::Service
                                             body: nulls(req_size)))
   end
 
+  def client_compressed_unary(simple_req, _call)
+    req_size = simple_req.response_size
+    message_compressed = false
+    if simple_req.expect_compressed.eql?(message_compressed)
+      _call.send_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'actual and expected compression mismatch', true)
+      #raise GRPC::BadStatus.new(GRPC::Code::StatusCodes::INVALID_ARGUMENT, 
+#				"Expected compression: #{simple_req.expected_compressed}. Message compressed: #{message_compressed}")
+    end
+    raise StandardError.new("shouldn't have gotten this")
+  end
+
+  def client_compressed_streaming(call)
+    sizes = call.each_remote_read.map { |x| x.payload.body.length }
+    sum = sizes.inject(0) { |s, x| s + x }
+    StreamingInputCallResponse.new(aggregated_payload_size: sum)
+  end
+
   def streaming_input_call(call)
     sizes = call.each_remote_read.map { |x| x.payload.body.length }
     sum = sizes.inject(0) { |s, x| s + x }

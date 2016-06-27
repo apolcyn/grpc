@@ -56,3 +56,9 @@ $PROTOC -I src/proto/math src/proto/math/math.proto \
     --grpc_out=src/ruby/bin \
     --ruby_out=src/ruby/bin \
     --plugin=$PLUGIN
+
+cd src/ruby/pb
+
+cp src/proto/grpc/testing/messages.rb test/proto/
+cp src/proto/grpc/testing/test.rb test/proto/
+cp src/proto/grpc/testing/empty.rb test/proto/
