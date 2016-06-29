@@ -67,5 +67,12 @@ module GRPC
 
       module_function :from_relative_time
     end
+
+    class CompressionOptions
+      def enable_compression_algorithms(*algorithms)
+      end
+
+
+    end
   end
 end

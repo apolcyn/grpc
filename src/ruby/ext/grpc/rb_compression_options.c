@@ -113,7 +113,7 @@ static VALUE grpc_rb_compression_options_alloc(VALUE cls) {
     pem_private_key: (optional) PEM encoding of the client's private key
     pem_cert_chain: (optional) PEM encoding of the client's cert chain
     Initializes Credential instances. */
-static VALUE grpc_rb_compression_options_init(int argc, VALUE *argv, VALUE self) {
+static VALUE grpc_rb_compression_options_init(VALUE self) {
   grpc_rb_compression_options *wrapper = NULL;
   grpc_compression_options *compression_options = NULL;
   /* "03" == no mandatory arg, 3 optional */
@@ -131,6 +131,59 @@ static VALUE grpc_rb_compression_options_init(int argc, VALUE *argv, VALUE self)
   return self;
 }
 
+void grpc_rb_enable_compression_algorithm(VALUE algorithm_to_enable, VALUE self) {
+  grpc_compression_algorithm compression_algorithm = 0;
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+  compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
+
+  grpc_enable_algorithm(wrapper->wrapped, compression_algorithm);
+}
+
+void grpc_rb_disbable_compression_algorithm(int argc, VALUE* args, VALUE self) {
+  grpc_compression_algorithm compression_algorithm = 0;
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+  compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
+
+  grpc_disable_algorithm(wrapper->wrapped, compression_algorithm);
+}
+
+VALUE grpc_rb_is_algorithm_enabled(VALUE algorithm, VALUE self) {
+  grpc_compression_algorithm compression_algorithm = 0;
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+  compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
+
+  return grpc_is_algorithm_enabled(wrapper->wrapped, compression_algorithm) ? Qtrue : Qfalse;
+}
+
+VALUE grpc_rb_get_enabled_algorithms_bitset(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+  return INT2NUM(wrapper->wrapped.enabled_algorithms_bitset);
+}
+
+VALUE grpc_rb_get_default_algorithm(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+
+  return RTEST(wrapper->wrapped.default_level) ? : INT2NUM(wrapper->wrapped.default) : Qnil;
+}
+
+VALUE grpc_rb_get_default_level(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+
+  return RTEST(wrapper->wrapped.default_algorithm) ? : INT2NUM(wrapper->wrapped.default) : Qnil;
+}
+
 void Init_grpc_compression_options() {
   grpc_rb_cCompressionOptions =
       rb_define_class_under(grpc_rb_mGrpcCore, "CompressionOptions", rb_cObject);
@@ -142,6 +195,16 @@ void Init_grpc_compression_options() {
   /* Provides a ruby constructor and support for dup/clone. */
   rb_define_method(grpc_rb_cCompressionOptions, "initialize",
                    grpc_rb_compression_options_init, -1);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_enable_algorithm", grpc_rb_enable_compression_algorithm);
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_disable_algorithm", grpc_rb_disable_compression_algorithm);
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_is_algorithm_enabled", grpc_rb_algorithm_enabled);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset);
+  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level", grpc_rb_get_default_algorithm);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm", grpc_rb_get_default_level);
  /* rb_define_method(grpc_rb_cCompressionOptions, "initialize_copy",
+
                    grpc_rb_channel_credentials_init_copy, 1);*/
 }
