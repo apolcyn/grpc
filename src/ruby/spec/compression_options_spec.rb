@@ -30,9 +30,13 @@
 require 'grpc'
 
 describe GRPC::Core::CompressionOptions do
-  GZIP = 0x4
-  DEFLATE = 0x2
-  NONE = 0x1
+  IDENTITY = 0
+  DEFLATE = 1
+  GZIP = 2
+
+  GZIP_BIT = 1 << GZIP
+  DEFLATE_BIT = 1 << DEFLATE
+  IDENTITY_BIT = 1 << IDENTITY
 
   before(:example) do
     @compression_options = GRPC::Core::CompressionOptions.new
@@ -58,7 +62,7 @@ describe GRPC::Core::CompressionOptions do
     it 'should pass correct internal values to #internal_disable_algorithms' do
       expect(@compression_options).to receive(:disable_algorithm_internal)
         .with(GZIP)
-      @compression_options.enable_algorithms(:gzip)
+      @compression_options.disable_algorithms(:gzip)
     end
 
     it 'should work with more than one parameter' do
@@ -73,29 +77,29 @@ describe GRPC::Core::CompressionOptions do
   it 'should provide the correct bit set for the enabled algorithms' do
     @compression_options.enable_algorithms(:gzip, :deflate)
     expect(@compression_options.enabled_algorithms_bitset).to eql(
-      GZIP | DEFLATE | NONE)
+      GZIP_BIT | DEFLATE_BIT | IDENTITY_BIT)
 
     @compression_options.disable_algorithms(:gzip)
     expect(@compression_options.enabled_algorithms_bitset).to eql(
-      DEFLATE | NONE)
+      DEFLATE_BIT | IDENTITY_BIT)
 
     @compression_options.disable_algorithms(:deflate)
-    expect(@compression_options.enabled_algorithms_bitset).to eql(NONE)
+    expect(@compression_options.enabled_algorithms_bitset).to eql(IDENTITY_BIT)
 
     @compression_options.enable_algorithms(:gzip, :deflate)
     expect(@compression_options.enabled_algorithms_bitset).to eql(
-      GZIP | DEFLATE | NONE)
+      GZIP_BIT | DEFLATE_BIT | IDENTITY_BIT)
   end
 
   it 'should be able to set the default algorithm' do
     @compression_options.default_algorithm = :gzip
-    expect(@compression_options.default_algorithm_internal_value).to eql(2)
+    expect(@compression_options.default_algorithm_internal_value).to eql(GZIP)
 
     @compression_options.default_algorithm = :deflate
-    expect(@compression_options.default_algorithm_internal_value).to eql(1)
+    expect(@compression_options.default_algorithm_internal_value).to eql(DEFLATE)
 
     @compression_options.default_algorithm = :identity
-    expect(@compression_options.default_algorithm_internal_value).to eql(0)
+    expect(@compression_options.default_algorithm_internal_value).to eql(IDENTITY)
   end
 
   it 'should be able to set the default level' do
@@ -117,10 +121,14 @@ describe GRPC::Core::CompressionOptions do
       expect { GRPC::Core::CompressionOptions.new }.to_not raise_error
     end
 
-    it 'starts out with no compression enabled' do
-      expect(@compression_options.enabled_algorithms_bitset).to eql(0x7)
-      expect(@compression_options.default_algorithm_internal_value).to eql(0)
-      expect(@compression_options.default_level_internal_value).to eql(0)
+    it 'starts out with everything enabled' do
+      expect(@compression_options.enabled_algorithms_bitset).to(
+        eql(GZIP_BIT | DEFLATE_BIT | IDENTITY_BIT))
+    end
+
+    it 'starts out with no default levels or algorithms' do
+      expect(@compression_options.default_algorithm_internal_value).to be_nil
+      expect(@compression_options.default_level_internal_value).to be_nil
     end
   end
 end
