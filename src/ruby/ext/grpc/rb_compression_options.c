@@ -213,12 +213,17 @@ int get_internal_value_of_algorithm(VALUE algorithm_name, grpc_compression_algor
   VALUE ruby_str = Qnil;
   char *name_str= NULL;
   long name_len = 0;
+  int internal_value = 0;
 
   ruby_str = rb_funcall(algorithm_name, rb_intern("to_s"), 0);
   name_str = RSTRING_PTR(ruby_str);
   name_len = RSTRING_LEN(ruby_str);
 
-  return grpc_compression_algorithm_parse(name_str, name_len, compression_algorithm);
+  if(!(internal_value = grpc_compression_algorithm_parse(name_str, name_len, compression_algorithm))) {
+     rb_raise(rb_eNameError, "invalid algorithm name: %s", StringValueCStr(ruby_str));
+  }
+
+  return internal_value;
 }
 
 VALUE grpc_rb_set_default_algorithm(VALUE self, VALUE algorithm_name) {
@@ -278,6 +283,30 @@ VALUE grpc_rb_disable_algorithms(int argc, VALUE *argv, VALUE self) {
   return change_compression_algorithm_settings(argc, argv, self, "disable_algorithm_internal");
 }
 
+VALUE grpc_rb_get_channel_arguments(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+  grpc_compression_options *compression_options = NULL;
+  VALUE channel_arg_hash = rb_funcall(rb_cHash, rb_intern("new"), 0);
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+  compression_options = wrapper->wrapped;
+
+  if(compression_options->default_level.is_set) {
+    rb_funcall(channel_arg_hash, rb_intern("[]="), 2, rb_str_new2(GRPC_COMPRESSION_CHANNEL_DEFAULT_LEVEL)
+      , INT2NUM((int)compression_options->default_level.level));
+  }
+
+  if(compression_options->default_algorithm.is_set) {
+    rb_funcall(channel_arg_hash, rb_intern("[]="), 2, rb_str_new2(GRPC_COMPRESSION_CHANNEL_DEFAULT_ALGORITHM)
+      , INT2NUM((int)compression_options->default_algorithm.algorithm));
+  }
+
+  rb_funcall(channel_arg_hash, rb_intern("[]="), 2, rb_str_new2(GRPC_COMPRESSION_CHANNEL_ENABLED_ALGORITHMS_BITSET)
+    , INT2NUM((int)compression_options->enabled_algorithms_bitset));
+
+  return channel_arg_hash;
+}
+
 void Init_grpc_compression_options() {
   grpc_rb_cCompressionOptions =
       rb_define_class_under(grpc_rb_mGrpcCore, "CompressionOptions", rb_cObject);
@@ -303,6 +332,8 @@ void Init_grpc_compression_options() {
 
   rb_define_method(grpc_rb_cCompressionOptions, "enable_algorithms", grpc_rb_enable_algorithms, -1);
   rb_define_method(grpc_rb_cCompressionOptions, "disable_algorithms", grpc_rb_disable_algorithms, -1);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "to_hash", grpc_rb_get_channel_arguments, 0);
  /* rb_define_method(grpc_rb_cCompressionOptions, "initialize_copy",
 
                    grpc_rb_channel_credentials_init_copy, 1);*/
