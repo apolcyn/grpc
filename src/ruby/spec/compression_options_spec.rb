@@ -131,4 +131,94 @@ describe GRPC::Core::CompressionOptions do
       expect(@compression_options.default_level_internal_value).to be_nil
     end
   end
+
+  describe 'sanity test' do
+    GRPC_COMPRESSION_CHANNEL_DEFAULT_ALGORITHM_KEY = "grpc.default_compression_algorithm"
+    GRPC_COMPRESSION_CHANNEL_DEFAULT_LEVEL_KEY = "grpc.default_compression_level"
+    GRPC_COMPRESSION_CHANNEL_ENABLED_ALGORITHMS_BITSET_KEY = "grpc.compression_enabled_algorithms_bitset"
+
+    it 'gives the correct channel args when nothing has been adjusted yet' do
+      expect(@compression_options.to_hash).to(
+        eql({ 'grpc.compression_enabled_algorithms_bitset' => 0x7 }))
+    end
+
+    it 'gives the correct channel args after everything has been disabled' do
+      @compression_options.default_algorithm(:identity)
+      @compression_options.default_level = :none
+      @compression_options.disable_algorithms(:gzip, :deflate)
+
+      expect(@compression_options.to_hash).to(
+        eql({ 'grpc.default_compression_algorithm' => 0,
+              'grpc.default_compression_level' => 0,
+              'grpc.compression_enabled_algorithms_bitset' => 0x1 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted lightly' do
+      @compression_options.default_algorithm(:deflate).default_level(:medium)
+      @compression_options.disable_algorithms(:gzip)
+
+      expect(@compression_options.to_hash).to(
+       eql({ 'grpc.default_compression_algorithm' => 1,
+             'grpc.default_compression_level' => 2,
+             'grpc.compression_enabled_algorithms_bitset' => 0x3 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted lightly' do
+      @compression_options.default_algorithm = :gzip
+      @compression_options.default_level = :low
+      @compression_options.disable_algorithms(:deflate)
+
+      expect(@compression_options.to_hash).to(
+        eql({ 'grpc.default_compression_algorithm' => 2,
+              'grpc.default_compression_level' => 1,
+              'grpc.compression_enabled_algorithms_bitset' => 0x5 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted multiple times' do
+      @compression_options.default_algorithm = :gzip
+      @compression_options.default_level = :medium
+
+      @compression_options.disable_algorithms(:deflate)
+      @compression_options.enable_algorithms(:gzip, :deflate)
+
+      @compression_options.default_algorithm = :deflate
+      @compression_options.default_level = :high
+
+      @compression_options.disable_algorithms(:gzip, :deflate)
+      @compression_options.enable_algorithms(:gzip, :deflate)
+
+      expect(@compression_options.to_hash).to(
+        eql({ 'grpc.default_compression_algorithm' => 1,
+              'grpc.default_compression_level' => 3,
+              'grpc.compression_enabled_algorithms_bitset' => 0x7 }))
+    end
+  end
+
+  describe 'invalid or unimplemented arguments' do
+    it 'passing a valid algorithm name should not fail' do
+      [:gzip, :deflate, :identity].each do |algorithm|
+        expect { @compression_options.disable_algorithms(algorithm) }.to_not raise_error
+        expect { @compression_options.default_algorithm = algorithm }.to_not raise_error
+      end
+    end
+
+    it 'passing valid algorithm name should fail fast' do
+      [:huffman, :unspecified, :none, :low, :medium, :high].each do |algorithm|
+        expect { @compression_options.disable_algorithms(algorithm) }.to raise_error
+        expect { @compression_options.default_algorithm = algorithm }.to raise_error
+      end
+    end
+
+    it 'passing a valid level name should not fail' do
+      [:none, :low, :medium, :high].each do |level|
+        expect { @compression_options.default_level = level }.to_not raise_error
+      end
+    end
+
+    it 'passing an invalid level name should fail fast' do
+      [:any, :unspecified, :gzip, :deflate, :identity].each do |level|
+        expect { @compression_options.default_level = level }.to raise_error
+      end
+    end
+  end
 end
