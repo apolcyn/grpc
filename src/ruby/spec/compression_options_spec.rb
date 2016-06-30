@@ -131,4 +131,67 @@ describe GRPC::Core::CompressionOptions do
       expect(@compression_options.default_level_internal_value).to be_nil
     end
   end
+
+  describe 'sanity test' do
+    GRPC_COMPRESSION_CHANNEL_DEFAULT_ALGORITHM_KEY = "grpc.default_compression_algorithm"
+    GRPC_COMPRESSION_CHANNEL_DEFAULT_LEVEL_KEY = "grpc.default_compression_level"
+    GRPC_COMPRESSION_CHANNEL_ENABLED_ALGORITHMS_BITSET_KEY = "grpc.compression_enabled_algorithms_bitset"
+
+    it 'gives the correct channel args when nothing has been adjusted yet' do
+      expect(@compression_options.channel_args_for_settings).to(
+        eql({ 'grpc.compression_enabled_algorithms_bitset' => 0x7 }))
+    end
+
+    it 'gives the correct channel args after everything has been disabled' do
+      @compression_options.default_algorithm = :identity
+      @compression_options.default_level = :none
+      @compression_options.disable_algorithms(:gzip, :deflate)
+
+      expect(@compression_options.channel_args_for_settings).to(
+        eql({ 'grpc.default_compression_algorithm' => 0,
+              'grpc.default_compression_level' => 0,
+              'grpc.compression_enabled_algorithms_bitset' => 0x1 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted lightly' do
+      @compression_options.default_algorithm = :deflate
+      @compression_options.default_level = :medium
+      @compression_options.disable_algorithms(:gzip)
+
+      expect(@compression_options.channel_args_for_settings).to(
+       eql({ 'grpc.default_compression_algorithm' => 1,
+             'grpc.default_compression_level' => 2,
+             'grpc.compression_enabled_algorithms_bitset' => 0x3 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted lightly' do
+      @compression_options.default_algorithm = :gzip
+      @compression_options.default_level = :low
+      @compression_options.disable_algorithms(:deflate)
+
+      expect(@compression_options.channel_args_for_settings).to(
+        eql({ 'grpc.default_compression_algorithm' => 2,
+              'grpc.default_compression_level' => 1,
+              'grpc.compression_enabled_algorithms_bitset' => 0x5 }))
+    end
+
+    it 'gives the correct channel args after all settings have been adjusted multiple times' do
+      @compression_options.default_algorithm = :gzip
+      @compression_options.default_level = :medium
+
+      @compression_options.disable_algorithms(:deflate)
+      @compression_options.enable_algorithms(:gzip, :deflate)
+
+      @compression_options.default_algorithm = :deflate
+      @compression_options.default_level = :high
+
+      @compression_options.disable_algorithms(:gzip, :deflate)
+      @compression_options.enable_algorithms(:gzip, :deflate)
+
+      expect(@compression_options.channel_args_for_settings).to(
+        eql({ 'grpc.default_compression_algorithm' => 1,
+              'grpc.default_compression_level' => 3,
+              'grpc.compression_enabled_algorithms_bitset' => 0x7 }))
+    end
+  end
 end
