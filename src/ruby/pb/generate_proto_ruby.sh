@@ -62,3 +62,4 @@ cd src/ruby/pb
 cp src/proto/grpc/testing/messages.rb test/proto/
 cp src/proto/grpc/testing/test.rb test/proto/
 cp src/proto/grpc/testing/empty.rb test/proto/
+cp src/proto/grpc/testing/test_services.rb test/proto/

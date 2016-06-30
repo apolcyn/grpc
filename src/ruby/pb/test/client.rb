@@ -436,7 +436,7 @@ class NamedTests
       error_info = "Error occured. class: #{e.class}."
     end
 
-    assert("Expected uncompressed SimpleRequest to result in an error. Error info: #{error_info}") { invalid_arg_error }
+    assert("Expected uncompressed SimpleRequest to result in a INVALID_ARGUMENT code. #{error_info}") { invalid_arg_error }
   end
 
   def perform_client_compressed_streaming
