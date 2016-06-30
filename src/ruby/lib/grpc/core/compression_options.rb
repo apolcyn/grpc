@@ -32,40 +32,23 @@ require_relative '../grpc'
 # GRPC contains the General RPC module.
 module GRPC
   module Core
-    # TimeConsts is a module from the C extension.
-    #
-    # Here it's re-opened to add a utility func.
-    module TimeConsts
-      # Converts a time delta to an absolute deadline.
-      #
-      # Assumes timeish is a relative time, and converts its to an absolute,
-      # with following exceptions:
-      #
-      # * if timish is one of the TimeConsts.TimeSpec constants the value is
-      # preserved.
-      # * timish < 0 => TimeConsts.INFINITE_FUTURE
-      # * timish == 0 => TimeConsts.ZERO
-      #
-      # @param timeish [Number|TimeSpec]
-      # @return timeish [Number|TimeSpec]
-      def from_relative_time(timeish)
-        if timeish.is_a? TimeSpec
-          timeish
-        elsif timeish.nil?
-          TimeConsts::ZERO
-        elsif !timeish.is_a? Numeric
-          fail(TypeError,
-               "Cannot make an absolute deadline from #{timeish.inspect}")
-        elsif timeish < 0
-          TimeConsts::INFINITE_FUTURE
-        elsif timeish.zero?
-          TimeConsts::ZERO
-        else
-          Time.now + timeish
+    # Wrapper for grpc_compression_options in core
+    class CompressionOptions
+      ALGS = { dentity: 0, deflate: 2, gzip: 3 }
+
+      def enable_algorithms(*algorithms)
+        algorithms.each do |algorithm|
+          internal_value = ALGS[algorithm.to_sym]
+          enable_algorithm_internal(internal_value)
         end
       end
 
-      module_function :from_relative_time
+      def disable_algorithms(*algorithms)
+        algorithms.each do |algorithm|
+          internal_value = ALGS[algorithm.to_sym]
+          disable_algorithm_internal(internal_value)
+        end
+      end
     end
   end
 end

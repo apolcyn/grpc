@@ -38,6 +38,7 @@
 
 #include <grpc/grpc.h>
 #include <grpc/impl/codegen/compression_types.h>
+#include <grpc/impl/codegen/alloc.h>
 #include <grpc/impl/codegen/grpc_types.h>
 #include <grpc/compression.h>
 
@@ -123,49 +124,52 @@ static VALUE grpc_rb_compression_options_init(VALUE self) {
   TypedData_Get_Struct(self, grpc_rb_compression_options,
                        &grpc_rb_compression_options_data_type, wrapper);
 
-  compression_options = ALLOCA_N(grpc_compression_options, 1);
-  MEMZERO(compression_options, grpc_compression_options, 1);
-
+  compression_options = gpr_malloc(sizeof(grpc_compression_options));
+  grpc_compression_options_init(compression_options);
   wrapper->wrapped = compression_options;
 
   return self;
 }
 
-void grpc_rb_enable_compression_algorithm(VALUE algorithm_to_enable, VALUE self) {
+VALUE grpc_rb_enable_compression_algorithm(VALUE self, VALUE algorithm_to_enable) {
   grpc_compression_algorithm compression_algorithm = 0;
   grpc_rb_compression_options *wrapper = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
   compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
 
-  grpc_enable_algorithm(wrapper->wrapped, compression_algorithm);
+  grpc_compression_options_enable_algorithm(wrapper->wrapped, compression_algorithm);
+
+  return Qnil;
 }
 
-void grpc_rb_disbable_compression_algorithm(int argc, VALUE* args, VALUE self) {
+VALUE grpc_rb_disable_compression_algorithm(VALUE self, VALUE algorithm_to_disable) {
   grpc_compression_algorithm compression_algorithm = 0;
   grpc_rb_compression_options *wrapper = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
-  compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
+  compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_disable);
 
-  grpc_disable_algorithm(wrapper->wrapped, compression_algorithm);
+  grpc_compression_options_disable_algorithm(wrapper->wrapped, compression_algorithm);
+
+  return Qnil;
 }
 
-VALUE grpc_rb_is_algorithm_enabled(VALUE algorithm, VALUE self) {
+VALUE grpc_rb_is_algorithm_enabled(VALUE self, VALUE algorithm_to_enable) {
   grpc_compression_algorithm compression_algorithm = 0;
   grpc_rb_compression_options *wrapper = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
   compression_algorithm = (grpc_compression_algorithm)NUM2INT(algorithm_to_enable);
 
-  return grpc_is_algorithm_enabled(wrapper->wrapped, compression_algorithm) ? Qtrue : Qfalse;
+  return grpc_compression_options_is_algorithm_enabled(wrapper->wrapped, compression_algorithm) ? Qtrue : Qfalse;
 }
 
 VALUE grpc_rb_get_enabled_algorithms_bitset(VALUE self) {
   grpc_rb_compression_options *wrapper = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
-  return INT2NUM(wrapper->wrapped.enabled_algorithms_bitset);
+  return INT2NUM((int)wrapper->wrapped->enabled_algorithms_bitset);
 }
 
 VALUE grpc_rb_get_default_algorithm(VALUE self) {
@@ -173,7 +177,7 @@ VALUE grpc_rb_get_default_algorithm(VALUE self) {
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
 
-  return RTEST(wrapper->wrapped.default_level) ? : INT2NUM(wrapper->wrapped.default) : Qnil;
+  return RTEST(wrapper->wrapped->default_level.level) ? INT2NUM((int)wrapper->wrapped->default_level.level) : Qnil;
 }
 
 VALUE grpc_rb_get_default_level(VALUE self) {
@@ -181,7 +185,46 @@ VALUE grpc_rb_get_default_level(VALUE self) {
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
 
-  return RTEST(wrapper->wrapped.default_algorithm) ? : INT2NUM(wrapper->wrapped.default) : Qnil;
+  return RTEST(wrapper->wrapped->default_algorithm.algorithm) ? INT2NUM((int)wrapper->wrapped->default_level.level) : Qnil;
+}
+
+VALUE grpc_rb_get_default_algorithm_internal_value(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+
+  return wrapper->wrapped->default_algorithm.is_set ? wrapper->wrapped->default_algorithm.algorithm : GRPC_COMPRESS_NONE;
+}
+
+VALUE grpc_rb_get_default_level_internal_value(VALUE self) {
+  grpc_rb_compression_options *wrapper = NULL;
+
+  TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
+
+  return wrapper->wrapped->default_level.is_set ? wrapper->wrapped->default_level.level: GRPC_COMPRESS_NONE;
+}
+
+VALUE grpc_rb_enable_algorithms(int argc, VALUE *argv, VALUE self) {
+  VALUE algorithm_names = NULL;
+  char *name = NULL;
+  compression_algorithm internal_algorithm_value;
+  int name_len;
+
+  rb_scan_args(argc, argv, "0*", &algorithm_names);
+  for(int i = 0; i < RARRAY_LEN(algorithm_names); i++) {
+    name = RSTRING(rb_ary_entry(algorithm_names, i))->ptr;
+    name_len = RSTRING(rb_ary_entry(algorithm_names, i))->len;
+
+    grpc_compression_algorithm_parse(name, name_len, &internal_algorithm_value);
+
+  }
+
+
+  return Qnil;
+}
+
+VALUE grpc_rb_disable_algorithms(int argc, VALUE *argv, VALUE self) {
+  return Qnil;
 }
 
 void Init_grpc_compression_options() {
@@ -194,16 +237,21 @@ void Init_grpc_compression_options() {
 
   /* Provides a ruby constructor and support for dup/clone. */
   rb_define_method(grpc_rb_cCompressionOptions, "initialize",
-                   grpc_rb_compression_options_init, -1);
+                   grpc_rb_compression_options_init, 0);
 
-  rb_define_method(grpc_rb_cCompressionOptions, "internal_enable_algorithm", grpc_rb_enable_compression_algorithm);
-  rb_define_method(grpc_rb_cCompressionOptions, "internal_disable_algorithm", grpc_rb_disable_compression_algorithm);
-  rb_define_method(grpc_rb_cCompressionOptions, "internal_is_algorithm_enabled", grpc_rb_algorithm_enabled);
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_enable_algorithm", grpc_rb_enable_compression_algorithm, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_disable_algorithm", grpc_rb_disable_compression_algorithm, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "internal_is_algorithm_enabled", grpc_rb_is_algorithm_enabled, 1);
 
-  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset);
-  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset);
-  rb_define_method(grpc_rb_cCompressionOptions, "default_level", grpc_rb_get_default_algorithm);
-  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm", grpc_rb_get_default_level);
+  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset, 0);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level=", grpc_rb_get_default_algorithm, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm=", grpc_rb_get_default_level, 1);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level_internal_value", grpc_rb_get_default_level_internal_value, 0);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm_internal_value", grpc_rb_get_default_algorithm_internal_value, 0);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "enable_algorithms", grpc_rb_enable_algorithms, -1);
+  rb_define_method(grpc_rb_cCompressionOptions, "disable_algorithms", grpc_rb_disable_algorithms, -1);
  /* rb_define_method(grpc_rb_cCompressionOptions, "initialize_copy",
 
                    grpc_rb_channel_credentials_init_copy, 1);*/
