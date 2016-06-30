@@ -157,7 +157,7 @@ describe GRPC::Core::CompressionOptions do
     end
 
     it 'gives the correct channel args after everything has been disabled' do
-      @compression_options.default_algorithm(:identity)
+      @compression_options.default_algorithm = :identity
       @compression_options.default_level = :none
       @compression_options.disable_algorithms(:gzip, :deflate)
 

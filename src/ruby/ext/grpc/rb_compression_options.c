@@ -220,7 +220,7 @@ int get_internal_value_of_algorithm(VALUE algorithm_name, grpc_compression_algor
   name_len = RSTRING_LEN(ruby_str);
 
   if(!(internal_value = grpc_compression_algorithm_parse(name_str, name_len, compression_algorithm))) {
-     rb_raise(rb_eNameError, "invalid algorithm name: %s", StringValueCStr(ruby_str));
+     rb_raise(rb_eNameError, "invalid algorithm name");//: %s", StringValueCStr(ruby_str));
   }
 
   return internal_value;
