@@ -334,6 +334,8 @@ void Init_grpc_compression_options() {
   rb_define_method(grpc_rb_cCompressionOptions, "disable_algorithms", grpc_rb_disable_algorithms, -1);
 
   rb_define_method(grpc_rb_cCompressionOptions, "to_hash", grpc_rb_get_channel_arguments, 0);
+
+  rb_define_const(grpc_rb_mGrpcCore, "GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY", rb_str_new2(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY));
  /* rb_define_method(grpc_rb_cCompressionOptions, "initialize_copy",
 
                    grpc_rb_channel_credentials_init_copy, 1);*/
