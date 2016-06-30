@@ -144,9 +144,6 @@ def create_stub(opts)
       creds = creds.compose call_creds
     end
 
-    if opts.test_case == 'client_compressed_unary' || opts.test_case == 'client_compressed_streaming' #Set channel default compression on
-    end
-
     GRPC.logger.info("... connecting securely to #{address}")
     Grpc::Testing::TestService::Stub.new(address, creds, **stub_opts)
   else
@@ -217,16 +214,6 @@ class NamedTests
 
   def large_unary
     perform_large_unary
-  end
-
-  def client_compressed_unary
-    perform_client_compressed_unary
-    assert("should have failed already") { false }
-  end
-
-  def client_compressed_streaming
-    perform_client_compressed_streaming
-    assert("should hvae failed already") { false }
   end
 
   def service_account_creds
@@ -410,39 +397,6 @@ class NamedTests
     end
     resp
   end
-
-  def perform_client_compressed_unary
-    send_probing_request
-  end
-
-  def send_probing_request
-    req_size, wanted_response_size = 271_828, 314_159
-    payload = Payload.new(type: :COMPRESSABLE, body: nulls(req_size))
-    req = SimpleRequest.new(response_type: :COMPRESSABLE,
-                            response_size: wanted_response_size,
-                            payload: payload,
-			    expect_compressed: true) 
-
-    error_info = nil
- 
-    invalid_arg_error = false
-    begin
-      error_info = "No error occured"
-      @stub.unary_call(req)
-    rescue Grpc::BadStatus => e
-      error_info = "Error occured. class: #{e.class}. code #{e.code}. details: #{e.details}"
-      invalid_arg_error ||= e.code == Grpc::Core::StatusCodes::INVALID_ARGUMENT
-    rescue StandardError => e
-      error_info = "Error occured. class: #{e.class}."
-    end
-
-    assert("Expected uncompressed SimpleRequest to result in a INVALID_ARGUMENT code. #{error_info}") { invalid_arg_error }
-  end
-
-  def perform_client_compressed_streaming
-    assert("Goes off") { false }
-  end
-    
 end
 
 # Args is used to hold the command line info.
