@@ -63,7 +63,6 @@ module GRPC
           raise ArgumentError("default algorithm #{default_algorithm} is listed as disabled")
         end
 
-
         set_default_algorithm(default_algorithm) unless default_algorithm.nil?
         set_default_level(default_level) unless default_level.nil?
         disable_algorithms(*disabled_algorithms) unless disabled_algorithms.empty?
