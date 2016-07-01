@@ -287,8 +287,4 @@ void Init_grpc_compression_options() {
   rb_define_private_method(grpc_rb_cCompressionOptions, "default_level_internal_value", grpc_rb_compression_options_default_level_internal_value, 0);
 
   rb_define_method(grpc_rb_cCompressionOptions, "to_hash", grpc_rb_compression_options_to_hash, 0);
-
-  rb_define_const(grpc_rb_cCompressionOptions, "GRPC_COMPRESSION_CHANNEL_DEFAULT_LEVEL", INT2NUM((int)GRPC_COMPRESSION_CHANNEL_DEFAULT_LEVEL));
-  rb_define_const(grpc_rb_cCompressionOptions, "GRPC_COMPRESSION_CHANNEL_DEFAULT_ALGORITHM", INT2NUM((int)GRPC_COMPRESSION_CHANNEL_DEFAULT_ALGORITHM));
-  rb_define_const(grpc_rb_cCompressionOptions, "GRPC_COMPRESSION_CHANNEL_ENABLED_ALGORITHMS_BITSET", INT2NUM((int)GRPC_COMPRESSION_CHANNEL_ENABLED_ALGORITHMS_BITSET));
 }
