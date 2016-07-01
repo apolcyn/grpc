@@ -250,40 +250,41 @@ VALUE grpc_rb_get_default_algorithm_internal_value(VALUE self) {
     ? INT2NUM(wrapper->wrapped->default_algorithm.algorithm) : Qnil;
 }
 
+/* Gets the internal value of the default compression level that is to be passed
+ * to the GRPC core as a channel argument. */
 VALUE grpc_rb_get_default_level_internal_value(VALUE self) {
   grpc_rb_compression_options *wrapper = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_compression_options, &grpc_rb_compression_options_data_type, wrapper);
 
-  return wrapper->wrapped->default_level.is_set
-    ? INT2NUM((int)wrapper->wrapped->default_level.level) : Qnil;
+  if(wrapper->wrapped->default_level.is_set) {
+    return INT2NUM((int)wrapper->wrapped->default_level.level);
+   }
+     else {
+     return Qnil;
 }
 
-VALUE change_compression_algorithm_settings(int argc, VALUE *argv, VALUE self, const char *internal_method_name) {
+/* Disables compression algorithms by their names. Raises an error if an unkown name was passed. */
+VALUE grpc_rb_disable_algorithms(int argc, VALUE *argv, VALUE self) {
   VALUE algorithm_names = Qnil;
   VALUE ruby_str = Qnil;
   grpc_compression_algorithm internal_algorithm_value;
 
+  /* read variadic argument list of names into the algorithm_name ruby array. */
   rb_scan_args(argc, argv, "0*", &algorithm_names);
 
   for(int i = 0; i < RARRAY_LEN(algorithm_names); i++) {
     ruby_str = rb_funcall(rb_ary_entry(algorithm_names, i), rb_intern("to_s"), 0);
     get_internal_value_of_algorithm(ruby_str, &internal_algorithm_value);
-    rb_funcall(self, rb_intern(internal_method_name), 1, LONG2NUM((long)internal_algorithm_value));
+    rb_funcall(self, rb_intern(disable_algorithm_internal), 1, LONG2NUM((long)internal_algorithm_value));
   }
 
   return Qnil;
 }
 
-VALUE grpc_rb_enable_algorithms(int argc, VALUE *argv, VALUE self) {
-  return change_compression_algorithm_settings(argc, argv, self, "enable_algorithm_internal");
-}
-
-VALUE grpc_rb_disable_algorithms(int argc, VALUE *argv, VALUE self) {
-  return change_compression_algorithm_settings(argc, argv, self, "disable_algorithm_internal");
-}
-
-VALUE grpc_rb_get_channel_arguments(VALUE self) {
+/* Provides a ruby hash of GRPC core channel argument key-values that
+ * correspond to the compression settings on this instance. */
+VALUE grpc_rb_get_channel_arguments_hash(VALUE self) {
   grpc_rb_compression_options *wrapper = NULL;
   grpc_compression_options *compression_options = NULL;
   VALUE channel_arg_hash = rb_funcall(rb_cHash, rb_intern("new"), 0);
@@ -307,6 +308,12 @@ VALUE grpc_rb_get_channel_arguments(VALUE self) {
   return channel_arg_hash;
 }
 
+/* Provides a ruby string representation of the current channel arg hash. */
+VALUE grpc_rb_display_channel_arguments_as_string(VALUE self) {
+  VALUE channel_arg_hash = rb_funcall(self, rb_intern("to_hash"), 0);
+  return rb_funcall(channel_arg_hash, rb_intern("to_s"), 0);
+}
+
 void Init_grpc_compression_options() {
   grpc_rb_cCompressionOptions =
       rb_define_class_under(grpc_rb_mGrpcCore, "CompressionOptions", rb_cObject);
@@ -316,27 +323,22 @@ void Init_grpc_compression_options() {
                        grpc_rb_compression_options_alloc);
 
   /* Provides a ruby constructor and support for dup/clone. */
-  rb_define_method(grpc_rb_cCompressionOptions, "initialize",
-                   grpc_rb_compression_options_init, 0);
+  rb_define_method(grpc_rb_cCompressionOptions, "initialize", grpc_rb_compression_options_init, 0);
 
-  rb_define_method(grpc_rb_cCompressionOptions, "enable_algorithm_internal", grpc_rb_enable_compression_algorithm, 1);
   rb_define_method(grpc_rb_cCompressionOptions, "disable_algorithm_internal", grpc_rb_disable_compression_algorithm, 1);
-  rb_define_method(grpc_rb_cCompressionOptions, "is_algorithm_enabled_internal", grpc_rb_is_algorithm_enabled, 1);
-
-  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset, 0);
-  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm=", grpc_rb_set_default_algorithm, 1);
-  rb_define_method(grpc_rb_cCompressionOptions, "default_level=", grpc_rb_set_default_level, 1);
-
-  rb_define_method(grpc_rb_cCompressionOptions, "default_level_internal_value", grpc_rb_get_default_level_internal_value, 0);
-  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm_internal_value", grpc_rb_get_default_algorithm_internal_value, 0);
-
-  rb_define_method(grpc_rb_cCompressionOptions, "enable_algorithms", grpc_rb_enable_algorithms, -1);
   rb_define_method(grpc_rb_cCompressionOptions, "disable_algorithms", grpc_rb_disable_algorithms, -1);
 
-  rb_define_method(grpc_rb_cCompressionOptions, "to_hash", grpc_rb_get_channel_arguments, 0);
+  rb_define_method(grpc_rb_cCompressionOptions, "is_algorithm_enabled_internal", grpc_rb_is_algorithm_enabled, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "enabled_algorithms_bitset", grpc_rb_get_enabled_algorithms_bitset, 0);
 
-  rb_define_const(grpc_rb_mGrpcCore, "GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY", rb_str_new2(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY));
- /* rb_define_method(grpc_rb_cCompressionOptions, "initialize_copy",
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm=", grpc_rb_set_default_algorithm, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm", grpc_rb_get_default_algorithm_name, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_algorithm_internal_value", grpc_rb_get_default_algorithm_internal_value, 0);
 
-                   grpc_rb_channel_credentials_init_copy, 1);*/
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level=", grpc_rb_set_default_level, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level", grpc_rb_get_default_level_name, 1);
+  rb_define_method(grpc_rb_cCompressionOptions, "default_level_internal_value", grpc_rb_get_default_level_internal_value, 0);
+
+  rb_define_method(grpc_rb_cCompressionOptions, "to_hash", grpc_rb_get_channel_arguments_hash, 0);
+  rb_define_method(grpc_rb_cCompressionOptions, "to_s", grpc_rb_display_channel_arguments_as_string, 0);
 }
