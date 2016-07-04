@@ -101,6 +101,33 @@ describe GRPC::ActiveCall do
       expect(server_call.remote_read).to eq(msg)
     end
 
+    it 'sends metadata before sending a message if metadata hasnt been sent yet' do
+      call = make_test_call
+      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false)
+
+      expected_metadata = {key: "dummy_val", other: "other_val"}
+      @client_call.merge_metadata(expected_metadata)
+      expected_message = 'dummy message'
+
+      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
+      @client_call.remote_send(expected_message)
+      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA => expected_metadata)).once
+      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_MESSAGE => expected_message)).once
+
+      @client_call.cancel
+    end
+
+    it 'sends metadata before sending a message if metadata hasnt been sent yet' do
+      call = make_test_call
+      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
+
+      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
+      expect(@client_call.call).to_receive(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
+      @client_call.remote_send(expected_message)
+
+      @client_call.cancel
+    end
+
     it 'marshals the payload using the marshal func' do
       call = make_test_call
       ActiveCall.client_invoke(call)
