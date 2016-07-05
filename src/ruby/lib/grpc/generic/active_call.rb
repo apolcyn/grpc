@@ -59,7 +59,7 @@ module GRPC
     include Core::TimeConsts
     include Core::CallOps
     extend Forwardable
-    attr_reader(:deadline)
+    attr_reader :deadline, :started, :metadata_to_send
     def_delegators :@call, :cancel, :metadata, :write_flag, :write_flag=,
                    :peer, :peer_cert
 
@@ -77,6 +77,10 @@ module GRPC
     # @param call [Call] a call on which to start and invocation
     # @param metadata [Hash] the metadata
     def self.client_invoke(call, metadata = {})
+      send_initial_metadata(call, metadata)
+    end
+
+    def self.send_initial_metadata(call, metadata = {})
       fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
       call.run_batch(SEND_INITIAL_METADATA => metadata)
     end
@@ -102,15 +106,18 @@ module GRPC
     # @param metadata_received [true|false] indicates if metadata has already
     #     been received. Should always be true for server calls
     def initialize(call, marshal, unmarshal, deadline, started: true,
-                   metadata_received: false)
+                   metadata_received: false, metadata_to_send: nil)
       fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
       @call = call
       @deadline = deadline
       @marshal = marshal
       @unmarshal = unmarshal
       @metadata_received = metadata_received
-      @metadata_sent = started
       @op_notifier = nil
+      @started = started
+
+      fail(ArgumentError) if started && metadata_to_send
+      @metadata_to_send = metadata_to_send || {} unless started
     end
 
     # output_metadata are provides access to hash that can be used to
@@ -189,7 +196,7 @@ module GRPC
     # @param marshalled [false, true] indicates if the object is already
     # marshalled.
     def remote_send(req, marshalled = false)
-      # TODO(murgatroid99): ensure metadata was sent
+      start_call(@metadata_to_send) unless @started
       GRPC.logger.debug("sending #{req}, marshalled? #{marshalled}")
       payload = marshalled ? req : @marshal.call(req)
       @call.run_batch(SEND_MESSAGE => payload)
@@ -430,15 +437,21 @@ module GRPC
       @op_notifier.notify(self)
     end
 
+    def merge_metadata_to_send(new_metadata = {})
+      fail(RuntimeError, 'cant change metadata after already sent') if @started
+      @metadata_to_send = @metadata_to_send.merge(new_metadata)
+      @metadata_to_send
+    end
+
     private
 
     # Starts the call if not already started
     # @param metadata [Hash] metadata to be sent to the server. If a value is
     # a list, multiple metadata for its key are sent
     def start_call(metadata = {})
-      return if @metadata_sent
-      @metadata_tag = ActiveCall.client_invoke(@call, metadata)
-      @metadata_sent = true
+      return if @started
+      @metadata_tag = ActiveCall.send_initial_metadata(@call, metadata)
+      @started = true
     end
 
     def self.view_class(*visible_methods)

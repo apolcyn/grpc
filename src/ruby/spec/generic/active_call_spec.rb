@@ -92,7 +92,7 @@ describe GRPC::ActiveCall do
       # check that server rpc new was received
       recvd_rpc = @server.request_call
       expect(recvd_rpc).to_not eq nil
-      recvd_call = recvd_rpc.call
+      recvd_call = recvd_rpc
 
       # Accept the call, and verify that the server reads the response ok.
       server_call = ActiveCall.new(recvd_call, @pass_through,
@@ -101,29 +101,40 @@ describe GRPC::ActiveCall do
       expect(server_call.remote_read).to eq(msg)
     end
 
-    it 'sends metadata before sending a message if metadata hasnt been sent yet' do
+    it 'sends metadata before sending a message if it knows that metadata hasnt been sent yet', :fast => true do
       call = make_test_call
       @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false)
 
+      class ActiveCall
+        attr_reader :call
+      end
+
       expected_metadata = {key: "dummy_val", other: "other_val"}
-      @client_call.merge_metadata(expected_metadata)
+      expect(@client_call.started).to eq(false)
+      @client_call.merge_metadata_to_send(expected_metadata)
+
       expected_message = 'dummy message'
 
-      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
+      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).once
+      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_MESSAGE => expected_message)).once
       @client_call.remote_send(expected_message)
-      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA => expected_metadata)).once
-      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_MESSAGE => expected_message)).once
 
+      expect(@client_call.started).to eq(true)
       @client_call.cancel
     end
 
-    it 'sends metadata before sending a message if metadata hasnt been sent yet' do
+    it 'doesnt send metadata before sending a message if it thinks that metadata has already been sent', :fast => true do
       call = make_test_call
+
+      class ActiveCall
+        attr_reader :call
+      end
+
       @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
 
-      expect(@client_call.call).to have_received(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
-      expect(@client_call.call).to_receive(:run_batch).with(hash_including(SEND_INITIAL_METADATA)).never
-      @client_call.remote_send(expected_message)
+      expect(@client_call.started).to eql(true)
+      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).never
+      @client_call.remote_send('message')
 
       @client_call.cancel
     end
@@ -138,9 +149,9 @@ describe GRPC::ActiveCall do
 
       # confirm that the message was marshalled
       recvd_rpc =  @server.request_call
-      recvd_call = recvd_rpc.call
+      recvd_call = recvd_rpc
       server_ops = {
-        CallOps::SEND_INITIAL_METADATA => nil
+        CallOps::CallOps::SEND_INITIAL_METADATA => nil
       }
       recvd_call.run_batch(server_ops)
       server_call = ActiveCall.new(recvd_call, @pass_through,
@@ -163,9 +174,9 @@ describe GRPC::ActiveCall do
 
         # confirm that the message was marshalled
         recvd_rpc =  @server.request_call
-        recvd_call = recvd_rpc.call
+        recvd_call = recvd_rpc
         server_ops = {
-          CallOps::SEND_INITIAL_METADATA => nil
+          CallOps::CallOps::SEND_INITIAL_METADATA => nil
         }
         recvd_call.run_batch(server_ops)
         server_call = ActiveCall.new(recvd_call, @pass_through,
@@ -176,13 +187,52 @@ describe GRPC::ActiveCall do
     end
   end
 
+  describe '#merge_metadata_to_send', :fast => true do
+    it 'adds to existing metadata when there is existing metadata to send' do
+      call = make_test_call
+      starting_metadata = {k1: 'key1_val', k2: 'key2_val'}
+      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false,
+        metadata_to_send: starting_metadata)
+
+      @client_call.merge_metadata_to_send(k3: 'key3_val', k4: 'key4_val')
+      expected_md_to_send = {k1: 'key1_val', k2: 'key2_val', k3: 'key3_val', k4: 'key4_val'}
+      expect(@client_call.metadata_to_send).to eq(expected_md_to_send)
+
+      @client_call.merge_metadata_to_send(k5: 'key5_val')
+      expect(@client_call.metadata_to_send).to eq(expected_md_to_send.merge(k5: 'key5_val'))
+    end
+
+    it 'overrides existing metadata if adding metadata with an existing key' do
+      call = make_test_call
+      starting_metadata = {k1: 'key1_val', k2: 'key2_val'}
+      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false,
+                                    metadata_to_send: starting_metadata)
+
+      @client_call.merge_metadata_to_send(k1: 'key1_new_val')
+      expect(@client_call.metadata_to_send).to eq({k1: 'key1_new_val', k2: 'key2_val' })
+    end
+
+    it 'fails when initial metadata has already been sent' do
+      call = make_test_call
+      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: true)
+
+      expect(@client_call.started).to eq(true)
+
+      blk = proc do
+        @client_call.merge_metadata_to_send(k1: 'key1_val')
+      end
+
+      expect { blk.call }.to raise_error
+    end
+  end
+
   describe '#client_invoke' do
     it 'sends metadata to the server when present' do
       call = make_test_call
       metadata = { k1: 'v1', k2: 'v2' }
       ActiveCall.client_invoke(call, metadata)
       recvd_rpc =  @server.request_call
-      recvd_call = recvd_rpc.call
+      recvd_call = recvd_rpc
       expect(recvd_call).to_not be_nil
       expect(recvd_rpc.metadata).to_not be_nil
       expect(recvd_rpc.metadata['k1']).to eq('v1')
@@ -365,7 +415,7 @@ describe GRPC::ActiveCall do
   def expect_server_to_be_invoked(**kw)
     recvd_rpc =  @server.request_call
     expect(recvd_rpc).to_not eq nil
-    recvd_call = recvd_rpc.call
+    recvd_call = recvd_rpc
     recvd_call.run_batch(CallOps::SEND_INITIAL_METADATA => kw)
     ActiveCall.new(recvd_call, @pass_through, @pass_through, deadline,
                    metadata_received: true, started: true)
