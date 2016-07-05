@@ -101,39 +101,60 @@ describe GRPC::ActiveCall do
       expect(server_call.remote_read).to eq(msg)
     end
 
-    it 'sends metadata before sending a message if it knows that metadata hasnt been sent yet', :fast => true do
+    it 'sends metadata before sending a message if it hasnt been sent yet',
+       fast: true do
       call = make_test_call
-      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false)
+      @client_call = ActiveCall.new(
+        call,
+        @pass_through,
+        @pass_through,
+        deadline,
+        started: false)
 
+      # Should take this out
       class ActiveCall
         attr_reader :call
       end
 
-      expected_metadata = {key: "dummy_val", other: "other_val"}
+      metadata = { key: 'dummy_val', other: 'other_val' }
       expect(@client_call.started).to eq(false)
-      @client_call.merge_metadata_to_send(expected_metadata)
+      @client_call.merge_metadata_to_send(metadata)
 
-      expected_message = 'dummy message'
+      message = 'dummy message'
 
-      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).once
-      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_MESSAGE => expected_message)).once
-      @client_call.remote_send(expected_message)
+      expect(@client_call.call).to(
+        receive(:run_batch)
+          .with(
+            hash_including(
+              CallOps::SEND_INITIAL_METADATA => metadata)).once)
+
+      expect(@client_call.call).to(
+        receive(:run_batch).with(hash_including(
+                                   CallOps::SEND_MESSAGE => message)).once)
+      @client_call.remote_send(message)
 
       expect(@client_call.started).to eq(true)
       @client_call.cancel
     end
 
-    it 'doesnt send metadata before sending a message if it thinks that metadata has already been sent', :fast => true do
+    it 'doesnt send metadata its already been sent',
+       fast: true do
       call = make_test_call
 
+      # Should take this out
       class ActiveCall
         attr_reader :call
       end
 
-      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
+      @client_call = ActiveCall.new(call,
+                                    @pass_through,
+                                    @pass_through,
+                                    deadline)
 
       expect(@client_call.started).to eql(true)
-      expect(@client_call.call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).never
+      expect(@client_call.call).to(
+        receive(:run_batch).with(hash_including(
+                                   CallOps::SEND_INITIAL_METADATA)).never)
       @client_call.remote_send('message')
 
       @client_call.cancel
@@ -151,7 +172,7 @@ describe GRPC::ActiveCall do
       recvd_rpc =  @server.request_call
       recvd_call = recvd_rpc
       server_ops = {
-        CallOps::CallOps::SEND_INITIAL_METADATA => nil
+        CallOps::SEND_INITIAL_METADATA => nil
       }
       recvd_call.run_batch(server_ops)
       server_call = ActiveCall.new(recvd_call, @pass_through,
@@ -176,7 +197,7 @@ describe GRPC::ActiveCall do
         recvd_rpc =  @server.request_call
         recvd_call = recvd_rpc
         server_ops = {
-          CallOps::CallOps::SEND_INITIAL_METADATA => nil
+          CallOps::SEND_INITIAL_METADATA => nil
         }
         recvd_call.run_batch(server_ops)
         server_call = ActiveCall.new(recvd_call, @pass_through,
@@ -187,34 +208,58 @@ describe GRPC::ActiveCall do
     end
   end
 
-  describe '#merge_metadata_to_send', :fast => true do
+  describe '#merge_metadata_to_send', fast: true do
     it 'adds to existing metadata when there is existing metadata to send' do
       call = make_test_call
-      starting_metadata = {k1: 'key1_val', k2: 'key2_val'}
-      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false,
+      starting_metadata = { k1: 'key1_val', k2: 'key2_val' }
+      @client_call = ActiveCall.new(
+        call,
+        @pass_through, @pass_through,
+        deadline,
+        started: false,
         metadata_to_send: starting_metadata)
 
-      @client_call.merge_metadata_to_send(k3: 'key3_val', k4: 'key4_val')
-      expected_md_to_send = {k1: 'key1_val', k2: 'key2_val', k3: 'key3_val', k4: 'key4_val'}
+      @client_call.merge_metadata_to_send(
+        k3: 'key3_val',
+        k4: 'key4_val')
+
+      expected_md_to_send = {
+        k1: 'key1_val',
+        k2: 'key2_val',
+        k3: 'key3_val',
+        k4: 'key4_val' }
+
       expect(@client_call.metadata_to_send).to eq(expected_md_to_send)
 
       @client_call.merge_metadata_to_send(k5: 'key5_val')
-      expect(@client_call.metadata_to_send).to eq(expected_md_to_send.merge(k5: 'key5_val'))
+      expect(@client_call.metadata_to_send).to eq(expected_md_to_send.merge(
+                                                    k5: 'key5_val'))
     end
 
     it 'overrides existing metadata if adding metadata with an existing key' do
       call = make_test_call
-      starting_metadata = {k1: 'key1_val', k2: 'key2_val'}
-      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: false,
-                                    metadata_to_send: starting_metadata)
+      starting_metadata = { k1: 'key1_val', k2: 'key2_val' }
+      @client_call = ActiveCall.new(
+        call,
+        @pass_through,
+        @pass_through,
+        deadline,
+        started: false,
+        metadata_to_send: starting_metadata)
 
       @client_call.merge_metadata_to_send(k1: 'key1_new_val')
-      expect(@client_call.metadata_to_send).to eq({k1: 'key1_new_val', k2: 'key2_val' })
+      expect(@client_call.metadata_to_send).to eq(k1: 'key1_new_val',
+                                                  k2: 'key2_val')
     end
 
     it 'fails when initial metadata has already been sent' do
       call = make_test_call
-      @client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline, started: true)
+      @client_call = ActiveCall.new(
+        call,
+        @pass_through,
+        @pass_through,
+        deadline,
+        started: true)
 
       expect(@client_call.started).to eq(true)
 

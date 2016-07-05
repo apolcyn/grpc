@@ -438,7 +438,7 @@ module GRPC
     end
 
     def merge_metadata_to_send(new_metadata = {})
-      fail(RuntimeError, 'cant change metadata after already sent') if @started
+      fail('cant change metadata after already sent') if @started
       @metadata_to_send = @metadata_to_send.merge(new_metadata)
       @metadata_to_send
     end
