@@ -107,7 +107,7 @@ module GRPC
     #     been received. Should always be true for server calls
     def initialize(call, marshal, unmarshal, deadline, started: true,
                    metadata_received: false, metadata_to_send: nil)
-      fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
+      fail(TypeError, "!Core::Call. Got #{call.class}") unless call.is_a? Core::Call
       @call = call
       @deadline = deadline
       @marshal = marshal
