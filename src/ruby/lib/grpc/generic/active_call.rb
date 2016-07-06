@@ -81,7 +81,7 @@ module GRPC
     end
 
     def self.send_initial_metadata(call, metadata = {})
-      fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
+      #fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
       call.run_batch(SEND_INITIAL_METADATA => metadata)
     end
 
@@ -107,7 +107,7 @@ module GRPC
     #     been received. Should always be true for server calls
     def initialize(call, marshal, unmarshal, deadline, started: true,
                    metadata_received: false, metadata_to_send: nil)
-      fail(TypeError, "!Core::Call. Got #{call.class}") unless call.is_a? Core::Call
+      #fail(TypeError, "!Core::Call. Got #{call.class}") unless call.is_a? Core::Call
       @call = call
       @deadline = deadline
       @marshal = marshal
@@ -212,6 +212,7 @@ module GRPC
     # list, mulitple metadata for its key are sent
     def send_status(code = OK, details = '', assert_finished = false,
                     metadata: {})
+      start_call unless @started
       ops = {
         SEND_STATUS_FROM_SERVER => Struct::Status.new(code, details, metadata)
       }

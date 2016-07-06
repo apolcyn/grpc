@@ -37,7 +37,7 @@ describe GRPC::ActiveCall do
   CallOps = GRPC::Core::CallOps
   WriteFlags = GRPC::Core::WriteFlags
 
-  before(:each) do
+  before(:each) do |example|
     @pass_through = proc { |x| x }
     host = '0.0.0.0:0'
     @server = GRPC::Core::Server.new(nil)
@@ -151,8 +151,8 @@ describe GRPC::ActiveCall do
 
   describe 'sending initial metadata' do
     it 'sends metadata before sending a message if it hasnt been sent yet',
-       fast: true do
-      call = make_test_call
+       mocked_call: true do
+      call = spy('call')
       @client_call = ActiveCall.new(
         call,
         @pass_through,
@@ -186,7 +186,7 @@ describe GRPC::ActiveCall do
     end
 
     it 'doesnt send metadata its already been sent',
-       fast: true do
+       mocked_call: true do
       call = make_test_call
 
       # Should take this out
@@ -209,10 +209,9 @@ describe GRPC::ActiveCall do
     end
   end
 
-
-  describe '#merge_metadata_to_send', fast: true do
+  describe '#merge_metadata_to_send', mocked_call: true do
     it 'adds to existing metadata when there is existing metadata to send' do
-      call = make_test_call
+      call = spy('call')
       starting_metadata = { k1: 'key1_val', k2: 'key2_val' }
       @client_call = ActiveCall.new(
         call,
@@ -287,6 +286,21 @@ describe GRPC::ActiveCall do
     end
   end
 
+  describe '#send_status', :send_status => true do
+    it 'works when no metadata or messages have been sent yet' do
+      call = make_test_call
+      ActiveCall.client_invoke(call)
+      client_call = ActiveCall.new(call, @pass_through,
+                                   @pass_through, deadline)
+      recvd_rpc = @server.request_call
+      server_call = ActiveCall.new(recvd_rpc.call, @pass_through,
+        @pass_through, deadline, started: false)
+      expect(server_call.started).to eq(false)
+      blk = proc { server_call.send_status(code = OK) }
+      expect { blk.call }.to_not raise_error
+    end
+  end
+
   describe '#remote_read' do
     it 'reads the response sent by a server' do
       call = make_test_call
@@ -327,6 +341,25 @@ describe GRPC::ActiveCall do
       client_call.remote_read
       expected = { 'k1' => 'v1', 'k2' => 'v2' }
       expect(client_call.metadata).to eq(expected)
+    end
+
+    it 'get a status from server with nothing else sent from server',
+      :remote_read => true do
+      call = make_test_call
+      ActiveCall.client_invoke(call)
+      client_call = ActiveCall.new(call, @pass_through,
+                                   @pass_through, deadline)
+      recvd_rpc = @server.request_call
+      recvd_call = recvd_rpc.call
+
+      server_call = ActiveCall.new(recvd_call, @pass_through,
+        @pass_through, deadline, started: false)
+
+      server_call.send_status(OK, 'OK')
+      read_result = client_call.remote_read
+
+      expect(read_result.class).to eq(Struct::Status)
+      expect(read_result.code).to eq(OK)
     end
 
     it 'get a nil msg before a status when an OK status is sent' do
