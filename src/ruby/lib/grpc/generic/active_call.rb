@@ -420,6 +420,7 @@ module GRPC
     #
     # @param gen_each_reply [Proc] generates the BiDi stream replies
     def run_server_bidi(gen_each_reply)
+      start_call unless @started
       bd = BidiCall.new(@call, @marshal, @unmarshal,
                         metadata_received: @metadata_received)
       bd.run_on_server(gen_each_reply)
