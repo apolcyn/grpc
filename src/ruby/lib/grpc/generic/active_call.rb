@@ -402,7 +402,7 @@ module GRPC
     # a list, multiple metadata for its key are sent
     # @return [Enumerator, nil] a response Enumerator
     def bidi_streamer(requests, metadata: {}, &blk)
-      start_call(metadata)
+      start_call(metadata) unless @started
       bd = BidiCall.new(@call, @marshal, @unmarshal,
                         metadata_received: @metadata_received)
       bd.run_on_client(requests, @op_notifier, &blk)
@@ -420,6 +420,7 @@ module GRPC
     #
     # @param gen_each_reply [Proc] generates the BiDi stream replies
     def run_server_bidi(gen_each_reply)
+      start_call unless @started
       bd = BidiCall.new(@call, @marshal, @unmarshal,
                         metadata_received: @metadata_received)
       bd.run_on_server(gen_each_reply)

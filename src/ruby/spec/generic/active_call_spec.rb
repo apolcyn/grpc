@@ -486,6 +486,41 @@ describe GRPC::ActiveCall do
     end
   end
 
+#  describe '#bidi_streamer', :test_bidi => true do
+#    it 'reads requests and sends responses' do
+#      call = make_test_call
+#      ActiveCall.client_invoke(call)
+#      client_call = ActiveCall.new(call, @pass_through,
+#                                   @pass_through, deadline)
+#      expect(client_call.started).to eq(true)
+#
+#      client_requests = ['client first', 'client second', 'client third']
+#      server_responses = ['server first', 'server second', 'server third']
+#
+#      recvd_rpc = @server.request_call
+#      recvd_call = reccvd_rpc.call
+#      ActiveCall.send_initial_metadata(recvd_call)
+#
+#      server_call = ActiveCall.new(recvd_call, @pass_through,
+#        @pass_through, deadline)
+#      expect(server_call.started).to eq(true)
+#
+#      server_response_num = 0
+#      client_call.bidi_streamer(client_requests) do |response|
+#        expect(response).to eq(server_responses[server_response_num])
+#        server_response_num += 1
+#      end
+#
+#      client_request_num = 0
+#      blk = proc do |request|
+#        expect(request).to eq(client_requests[client_request_num])
+#        client_request_num += 1
+#      end
+#
+#      server_call.run_on_server(&blk)
+#    end
+#  end
+
   def expect_server_to_receive(sent_text, **kw)
     c = expect_server_to_be_invoked(**kw)
     expect(c.remote_read).to eq(sent_text)
