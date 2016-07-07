@@ -268,6 +268,11 @@ static void Init_grpc_time_consts() {
   id_tv_nsec = rb_intern("tv_nsec");
 }
 
+static void Init_grpc_call_metadata_keys() {
+  VALUE grpc_rb_mMetadataKeys = rb_define_module_under(grpc_rb_mGrpcCore, "MetadataKeys");
+  rb_define_const(grpc_rb_mMetadataKeys, "COMPRESSION_REQUEST_ALGORITHM", ID2SYM(rb_intern(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY)));
+}
+
 static void grpc_rb_shutdown(void) {
   grpc_shutdown();
 }
@@ -332,4 +337,5 @@ void Init_grpc_c() {
   Init_grpc_server_credentials();
   Init_grpc_status_codes();
   Init_grpc_time_consts();
+  Init_grpc_call_metadata_keys();
 }

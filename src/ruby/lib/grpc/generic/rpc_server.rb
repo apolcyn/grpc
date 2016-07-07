@@ -400,7 +400,6 @@ module GRPC
       unless @connect_md_proc.nil?
         connect_md = @connect_md_proc.call(an_rpc.method, an_rpc.metadata)
       end
-      #an_rpc.call.run_batch(SEND_INITIAL_METADATA => connect_md)
 
       return nil unless available?(an_rpc)
       return nil unless implemented?(an_rpc)

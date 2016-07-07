@@ -87,19 +87,6 @@ module GRPC
       each_queued_msg(&blk)
     end
 
-    #TODO: Look at possible race conditions over sending this.
-    def send_initial_metadata()
-      raise "Already sent initial metadata" if @metadata_sent
-      ops = { SEND_INITIAL_METADATA => @metadata_to_send }
-      batch_result = @call.run_batch(ops)
-      @metadata_sent = true
-    end
-
-    def merge_metadata_to_send(new_metadata: {})
-      raise "Already sent initial metadata" if @metadata_sent
-      @metadata_to_send.merge!(new_metadata)
-    end
-
     # Begins orchestration of the Bidi stream for a server generating replies.
     #
     # N.B. gen_each_reply is a func(Enumerable<Requests>)
@@ -119,7 +106,7 @@ module GRPC
       elsif gen_each_reply.arity == 2
         replys = gen_each_reply.call(each_queued_msg, @metadata_sender)
       else
-        raise "Illegal arity of reply generator"
+        fail 'Illegal arity of reply generator'
       end
 
       @loop_th = start_read_loop(is_client: false)
@@ -186,8 +173,8 @@ module GRPC
         payload = @marshal.call(req)
         # Fails if status already received
         begin
-          @metadata_sender.send_initial_metadata unless @metadata_sender.nil? ||
-            @metadata_sender.sent_initial_metadata
+          @metadata_sender.send_initial_metadata unless
+            @metadata_sender.nil? || @metadata_sender.initial_metadata_sent
           @call.run_batch(SEND_MESSAGE => payload)
         rescue GRPC::Core::CallError => e
           # This is almost definitely caused by a status arriving while still

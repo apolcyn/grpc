@@ -37,7 +37,7 @@ describe GRPC::ActiveCall do
   CallOps = GRPC::Core::CallOps
   WriteFlags = GRPC::Core::WriteFlags
 
-  before(:each) do |example|
+  before(:each) do
     @pass_through = proc { |x| x }
     host = '0.0.0.0:0'
     @server = GRPC::Core::Server.new(nil)
@@ -149,21 +149,15 @@ describe GRPC::ActiveCall do
     end
   end
 
-  describe 'sending initial metadata' do
-    it 'sends metadata before sending a message if it hasnt been sent yet',
-       mocked_call: true do
-      call = spy('call')
+  describe 'sending initial metadata', test_md_sending: true do
+    it 'sends metadata before sending a message if it hasnt been sent yet' do
+      call = make_test_call
       @client_call = ActiveCall.new(
         call,
         @pass_through,
         @pass_through,
         deadline,
         started: false)
-
-      # Should take this out
-      class ActiveCall
-        attr_reader :call
-      end
 
       metadata = { key: 'dummy_val', other: 'other_val' }
       expect(@client_call.started).to eq(false)
@@ -185,14 +179,8 @@ describe GRPC::ActiveCall do
       expect(@client_call.started).to eq(true)
     end
 
-    it 'doesnt send metadata its already been sent',
-       mocked_call: true do
+    it 'doesnt send metadata if it thinks its already been sent' do
       call = make_test_call
-
-      # Should take this out
-      class ActiveCall
-        attr_reader :call
-      end
 
       @client_call = ActiveCall.new(call,
                                     @pass_through,
@@ -203,15 +191,58 @@ describe GRPC::ActiveCall do
       expect(call).to(
         receive(:run_batch).with(hash_including(
                                    CallOps::SEND_INITIAL_METADATA)).never)
-      @client_call.remote_send('message')
 
-      @client_call.cancel
+      message = 'test message'
+      expect(call).to(
+        receive(:run_batch).with(hash_including(
+                                   CallOps::SEND_MESSAGE => message)).once)
+      @client_call.remote_send(message)
+    end
+
+    it 'sends metadata if it is explicitly sent and ok to do so' do
+      call = make_test_call
+
+      @client_call = ActiveCall.new(call,
+                                    @pass_through,
+                                    @pass_through,
+                                    deadline,
+                                    started: false)
+
+      expect(@client_call.started).to eql(false)
+
+      metadata = { test_key: 'val' }
+      @client_call.merge_metadata_to_send(metadata)
+      expect(@client_call.metadata_to_send).to eq(metadata)
+
+      expect(call).to(
+        receive(:run_batch).with(hash_including(
+                                   CallOps::SEND_INITIAL_METADATA =>
+                                     metadata)).once)
+      @client_call.send_initial_metadata
+    end
+
+    it 'explicit sending fails if metadata has already been sent' do
+      call = make_test_call
+
+      @client_call = ActiveCall.new(call,
+                                    @pass_through,
+                                    @pass_through,
+                                    deadline)
+
+      expect(@client_call.started).to eql(true)
+
+      blk = proc do
+        @client_call.merge_metadata_to_send(dummy_key: 'test_val')
+        @client_call.send_initial_metadata
+      end
+
+      expect { blk.call }.to raise_error
     end
   end
 
-  describe '#merge_metadata_to_send', mocked_call: true do
+  describe '#merge_metadata_to_send', test_md_sending: true do
     it 'adds to existing metadata when there is existing metadata to send' do
-      call = spy('call')
+      call = make_test_call
       starting_metadata = { k1: 'key1_val', k2: 'key2_val' }
       @client_call = ActiveCall.new(
         call,
@@ -290,11 +321,6 @@ describe GRPC::ActiveCall do
     it 'works when no metadata or messages have been sent yet' do
       call = make_test_call
       ActiveCall.client_invoke(call)
-      client_call = ActiveCall.new(
-        call,
-        @pass_through,
-        @pass_through,
-        deadline)
 
       recvd_rpc = @server.request_call
       server_call = ActiveCall.new(
@@ -310,7 +336,7 @@ describe GRPC::ActiveCall do
     end
   end
 
-  describe '#remote_read' do
+  describe '#remote_read', tests_remote_read: true do
     it 'reads the response sent by a server' do
       call = make_test_call
       ActiveCall.client_invoke(call)
@@ -352,8 +378,7 @@ describe GRPC::ActiveCall do
       expect(client_call.metadata).to eq(expected)
     end
 
-    it 'get a status from server with nothing else sent from server',
-      remote_read: true do
+    it 'get a status from server with nothing else sent from server' do
       call = make_test_call
       ActiveCall.client_invoke(call)
       client_call = ActiveCall.new(
