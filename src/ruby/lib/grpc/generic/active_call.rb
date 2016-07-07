@@ -62,6 +62,7 @@ module GRPC
     attr_reader :deadline, :started, :metadata_to_send
     def_delegators :@call, :cancel, :metadata, :write_flag, :write_flag=,
                    :peer, :peer_cert
+    alias_method :sent_initial_metadata, :started
 
     # client_invoke begins a client invocation.
     #
@@ -403,8 +404,11 @@ module GRPC
     # @return [Enumerator, nil] a response Enumerator
     def bidi_streamer(requests, metadata: {}, &blk)
       start_call(metadata) unless @started
-      bd = BidiCall.new(@call, @marshal, @unmarshal,
+      bd = BidiCall.new(@call,
+                        @marshal,
+                        @unmarshal,
                         metadata_received: @metadata_received)
+
       bd.run_on_client(requests, @op_notifier, &blk)
     end
 
@@ -420,9 +424,12 @@ module GRPC
     #
     # @param gen_each_reply [Proc] generates the BiDi stream replies
     def run_server_bidi(gen_each_reply)
-      start_call unless @started
-      bd = BidiCall.new(@call, @marshal, @unmarshal,
-                        metadata_received: @metadata_received)
+      bd = BidiCall.new(@call,
+                        @marshal,
+                        @unmarshal,
+                        metadata_received: @metadata_received,
+                        metadata_sender: MetadataSenderView.new(self))
+
       bd.run_on_server(gen_each_reply)
     end
 
@@ -441,8 +448,7 @@ module GRPC
 
     def merge_metadata_to_send(new_metadata = {})
       fail('cant change metadata after already sent') if @started
-      @metadata_to_send = @metadata_to_send.merge(new_metadata)
-      @metadata_to_send
+      @metadata_to_send.merge!(new_metadata)
     end
 
     private
@@ -454,6 +460,11 @@ module GRPC
       return if @started
       @metadata_tag = ActiveCall.send_initial_metadata(@call, metadata)
       @started = true
+    end
+
+    def send_initial_metadata()
+      raise "Already sent metadata" if @started
+      start_call(@metadata_to_send)
     end
 
     def self.view_class(*visible_methods)
@@ -483,5 +494,10 @@ module GRPC
     Operation = view_class(:cancel, :cancelled, :deadline, :execute,
                            :metadata, :status, :start_call, :wait, :write_flag,
                            :write_flag=)
+
+    MetadataSenderView = view_class(:send_initial_metadata,
+                                    :metadata_to_send,
+                                    :merge_metadata_to_send,
+                                    :sent_initial_metadata)
   end
 end

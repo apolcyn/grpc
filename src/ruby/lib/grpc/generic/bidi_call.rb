@@ -56,7 +56,8 @@ module GRPC
     # @param unmarshal [Function] f(string)->obj that unmarshals responses
     # @param metadata_received [true|false] indicates if metadata has already
     #     been received. Should always be true for server calls
-    def initialize(call, marshal, unmarshal, metadata_received: false)
+    def initialize(call, marshal, unmarshal, metadata_received: false,
+                   metadata_sender: nil)
       fail(ArgumentError, 'not a call') unless call.is_a? Core::Call
       @call = call
       @marshal = marshal
@@ -68,6 +69,7 @@ module GRPC
       @writes_complete = false
       @complete = false
       @done_mutex = Mutex.new
+      @metadata_sender = metadata_sender
     end
 
     # Begins orchestration of the Bidi stream for a client sending requests.
@@ -85,6 +87,19 @@ module GRPC
       each_queued_msg(&blk)
     end
 
+    #TODO: Look at possible race conditions over sending this.
+    def send_initial_metadata()
+      raise "Already sent initial metadata" if @metadata_sent
+      ops = { SEND_INITIAL_METADATA => @metadata_to_send }
+      batch_result = @call.run_batch(ops)
+      @metadata_sent = true
+    end
+
+    def merge_metadata_to_send(new_metadata: {})
+      raise "Already sent initial metadata" if @metadata_sent
+      @metadata_to_send.merge!(new_metadata)
+    end
+
     # Begins orchestration of the Bidi stream for a server generating replies.
     #
     # N.B. gen_each_reply is a func(Enumerable<Requests>)
@@ -97,7 +112,16 @@ module GRPC
     #
     # @param gen_each_reply [Proc] generates the BiDi stream replies.
     def run_on_server(gen_each_reply)
-      replys = gen_each_reply.call(each_queued_msg)
+      replys = nil
+
+      if gen_each_reply.arity == 1
+        replys = gen_each_reply.call(each_queued_msg)
+      elsif gen_each_reply.arity == 2
+        replys = gen_each_reply.call(each_queued_msg, @metadata_sender)
+      else
+        raise "Illegal arity of reply generator"
+      end
+
       @loop_th = start_read_loop(is_client: false)
       write_loop(replys, is_client: false)
     end
@@ -162,6 +186,8 @@ module GRPC
         payload = @marshal.call(req)
         # Fails if status already received
         begin
+          @metadata_sender.send_initial_metadata unless @metadata_sender.nil? ||
+            @metadata_sender.sent_initial_metadata
           @call.run_batch(SEND_MESSAGE => payload)
         rescue GRPC::Core::CallError => e
           # This is almost definitely caused by a status arriving while still
