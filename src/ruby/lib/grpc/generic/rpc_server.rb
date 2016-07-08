@@ -340,7 +340,7 @@ module GRPC
       GRPC.logger.warn("NOT AVAILABLE: too many jobs_waiting: #{an_rpc}")
       noop = proc { |x| x }
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true)
+                         metadata_received: true, started: false)
       c.send_status(GRPC::Core::StatusCodes::RESOURCE_EXHAUSTED, '')
       nil
     end
@@ -352,7 +352,7 @@ module GRPC
       GRPC.logger.warn("UNIMPLEMENTED: #{an_rpc}")
       noop = proc { |x| x }
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true)
+                         metadata_received: true, started: false)
       c.send_status(GRPC::Core::StatusCodes::UNIMPLEMENTED, '')
       nil
     end

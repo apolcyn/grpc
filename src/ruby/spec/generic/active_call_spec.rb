@@ -51,7 +51,7 @@ describe GRPC::ActiveCall do
     @server.close(deadline)
   end
 
-  describe 'restricted view.to_procs' do
+  describe 'restricted view methods' do
     before(:each) do
       call = make_test_call
       ActiveCall.client_invoke(call)
@@ -60,21 +60,26 @@ describe GRPC::ActiveCall do
     end
 
     describe '#multi_req_view' do
-      it 'exposes a fixed subset of the ActiveCall.to_procs' do
-        want = %w(cancelled, deadline, each_remote_read, metadata, shutdown)
+      it 'exposes a fixed subset of the ActiveCall.methods' do
+        want = %w(cancelled, deadline, each_remote_read, metadata, \
+                  shutdown, peer, peer_cert, send_initial_metadata, \
+                  metadata_to_send, merge_metadata_to_send, \
+                  initial_metadata_sent)
         v = @client_call.multi_req_view
         want.each do |w|
-          expect(v.to_procs.include?(w))
+          expect(v.methods.include?(w))
         end
       end
     end
 
     describe '#single_req_view' do
-      it 'exposes a fixed subset of the ActiveCall.to_procs' do
-        want = %w(cancelled, deadline, metadata, shutdown)
+      it 'exposes a fixed subset of the ActiveCall.methods' do
+        want = %w(cancelled, deadline, metadata, shutdown, \
+                  send_initial_metadata, metadata_to_send, \
+                  merge_metadata_to_send, initial_metadata_sent)
         v = @client_call.single_req_view
         want.each do |w|
-          expect(v.to_procs.include?(w))
+          expect(v.methods.include?(w))
         end
       end
     end
@@ -379,13 +384,8 @@ describe GRPC::ActiveCall do
     end
 
     it 'get a status from server with nothing else sent from server' do
-      call = make_test_call
-      ActiveCall.client_invoke(call)
-      client_call = ActiveCall.new(
-        call,
-        @pass_through,
-        @pass_through,
-        deadline)
+      client_call = make_test_call
+      ActiveCall.client_invoke(client_call)
 
       recvd_rpc = @server.request_call
       recvd_call = recvd_rpc.call
@@ -397,11 +397,17 @@ describe GRPC::ActiveCall do
         deadline,
         started: false)
 
-      server_call.send_status(OK, 'OK')
-      read_result = client_call.remote_read
+      client_call.run_batch(
+        CallOps::SEND_CLOSE_FROM_CLIENT => nil)
 
-      expect(read_result.class).to eq(Struct::Status)
-      expect(read_result.code).to eq(OK)
+      server_call.send_status(OK, 'OK')
+
+      client_call.run_batch(
+        CallOps::RECV_INITIAL_METADATA => nil)
+      batch_result = client_call.run_batch(
+        CallOps::RECV_STATUS_ON_CLIENT => nil)
+
+      expect(batch_result.status.code).to eq(OK)
     end
 
     it 'get a nil msg before a status when an OK status is sent' do
@@ -528,37 +534,17 @@ describe GRPC::ActiveCall do
     end
   end
 
-  describe '#run_server_bidi server metadata sending tests', tests_server_bidi: true do
-    def fake_gen_each_reply_single_arg_send_message(requests)
-      [1, 2, 3, 4]
-    end
+  # Test sending of the initial metadata in #run_server_bidi
+  # from the server handler both implicitly and explicitly,
+  # when the server handler function has one argument and two arguments
+  describe '#run_server_bidi sanity tests', run_server_bidi: true do
+    it 'sends the initial metadata implicitly if not already sent' do
+      requests = ['first message', 'second message']
+      server_to_client_metadata = { 'test_key' => 'test_val' }
+      server_status = OK
 
-    def fake_gen_each_reply_with_call_arg_send_message(requests, call)
-      call.merge_metadata(test_key: 'test_val')
-      call.send_initial_metadata
-      [1, 2, 3, 4]
-    end
-
-    def fake_gen_each_reply_single_arg_no_messages_sent(requests)
-      []
-    end
-
-    def fake_gen_each_reply_with_call_arg_no_messages_sent(requests, call)
-      call.merge_metadata_to_send(test_key: 'test_val')
-      []
-    end
-
-    def fake_gen_each_reply_with_call_arg_send_metadata_twice(requests, call)
-      call.send_initial_metadata(test_key: 'test_val')
-      call.merge_metadata(test_key: 'test_val')
-      []
-    end
-
-    it 'sends the initial metadata if not sent so far and the first message is sent' do
-      call = make_test_call
-      ActiveCall.client_invoke(call, @client_queue)
-
-      client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
+      client_call = make_test_call
+      client_call.run_batch(CallOps::SEND_INITIAL_METADATA => {})
 
       recvd_rpc = @server.request_call
       recvd_call = recvd_rpc.call
@@ -567,59 +553,53 @@ describe GRPC::ActiveCall do
                                    @pass_through,
                                    deadline,
                                    metadata_received: true,
-                                   started: false)
+                                   started: false,
+                                   metadata_to_send: server_to_client_metadata)
 
-      blk = proc do |requests|
-        requests
+      # Server handler that doesn't have access to a "call"
+      # It echoes the requests
+      fake_gen_each_reply_with_no_call_param = proc do |msgs|
+        msgs
       end
 
       server_thread = Thread.new do
-        server_call.run_server_bidi(blk)
-        server_call.send_status(OK)
+        server_call.run_server_bidi(
+          fake_gen_each_reply_with_no_call_param)
+        server_call.send_status(server_status)
       end
 
-      ['first message', 'second message'].each do |message|
-        client_call.remote_send(message)
+      # Send the requests and send a close so the server can send a status
+      requests.each do |message|
+        client_call.run_batch(CallOps::SEND_MESSAGE => message)
       end
-
-      expect(client_call.remote_read()).to eq('first message')
-      expect(client_call.remote_read()).to eq('second message')
-      client_call.writes_done(true)
+      client_call.run_batch(CallOps::SEND_CLOSE_FROM_CLIENT => nil)
 
       server_thread.join
-    end
 
-    it 'doesnt send the initial metadata if its already been sent and a message is sent' do
-      call = make_test_call
-      ActiveCall.client_invoke(call, @client_queue)
+      # Expect that initial metadata was sent,
+      # the requests were echoed, and a status was sent
+      batch_result = client_call.run_batch(
+        CallOps::RECV_INITIAL_METADATA => nil)
+      expect(batch_result.metadata).to eq(server_to_client_metadata)
 
-      client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
-
-      recvd_rpc = @server.request_call
-      recvd_call = recvd_rpc.call
-      recvd_call.run_batch(CallOps::SEND_INITIAL_METADATA => {})
-      server_call = ActiveCall.new(recvd_call,
-                                   @pass_through,
-                                   @pass_through,
-                                   deadline,
-                                   metadata_received: true,
-                                   started: true)
-      server_call.run_server_bidi(fake_gen_each_reply_single_arg_no_messages_sent.to_proc)
-
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA).never)
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_MESSAGE).exactly(2).times)
-      expect(server_call).to receive(:run_batch).with(hash_including(CallOps::SEND_STATUS_FROM_SERVER)).never
-
-      ['first message', 'second message'].each do |message|
-        client_call.remote_send(message)
+      requests.each do |message|
+        batch_result = client_call.run_batch(
+          CallOps::RECV_MESSAGE => nil)
+        expect(batch_result.message).to eq(message)
       end
+
+      batch_result = client_call.run_batch(
+        CallOps::RECV_STATUS_ON_CLIENT => nil)
+      expect(batch_result.status.code).to eq(server_status)
     end
 
     it 'sends the metadata when sent explicitly and not already sent' do
-      call = make_test_call
-      ActiveCall.client_invoke(call, @client_queue)
+      requests = ['first message', 'second message']
+      server_to_client_metadata = { 'test_key' => 'test_val' }
+      server_status = OK
 
-      client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
+      client_call = make_test_call
+      client_call.run_batch(CallOps::SEND_INITIAL_METADATA => {})
 
       recvd_rpc = @server.request_call
       recvd_call = recvd_rpc.call
@@ -630,63 +610,46 @@ describe GRPC::ActiveCall do
                                    metadata_received: true,
                                    started: false)
 
-      server_call.run_server_bidi(fake_gen_each_reply_with_call_arg_send_message.to_proc)
-
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA).once)
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_MESSAGE).exactly(2).times)
-      expect(server_call).to receive(:run_batch).with(hash_including(CallOps::SEND_STATUS_FROM_SERVER)).never
-
-      ['first message', 'second message'].each do |message|
-        client_call.remote_send(message)
-      end
-    end
-
-    it 'sending initial metadata fails when the metadata has already been sent' do
-      call = make_test_call
-      ActiveCall.client_invoke(call, @client_queue)
-
-      client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
-
-      recvd_rpc = @server.request_call
-      recvd_call = recvd_rpc.call
-      recvd_call.run_batch(CallOps::SEND_INITIAL_METADATA => {})
-      server_call = ActiveCall.new(recvd_call,
-                                   @pass_through,
-                                   @pass_through,
-                                   deadline,
-                                   metadata_received: true,
-                                   started: true)
-
-      ['first message', 'second message'].each do |message|
-        client_call.remote_send(message)
+      # Fake server handler that has access to a _call object and
+      # uses it to explicitly update and sent the initial metadata
+      fake_gen_each_reply_with_call_param = proc do |msgs, call_param|
+        call_param.merge_metadata_to_send(server_to_client_metadata)
+        call_param.send_initial_metadata
+        msgs
       end
 
-      blk = proc do
-        server_call.run_server_bidi(fake_gen_each_reply_with_call_arg_send_message.to_proc)
+      server_thread = Thread.new do
+        server_call.run_server_bidi(
+          fake_gen_each_reply_with_call_param)
+        server_call.send_status(server_status)
       end
 
-      expect(blk.call).to raise_error
-    end
+      # Send requests and a close from the client so the server
+      # can send a status
+      requests.each do |message|
+        client_call.run_batch(
+          CallOps::SEND_MESSAGE => message)
+      end
+      client_call.run_batch(
+        CallOps::SEND_CLOSE_FROM_CLIENT => nil)
 
-    it 'sends the initial metadata when nothing sent so far but we send a status' do
-      call = make_test_call
-      ActiveCall.client_invoke(call, @client_queue)
+      server_thread.join
 
-      client_call = ActiveCall.new(call, @pass_through, @pass_through, deadline)
+      # Verify that the correct metadata was sent, the requests
+      # were echoed, and the correct status was sent
+      batch_result = client_call.run_batch(
+        CallOps::RECV_INITIAL_METADATA => nil)
+      expect(batch_result.metadata).to eq(server_to_client_metadata)
 
-      recvd_rpc = @server.request_call
-      recvd_call = recvd_rpc.call
-      recvd_call.run_batch(CallOps::SEND_INITIAL_METADATA => {})
-      server_call = ActiveCall.new(recvd_call,
-                                   @pass_through,
-                                   @pass_through,
-                                   deadline,
-                                   metadata_received: true,
-                                   started: true)
+      requests.each do |message|
+        batch_result = client_call.run_batch(
+          CallOps::RECV_MESSAGE => nil)
+        expect(batch_result.message).to eq(message)
+      end
 
-      expect(server_call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).once
-      expect(server_call).to receive(:run_batch).with(hash_including(CallOps::SEND_STATUS_FROM_SERVER)).once
-      client_call.send_status(OK)
+      batch_result = client_call.run_batch(
+        CallOps::RECV_STATUS_ON_CLIENT => nil)
+      expect(batch_result.status.code).to eq(server_status)
     end
   end
 
