@@ -530,13 +530,13 @@ describe GRPC::ActiveCall do
 
   describe '#run_server_bidi server metadata sending tests', tests_server_bidi: true do
     def fake_gen_each_reply_single_arg_send_message(requests)
-      requests
+      [1, 2, 3, 4]
     end
 
     def fake_gen_each_reply_with_call_arg_send_message(requests, call)
       call.merge_metadata(test_key: 'test_val')
       call.send_initial_metadata
-      requests
+      [1, 2, 3, 4]
     end
 
     def fake_gen_each_reply_single_arg_no_messages_sent(requests)
@@ -570,20 +570,21 @@ describe GRPC::ActiveCall do
                                    started: false)
 
       blk = proc do |requests|
-        requests.map { |req| "response for:#{req}" }
+        requests
       end
 
       server_thread = Thread.new do
         server_call.run_server_bidi(blk)
+        server_call.send_status(OK)
       end
-
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_INITIAL_METADATA)).once
-      expect(recvd_call).to receive(:run_batch).with(hash_including(CallOps::SEND_MESSAGE)).exactly(2).times
-      expect(server_call).to receive(:run_batch).with(hash_including(CallOps::SEND_STATUS_FROM_SERVER)).never
 
       ['first message', 'second message'].each do |message|
         client_call.remote_send(message)
       end
+
+      expect(client_call.remote_read()).to eq('first message')
+      expect(client_call.remote_read()).to eq('second message')
+      client_call.writes_done(true)
 
       server_thread.join
     end
