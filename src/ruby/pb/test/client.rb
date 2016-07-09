@@ -111,6 +111,14 @@ end
 # creates a test stub that accesses host:port securely.
 def create_stub(opts)
   address = "#{opts.host}:#{opts.port}"
+
+  compression_channel_args = {}
+
+  if opts.test_case == 'client_compressed_unary'
+    compression_options = CompressionOptions.new(default_algorithm: :gzip)
+    compression_channel_args = compression_options.to_channel_arg_hash
+  end
+
   if opts.secure
     creds = ssl_creds(opts.use_test_ca)
     stub_opts = {
@@ -145,10 +153,12 @@ def create_stub(opts)
     end
 
     GRPC.logger.info("... connecting securely to #{address}")
-    Grpc::Testing::TestService::Stub.new(address, creds, **stub_opts)
+    Grpc::Testing::TestService::Stub.new(address, creds,
+                                         **(stub_opts.merge(compression_channel_args)))
   else
     GRPC.logger.info("... connecting insecurely to #{address}")
-    Grpc::Testing::TestService::Stub.new(address, :this_channel_is_insecure)
+    Grpc::Testing::TestService::Stub.new(address, :this_channel_is_insecure,
+                                         **compression_channel_args)
   end
 end
 
@@ -233,6 +243,28 @@ class NamedTests
 
   def large_unary
     perform_large_unary
+  end
+
+  def client_compressed_unary
+    req_size, wanted_response_size = 271_828, 314_159
+    payload = Payload.new(type: :COMPRESSABLE, body: nulls(req_size))
+    req = SimpleRequest.new(response_type: :COMPRESSABLE,
+                            response_size: wanted_response_size,
+                            payload: payload,
+                            expect_compressed: true)
+
+
+    resp = @stub.unary_call(req, **kw)
+    assert('payload type is wrong') do
+      :COMPRESSABLE == resp.payload.type
+    end
+    assert('payload body has the wrong length') do
+      wanted_response_size == resp.payload.body.length
+    end
+    assert('payload body is invalid') do
+      nulls(wanted_response_size) == resp.payload.body
+    end
+    resp
   end
 
   def service_account_creds
