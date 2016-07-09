@@ -115,7 +115,7 @@ def create_stub(opts)
   compression_channel_args = {}
 
   if opts.test_case == 'client_compressed_unary'
-    compression_options = CompressionOptions.new(default_algorithm: :gzip)
+    compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)
     compression_channel_args = compression_options.to_channel_arg_hash
   end
 
@@ -154,11 +154,11 @@ def create_stub(opts)
 
     GRPC.logger.info("... connecting securely to #{address}")
     Grpc::Testing::TestService::Stub.new(address, creds,
-                                         **(stub_opts.merge(compression_channel_args)))
+                                         stub_opts.merge(compression_channel_args))
   else
     GRPC.logger.info("... connecting insecurely to #{address}")
     Grpc::Testing::TestService::Stub.new(address, :this_channel_is_insecure,
-                                         **compression_channel_args)
+                                         compression_channel_args)
   end
 end
 
@@ -253,18 +253,23 @@ class NamedTests
                             payload: payload,
                             expect_compressed: true)
 
+    bad_status_occured = false
 
-    resp = @stub.unary_call(req, **kw)
-    assert('payload type is wrong') do
-      :COMPRESSABLE == resp.payload.type
+    begin
+      @stub.unary_call(req, GRPC::Core::MetadataKeys::COMPRESSION_REQUEST_ALGORITHM => 'gzip')
+    rescue GRPC::BadStatus => e
+      if e.code == StatusCodes::INVALID_ARGUMENT
+        bad_status_occured = true
+      else
+        fail AssertionError, "Bad status received but code is #{e.code}"
+      end
+    rescue Error => e
+      fail AssertionError, "Expected BadStatus but received error: #{e.inspect}"
     end
-    assert('payload body has the wrong length') do
-      wanted_response_size == resp.payload.body.length
+
+    assert('Expected BadStatus error with invalid arg code for probing message') do
+      bad_status_occured
     end
-    assert('payload body is invalid') do
-      nulls(wanted_response_size) == resp.payload.body
-    end
-    resp
   end
 
   def service_account_creds
