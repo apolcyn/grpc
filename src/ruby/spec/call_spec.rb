@@ -95,6 +95,20 @@ describe GRPC::Core::CallOps do
   end
 end
 
+describe GRPC::Core::MetadataKeys do
+  before(:each) do
+    @known_metadata_keys = {
+      COMPRESSION_REQUEST_ALGORITHM: 'grpc-internal-encoding-request'
+    }
+  end
+
+  it 'should have symbols for all the known operation types' do
+    m = GRPC::Core::MetadataKeys
+    syms_and_codes = m.constants.collect { |c| [c, m.const_get(c)] }
+    expect(Hash[syms_and_codes]).to eq(@known_metadata_keys)
+  end
+end
+
 describe GRPC::Core::Call do
   let(:test_tag)  { Object.new }
   let(:fake_host) { 'localhost:10101' }
