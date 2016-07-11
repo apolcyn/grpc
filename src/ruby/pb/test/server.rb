@@ -239,8 +239,10 @@ end
 
 def main
   opts = parse_options
+  STDERR.puts "opts = parse_options"
   host = "0.0.0.0:#{opts['port']}"
   s = GRPC::RpcServer.new
+  STDERR.puts "s = GRPC::RpcServer.new"
   if opts['secure']
     s.add_http2_port(host, test_server_creds)
     GRPC.logger.info("... running securely on #{host}")
@@ -249,6 +251,7 @@ def main
     GRPC.logger.info("... running insecurely on #{host}")
   end
   s.handle(TestTarget)
+  STDERR.puts "opts = parse_options"
   s.run_till_terminated
 end
 

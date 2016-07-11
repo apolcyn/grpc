@@ -116,7 +116,9 @@ def create_stub(opts)
 
   if opts.test_case == 'client_compressed_unary'
     compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)
+    STDERR.puts "made it to here: compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)"
     compression_channel_args = compression_options.to_channel_arg_hash
+    STDERR.puts "made it to here: compression_channel_args = compression_options.to_channel_arg_hash"
   end
 
   if opts.secure
@@ -153,12 +155,13 @@ def create_stub(opts)
     end
 
     GRPC.logger.info("... connecting securely to #{address}")
-    Grpc::Testing::TestService::Stub.new(address, creds,
-                                         stub_opts.merge(compression_channel_args))
+    stub_opts[:channel_args].merge!(compression_channel_args)
+    Grpc::Testing::TestService::Stub.new(address, creds, **stub_opts)
   else
     GRPC.logger.info("... connecting insecurely to #{address}")
+    stub_opts = { channel_args: compression_channel_args }
     Grpc::Testing::TestService::Stub.new(address, :this_channel_is_insecure,
-                                         compression_channel_args)
+                                         **stub_opts)
   end
 end
 
@@ -505,9 +508,13 @@ def _check_args(args)
 end
 
 def main
+  STDERR.puts "made it to start"
   opts = parse_args
+  STDERR.puts "made it here opts = parse_args"
   stub = create_stub(opts)
+  STDERR.puts "made it here stub = create_stub(opts)"
   NamedTests.new(stub, opts).method(opts['test_case']).call
+  STDERR.puts "made it here NamedTests.new(stub, opts).method(opts['test_case']).call"
   p "OK: #{opts['test_case']}"
 end
 
