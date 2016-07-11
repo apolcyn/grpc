@@ -217,6 +217,7 @@ VALUE grpc_rb_compression_options_algorithm_name_to_value(
     VALUE self, VALUE algorithm_name) {
   (void)self;
   grpc_compression_algorithm algorithm_value;
+  (void)self;
   grpc_rb_compression_options_algorithm_name_to_value_internal(&algorithm_value,
                                                                algorithm_name);
 
@@ -349,9 +350,9 @@ VALUE grpc_rb_compression_options_algorithm_value_to_name_internal(
  */
 VALUE grpc_rb_compression_options_algorithm_value_to_name(
     VALUE self, VALUE algorithm_value) {
-  (void)self;
-  algorithm_internal_value =
+  grpc_compression_algorithm algorithm_internal_value =
       (grpc_compression_algorithm)NUM2INT(algorithm_value);
+  (void)self;
 
   return grpc_rb_compression_options_algorithm_value_to_name_internal(
       algorithm_internal_value);
