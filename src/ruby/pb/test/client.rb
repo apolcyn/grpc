@@ -112,14 +112,17 @@ end
 def create_stub(opts)
   address = "#{opts.host}:#{opts.port}"
 
-  compression_channel_args = {}
+  compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :identity)
+  STDERR.puts "made it to here: compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)"
+  compression_channel_args = compression_options.to_channel_arg_hash
+  STDERR.puts "made it to here: compression_channel_args = compression_options.to_channel_arg_hash"
 
-  if opts.test_case == 'client_compressed_unary'
-    compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)
-    STDERR.puts "made it to here: compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)"
-    compression_channel_args = compression_options.to_channel_arg_hash
-    STDERR.puts "made it to here: compression_channel_args = compression_options.to_channel_arg_hash"
-  end
+ # if opts.test_case == 'client_compressed_unary'
+ #   compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :identity)
+ #   STDERR.puts "made it to here: compression_options = GRPC::Core::CompressionOptions.new(default_algorithm: :gzip)"
+ #   compression_channel_args = compression_options.to_channel_arg_hash
+ #   STDERR.puts "made it to here: compression_channel_args = compression_options.to_channel_arg_hash"
+ # end
 
   if opts.secure
     creds = ssl_creds(opts.use_test_ca)
@@ -268,6 +271,8 @@ class NamedTests
       else
         fail AssertionError, "Bad status received but code is #{e.code}"
       end
+    rescue RuntimeError => e
+      rail AssertionError, "Expected BadStatus but received error: #{e.inspect}"
     rescue Exception => e
       fail AssertionError, "Expected BadStatus but received error: #{e.inspect}"
     end

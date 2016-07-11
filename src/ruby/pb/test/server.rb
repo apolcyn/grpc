@@ -241,7 +241,9 @@ def main
   opts = parse_options
   STDERR.puts "opts = parse_options"
   host = "0.0.0.0:#{opts['port']}"
-  s = GRPC::RpcServer.new
+
+  compression_channel_args = GRPC::Core::CompressionOptions.new
+  s = GRPC::RpcServer.new(server_args: compression_channel_args.to_channel_arg_hash)
   STDERR.puts "s = GRPC::RpcServer.new"
   if opts['secure']
     s.add_http2_port(host, test_server_creds)
