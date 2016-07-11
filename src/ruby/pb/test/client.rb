@@ -52,9 +52,9 @@ require_relative '../../lib/grpc'
 require 'googleauth'
 require 'google/protobuf'
 
-require_relative 'proto/empty'
-require_relative 'proto/messages'
-require_relative 'proto/test_services'
+require_relative '../src/proto/grpc/testing/empty'
+require_relative '../src/proto/grpc/testing/messages'
+require_relative '../src/proto/grpc/testing/test_services'
 
 AUTH_ENV = Google::Auth::CredentialsLoader::ENV_VAR
 
@@ -251,22 +251,24 @@ class NamedTests
   def client_compressed_unary
     req_size, wanted_response_size = 271_828, 314_159
     payload = Payload.new(type: :COMPRESSABLE, body: nulls(req_size))
+    expect_compressed = BoolValue.new(value: true)
     req = SimpleRequest.new(response_type: :COMPRESSABLE,
                             response_size: wanted_response_size,
                             payload: payload,
-                            expect_compressed: true)
+                            expect_compressed: expect_compressed)
 
     bad_status_occured = false
 
     begin
-      @stub.unary_call(req, GRPC::Core::MetadataKeys::COMPRESSION_REQUEST_ALGORITHM => 'gzip')
+      stub_options = { GRPC::Core::MetadataKeys::COMPRESSION_REQUEST_ALGORITHM => 'identity' }
+      @stub.unary_call(req, metadata: stub_options)
     rescue GRPC::BadStatus => e
       if e.code == StatusCodes::INVALID_ARGUMENT
         bad_status_occured = true
       else
         fail AssertionError, "Bad status received but code is #{e.code}"
       end
-    rescue Error => e
+    rescue Exception => e
       fail AssertionError, "Expected BadStatus but received error: #{e.inspect}"
     end
 
