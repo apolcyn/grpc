@@ -169,6 +169,7 @@ grpc_compression_level grpc_rb_compression_options_level_name_to_value_internal(
  * Raises an exception for unrecognized level names. */
 VALUE grpc_rb_compression_options_level_name_to_value(VALUE self,
                                                       VALUE level_name) {
+  (void)self;
   return INT2NUM((int)grpc_rb_compression_options_level_name_to_value_internal(
       level_name));
 }
@@ -214,6 +215,7 @@ void grpc_rb_compression_options_algorithm_name_to_value_internal(
  * testing. */
 VALUE grpc_rb_compression_options_algorithm_name_to_value(
     VALUE self, VALUE algorithm_name) {
+  (void)self;
   grpc_compression_algorithm algorithm_value;
   grpc_rb_compression_options_algorithm_name_to_value_internal(&algorithm_value,
                                                                algorithm_name);
@@ -324,6 +326,7 @@ VALUE grpc_rb_compression_options_level_value_to_name_internal(
 /* Wrapper of internal method that makes it available for use and testing. */
 VALUE grpc_rb_compression_options_level_value_to_name(VALUE self,
                                                       VALUE compression_value) {
+  (void)self;
   Check_Type(compression_value, T_FIXNUM);
   return grpc_rb_compression_options_level_value_to_name_internal(
       (grpc_compression_level)NUM2INT(compression_value));
@@ -346,7 +349,7 @@ VALUE grpc_rb_compression_options_algorithm_value_to_name_internal(
  */
 VALUE grpc_rb_compression_options_algorithm_value_to_name(
     VALUE self, VALUE algorithm_value) {
-  grpc_compression_algorithm algorithm_internal_value;
+  (void)self;
   algorithm_internal_value =
       (grpc_compression_algorithm)NUM2INT(algorithm_value);
 
