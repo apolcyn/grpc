@@ -75,15 +75,13 @@ describe GenericService do
 
   describe 'including it' do
     it 'adds a class method, rpc' do
-      c = Class.new do
-        include GenericService
+      c = Class.new(GenericService) do
       end
       expect(c.methods).to include(:rpc)
     end
 
     it 'adds rpc descs using the added class method, #rpc' do
-      c = Class.new do
-        include GenericService
+      c = Class.new(GenericService) do
         rpc :AnRpc, GoodMsg, GoodMsg
       end
 
@@ -92,8 +90,7 @@ describe GenericService do
     end
 
     it 'give subclasses access to #rpc_descs' do
-      base = Class.new do
-        include GenericService
+      base = Class.new(GenericService) do
         rpc :AnRpc, GoodMsg, GoodMsg
       end
       c = Class.new(base) do
@@ -103,15 +100,13 @@ describe GenericService do
     end
 
     it 'adds a default service name' do
-      c = Class.new do
-        include GenericService
+      c = Class.new(GenericService) do
       end
       expect(c.service_name).to eq('GenericService')
     end
 
     it 'adds a default service name to subclasses' do
-      base = Class.new do
-        include GenericService
+      base = Class.new(GenericService) do
       end
       c = Class.new(base) do
       end
@@ -119,16 +114,14 @@ describe GenericService do
     end
 
     it 'adds the specified service name' do
-      c = Class.new do
-        include GenericService
+      c = Class.new(GenericService) do
         self.service_name = 'test.service.TestService'
       end
       expect(c.service_name).to eq('test.service.TestService')
     end
 
     it 'adds the specified service name to subclasses' do
-      base = Class.new do
-        include GenericService
+      base = Class.new(GenericService) do
         self.service_name = 'test.service.TestService'
       end
       c = Class.new(base) do
@@ -140,16 +133,14 @@ describe GenericService do
   describe '#include' do
     it 'raises if #rpc is missing an arg' do
       blk = proc do
-        Class.new do
-          include GenericService
+        Class.new(GenericService) do
           rpc :AnRpc, GoodMsg
         end
       end
       expect(&blk).to raise_error ArgumentError
 
       blk = proc do
-        Class.new do
-          include GenericService
+        Class.new(GenericService) do
           rpc :AnRpc
         end
       end
@@ -159,8 +150,7 @@ describe GenericService do
     describe 'when #rpc args are incorrect' do
       it 'raises if an arg does not have the marshal or unmarshal methods' do
         blk = proc do
-          Class.new do
-            include GenericService
+          Class.new(GenericService) do
             rpc :AnRpc, GoodMsg, Object
           end
         end
@@ -176,8 +166,7 @@ describe GenericService do
         end
 
         blk = proc do
-          Class.new do
-            include GenericService
+          Class.new(GenericService) do
             rpc :AnRpc, OnlyMarshal, GoodMsg
           end
         end
@@ -192,8 +181,7 @@ describe GenericService do
           end
         end
         blk = proc do
-          Class.new do
-            include GenericService
+          Class.new(GenericService) do
             rpc :AnRpc, GoodMsg, OnlyUnmarshal
           end
         end
@@ -203,8 +191,7 @@ describe GenericService do
 
     it 'is ok for services that expect the default {un,}marshal methods' do
       blk = proc do
-        Class.new do
-          include GenericService
+        Class.new(GenericService) do
           rpc :AnRpc, GoodMsg, GoodMsg
         end
       end
@@ -213,8 +200,7 @@ describe GenericService do
 
     it 'is ok for services that override the default {un,}marshal methods' do
       blk = proc do
-        Class.new do
-          include GenericService
+        Class.new(GenericService) do
           self.marshal_class_method = :encode
           self.unmarshal_class_method = :decode
           rpc :AnRpc, EncodeDecodeMsg, EncodeDecodeMsg
@@ -226,8 +212,7 @@ describe GenericService do
 
   describe '#rpc_stub_class' do
     it 'generates a client class that defines any of the rpc methods' do
-      s = Class.new do
-        include GenericService
+      s = Class.new(GenericService) do
         rpc :AnRpc, GoodMsg, GoodMsg
         rpc :AServerStreamer, GoodMsg, stream(GoodMsg)
         rpc :AClientStreamer, stream(GoodMsg), GoodMsg
@@ -242,8 +227,7 @@ describe GenericService do
 
     describe 'the generated instances' do
       it 'can be instanciated with just a hostname and credentials' do
-        s = Class.new do
-          include GenericService
+        s = Class.new(GenericService) do
           rpc :AnRpc, GoodMsg, GoodMsg
           rpc :AServerStreamer, GoodMsg, stream(GoodMsg)
           rpc :AClientStreamer, stream(GoodMsg), GoodMsg
@@ -257,8 +241,7 @@ describe GenericService do
       end
 
       it 'has the methods defined in the service' do
-        s = Class.new do
-          include GenericService
+        s = Class.new(GenericService) do
           rpc :AnRpc, GoodMsg, GoodMsg
           rpc :AServerStreamer, GoodMsg, stream(GoodMsg)
           rpc :AClientStreamer, stream(GoodMsg), GoodMsg

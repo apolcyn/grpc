@@ -55,19 +55,16 @@ class EchoMsg
 end
 
 # A test service with no methods.
-class EmptyService
-  include GRPC::GenericService
+class EmptyService < GRPC::GenericService
 end
 
 # A test service without an implementation.
-class NoRpcImplementation
-  include GRPC::GenericService
+class NoRpcImplementation < GRPC::GenericService
   rpc :an_rpc, EchoMsg, EchoMsg
 end
 
 # A test service with an echo implementation.
-class EchoService
-  include GRPC::GenericService
+class EchoService < GRPC::GenericService
   rpc :an_rpc, EchoMsg, EchoMsg
   attr_reader :received_md
 
@@ -87,8 +84,7 @@ end
 EchoStub = EchoService.rpc_stub_class
 
 # A test service with an implementation that fails with BadStatus
-class FailingService
-  include GRPC::GenericService
+class FailingService < GRPC::GenericService
   rpc :an_rpc, EchoMsg, EchoMsg
   attr_reader :details, :code, :md
 
@@ -106,8 +102,7 @@ end
 FailingStub = FailingService.rpc_stub_class
 
 # A slow test service.
-class SlowService
-  include GRPC::GenericService
+class SlowService < GRPC::GenericService
   rpc :an_rpc, EchoMsg, EchoMsg
   attr_reader :received_md, :delay
 

@@ -38,9 +38,7 @@ module Grpc
   module Health
     module V1
       module Health
-        class Service
-
-          include GRPC::GenericService
+        class Service < GRPC::GenericService
 
           self.marshal_class_method = :encode
           self.unmarshal_class_method = :decode

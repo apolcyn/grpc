@@ -85,12 +85,10 @@ void PrintService(const ServiceDescriptor *service, const grpc::string &package,
   out->Indent();
 
   out->Print(GetRubyComments(service, true).c_str());
-  out->Print("class Service\n");
+  out->Print("class Service < GRPC::GenericService\n");
 
   // Write the indented class body.
   out->Indent();
-  out->Print("\n");
-  out->Print("include GRPC::GenericService\n");
   out->Print("\n");
   out->Print("self.marshal_class_method = :encode\n");
   out->Print("self.unmarshal_class_method = :decode\n");

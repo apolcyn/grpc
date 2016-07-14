@@ -39,9 +39,7 @@ require 'src/proto/grpc/testing/services'
 module Grpc
   module Testing
     module BenchmarkService
-      class Service
-
-        include GRPC::GenericService
+      class Service < GRPC::GenericService
 
         self.marshal_class_method = :encode
         self.unmarshal_class_method = :decode
@@ -58,9 +56,7 @@ module Grpc
       Stub = Service.rpc_stub_class
     end
     module WorkerService
-      class Service
-
-        include GRPC::GenericService
+      class Service < GRPC::GenericService
 
         self.marshal_class_method = :encode
         self.unmarshal_class_method = :decode

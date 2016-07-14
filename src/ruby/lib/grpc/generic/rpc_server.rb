@@ -426,8 +426,8 @@ module GRPC
     end
 
     def assert_valid_service_class(cls)
-      unless cls.include?(GenericService)
-        fail "#{cls} must 'include GenericService'"
+      unless cls.ancestors.include?(GenericService)
+        fail "#{cls} must 'be a subclass of GenericService'"
       end
       fail "#{cls} should specify some rpc descriptions" if
         cls.rpc_descs.size.zero?

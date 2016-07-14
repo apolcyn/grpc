@@ -42,9 +42,7 @@ module Grpc
     module TestService
       # A simple service to test the various types of RPCs and experiment with
       # performance with various types of payload.
-      class Service
-
-        include GRPC::GenericService
+      class Service < GRPC::GenericService
 
         self.marshal_class_method = :encode
         self.unmarshal_class_method = :decode
@@ -76,9 +74,7 @@ module Grpc
     module UnimplementedService
       # A simple service NOT implemented at servers so clients can test for
       # that case.
-      class Service
-
-        include GRPC::GenericService
+      class Service < GRPC::GenericService
 
         self.marshal_class_method = :encode
         self.unmarshal_class_method = :decode
@@ -92,9 +88,7 @@ module Grpc
     end
     module ReconnectService
       # A service used to control reconnect server.
-      class Service
-
-        include GRPC::GenericService
+      class Service < GRPC::GenericService
 
         self.marshal_class_method = :encode
         self.unmarshal_class_method = :decode

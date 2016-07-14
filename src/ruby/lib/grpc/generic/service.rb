@@ -36,7 +36,7 @@ module GRPC
   #
   # Is intended to be used to support both client and server
   # IDL-schema-derived servers.
-  module GenericService
+  class GenericService
     # creates a new string that is the underscore separate version of s.
     #
     # E.g,
@@ -204,7 +204,7 @@ module GRPC
       end
     end
 
-    def self.included(o)
+    def self.inherited(o)
       o.extend(Dsl)
       # Update to the use the service name including module. Provide a default
       # that can be nil e.g. when modules are declared dynamically.
