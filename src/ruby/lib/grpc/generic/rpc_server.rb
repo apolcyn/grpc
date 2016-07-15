@@ -302,6 +302,7 @@ module GRPC
     # @param service [Object|Class] a service class or object as described
     #        above
     def handle(service)
+      raise RuntimeError
       @run_mutex.synchronize do
         unless @running_state == :not_started
           fail 'cannot add services if the server has been started'
@@ -373,7 +374,15 @@ module GRPC
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
             @pool.schedule(active_call) do |ac|
-              c, mth = ac
+              rpc, mth, connect_md = ac
+              rpc_desc = rpc_descs[rpc.method.to_sym]
+              c = ActiveCall.new(rpc.call,
+                                 rpc_desc.marshal_proc,
+                                 rpc_desc.unmarshal_proc(:input),
+                                 rpc.deadline,
+                                 metadata_received: true,
+                                 started: false,
+                                 metadata_to_send: connect_md)
               begin
                 rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
               rescue StandardError
@@ -412,16 +421,8 @@ module GRPC
 
       # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
       GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
-      rpc_desc = rpc_descs[an_rpc.method.to_sym]
-      c = ActiveCall.new(an_rpc.call,
-                         rpc_desc.marshal_proc,
-                         rpc_desc.unmarshal_proc(:input),
-                         an_rpc.deadline,
-                         metadata_received: true,
-                         started: false,
-                         metadata_to_send: connect_md)
       mth = an_rpc.method.to_sym
-      [c, mth]
+      [an_rpc, mth, connect_md]
     end
 
     protected

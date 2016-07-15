@@ -101,8 +101,8 @@ module GRPC
     # @param metadata_received [true|false] indicates if metadata has already
     #     been received. Should always be true for server calls
     def initialize(call, marshal, unmarshal, deadline, started: true,
-                   metadata_received: false, metadata_to_send: nil)
-      fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
+                   metadata_received: false, metadata_to_send: {})
+      # fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
       @call = call
       @deadline = deadline
       @marshal = marshal
@@ -111,8 +111,8 @@ module GRPC
       @metadata_sent = started
       @op_notifier = nil
 
-      fail(ArgumentError, 'Already sent md') if started && metadata_to_send
-      @metadata_to_send = metadata_to_send || {} unless started
+      # fail(ArgumentError, 'Already sent md') if started && metadata_to_send
+      @metadata_to_send = metadata_to_send # || {} unless started
     end
 
     def send_initial_metadata
