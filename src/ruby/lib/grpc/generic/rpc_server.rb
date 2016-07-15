@@ -302,7 +302,6 @@ module GRPC
     # @param service [Object|Class] a service class or object as described
     #        above
     def handle(service)
-      raise RuntimeError
       @run_mutex.synchronize do
         unless @running_state == :not_started
           fail 'cannot add services if the server has been started'

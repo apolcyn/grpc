@@ -34,10 +34,12 @@
 # Usage: $ path/to/greeter_server.rb
 
 this_dir = File.expand_path(File.dirname(__FILE__))
-lib_dir = File.join(this_dir, 'lib')
+lib_dir = File.join(this_dir, '../lib')
 $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
+$LOAD_PATH.unshift(this_dir)
 
-require_relative '../lib/grpc'
+puts $LOAD_PATH
+require 'grpc'
 require 'helloworld_services'
 
 # GreeterServer is simple server that implements the Helloworld Greeter server.
