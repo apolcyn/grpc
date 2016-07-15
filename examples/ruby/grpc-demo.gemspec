@@ -19,5 +19,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'grpc', '~> 0.11'
 
+  s.add_dependency 'ruby-prof'
+
   s.add_development_dependency 'bundler', '~> 1.7'
 end
