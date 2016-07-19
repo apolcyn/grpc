@@ -29,24 +29,45 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Sample app that connects to a Greeter service.
+# Sample gRPC server that implements the Greeter::Helloworld service.
 #
-# Usage: $ path/to/greeter_client.rb
+# Usage: $ path/to/greeter_server.rb
 
 this_dir = File.expand_path(File.dirname(__FILE__))
-lib_dir = File.join(this_dir, 'lib')
+lib_dir = File.join(this_dir, '../lib')
 $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
+$LOAD_PATH.unshift(this_dir)
 
+puts $LOAD_PATH
 require 'grpc'
 require 'helloworld_services'
 
-def main
-  stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
-  user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  10000.times do
-    stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
+require 'stackprof'
+
+# GreeterServer is simple server that implements the Helloworld Greeter server.
+class GreeterServer < Helloworld::Greeter::Service
+  # say_hello implements the SayHello rpc method.
+  def say_hello(hello_req, _unused_call)
+    Helloworld::HelloReply.new(message: "Hello #{hello_req.name}")
   end
-  p "Greeting"
+end
+
+# main starts an RpcServer that receives requests to GreeterServer at the sample
+# server port.
+def main
+  s = GRPC::RpcServer.new
+  s.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
+  s.handle(GreeterServer)
+
+  s.run_till_terminated
+end
+
+StackProf.start(mode: :cpu)
+
+Signal.trap("INT") do
+  StackProf.stop
+  StackProf.results(File.join(this_dir, 'server.dump'))
+  exit
 end
 
 main

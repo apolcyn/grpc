@@ -148,7 +148,7 @@ module GRPC
     def_delegators :@server, :add_http2_port
 
     # Default thread pool size is 3
-    DEFAULT_POOL_SIZE = 3
+    DEFAULT_POOL_SIZE = 7
 
     # Default max_waiting_requests size is 20
     DEFAULT_MAX_WAITING_REQUESTS = 20
@@ -334,25 +334,29 @@ module GRPC
 
     # Sends RESOURCE_EXHAUSTED if there are too many unprocessed jobs
     def available?(an_rpc)
-      jobs_count, max = @pool.jobs_waiting, @max_waiting_requests
-      GRPC.logger.info("waiting: #{jobs_count}, max: #{max}")
+      #GRPC.logger.info("waiting: #{@pool.jobs_waiting}, max: #{@max_waiting_requests}")
       return an_rpc if @pool.jobs_waiting <= @max_waiting_requests
       GRPC.logger.warn("NOT AVAILABLE: too many jobs_waiting: #{an_rpc}")
       noop = proc { |x| x }
+
+      # Create a new active call that knows that metadata hasn't been
+      # sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true)
+                         metadata_received: true, started: false)
       c.send_status(GRPC::Core::StatusCodes::RESOURCE_EXHAUSTED, '')
       nil
     end
 
     # Sends UNIMPLEMENTED if the method is not implemented by this server
-    def implemented?(an_rpc)
-      mth = an_rpc.method.to_sym
+    def implemented?(an_rpc, mth)
       return an_rpc if rpc_descs.key?(mth)
       GRPC.logger.warn("UNIMPLEMENTED: #{an_rpc}")
       noop = proc { |x| x }
+
+      # Create a new active call that knows that
+      # metadata hasn't been sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true)
+                         metadata_received: true, started: false)
       c.send_status(GRPC::Core::StatusCodes::UNIMPLEMENTED, '')
       nil
     end
@@ -367,7 +371,17 @@ module GRPC
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
             @pool.schedule(active_call) do |ac|
-              c, mth = ac
+              rpc, mth, connect_md = ac
+              rpc_desc = rpc_descs[rpc.method.to_sym]
+              # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
+              GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
+              c = ActiveCall.new(rpc.call,
+                                 rpc_desc.marshal_proc,
+                                 rpc_desc.unmarshal_proc(:input),
+                                 rpc.deadline,
+                                 metadata_received: true,
+                                 started: false,
+                                 metadata_to_send: connect_md)
               begin
                 rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
               rescue StandardError
@@ -395,24 +409,20 @@ module GRPC
 
       # allow the metadata to be accessed from the call
       an_rpc.call.metadata = an_rpc.metadata  # attaches md to call for handlers
-      GRPC.logger.debug("call md is #{an_rpc.metadata}")
+      #GRPC.logger.debug("call md is #{an_rpc.metadata}")
       connect_md = nil
       unless @connect_md_proc.nil?
         connect_md = @connect_md_proc.call(an_rpc.method, an_rpc.metadata)
       end
-      an_rpc.call.run_batch(SEND_INITIAL_METADATA => connect_md)
+
 
       return nil unless available?(an_rpc)
-      return nil unless implemented?(an_rpc)
 
-      # Create the ActiveCall
-      GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
-      rpc_desc = rpc_descs[an_rpc.method.to_sym]
-      c = ActiveCall.new(an_rpc.call, rpc_desc.marshal_proc,
-                         rpc_desc.unmarshal_proc(:input), an_rpc.deadline,
-                         metadata_received: true)
       mth = an_rpc.method.to_sym
-      [c, mth]
+
+      return nil unless implemented?(an_rpc, mth)
+
+      [an_rpc, mth, connect_md]
     end
 
     protected

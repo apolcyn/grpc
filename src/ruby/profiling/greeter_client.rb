@@ -34,19 +34,25 @@
 # Usage: $ path/to/greeter_client.rb
 
 this_dir = File.expand_path(File.dirname(__FILE__))
-lib_dir = File.join(this_dir, 'lib')
+lib_dir = File.join(this_dir, '../lib')
 $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
+$LOAD_PATH.unshift(this_dir)
 
+puts $LOAD_PATH
 require 'grpc'
 require 'helloworld_services'
+
+require 'stackprof'
 
 def main
   stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
   user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  10000.times do
+  1.times do
     stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
   end
   p "Greeting"
 end
 
-main
+StackProf.run(mode: :wall, out: File.join(this_dir, 'client.dump')) do
+  main
+end
