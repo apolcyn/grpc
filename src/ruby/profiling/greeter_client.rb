@@ -42,13 +42,17 @@ puts $LOAD_PATH
 require 'grpc'
 require 'helloworld_services'
 
+require 'stackprof'
+
 def main
   stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
   user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  10000.times do
+  1.times do
     stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
   end
   p "Greeting"
 end
 
-main
+StackProf.run(mode: :wall, out: File.join(this_dir, 'client.dump')) do
+  main
+end
