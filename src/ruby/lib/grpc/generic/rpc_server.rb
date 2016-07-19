@@ -39,7 +39,7 @@ module GRPC
     # Default keep alive period is 1s
     DEFAULT_KEEP_ALIVE = 1
 
-    def initialize(size, keep_alive: DEFAULT_KEEP_ALIVE)
+    def initialize(size, server, keep_alive: DEFAULT_KEEP_ALIVE)
       fail 'pool size must be positive' unless size > 0
       @jobs = Queue.new
       @size = size
@@ -48,6 +48,7 @@ module GRPC
       @stop_cond = ConditionVariable.new
       @workers = []
       @keep_alive = keep_alive
+      @server = server
     end
 
     # Returns the number of jobs waiting
@@ -59,15 +60,15 @@ module GRPC
     #
     # @param args the args passed blk when it is called
     # @param blk the block to call
-    def schedule(*args, &blk)
-      return if blk.nil?
+    def schedule(call)
       @stop_mutex.synchronize do
         if @stopped
           GRPC.logger.warn('did not schedule job, already stopped')
           return
         end
         GRPC.logger.info('schedule another job')
-        @jobs << [blk, args]
+
+        @jobs << call
       end
     end
 
@@ -90,7 +91,7 @@ module GRPC
     # Stops the jobs in the pool
     def stop
       GRPC.logger.info('stopping, will wait for all the workers to exit')
-      @workers.size.times { schedule { throw :exit } }
+      @workers.size.times { schedule(nil) }
       @stop_mutex.synchronize do  # wait @keep_alive for works to stop
         @stopped = true
         @stop_cond.wait(@stop_mutex, @keep_alive) if @workers.size > 0
@@ -125,11 +126,13 @@ module GRPC
       end
     end
 
+
     def loop_execute_jobs
       loop do
         begin
-          blk, args = @jobs.pop
-          blk.call(*args)
+          call = @jobs.pop
+          remove_current_thread if call.nil?
+          @server.handle_active_call(call)
         rescue StandardError => e
           GRPC.logger.warn('Error in worker thread')
           GRPC.logger.warn(e)
@@ -204,7 +207,7 @@ module GRPC
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
       @pool_size = pool_size
-      @pool = Pool.new(@pool_size)
+      @pool = Pool.new(@pool_size, self)
       @run_cond = ConditionVariable.new
       @run_mutex = Mutex.new
       # running_state can take 4 values: :not_started, :running, :stopping, and
@@ -361,6 +364,26 @@ module GRPC
       nil
     end
 
+    def handle_active_call(ac)
+      rpc, mth, connect_md = ac
+      rpc_desc = rpc_descs[rpc.method.to_sym]
+      # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
+      GRPC.logger.info("deadline is #{rpc.deadline}; (now=#{Time.now})")
+      c = ActiveCall.new(rpc.call,
+                         rpc_desc.marshal_proc,
+                         rpc_desc.unmarshal_proc(:input),
+                         rpc.deadline,
+                         metadata_received: true,
+                         started: false,
+                         metadata_to_send: connect_md)
+      begin
+        rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
+      rescue StandardError
+        c.send_status(GRPC::Core::StatusCodes::INTERNAL,
+                      'Server handler failed')
+      end
+    end
+
     # handles calls to the server
     def loop_handle_server_calls
       fail 'not started' if running_state == :not_started
@@ -370,25 +393,7 @@ module GRPC
           break if (!an_rpc.nil?) && an_rpc.call.nil?
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
-            @pool.schedule(active_call) do |ac|
-              rpc, mth, connect_md = ac
-              rpc_desc = rpc_descs[rpc.method.to_sym]
-              # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
-              GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
-              c = ActiveCall.new(rpc.call,
-                                 rpc_desc.marshal_proc,
-                                 rpc_desc.unmarshal_proc(:input),
-                                 rpc.deadline,
-                                 metadata_received: true,
-                                 started: false,
-                                 metadata_to_send: connect_md)
-              begin
-                rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
-              rescue StandardError
-                c.send_status(GRPC::Core::StatusCodes::INTERNAL,
-                              'Server handler failed')
-              end
-            end
+            @pool.schedule(active_call)
           end
         rescue Core::CallError, RuntimeError => e
           # these might happen for various reasonse.  The correct behaviour of

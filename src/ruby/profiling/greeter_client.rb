@@ -47,7 +47,7 @@ require 'stackprof'
 def main
   stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
   user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  1.times do
+  5000.times do
     stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
   end
   p "Greeting"
