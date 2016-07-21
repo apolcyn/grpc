@@ -42,17 +42,22 @@ puts $LOAD_PATH
 require 'grpc'
 require 'helloworld_services'
 
-require 'stackprof'
+require 'ruby-prof'
 
 def main
   stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
   user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  5000.times do
+  1000.times do
     stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
   end
   p "Greeting"
 end
 
-StackProf.run(mode: :wall, out: File.join(this_dir, 'client.dump')) do
+RubyProf.measure_mode = RubyProf::CPU_TIME
+
+result = RubyProf.profile do
   main
 end
+
+printer = RubyProf::GraphHtmlPrinter.new(result)
+printer.print(STDOUT, {})

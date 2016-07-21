@@ -368,7 +368,7 @@ module GRPC
       rpc, mth, connect_md = ac
       rpc_desc = rpc_descs[rpc.method.to_sym]
       # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
-      GRPC.logger.info("deadline is #{rpc.deadline}; (now=#{Time.now})")
+      #GRPC.logger.info("deadline is #{rpc.deadline}; (now=#{Time.now})")
       c = ActiveCall.new(rpc.call,
                          rpc_desc.marshal_proc,
                          rpc_desc.unmarshal_proc(:input),
