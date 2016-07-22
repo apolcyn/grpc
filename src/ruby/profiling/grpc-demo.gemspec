@@ -18,6 +18,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'ruby-prof'
   s.add_dependency 'google-protobuf', '~> 3.0.0.alpha.5.0.3'
 
-  s.add_dependency 'stackprof', '~> 0.2.7'
   s.add_development_dependency 'bundler', '~> 1.7'
 end

@@ -41,8 +41,8 @@ $LOAD_PATH.unshift(this_dir)
 puts $LOAD_PATH
 require 'grpc'
 require 'helloworld_services'
-
-require 'stackprof'
+require 'ruby-prof'
+require 'optparse'
 
 # GreeterServer is simple server that implements the Helloworld Greeter server.
 class GreeterServer < Helloworld::Greeter::Service
@@ -55,19 +55,37 @@ end
 # main starts an RpcServer that receives requests to GreeterServer at the sample
 # server port.
 def main
+  args = {
+    'measurement' => 'CPU_TIME',
+    'calls' => 2000,
+    'port' => 50051,
+    'host' => 'localhost'
+  }
+
+  OptionParser.new do |opts|
+    opts.on('--measurement', '-m',
+            'Profiling Measurement type') { |v| args['measurement'] = v }
+    opts.on('--calls[=OPTIONAL]', '-c',
+            'Number of calls to make to server') { |v| args['calls'] = v.to_i }
+    opts.on('--port[=MANDATORY]',
+            'Port number for server') { |v| args['port'] = v.to_i }
+    opts.on('--host', '-s',
+            'Server address') { |v| args['server'] = v }
+  end.parse!
+
+  RubyProf.measure_mode = RubyProf.const_get(args['measurement'].upcase)
+  RubyProf.start
+
+  Signal.trap("INT") do
+    result = RubyProf.stop
+    RubyProf::GraphHtmlPrinter.new(result).print(STDOUT, {})
+    exit
+  end
+
   s = GRPC::RpcServer.new
-  s.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
+  s.add_http2_port("#{args['server']}:#{args['port']}", :this_port_is_insecure)
   s.handle(GreeterServer)
-
   s.run_till_terminated
-end
-
-StackProf.start(mode: :cpu)
-
-Signal.trap("INT") do
-  StackProf.stop
-  StackProf.results(File.join(this_dir, 'server.dump'))
-  exit
 end
 
 main

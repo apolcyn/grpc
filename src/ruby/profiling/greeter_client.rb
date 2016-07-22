@@ -39,25 +39,42 @@ $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
 $LOAD_PATH.unshift(this_dir)
 
 puts $LOAD_PATH
+
 require 'grpc'
 require 'helloworld_services'
-
 require 'ruby-prof'
+require 'optparse'
 
 def main
-  stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
-  user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  1000.times do
-    stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
+  args = {
+    'measurement' => 'CPU_TIME',
+    'calls' => 2000,
+    'port' => 50051,
+    'server' => 'localhost'
+  }
+
+  OptionParser.new do |opts|
+    opts.on('--measurement', '-m',
+            'Profiling Measurement type') { |v| args['measurement'] = v }
+    opts.on('--calls', 'c',
+            'Number of calls to make to server') { |v| args['calls'] = v }
+    opts.on('--port', 'p',
+            'Port number for server') { |v| args['port'] = v }
+    opts.on('--server', 's',
+            'Server address') { |v| args['server'] = v }
+  end.parse!
+
+  RubyProf.measure_mode = RubyProf.const_get(args['measurement'].upcase)
+  RubyProf.start
+
+  stub = Helloworld::Greeter::Stub.new("#{args['server']}:#{args['port']}", :this_channel_is_insecure)
+  args['num_calls'].to_i.times do
+    stub.say_hello(Helloworld::HelloRequest.new(name: 'world')).message
   end
-  p "Greeting"
+
+  result = RubyProf.stop
+  RubyProf::GraphHtmlPrinter.new(result).print(STDOUT, {})
 end
 
-RubyProf.measure_mode = RubyProf::CPU_TIME
+main
 
-result = RubyProf.profile do
-  main
-end
-
-printer = RubyProf::GraphHtmlPrinter.new(result)
-printer.print(STDOUT, {})
