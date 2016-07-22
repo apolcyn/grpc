@@ -53,22 +53,24 @@ def main
     'server' => 'localhost'
   }
 
-  OptionParser.new do |opts|
-    opts.on('--measurement', '-m',
+  parser = OptionParser.new do |opts|
+    opts.on('-m', '--measurement MEASUREMENT',
             'Profiling Measurement type') { |v| args['measurement'] = v }
-    opts.on('--calls', 'c',
-            'Number of calls to make to server') { |v| args['calls'] = v }
-    opts.on('--port', 'p',
-            'Port number for server') { |v| args['port'] = v }
-    opts.on('--server', 's',
+    opts.on('-c', '--calls CALLS',
+            'Number of calls to make to server') { |v| args['calls'] = v.to_i }
+    opts.on('-p', '--port PORT',
+            'Port number for PORT') { |v| args['port'] = v.to_i }
+    opts.on('-s', '--server SERVER',
             'Server address') { |v| args['server'] = v }
-  end.parse!
+  end
+
+  parser.parse!
 
   RubyProf.measure_mode = RubyProf.const_get(args['measurement'].upcase)
   RubyProf.start
 
   stub = Helloworld::Greeter::Stub.new("#{args['server']}:#{args['port']}", :this_channel_is_insecure)
-  args['num_calls'].to_i.times do
+  args['calls'].times do
     stub.say_hello(Helloworld::HelloRequest.new(name: 'world')).message
   end
 

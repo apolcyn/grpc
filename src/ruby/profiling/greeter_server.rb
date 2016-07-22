@@ -57,20 +57,17 @@ end
 def main
   args = {
     'measurement' => 'CPU_TIME',
-    'calls' => 2000,
     'port' => 50051,
     'host' => 'localhost'
   }
 
   OptionParser.new do |opts|
-    opts.on('--measurement', '-m',
+    opts.on('-m', '--measurement MEASUREMENT',
             'Profiling Measurement type') { |v| args['measurement'] = v }
-    opts.on('--calls[=OPTIONAL]', '-c',
-            'Number of calls to make to server') { |v| args['calls'] = v.to_i }
-    opts.on('--port[=MANDATORY]',
-            'Port number for server') { |v| args['port'] = v.to_i }
-    opts.on('--host', '-s',
-            'Server address') { |v| args['server'] = v }
+    opts.on('-p', '--port PORT',
+            'Port number for PORT') { |v| args['port'] = v.to_i }
+    opts.on('-h', '--host HOST',
+            'Server address') { |v| args['host'] = v }
   end.parse!
 
   RubyProf.measure_mode = RubyProf.const_get(args['measurement'].upcase)
@@ -83,7 +80,7 @@ def main
   end
 
   s = GRPC::RpcServer.new
-  s.add_http2_port("#{args['server']}:#{args['port']}", :this_port_is_insecure)
+  s.add_http2_port("#{args['host']}:#{args['port']}", :this_port_is_insecure)
   s.handle(GreeterServer)
   s.run_till_terminated
 end
