@@ -28,7 +28,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-source ~/.rvm/scripts/rvm
+# Check if RVM has already been loaded already before doing so
+if [[ -s "~/.rvm/scripts/rvm" ]]; then
+  source ~/.rvm/scripts/rvm
+fi
+
 set -ex
 
 cd $(dirname $0)/../../..
