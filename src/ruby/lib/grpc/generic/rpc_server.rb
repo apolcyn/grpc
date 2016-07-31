@@ -148,7 +148,7 @@ module GRPC
     def_delegators :@server, :add_http2_port
 
     # Default thread pool size is 3
-    DEFAULT_POOL_SIZE = 3
+    DEFAULT_POOL_SIZE = 7
 
     # Default max_waiting_requests size is 20
     DEFAULT_MAX_WAITING_REQUESTS = 20
@@ -204,7 +204,7 @@ module GRPC
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
       @pool_size = pool_size
-      @pool = Pool.new(@pool_size)
+      @pool = Pool.new(DEFAULT_POOL_SIZE)
       @run_cond = ConditionVariable.new
       @run_mutex = Mutex.new
       # running_state can take 4 values: :not_started, :running, :stopping, and

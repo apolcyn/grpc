@@ -29,6 +29,7 @@
 
 require 'forwardable'
 require_relative '../grpc'
+require_relative './rpc_server'
 
 # GRPC contains the General RPC module.
 module GRPC
@@ -38,6 +39,9 @@ module GRPC
     include Core::CallOps
     include Core::StatusCodes
     include Core::TimeConsts
+
+    @@pool = GRPC::Pool.new(7)
+    @@pool.start
 
     # Creates a BidiCall.
     #
@@ -80,7 +84,7 @@ module GRPC
     # @return an Enumerator of requests to yield
     def run_on_client(requests, op_notifier, &blk)
       @op_notifier = op_notifier
-      @enq_th = Thread.new { write_loop(requests) }
+      @enq_th = @@pool.schedule { write_loop(requests) }
       @loop_th = start_read_loop
       each_queued_msg(&blk)
     end
@@ -192,7 +196,7 @@ module GRPC
 
     # starts the read loop
     def start_read_loop(is_client: true)
-      Thread.new do
+      @@pool.schedule do
         GRPC.logger.debug('bidi-read-loop: starting')
         begin
           count = 0
