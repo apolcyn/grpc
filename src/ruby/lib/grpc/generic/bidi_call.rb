@@ -150,6 +150,7 @@ module GRPC
         fail req if req.is_a? StandardError
         break if req.equal?(END_OF_READS)
         yield req
+        puts "in each_queued_msg, number of #{req.class} objects: #{Object.each_object(req.class).count}"
       end
     end
 
