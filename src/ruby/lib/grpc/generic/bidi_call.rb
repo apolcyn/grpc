@@ -222,7 +222,7 @@ module GRPC
       rescue StandardError => e
         GRPC.logger.warn('bidi: read-loop failed')
         GRPC.logger.warn(e)
-        @readq.push(e)  # let each_queued_msg terminate with this error
+        raise e # let each_queued_msg terminate with this error
       end
       GRPC.logger.debug('bidi-read-loop: finished')
       @reads_complete = true

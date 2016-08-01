@@ -108,18 +108,15 @@ module GRPC
       @timeout = timeout.nil? ? DEFAULT_TIMEOUT : timeout
     end
 
-    include
-
     def my_request_response_not_op(method, req, marshal, unmarshal,
                          deadline: nil,
-                         return_op: false,
                          parent: nil,
                          credentials: nil,
                          metadata: {})
       call = new_call(method, marshal, unmarshal,
-                          deadline: deadline,
-                          parent: parent,
-                          credentials: credentials)
+                      deadline: deadline,
+                      parent: parent,
+                      credentials: credentials)
       batch_result = call.run_batch(
         Core::CallOps::SEND_INITIAL_METADATA => metadata,
         Core::CallOps::SEND_MESSAGE => req,
@@ -190,8 +187,6 @@ module GRPC
                          credentials: nil,
                          metadata: {})
       return my_request_response_not_op(method, req, marshal, unmarshal,
-                                        deadline: deadline,
-                                        return_op: return_op,
                                         parent: parent,
                                         credentials: credentials,
                                         metadata: metadata) unless return_op
@@ -466,10 +461,10 @@ module GRPC
 
     private
 
-    def new_call(method, marshal, unmarshal,
-                        deadline: nil,
-                        parent: nil,
-                        credentials: nil)
+    def new_call(method, _marshal, _unmarshal,
+                 deadline: nil,
+                 parent: nil,
+                 credentials: nil)
 
       deadline = from_relative_time(@timeout) if deadline.nil?
       # Provide each new client call with its own completion queue
