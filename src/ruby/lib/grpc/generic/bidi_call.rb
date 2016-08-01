@@ -81,7 +81,6 @@ module GRPC
     def run_on_client(requests, op_notifier, &blk)
       @op_notifier = op_notifier
       @enq_th = Thread.new { write_loop(requests) }
-      @loop_th = start_read_loop
       start_read_loop(&blk)
     end
 
@@ -212,7 +211,6 @@ module GRPC
               GRPC.logger.debug("bidi-read-loop: done status #{@call.status}")
             end
 
-            @readq.push(END_OF_READS)
             GRPC.logger.debug('bidi-read-loop: done reading!')
             break
           end
