@@ -303,11 +303,26 @@ module GRPC
     # a list, multiple metadata for its key are sent
     # @return [Object] the response received from the server
     def request_response(req, metadata: {})
-      start_call(metadata)
-      remote_send(req)
-      writes_done(false)
-      response = remote_read
-      finished unless response.is_a? Struct::Status
+      batch_result = @call.run_batch(
+        SEND_INITIAL_METADATA => metadata,
+        SEND_MESSAGE => req,
+        RECV_INITIAL_METADATA => nil,
+        RECV_MESSAGE => nil,
+        RECV_STATUS_ON_CLIENT => nil)
+
+      response = nil
+      unless batch_result.nil? || batch_result.message.nil?
+        response = @unmarshal.call(batch_result.message)
+      end
+      unless batch_result.status.nil?
+        @call.trailing_metadata = batch_result.status.metadata
+      end
+      @call.status = batch_result.status
+      @call.metadata = batch_result.metadata
+
+      op_is_done
+      batch_result.check_status
+      @call.close
       response
     rescue GRPC::Core::CallError => e
       finished  # checks for Cancelled
