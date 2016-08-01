@@ -108,6 +108,44 @@ module GRPC
       @timeout = timeout.nil? ? DEFAULT_TIMEOUT : timeout
     end
 
+    include
+
+    def my_request_response_not_op(method, req, marshal, unmarshal,
+                         deadline: nil,
+                         return_op: false,
+                         parent: nil,
+                         credentials: nil,
+                         metadata: {})
+      call = new_call(method, marshal, unmarshal,
+                          deadline: deadline,
+                          parent: parent,
+                          credentials: credentials)
+      batch_result = call.run_batch(
+        Core::CallOps::SEND_INITIAL_METADATA => metadata,
+        Core::CallOps::SEND_MESSAGE => req,
+        Core::CallOps::RECV_INITIAL_METADATA => nil,
+        Core::CallOps::RECV_MESSAGE => nil,
+        Core::CallOps::RECV_STATUS_ON_CLIENT => nil)
+
+      response = nil
+      unless batch_result.nil? || batch_result.message.nil?
+        response = unmarshal.call(batch_result.message)
+      end
+      unless batch_result.status.nil?
+        call.trailing_metadata = batch_result.status.metadata
+      end
+      call.status = batch_result.status
+      call.metadata = batch_result.metadata
+
+      batch_result.check_status
+      call.close
+      response
+    rescue GRPC::Core::CallError => e
+      batch_result.check_status
+      call.close
+      raise e
+    end
+
     # request_response sends a request to a GRPC server, and returns the
     # response.
     #
@@ -151,11 +189,16 @@ module GRPC
                          parent: nil,
                          credentials: nil,
                          metadata: {})
+      return my_request_response_not_op(method, req, marshal, unmarshal,
+                                        deadline: deadline,
+                                        return_op: return_op,
+                                        parent: parent,
+                                        credentials: credentials,
+                                        metadata: metadata) unless return_op
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,
                           credentials: credentials)
-      return c.request_response(req, metadata: metadata) unless return_op
 
       # return the operation view of the active_call; define #execute as a
       # new method for this instance that invokes #request_response.
@@ -422,6 +465,22 @@ module GRPC
     end
 
     private
+
+    def new_call(method, marshal, unmarshal,
+                        deadline: nil,
+                        parent: nil,
+                        credentials: nil)
+
+      deadline = from_relative_time(@timeout) if deadline.nil?
+      # Provide each new client call with its own completion queue
+      call = @ch.create_call(parent, # parent call
+                             @propagate_mask, # propagation options
+                             method,
+                             nil, # host use nil,
+                             deadline)
+      call.set_credentials! credentials unless credentials.nil?
+      call
+    end
 
     # Creates a new active stub
     #
