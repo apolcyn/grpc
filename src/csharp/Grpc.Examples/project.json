@@ -20,7 +20,7 @@
         "System.IO": ""
       }
     },
-    "netstandard1.5": {
+    "netcoreapp1.0": {
       "imports": [
         "portable-net45"
       ],
