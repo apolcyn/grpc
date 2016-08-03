@@ -73,6 +73,12 @@ RUN echo "deb http://download.mono-project.com/repo/debian wheezy-apache24-compa
 RUN echo "deb http://download.mono-project.com/repo/debian wheezy-libjpeg62-compat main" | tee -a /etc/apt/sources.list.d/mono-xamarin.list
 RUN echo "deb http://download.mono-project.com/repo/debian wheezy-libtiff-compat main" | tee -a /etc/apt/sources.list.d/mono-xamarin.list
 
+# Install dotnet SDK based on https://www.microsoft.com/net/core#debian
+RUN apt-get update && apt-get install -y curl libunwind8 gettext
+RUN curl -sSL -o dotnet.tar.gz https://go.microsoft.com/fwlink/?LinkID=809130
+RUN mkdir -p /opt/dotnet && tar zxf dotnet.tar.gz -C /opt/dotnet
+RUN ln -s /opt/dotnet/dotnet /usr/local/bin
+
 # Install dependencies
 RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y \
     mono-devel \
@@ -82,12 +88,6 @@ RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y \
 
 RUN nuget update -self
 
-
-# Install dotnet SDK based on https://www.microsoft.com/net/core#debian
-RUN apt-get update && apt-get install -y curl libunwind8 gettext
-RUN curl -sSL -o dotnet.tar.gz https://go.microsoft.com/fwlink/?LinkID=809130
-RUN mkdir -p /opt/dotnet && tar zxf dotnet.tar.gz -C /opt/dotnet
-RUN ln -s /opt/dotnet/dotnet /usr/local/bin
 
 # Trigger the population of the local package cache
 ENV NUGET_XMLDOC_MODE skip

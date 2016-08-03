@@ -46,7 +46,8 @@ namespace Grpc.Core.Tests
     public class SanityTest
     {
         // TODO: make sanity test work for CoreCLR as well
-#if !NETCOREAPP1_0
+		// TODO: bring back sanity test
+#if !NETCOREAPP1_0 && !NET45
         /// <summary>
         /// Because we depend on a native library, sometimes when things go wrong, the
         /// entire NUnit test process crashes. To be able to track down problems better,
