@@ -914,12 +914,18 @@ static void Init_grpc_metadata_keys() {
                   rb_str_new2(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY));
 }
 
-static grpc_rb_cBatchStack = Qnil;
+static grpc_rb_cBatchOps = Qnil;
+
+static typedef struct grpc_rb_batch_ops {
+  /* The batch ops */
+  grpc_op ops[8]; /* 8 is the maximum number of operations */
+  size_t op_num;  /* tracks the last added operation */
+} grpc_rb_batch_result;
 
 /* Describes grpc_call struct for RTypedData */
-static const rb_data_type_t grpc_rb_batch_stack_data_type = {
-    "grpc_rb_batch_stack",
-    {GRPC_RB_GC_NOT_MARKED, grpc_rb_batch_stack_free, GRPC_RB_MEMSIZE_UNAVAILABLE,
+static const rb_data_type_t grpc_rb_batch_ops_data_type = {
+    "grpc_rb_batch_ops",
+    {GRPC_RB_GC_NOT_MARKED, grpc_rb_batch_ops_free, GRPC_RB_MEMSIZE_UNAVAILABLE,
      {NULL, NULL}},
     NULL,
     NULL,
@@ -928,18 +934,86 @@ static const rb_data_type_t grpc_rb_batch_stack_data_type = {
 #endif
 };
 
-static struct grpc_rb_batch_stack {
-  run_batch_stack* wrapped;
-} grpc_rb_batch_stack;
+VALUE grpc_rb_batch_ops_alloc(VALUE cls) {
+  grpc_rb_batch_ops *batch_ops =
+    gpr_malloc(sizeof(batch_ops));
+  MEMZERO(batch_ops(sizeof(grpc_rb_batch_ops)));
+  return TypedData_Wrap_Struct(cls, &grpc_rb_batch_ops_data_type, batch_ops);
+}
 
-static VALUE create_wrapped_batch_result(run_batch_stack* run_batch_stack) {
-  grpc_rb_batch_stack *wrapper = gpr_malloc(sizeof(grpc_rb_batch_stack));
-  wrapper->wrapped = run_batch_stack;
-  return TypedData_Wrap_Struct(grpc_rb_cBatchStack, &grpc_rb_batch_stack_data_type,
+
+/* Allocates CompressionOptions instances.
+   Allocate the wrapped grpc compression options and
+   initialize it here too. */
+static VALUE grpc_rb_compression_options_alloc(VALUE cls) {
+  grpc_rb_compression_options *wrapper =
+      gpr_malloc(sizeof(grpc_rb_compression_options));
+  wrapper->wrapped = NULL;
+  wrapper->wrapped = gpr_malloc(sizeof(grpc_compression_options));
+  grpc_compression_options_init(wrapper->wrapped);
+
+  return TypedData_Wrap_Struct(cls, &grpc_rb_compression_options_data_type,
                                wrapper);
 }
 
-static void grpc_rb_batch_stack_free(void *p) {
+void grpc_rb_batch_ops_free(grpc_rb_batch_ops *batch_ops) {
+  xfree(batch_ops);
+}
+
+void grpc_rb_batch_ops_send_cancelled(VALUE self) {
+}
+
+void grpc_rb_batch_ops_send_message(VALUE self, VALUE cancelled) {
+}
+
+void grpc_rb_batch_ops_send_metadata(VALUE self, VALUE metadata) {
+}
+
+void grpc_rb_batch_ops_send_status(VALUE self, VALUE status) {
+}
+
+static typedef struct grpc_rb_batch_result {
+  /* Data being sent */
+  grpc_metadata_array send_metadata;
+  grpc_metadata_array send_trailing_metadata;
+
+  /* Data being received */
+  grpc_byte_buffer *recv_message;
+  grpc_metadata_array recv_metadata;
+  grpc_metadata_array recv_trailing_metadata;
+  int recv_cancelled;
+  grpc_status_code recv_status;
+  char *recv_status_details;
+  size_t recv_status_details_capacity;
+  unsigned write_flag;
+} run_batch_stack;
+
+static grpc_rb_cBatchResult = Qnil;
+
+/* Describes grpc_call struct for RTypedData */
+static const rb_data_type_t grpc_rb_batch_result_data_type = {
+    "grpc_rb_batch_result",
+    {GRPC_RB_GC_NOT_MARKED, grpc_rb_batch_result_free, GRPC_RB_MEMSIZE_UNAVAILABLE,
+     {NULL, NULL}},
+    NULL,
+    NULL,
+#ifdef RUBY_TYPED_FREE_IMMEDIATELY
+    RUBY_TYPED_FREE_IMMEDIATELY
+#endif
+};
+
+static struct grpc_rb_batch_result {
+  run_batch_stack* wrapped;
+} grpc_rb_batch_result;
+
+static VALUE create_wrapped_batch_result(run_batch_stack* run_batch_stack) {
+  grpc_rb_batch_result *wrapper = gpr_malloc(sizeof(grpc_rb_batch_result));
+  wrapper->wrapped = run_batch_stack;
+  return TypedData_Wrap_Struct(grpc_rb_cBatchResult, &grpc_rb_batch_result_data_type,
+                               wrapper);
+}
+
+static void grpc_rb_batch_result_free(void *p) {
   grpc_rb_compression_options *wrapper = NULL;
   if (p == NULL) {
     return;
@@ -979,33 +1053,38 @@ static void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
     }
   }
 }
-  grpc_rb_batch_stack_cleanup()
+  grpc_rb_batch_result_cleanup()
   xfree(p);
 }
 
-
-VALUE grpc_rb_batch_stack_get_message(VALUE self) {
+VALUE grpc_rb_batch_result_get_message(VALUE self) {
   return Qnil;
 }
 
-VALUE grpc_rb_batch_stack_get_metadata(VALUE self) {
+VALUE grpc_rb_batch_result_get_metadata(VALUE self) {
   return Qnil;
 }
 
-VALUE grpc_rb_batch_stack_get_status(VALUE self) {
+VALUE grpc_rb_batch_result_get_status(VALUE self) {
   return Qnil;
 }
 
-VALUE grpc_rb_batch_stack_is_cancelled(VALUE self) {
+VALUE grpc_rb_batch_result_is_cancelled(VALUE self) {
   return Qnil;
 }
 
 void Init_grpc_call() {
-  grpc_rb_cBatchStack = rb_define_class_under(grpc_rb_mGrpcCore, "BatchStack", rb_cObject);
-  rb_define_method(grpc_rb_cBatchStack, "message", grpc_rb_batch_stack_get_message, 0);
-  rb_define_method(grpc_rb_cBatchStack, "metadata", grpc_rb_batch_stack_get_metadata, 0);
-  rb_define_method(grpc_rb_cBatchStack, "status", grpc_rb_batch_stack_get_status, 0);
-  rb_define_method(grpc_rb_cBatchStack, "cancelled", grpc_rb_batch_stack_is_cancelled, 0);
+  grpc_rb_cBatchOps = rb_define_class_under(grpc_rb_mGrpcCore, "BatchOps", rb_cObject);
+  rb_define_method(grpc_rb_cBatchOps, "send_metadata", grpc_rb_batch_ops_send_metadata, 1);
+  rb_define_method(grpc_rb_cBatchOps, "send_message", grpc_rb_batch_ops_send_message, 1);
+  rb_define_method(grpc_rb_cBatchOps, "send_cancelled", grpc_rb_batch_ops_send_cancelled, 1);
+  rb_define_method(grpc_rb_cBatchOps, "send_status", grpc_rb_batch_ops_send_status, 1);
+
+  grpc_rb_cBatchResult = rb_define_class_under(grpc_rb_mGrpcCore, "BatchStack", rb_cObject);
+  rb_define_method(grpc_rb_cBatchResult, "message", grpc_rb_batch_result_get_message, 0);
+  rb_define_method(grpc_rb_cBatchResult, "metadata", grpc_rb_batch_result_get_metadata, 0);
+  rb_define_method(grpc_rb_cBatchResult, "status", grpc_rb_batch_result_get_status, 0);
+  rb_define_method(grpc_rb_cBatchResult, "cancelled", grpc_rb_batch_result_is_cancelled, 0);
 
   /* CallError inherits from Exception to signal that it is non-recoverable */
   grpc_rb_eCallError =
