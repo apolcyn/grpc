@@ -781,14 +781,14 @@ static VALUE grpc_run_batch_stack_build_result(run_batch_stack *st) {
    Only one operation of each type can be active at once in any given
    batch */
 static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
-  run_batch_stack st;
+  run_batch_stack *st = gpr_malloc(sizeof(run_batch_stack));
   grpc_rb_call *call = NULL;
   grpc_event ev;
   grpc_call_error err;
   VALUE result = Qnil;
   VALUE rb_write_flag = rb_ivar_get(self, id_write_flag);
   unsigned write_flag = 0;
-  void *tag = (void*)&st;
+  void *tag = (void*)st;
   if (RTYPEDDATA_DATA(self) == NULL) {
     rb_raise(grpc_rb_eCallError, "Cannot run batch on closed call");
     return Qnil;
@@ -803,14 +803,14 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   if (rb_write_flag != Qnil) {
     write_flag = NUM2UINT(rb_write_flag);
   }
-  grpc_run_batch_stack_init(&st, write_flag);
-  grpc_run_batch_stack_fill_ops(&st, ops_hash);
+  grpc_run_batch_stack_init(st, write_flag);
+  grpc_run_batch_stack_fill_ops(st, ops_hash);
 
   /* call grpc_call_start_batch, then wait for it to complete using
    * pluck_event */
-  err = grpc_call_start_batch(call->wrapped, st.ops, st.op_num, tag, NULL);
+  err = grpc_call_start_batch(call->wrapped, st->ops, st->op_num, tag, NULL);
   if (err != GRPC_CALL_OK) {
-    grpc_run_batch_stack_cleanup(&st);
+    grpc_run_batch_stack_cleanup(st);
     rb_raise(grpc_rb_eCallError,
              "grpc_call_start_batch failed with %s (code=%d)",
              grpc_call_error_detail_of(err), err);
@@ -821,11 +821,8 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   if (!ev.success) {
     rb_raise(grpc_rb_eCallError, "call#run_batch failed somehow");
   }
-  /* Build and return the BatchResult struct result,
-     if there is an error, it's reflected in the status */
-  result = grpc_run_batch_stack_build_result(&st);
-  grpc_run_batch_stack_cleanup(&st);
-  return result;
+
+  return create_wrapped_batch_result(st);
 }
 
 static void Init_grpc_write_flags() {
@@ -917,7 +914,99 @@ static void Init_grpc_metadata_keys() {
                   rb_str_new2(GRPC_COMPRESSION_REQUEST_ALGORITHM_MD_KEY));
 }
 
+static grpc_rb_cBatchStack = Qnil;
+
+/* Describes grpc_call struct for RTypedData */
+static const rb_data_type_t grpc_rb_batch_stack_data_type = {
+    "grpc_rb_batch_stack",
+    {GRPC_RB_GC_NOT_MARKED, grpc_rb_batch_stack_free, GRPC_RB_MEMSIZE_UNAVAILABLE,
+     {NULL, NULL}},
+    NULL,
+    NULL,
+#ifdef RUBY_TYPED_FREE_IMMEDIATELY
+    RUBY_TYPED_FREE_IMMEDIATELY
+#endif
+};
+
+static struct grpc_rb_batch_stack {
+  run_batch_stack* wrapped;
+} grpc_rb_batch_stack;
+
+static VALUE create_wrapped_batch_result(run_batch_stack* run_batch_stack) {
+  grpc_rb_batch_stack *wrapper = gpr_malloc(sizeof(grpc_rb_batch_stack));
+  wrapper->wrapped = run_batch_stack;
+  return TypedData_Wrap_Struct(grpc_rb_cBatchStack, &grpc_rb_batch_stack_data_type,
+                               wrapper);
+}
+
+static void grpc_rb_batch_stack_free(void *p) {
+  grpc_rb_compression_options *wrapper = NULL;
+  if (p == NULL) {
+    return;
+  };
+  wrapper = (grpc_rb_compression_options *)p;
+
+  if (wrapper->wrapped != NULL) {
+    grpc_run_batch_stack_cleanup(wrapper->wrapped)
+    gpr_free(wrapper->wrapped);
+    wrapper->wrapped = NULL;
+  }
+
+  xfree(p);
+}
+
+/* grpc_run_batch_stack_cleanup ensures the run_batch_stack is properly
+ * cleaned up */
+static void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
+  size_t i = 0;
+
+  grpc_metadata_array_destroy(&st->send_metadata);
+  grpc_metadata_array_destroy(&st->send_trailing_metadata);
+  grpc_metadata_array_destroy(&st->recv_metadata);
+  grpc_metadata_array_destroy(&st->recv_trailing_metadata);
+
+  if (st->recv_status_details != NULL) {
+    gpr_free(st->recv_status_details);
+  }
+
+  if (st->recv_message != NULL) {
+    grpc_byte_buffer_destroy(st->recv_message);
+  }
+
+  for (i = 0; i < st->op_num; i++) {
+    if (st->ops[i].op == GRPC_OP_SEND_MESSAGE) {
+      grpc_byte_buffer_destroy(st->ops[i].data.send_message);
+    }
+  }
+}
+  grpc_rb_batch_stack_cleanup()
+  xfree(p);
+}
+
+
+VALUE grpc_rb_batch_stack_get_message(VALUE self) {
+  return Qnil;
+}
+
+VALUE grpc_rb_batch_stack_get_metadata(VALUE self) {
+  return Qnil;
+}
+
+VALUE grpc_rb_batch_stack_get_status(VALUE self) {
+  return Qnil;
+}
+
+VALUE grpc_rb_batch_stack_is_cancelled(VALUE self) {
+  return Qnil;
+}
+
 void Init_grpc_call() {
+  grpc_rb_cBatchStack = rb_define_class_under(grpc_rb_mGrpcCore, "BatchStack", rb_cObject);
+  rb_define_method(grpc_rb_cBatchStack, "message", grpc_rb_batch_stack_get_message, 0);
+  rb_define_method(grpc_rb_cBatchStack, "metadata", grpc_rb_batch_stack_get_metadata, 0);
+  rb_define_method(grpc_rb_cBatchStack, "status", grpc_rb_batch_stack_get_status, 0);
+  rb_define_method(grpc_rb_cBatchStack, "cancelled", grpc_rb_batch_stack_is_cancelled, 0);
+
   /* CallError inherits from Exception to signal that it is non-recoverable */
   grpc_rb_eCallError =
       rb_define_class_under(grpc_rb_mGrpcCore, "CallError", rb_eException);
