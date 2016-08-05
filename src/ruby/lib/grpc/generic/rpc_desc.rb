@@ -62,25 +62,42 @@ module GRPC
       proc { |o| unmarshal_class.method(unmarshal_method).call(o) }
     end
 
+    def run_request_response(active_call, mth)
+      req = active_call.remote_read
+      resp = mth.call(req, active_call.single_req_view)
+      send_message_and_status(active_call, resp, active_call.output_metadata)
+    end
+
+    def run_client_streamer(active_call, mth)
+      resp = mth.call(active_call.multi_req_view)
+      send_message_and_status(active_call, resp, active_call.output_metadata)
+    end
+
+    def run_server_streamer(active_call, mth)
+      req = active_call.remote_read
+      replys = mth.call(req, active_call.single_req_view)
+      replys.each { |r| active_call.remote_send(r) }
+      send_status(active_call, OK, 'OK', active_call.output_metadata)
+    end
+
+    def run_bidi_stream(active_call, mth)
+      active_call.run_server_bidi(mth)
+      send_status(active_call, OK, 'OK', active_call.output_metadata)
+    end
+
     def run_server_method(active_call, mth)
       # While a server method is running, it might be cancelled, its deadline
       # might be reached, the handler could throw an unknown error, or a
       # well-behaved handler could throw a StatusError.
       if request_response?
-        req = active_call.remote_read
-        resp = mth.call(req, active_call.single_req_view)
-        active_call.remote_send(resp)
+        run_request_response(active_call, mth)
       elsif client_streamer?
-        resp = mth.call(active_call.multi_req_view)
-        active_call.remote_send(resp)
+        run_client_streamer(active_call, mth)
       elsif server_streamer?
-        req = active_call.remote_read
-        replys = mth.call(req, active_call.single_req_view)
-        replys.each { |r| active_call.remote_send(r) }
+        run_server_streamer(active_call, mth)
       else  # is a bidi_stream
-        active_call.run_server_bidi(mth)
+        run_bidi_stream(active_call, mth)
       end
-      send_status(active_call, OK, 'OK', active_call.output_metadata)
     rescue BadStatus => e
       # this is raised by handlers that want GRPC to send an application error
       # code and detail message and some additional app-specific metadata.
@@ -139,6 +156,15 @@ module GRPC
       details = 'Not sure why' if details.nil?
       GRPC.logger.debug("Sending status  #{code}:#{details}")
       active_client.send_status(code, details, code == OK, metadata: metadata)
+    rescue StandardError => e
+      GRPC.logger.warn("Could not send status #{code}:#{details}")
+      GRPC.logger.warn(e)
+    end
+
+    def send_message_and_status(active_client, resp, code = OK,
+                                details = 'OK', metadata = {})
+      active_client.remote_send_message_and_status(
+        resp, code, details, true, metadata)
     rescue StandardError => e
       GRPC.logger.warn("Could not send status #{code}:#{details}")
       GRPC.logger.warn(e)

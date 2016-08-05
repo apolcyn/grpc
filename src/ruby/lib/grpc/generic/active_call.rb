@@ -193,6 +193,31 @@ module GRPC
       @call.run_batch(SEND_MESSAGE => payload)
     end
 
+    # Like remote send but also sends the status in the same run_batch as the
+    # message
+    #
+    # It blocks until the message and the status have been sent.
+    #
+    # @param req [Object, String] the object to send or it's marshal form.
+    # @param marshalled [false, true] indicates if the object is already
+    # @param code [int] the status code to send
+    # @param details [String] details
+    # @param assert_finished [true, false] when true(default), waits for
+    def remote_send_message_and_status(req,
+                                       marshalled,
+                                       code = OK,
+                                       details = '',
+                                       assert_finished = false,
+                                       metadata: {})
+      payload = marshalled ? req : @marshal.call(req)
+      ops = {
+        SEND_MESSAGE => payload,
+        SEND_STATUS_FROM_SERVER => Struct::Status.new(code, details, metadata)
+      }
+      ops[RECV_CLOSE_ON_SERVER] = nil if assert_finished
+      @call.run_batch(ops)
+    end
+
     # send_status sends a status to the remote endpoint.
     #
     # @param code [int] the status code to send

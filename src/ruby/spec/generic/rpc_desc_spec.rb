@@ -117,7 +117,9 @@ describe GRPC::RpcDesc do
       end
 
       it 'absorbs CallError with no further action' do
-        expect(@call).to receive(:remote_send).once.and_raise(CallError)
+        allow(@call).to receive(:output_metadata)
+        expect(@call).to(
+          receive(:remote_send_message_and_status).once.and_raise(CallError))
         blk = proc do
           @client_streamer.run_server_method(@call, method(:fake_clstream))
         end
@@ -125,10 +127,9 @@ describe GRPC::RpcDesc do
       end
 
       it 'sends a response and closes the stream if there no errors' do
-        expect(@call).to receive(:remote_send).once.with(@ok_response)
         expect(@call).to receive(:output_metadata).and_return(fake_md)
-        expect(@call).to receive(:send_status).once.with(OK, 'OK', true,
-                                                         metadata: fake_md)
+        expect(@call).to(receive(:remote_send_message_and_status).once.with(
+                           @ok_response, OK, 'OK', true, metadata: fake_md))
         @client_streamer.run_server_method(@call, method(:fake_clstream))
       end
     end
