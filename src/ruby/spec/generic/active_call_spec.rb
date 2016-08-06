@@ -149,6 +149,30 @@ describe GRPC::ActiveCall do
     end
   end
 
+  describe '#remote_send_message_and_status', message_and_status: :true do
+    it 'sends both a message and a status' do
+      call = make_test_call
+      ActiveCall.client_invoke(call)
+      @client_call = ActiveCall.new(call, @pass_through,
+                                    @pass_through, deadline)
+      # check that server rpc new was received
+      server_call = expect_server_to_be_invoked({})
+      server_msg = 'message from server'
+
+      server_call.remote_send_message_and_status(server_msg)
+
+      batch_result = call.run_batch(
+        CallOps::RECV_INITIAL_METADATA => nil,
+        CallOps::RECV_MESSAGE => nil,
+        CallOps::RECV_STATUS_ON_CLIENT => nil)
+
+      expect(batch_result.message).to eq(server_msg)
+      expect(batch_result.status.code).to eq(OK)
+      expect(batch_result.status.details).to eq('')
+      expect(batch_result.status.metadata).to eq({})
+    end
+  end
+
   describe '#client_invoke' do
     it 'sends metadata to the server when present' do
       call = make_test_call

@@ -204,10 +204,10 @@ module GRPC
     # @param details [String] details
     # @param assert_finished [true, false] when true(default), waits for
     def remote_send_message_and_status(req,
-                                       marshalled,
-                                       code = OK,
-                                       details = '',
-                                       assert_finished = false,
+                                       marshalled: false,
+                                       code: OK,
+                                       details: '',
+                                       assert_finished: false,
                                        metadata: {})
       payload = marshalled ? req : @marshal.call(req)
       ops = {

@@ -90,10 +90,11 @@ describe GRPC::RpcDesc do
       it 'sends a response and closes the stream if there no errors' do
         req = Object.new
         expect(@call).to receive(:remote_read).once.and_return(req)
-        expect(@call).to receive(:remote_send).once.with(@ok_response)
         expect(@call).to receive(:output_metadata).and_return(fake_md)
-        expect(@call).to receive(:send_status).once.with(OK, 'OK', true,
-                                                         metadata: fake_md)
+        expect(@call).to receive(:remote_send_message_and_status).once.with(
+          response: @ok_response, code: OK, details: 'OK',
+          assert_finished: true, metadata: fake_md)
+
         this_desc.run_server_method(@call, method(:fake_reqresp))
       end
     end
@@ -128,8 +129,9 @@ describe GRPC::RpcDesc do
 
       it 'sends a response and closes the stream if there no errors' do
         expect(@call).to receive(:output_metadata).and_return(fake_md)
-        expect(@call).to(receive(:remote_send_message_and_status).once.with(
-                           @ok_response, OK, 'OK', true, metadata: fake_md))
+        expect(@call).to receive(:remote_send_message_and_status).once.with(
+          response: @ok_response, code: OK, details: 'OK',
+          assert_finished: true, metadata: fake_md)
         @client_streamer.run_server_method(@call, method(:fake_clstream))
       end
     end

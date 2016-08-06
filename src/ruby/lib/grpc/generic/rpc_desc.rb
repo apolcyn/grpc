@@ -65,12 +65,24 @@ module GRPC
     def run_request_response(active_call, mth)
       req = active_call.remote_read
       resp = mth.call(req, active_call.single_req_view)
-      send_message_and_status(active_call, resp, active_call.output_metadata)
+
+      active_call.remote_send_message_and_status(
+        response: resp,
+        code: OK,
+        details: 'OK',
+        assert_finished: true,
+        metadata: active_call.output_metadata)
     end
 
     def run_client_streamer(active_call, mth)
       resp = mth.call(active_call.multi_req_view)
-      send_message_and_status(active_call, resp, active_call.output_metadata)
+
+      active_call.remote_send_message_and_status(
+        response: resp,
+        code: OK,
+        details: 'OK',
+        assert_finished: true,
+        metadata: active_call.output_metadata)
     end
 
     def run_server_streamer(active_call, mth)
@@ -156,15 +168,6 @@ module GRPC
       details = 'Not sure why' if details.nil?
       GRPC.logger.debug("Sending status  #{code}:#{details}")
       active_client.send_status(code, details, code == OK, metadata: metadata)
-    rescue StandardError => e
-      GRPC.logger.warn("Could not send status #{code}:#{details}")
-      GRPC.logger.warn(e)
-    end
-
-    def send_message_and_status(active_client, resp, code = OK,
-                                details = 'OK', metadata = {})
-      active_client.remote_send_message_and_status(
-        resp, code, details, true, metadata)
     rescue StandardError => e
       GRPC.logger.warn("Could not send status #{code}:#{details}")
       GRPC.logger.warn(e)
