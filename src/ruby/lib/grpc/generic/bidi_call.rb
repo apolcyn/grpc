@@ -190,7 +190,8 @@ module GRPC
 
     # starts the read loop
     def start_read_loop(is_client: true)
-      return enum_for(:start_read_loop, is_client: is_client) unless block_given?
+      return enum_for(:start_read_loop,
+                      is_client: is_client) unless block_given?
       GRPC.logger.debug('bidi-read-loop: starting')
       begin
         count = 0
