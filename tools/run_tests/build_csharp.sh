@@ -35,4 +35,4 @@ cd $(dirname $0)/../../src/csharp
 # overriding NativeDependenciesConfigurationUnix is needed to make gcov code coverage work.
 # xbuild /p:Configuration=$MSBUILD_CONFIG /p:NativeDependenciesConfigurationUnix=$CONFIG Grpc.sln
 
-/usr/local/bin/dotnet build --configuration Debug -f net45 --output ./bin **/project.json
+/usr/local/bin/dotnet build --configuration $MSBUILD_CONFIG -f net45 **/project.json

@@ -37,7 +37,7 @@ root=`pwd`
 
 if [ -e /usr/local/bin/dotnet ]
 then
-  /usr/local/bin/dotnet restore --packages ./packages
+  /usr/local/bin/dotnet restore
 else
   echo "dotnet cli not found"
   exit 1
