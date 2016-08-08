@@ -80,6 +80,13 @@ RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y \
     nuget \
     && apt-get clean
 
+# Install dotnet SDK based on https://www.microsoft.com/net/core#debian
+RUN apt-get update && apt-get install -y curl libunwind8 gettext
+RUN curl -sSL -o dotnet.tar.gz https://dotnetcli.blob.core.windows.net/dotnet/Sdk/rel-1.0.0/dotnet-dev-debian-x64.latest.tar.gz
+RUN mkdir -p /opt/dotnet && tar zxf dotnet.tar.gz -C /opt/dotnet
+RUN ln -s /opt/dotnet/dotnet /usr/local/bin
+
+
 #=================
 # C++ dependencies
 RUN apt-get update && apt-get -y install libgflags-dev libgtest-dev libc++-dev clang && apt-get clean
