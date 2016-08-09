@@ -18,7 +18,8 @@
             "grpc_csharp_ext.x64.dll": "../../../vsprojects/x64/Debug/grpc_csharp_ext.dll",
             "grpc_csharp_ext.x86.dll": "../../../vsprojects/Debug/grpc_csharp_ext.dll",
             "libgrpc_csharp_ext.x64.so": "../../../libs/dbg/libgrpc_csharp_ext.so",
-            "libgrpc_csharp_ext.x64.dylib": "../../../libs/dbg/libgrpc_csharp_ext.dylib"
+            "libgrpc_csharp_ext.x64.dylib": "../../../libs/dbg/libgrpc_csharp_ext.dylib",
+            "libgrpc_csharp_ext.x86.dylib": "../../../libs/dbg/libgrpc_csharp_ext.dylib"
           }
         }
       }
@@ -65,7 +66,8 @@
   "frameworks": {
     "net45": {
       "dependencies": {
-        "Moq": "4.2.1510.2205"
+        "Moq": "4.2.1510.2205",
+        "Microsoft.NETCore.Platforms": "1.0.1"
       },
       "frameworkAssemblies": {
         "System.Runtime": "",

@@ -60,7 +60,7 @@
     "ReportGenerator": "2.4.4.0"
   },
   "frameworks": {
-    "net45": { },
+    "net45": { "dependencies": { "Microsoft.NETCore.Platforms": "1.0.1" } },
     "netcoreapp1.0": {
       "imports": [
         "portable-net45"
