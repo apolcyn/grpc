@@ -101,7 +101,16 @@ namespace Grpc.Core.Tests
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var testsJsonFile = Path.Combine(assemblyDir, "..", "..", "..", "tests.json");
-            return File.ReadAllText(testsJsonFile);
+			var alternateTestsJsonFile = Path.Combine(assemblyDir, "..", "..", "..", "..", "..", "tests.json");
+
+			if (File.Exists(testsJsonFile))
+			{
+				return File.ReadAllText(testsJsonFile);
+			}
+			else 
+			{
+				return File.ReadAllText(alternateTestsJsonFile);
+			}				
         }
 
         private List<Assembly> GetTestAssemblies()
