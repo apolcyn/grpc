@@ -363,6 +363,29 @@ module GRPC
       nil
     end
 
+    def handle_call(an_rpc)
+      an_rpc.call.metadata = an_rpc.metadata
+      connect_md = nil
+      unless @connect_md_proc.nil?
+        connect_md = @connect_md_proc.call(an_rpc.method, an_rpc.metadata)
+      end
+      rpc_desc = rpc_descs[an_rpc.method.to_sym]
+      c = ActiveCall.new(an_rpc.call,
+                         rpc_desc.marshal_proc,
+                         rpc_desc.unmarshal_proc(:input),
+                         an_rpc.deadline,
+                         metadata_received: true,
+                         started: false,
+                         metadata_to_send: connect_md)
+      mth = an_rpc.method.to_sym
+      begin
+        rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
+      rescue StandardError
+        c.send_status(GRPC::Core::StatusCodes::INTERNAL,
+                      'Server handler failed')
+      end
+    end
+
     # handles calls to the server
     def loop_handle_server_calls
       fail 'not started' if running_state == :not_started
@@ -370,16 +393,9 @@ module GRPC
         begin
           an_rpc = @server.request_call
           break if (!an_rpc.nil?) && an_rpc.call.nil?
-          active_call = new_active_server_call(an_rpc)
-          unless active_call.nil?
-            @pool.schedule(active_call) do |ac|
-              c, mth = ac
-              begin
-                rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
-              rescue StandardError
-                c.send_status(GRPC::Core::StatusCodes::INTERNAL,
-                              'Server handler failed')
-              end
+          if call_ok_to_handle?(an_rpc)
+            @pool.schedule(an_rpc) do |rpc|
+              handle_call(rpc)
             end
           end
         rescue Core::CallError, RuntimeError => e
@@ -396,32 +412,8 @@ module GRPC
       GRPC.logger.info("stopped: #{self}")
     end
 
-    def new_active_server_call(an_rpc)
-      return nil if an_rpc.nil? || an_rpc.call.nil?
-
-      # allow the metadata to be accessed from the call
-      an_rpc.call.metadata = an_rpc.metadata  # attaches md to call for handlers
-      GRPC.logger.debug("call md is #{an_rpc.metadata}")
-      connect_md = nil
-      unless @connect_md_proc.nil?
-        connect_md = @connect_md_proc.call(an_rpc.method, an_rpc.metadata)
-      end
-
-      return nil unless available?(an_rpc)
-      return nil unless implemented?(an_rpc)
-
-      # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
-      GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
-      rpc_desc = rpc_descs[an_rpc.method.to_sym]
-      c = ActiveCall.new(an_rpc.call,
-                         rpc_desc.marshal_proc,
-                         rpc_desc.unmarshal_proc(:input),
-                         an_rpc.deadline,
-                         metadata_received: true,
-                         started: false,
-                         metadata_to_send: connect_md)
-      mth = an_rpc.method.to_sym
-      [c, mth]
+    def call_ok_to_handle?(an_rpc)
+      an_rpc && an_rpc.call && available?(an_rpc) && implemented?(an_rpc)
     end
 
     protected
