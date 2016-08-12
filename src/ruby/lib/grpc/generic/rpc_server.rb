@@ -31,7 +31,6 @@ require_relative '../grpc'
 require_relative 'active_call'
 require_relative 'service'
 require 'thread'
-require 'concurrent'
 
 # GRPC contains the General RPC module.
 module GRPC
@@ -60,15 +59,15 @@ module GRPC
     #
     # @param args the args passed blk when it is called
     # @param blk the block to call
-    def schedule(*args, &blk)
-      return if blk.nil?
+    def schedule(call)
       @stop_mutex.synchronize do
         if @stopped
           GRPC.logger.warn('did not schedule job, already stopped')
           return
         end
         GRPC.logger.info('schedule another job')
-        @jobs << [blk, args]
+
+        @jobs << call
       end
     end
 
@@ -91,7 +90,7 @@ module GRPC
     # Stops the jobs in the pool
     def stop
       GRPC.logger.info('stopping, will wait for all the workers to exit')
-      @workers.size.times { schedule { throw :exit } }
+      @workers.size.times { schedule(nil) }
       @stop_mutex.synchronize do  # wait @keep_alive for works to stop
         @stopped = true
         @stop_cond.wait(@stop_mutex, @keep_alive) if @workers.size > 0
@@ -129,8 +128,9 @@ module GRPC
     def loop_execute_jobs
       loop do
         begin
-          blk, args = @jobs.pop
-          blk.call(*args)
+          call = @jobs.pop
+          remove_current_thread if call.nil?
+          @server.handle_active_call(call)
         rescue StandardError => e
           GRPC.logger.warn('Error in worker thread')
           GRPC.logger.warn(e)
@@ -205,6 +205,7 @@ module GRPC
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
       @pool_size = pool_size
+      @pool = Pool.new(@pool_size, self)
       @run_cond = ConditionVariable.new
       @run_mutex = Mutex.new
       # running_state can take 4 values: :not_started, :running, :stopping, and
@@ -225,8 +226,7 @@ module GRPC
       end
       deadline = from_relative_time(@poll_period)
       @server.close(deadline)
-      @pool.shutdown
-      @pool.wait_for_termination
+      @pool.stop
     end
 
     def running_state
@@ -323,8 +323,6 @@ module GRPC
     def run
       @run_mutex.synchronize do
         fail 'cannot run without registering services' if rpc_descs.size.zero?
-        @pool = Concurrent::FixedThreadPool.new(@pool_size)
-        puts "just started up the thread pool"
         @server.start
         transition_running_state(:running)
         @run_cond.broadcast
@@ -394,11 +392,8 @@ module GRPC
       while running_state == :running
         begin
           an_rpc = @server.request_call
-          puts "just got a new call to handle"
           break if (!an_rpc.nil?) && an_rpc.call.nil?
-          puts "about to check if call ok"
           if call_ok_to_handle?(an_rpc)
-            puts "about to add new call to handle. is pool running? : #{@pool.running?}"
             @pool.post do
               handle_call(an_rpc)
             end
