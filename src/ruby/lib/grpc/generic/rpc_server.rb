@@ -39,7 +39,7 @@ module GRPC
     # Default keep alive period is 1s
     DEFAULT_KEEP_ALIVE = 1
 
-    def initialize(size, keep_alive: DEFAULT_KEEP_ALIVE)
+    def initialize(size, server, keep_alive: DEFAULT_KEEP_ALIVE)
       fail 'pool size must be positive' unless size > 0
       @jobs = Queue.new
       @size = size
@@ -48,6 +48,7 @@ module GRPC
       @stop_cond = ConditionVariable.new
       @workers = []
       @keep_alive = keep_alive
+      @server = server
     end
 
     # Returns the number of jobs waiting
@@ -130,7 +131,7 @@ module GRPC
         begin
           call = @jobs.pop
           remove_current_thread if call.nil?
-          @server.handle_active_call(call)
+          @server.handle_call(call)
         rescue StandardError => e
           GRPC.logger.warn('Error in worker thread')
           GRPC.logger.warn(e)
@@ -323,6 +324,7 @@ module GRPC
     def run
       @run_mutex.synchronize do
         fail 'cannot run without registering services' if rpc_descs.size.zero?
+        @pool.start
         @server.start
         transition_running_state(:running)
         @run_cond.broadcast
@@ -378,12 +380,10 @@ module GRPC
                          started: false,
                          metadata_to_send: connect_md)
       mth = an_rpc.method.to_sym
-      begin
         rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
-      rescue StandardError
+    rescue StandardError
         c.send_status(GRPC::Core::StatusCodes::INTERNAL,
                       'Server handler failed')
-      end
     end
 
     # handles calls to the server
@@ -394,9 +394,7 @@ module GRPC
           an_rpc = @server.request_call
           break if (!an_rpc.nil?) && an_rpc.call.nil?
           if call_ok_to_handle?(an_rpc)
-            @pool.post do
-              handle_call(an_rpc)
-            end
+            @pool.schedule(an_rpc)
           end
         rescue Core::CallError, RuntimeError => e
           # these might happen for various reasonse.  The correct behaviour of

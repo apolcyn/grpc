@@ -31,12 +31,13 @@ require 'grpc'
 
 describe GRPC::Pool do
   Pool = GRPC::Pool
+  RpcServer = GRPC::RpcServer
 
   describe '#new' do
     it 'raises if a non-positive size is used' do
-      expect { Pool.new(0) }.to raise_error
-      expect { Pool.new(-1) }.to raise_error
-      expect { Pool.new(Object.new) }.to raise_error
+      expect { Pool.new(0, RpcServer.new) }.to raise_error
+      expect { Pool.new(-1, RpcServer.new) }.to raise_error
+      expect { Pool.new(Object.new, RpcServer.new) }.to raise_error
     end
 
     it 'is constructed OK with a positive size' do
@@ -46,13 +47,13 @@ describe GRPC::Pool do
 
   describe '#jobs_waiting' do
     it 'at start, it is zero' do
-      p = Pool.new(1)
+      p = Pool.new(1, RpcServer.new)
       expect(p.jobs_waiting).to be(0)
     end
 
     it 'it increases, with each scheduled job if the pool is not running' do
-      p = Pool.new(1)
-      job = proc {}
+      p = Pool.new(1, RpcServer.new)
+      job = Object.new
       expect(p.jobs_waiting).to be(0)
       5.times do |i|
         p.schedule(&job)
@@ -61,8 +62,8 @@ describe GRPC::Pool do
     end
 
     it 'it decreases as jobs are run' do
-      p = Pool.new(1)
-      job = proc {}
+      p = Pool.new(1, RpcServer.new)
+      job = Object.new
       expect(p.jobs_waiting).to be(0)
       3.times do
         p.schedule(&job)
@@ -75,14 +76,14 @@ describe GRPC::Pool do
 
   describe '#schedule' do
     it 'return if the pool is already stopped' do
-      p = Pool.new(1)
+      p = Pool.new(1, RpcServer.new)
       p.stop
-      job = proc {}
+      job = Object.new
       expect { p.schedule(&job) }.to_not raise_error
     end
 
     it 'adds jobs that get run by the pool' do
-      p = Pool.new(1)
+      p = Pool.new(1, RpcServer.new)
       p.start
       o, q = Object.new, Queue.new
       job = proc { q.push(o) }
@@ -94,12 +95,12 @@ describe GRPC::Pool do
 
   describe '#stop' do
     it 'works when there are no scheduled tasks' do
-      p = Pool.new(1)
+      p = Pool.new(1, RpcServer.new)
       expect { p.stop }.not_to raise_error
     end
 
     it 'stops jobs when there are long running jobs' do
-      p = Pool.new(1)
+      p = Pool.new(1, RpcServer.new)
       p.start
       o, q = Object.new, Queue.new
       job = proc do
@@ -114,7 +115,7 @@ describe GRPC::Pool do
 
   describe '#start' do
     it 'runs pre-scheduled jobs' do
-      p = Pool.new(2)
+      p = Pool.new(2, RpcServer.new)
       o, q = Object.new, Queue.new
       n = 5  # arbitrary
       n.times { p.schedule(o, &q.method(:push)) }
@@ -124,7 +125,8 @@ describe GRPC::Pool do
     end
 
     it 'runs jobs as they are scheduled ' do
-      p = Pool.new(2)
+      server = RpcServer.new
+      p = Pool.new(2, RpcServer.new)
       o, q = Object.new, Queue.new
       p.start
       n = 5  # arbitrary
