@@ -31,6 +31,7 @@ require_relative '../grpc'
 require_relative 'active_call'
 require_relative 'service'
 require 'thread'
+require 'concurrent'
 
 # GRPC contains the General RPC module.
 module GRPC
@@ -204,7 +205,7 @@ module GRPC
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
       @pool_size = pool_size
-      @pool = Pool.new(@pool_size)
+      @pool = Concurrent::CachedThreadPool.new
       @run_cond = ConditionVariable.new
       @run_mutex = Mutex.new
       # running_state can take 4 values: :not_started, :running, :stopping, and
@@ -225,7 +226,8 @@ module GRPC
       end
       deadline = from_relative_time(@poll_period)
       @server.close(deadline)
-      @pool.stop
+      @pool.shutdown
+      @pool.wait_for_termination
     end
 
     def running_state
@@ -322,7 +324,6 @@ module GRPC
     def run
       @run_mutex.synchronize do
         fail 'cannot run without registering services' if rpc_descs.size.zero?
-        @pool.start
         @server.start
         transition_running_state(:running)
         @run_cond.broadcast
@@ -334,9 +335,9 @@ module GRPC
 
     # Sends RESOURCE_EXHAUSTED if there are too many unprocessed jobs
     def available?(an_rpc)
-      jobs_count, max = @pool.jobs_waiting, @max_waiting_requests
+      jobs_count, max = @pool.queue_length, @max_waiting_requests
       GRPC.logger.info("waiting: #{jobs_count}, max: #{max}")
-      return an_rpc if @pool.jobs_waiting <= @max_waiting_requests
+      return an_rpc if @pool.queue_length <= @max_waiting_requests
       GRPC.logger.warn("NOT AVAILABLE: too many jobs_waiting: #{an_rpc}")
       noop = proc { |x| x }
 
@@ -372,7 +373,7 @@ module GRPC
           break if (!an_rpc.nil?) && an_rpc.call.nil?
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
-            @pool.schedule(active_call) do |ac|
+            @pool.post(active_call) do |ac|
               c, mth = ac
               begin
                 rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
