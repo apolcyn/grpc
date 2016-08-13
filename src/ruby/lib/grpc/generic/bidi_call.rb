@@ -134,10 +134,14 @@ module GRPC
     end
 
     # performs a read using @call.run_batch, ensures metadata is set up
-    def read_using_run_batch
-      ops = { RECV_MESSAGE => nil }
-      ops[RECV_INITIAL_METADATA] = nil unless @metadata_received
-      batch_result = @call.run_batch(ops)
+    def read_using_run_batch(batch_inputs_hash)
+      batch_inputs_hash[RECV_MESSAGE] = nil
+      if @metadata_received
+        batch_inputs_hash.delete(RECV_INITIAL_METADATA)
+      else
+        batch_inputs_hash[RECV_INITIAL_METADATA] = nil
+      end
+      batch_result = @call.run_batch(batch_inputs_hash)
       unless @metadata_received
         @call.metadata = batch_result.metadata
         @metadata_received = true
@@ -166,6 +170,7 @@ module GRPC
     def write_loop(requests, is_client: true)
       GRPC.logger.debug('bidi-write-loop: starting')
       count = 0
+      batch_inputs_hash = {}
       requests.each do |req|
         GRPC.logger.debug("bidi-write-loop: #{count}")
         count += 1
@@ -173,7 +178,8 @@ module GRPC
         # Fails if status already received
         begin
           @req_view.send_initial_metadata unless @req_view.nil?
-          @call.run_batch(SEND_MESSAGE => payload)
+          batch_inputs_hash[SEND_MESSAGE] = payload
+          @call.run_batch(batch_inputs_hash)
         rescue GRPC::Core::CallError => e
           # This is almost definitely caused by a status arriving while still
           # writing. Don't re-throw the error
@@ -207,11 +213,12 @@ module GRPC
         GRPC.logger.debug('bidi-read-loop: starting')
         begin
           count = 0
+          run_batch_hash = {}
           # queue the initial read before beginning the loop
           loop do
             GRPC.logger.debug("bidi-read-loop: #{count}")
             count += 1
-            batch_result = read_using_run_batch
+            batch_result = read_using_run_batch(run_batch_hash)
 
             # handle the next message
             if batch_result.message.nil?
