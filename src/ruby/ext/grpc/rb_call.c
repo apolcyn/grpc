@@ -716,6 +716,68 @@ static void grpc_run_batch_stack_fill_ops(run_batch_stack *st, VALUE ops_hash) {
   }
 }
 
+static void reset_batch_result(VALUE result) {
+  rb_struct_aset(result, sym_send_metadata, Qnil);
+  rb_struct_aset(result, sym_send_message, Qnil);
+  rb_struct_aset(result, sym_send_close, Qnil);
+  rb_struct_aset(result, sym_send_status, Qnil);
+
+  rb_struct_aset(result, sym_metadata, Qnil);
+  rb_struct_aset(result, sym_message, Qnil);
+  rb_struct_aset(result, sym_status, Qnil);
+  rb_struct_aset(result, sym_cancelled, Qnil);
+}
+
+static VALUE create_batch_result(VALUE self) {
+  return rb_struct_new(grpc_rb_sBatchResult, Qnil, Qnil, Qnil, Qnil,
+                               Qnil, Qnil, Qnil, Qnil, NULL);
+}
+
+static VALUE grpc_run_batch_stack_build_result_given_batch_result(run_batch_stack *st, VALUE result) {
+  size_t i = 0;
+  reset_batch_result(result);
+
+  for (i = 0; i < st->op_num; i++) {
+    switch (st->ops[i].op) {
+      case GRPC_OP_SEND_INITIAL_METADATA:
+        rb_struct_aset(result, sym_send_metadata, Qtrue);
+        break;
+      case GRPC_OP_SEND_MESSAGE:
+        rb_struct_aset(result, sym_send_message, Qtrue);
+        break;
+      case GRPC_OP_SEND_CLOSE_FROM_CLIENT:
+        rb_struct_aset(result, sym_send_close, Qtrue);
+        break;
+      case GRPC_OP_SEND_STATUS_FROM_SERVER:
+        rb_struct_aset(result, sym_send_status, Qtrue);
+        break;
+      case GRPC_OP_RECV_INITIAL_METADATA:
+        rb_struct_aset(result, sym_metadata,
+                       grpc_rb_md_ary_to_h(&st->recv_metadata));
+      case GRPC_OP_RECV_MESSAGE:
+        rb_struct_aset(result, sym_message,
+                       grpc_rb_byte_buffer_to_s(st->recv_message));
+        break;
+      case GRPC_OP_RECV_STATUS_ON_CLIENT:
+        rb_struct_aset(
+            result, sym_status,
+            rb_struct_new(grpc_rb_sStatus, UINT2NUM(st->recv_status),
+                          (st->recv_status_details == NULL
+                               ? Qnil
+                               : rb_str_new2(st->recv_status_details)),
+                          grpc_rb_md_ary_to_h(&st->recv_trailing_metadata),
+                          NULL));
+        break;
+      case GRPC_OP_RECV_CLOSE_ON_SERVER:
+        rb_struct_aset(result, sym_send_close, Qtrue);
+        break;
+      default:
+        break;
+    }
+  }
+  return result;
+}
+
 /* grpc_run_batch_stack_build_result fills constructs a ruby BatchResult struct
    after the results have run */
 static VALUE grpc_run_batch_stack_build_result(run_batch_stack *st) {
@@ -761,6 +823,53 @@ static VALUE grpc_run_batch_stack_build_result(run_batch_stack *st) {
     }
   }
   return result;
+}
+
+static VALUE grpc_rb_call_run_batch_given_batch_result(VALUE self, VALUE ops_hash, VALUE batch_result) {
+  run_batch_stack st;
+  grpc_rb_call *call = NULL;
+  grpc_event ev;
+  grpc_call_error err;
+  VALUE rb_write_flag = rb_ivar_get(self, id_write_flag);
+  unsigned write_flag = 0;
+  void *tag = (void*)&st;
+  if (RTYPEDDATA_DATA(self) == NULL) {
+    rb_raise(grpc_rb_eCallError, "Cannot run batch on closed call");
+    return Qnil;
+  }
+  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
+
+  /* Validate the ops args, adding them to a ruby array */
+  if (TYPE(ops_hash) != T_HASH) {
+    rb_raise(rb_eTypeError, "call#run_batch: ops hash should be a hash");
+    return Qnil;
+  }
+  if (rb_write_flag != Qnil) {
+    write_flag = NUM2UINT(rb_write_flag);
+  }
+  grpc_run_batch_stack_init(&st, write_flag);
+  grpc_run_batch_stack_fill_ops(&st, ops_hash);
+
+  /* call grpc_call_start_batch, then wait for it to complete using
+   * pluck_event */
+  err = grpc_call_start_batch(call->wrapped, st.ops, st.op_num, tag, NULL);
+  if (err != GRPC_CALL_OK) {
+    grpc_run_batch_stack_cleanup(&st);
+    rb_raise(grpc_rb_eCallError,
+             "grpc_call_start_batch failed with %s (code=%d)",
+             grpc_call_error_detail_of(err), err);
+    return Qnil;
+  }
+  ev = rb_completion_queue_pluck(call->queue, tag,
+                                 gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
+  if (!ev.success) {
+    rb_raise(grpc_rb_eCallError, "call#run_batch failed somehow");
+  }
+  /* Build and return the BatchResult struct result,
+     if there is an error, it's reflected in the status */
+  batch_result = grpc_run_batch_stack_build_result_given_batch_result(&st, batch_result);
+  grpc_run_batch_stack_cleanup(&st);
+  return batch_result;
 }
 
 /* call-seq:
@@ -935,6 +1044,8 @@ void Init_grpc_call() {
 
   /* Add ruby analogues of the Call methods. */
   rb_define_method(grpc_rb_cCall, "run_batch", grpc_rb_call_run_batch, 1);
+  rb_define_method(grpc_rb_cCall, "run_batch_given_batch_result", grpc_rb_call_run_batch_given_batch_result, 2);
+  rb_define_singleton_method(grpc_rb_cCall, "create_batch_result", create_batch_result, 0);
   rb_define_method(grpc_rb_cCall, "cancel", grpc_rb_call_cancel, 0);
   rb_define_method(grpc_rb_cCall, "close", grpc_rb_call_close, 0);
   rb_define_method(grpc_rb_cCall, "peer", grpc_rb_call_get_peer, 0);
