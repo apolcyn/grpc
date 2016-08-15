@@ -205,7 +205,8 @@ module GRPC
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
       @pool_size = pool_size
-      @pool = Concurrent::CachedThreadPool.new
+      @pool = Concurrent::CachedThreadPool.new(min_threads: pool_size,
+                                               max_queue: 20)
       @run_cond = ConditionVariable.new
       @run_mutex = Mutex.new
       # running_state can take 4 values: :not_started, :running, :stopping, and
