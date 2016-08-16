@@ -88,13 +88,14 @@ class BenchmarkClient
                    response_size: simple_params.resp_size,
                    payload: gtp.new(type: gtpt::COMPRESSABLE,
                                     body: nulls(simple_params.req_size)))
+    @child_threads = []
 
     (0..config.client_channels-1).each do |chan|
       gtbss = Grpc::Testing::BenchmarkService::Stub
       st = config.server_targets
       stub = gtbss.new(st[chan % st.length], cred, **opts)
       (0..config.outstanding_rpcs_per_channel-1).each do |r|
-        Thread.new {
+        @child_threads << Thread.new {
           case config.load_params.load.to_s
           when 'closed_loop'
             waiter = nil

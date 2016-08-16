@@ -118,6 +118,10 @@ def main
       options['server_port'] = v
     end
   end.parse!
+
+  # Cause exceptions in client or server child threads to surface
+  Thread.abort_on_exception = true
+
   s = GRPC::RpcServer.new
   s.add_http2_port("0.0.0.0:" + options['driver_port'].to_s,
                    :this_port_is_insecure)
