@@ -733,7 +733,7 @@ static VALUE create_batch_result(VALUE self) {
                                Qnil, Qnil, Qnil, Qnil, NULL);
 }
 
-static VALUE grpc_run_batch_stack_build_result_given_batch_result(run_batch_stack *st, VALUE result) {
+static void grpc_run_batch_stack_build_result_given_batch_result(run_batch_stack *st, VALUE result) {
   size_t i = 0;
   reset_batch_result(result);
 
@@ -775,7 +775,6 @@ static VALUE grpc_run_batch_stack_build_result_given_batch_result(run_batch_stac
         break;
     }
   }
-  return result;
 }
 
 /* grpc_run_batch_stack_build_result fills constructs a ruby BatchResult struct
@@ -867,9 +866,10 @@ static VALUE grpc_rb_call_run_batch_given_batch_result(VALUE self, VALUE ops_has
   }
   /* Build and return the BatchResult struct result,
      if there is an error, it's reflected in the status */
-  batch_result = grpc_run_batch_stack_build_result_given_batch_result(&st, batch_result);
+  grpc_run_batch_stack_build_result_given_batch_result(&st, batch_result);
   grpc_run_batch_stack_cleanup(&st);
-  return batch_result;
+
+  return Qnil;
 }
 
 /* call-seq:

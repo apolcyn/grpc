@@ -142,13 +142,11 @@ module GRPC
       else
         batch_inputs_hash[RECV_INITIAL_METADATA] = nil
       end
-      batch_result = @call.run_batch_given_batch_result(batch_inputs_hash,
-                                                        batch_result_struct)
-      unless @metadata_received
-        @call.metadata = batch_result.metadata
-        @metadata_received = true
-      end
-      batch_result
+      @call.run_batch_given_batch_result(batch_inputs_hash,
+                                         batch_result_struct)
+
+      @call.metadata = batch_result_struct.metadata unless @metadata_received
+      @metadata_received = true unless @metadata_received
     end
 
     # each_queued_msg yields each message on this instances readq
@@ -222,8 +220,8 @@ module GRPC
           loop do
             GRPC.logger.debug("bidi-read-loop: #{count}")
             count += 1
-            batch_result = read_using_run_batch(run_batch_hash,
-                                                batch_result)
+            read_using_run_batch(run_batch_hash,
+                                 batch_result)
 
             # handle the next message
             if batch_result.message.nil?
