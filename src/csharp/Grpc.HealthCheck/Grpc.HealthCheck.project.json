@@ -25,6 +25,7 @@
     "Grpc.Core": "1.0.0-pre2",
     "Google.Protobuf": "3.0.0-beta3"
   },
+  "runtimes": { "win": {} },
   "frameworks": {
     "net45": {
       "frameworkAssemblies": {

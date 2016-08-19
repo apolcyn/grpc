@@ -54,6 +54,7 @@
       "target": "project"
     }
   },
+  "runtimes": { "win": {} },
   "frameworks": {
     "net45": { },
     "netcoreapp1.0": {

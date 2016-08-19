@@ -63,6 +63,7 @@
     "NUnit": "3.2.0",
     "NUnitLite": "3.2.0-*"
   },
+  "runtimes": { "win": {} },
   "frameworks": {
     "net45": {
       "dependencies": {
