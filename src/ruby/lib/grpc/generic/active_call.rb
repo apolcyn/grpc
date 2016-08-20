@@ -233,7 +233,7 @@ module GRPC
         @call.run_batch(
           SEND_INITIAL_METADATA => metadata,
           SEND_MESSAGE => payload,
-          SEND_STATUS_FROM_SERVER => Struct::Status.new(OK, '', metadata),
+          SEND_STATUS_FROM_SERVER => Struct::Status.new(OK, 'OK', metadata),
           RECV_CLOSE_ON_SERVER => nil)
       end
     end
