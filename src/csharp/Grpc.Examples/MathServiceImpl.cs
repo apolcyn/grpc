@@ -45,9 +45,25 @@ namespace Math
     /// </summary>
     public class MathServiceImpl : Math.MathBase
     {
-        public override Task<DivReply> Div(DivArgs request, ServerCallContext context)
+        Math.MathClient client;
+
+        public MathServiceImpl(Math.MathClient client)
         {
-            return Task.FromResult(DivInternal(request));
+            this.client = client;
+        }
+
+        public MathServiceImpl() { }
+
+        public override async Task<DivReply> Div(DivArgs request, ServerCallContext context)
+        {
+            if (client != null)
+            {
+                return await client.DivAsync(request);
+            }
+            else 
+            {
+                throw new RpcException(new Status(StatusCode.DataLoss, "some string"));
+            }
         }
 
         public override async Task Fib(FibArgs request, IServerStreamWriter<Num> responseStream, ServerCallContext context)

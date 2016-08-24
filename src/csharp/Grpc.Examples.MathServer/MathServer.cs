@@ -39,21 +39,49 @@ namespace Math
     class MainClass
     {
         const string Host = "0.0.0.0";
-        const int Port = 23456;
+        const int Port1 = 23456;
+        const int Port2 = 23457;
 
         public static void Main(string[] args)
+        {
+            SetupSecondServer();
+        }
+
+        public static void SetupFirstServer()
+        {
+            var channel = new Channel("127.0.0.1", Port2, ChannelCredentials.Insecure);
+            Math.MathClient client = new Math.MathClient(channel);
+
+            Server server = new Server
+            {
+                Services = { Math.BindService(new MathServiceImpl(client)) },
+                Ports = { { Host, Port1, ServerCredentials.Insecure } }
+            };
+            server.Start();
+
+            Console.WriteLine("MathServer 1 listening on port " + Port1);
+
+            Console.WriteLine("Press any key to stop the server...");
+            Console.ReadKey();
+
+            server.ShutdownAsync().Wait();
+        }
+
+        public static void SetupSecondServer()
         {
             Server server = new Server
             {
                 Services = { Math.BindService(new MathServiceImpl()) },
-                Ports = { { Host, Port, ServerCredentials.Insecure } }
+                Ports = { { Host, Port2, ServerCredentials.Insecure } }
             };
             server.Start();
 
-            Console.WriteLine("MathServer listening on port " + Port);
+            Console.WriteLine("MathServer 2 listening on port " + Port2);
 
             Console.WriteLine("Press any key to stop the server...");
             Console.ReadKey();
+
+            SetupFirstServer();
 
             server.ShutdownAsync().Wait();
         }
