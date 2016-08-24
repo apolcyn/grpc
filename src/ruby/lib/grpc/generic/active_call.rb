@@ -226,15 +226,20 @@ module GRPC
       nil
     end
 
-    def server_unary_response(req, marshalled: false, metadata: {})
+    def server_unary_response(req, marshalled: false, trailing_metadata: {},
+                              code: Core::StatusCodes::OK, details: 'OK')
       @send_initial_md_mutex.synchronize do
-        fail 'md already sent for this server call' if @metadata_sent
+        ops = {}
+        ops[SEND_INITIAL_METADATA] = @metadata_to_send unless @metadata_sent
+        @metadata_sent = true unless @metadata_sent
+
         payload = marshalled ? req : @marshal.call(req)
-        @call.run_batch(
-          SEND_INITIAL_METADATA => metadata,
-          SEND_MESSAGE => payload,
-          SEND_STATUS_FROM_SERVER => Struct::Status.new(OK, 'OK', metadata),
-          RECV_CLOSE_ON_SERVER => nil)
+        ops[SEND_MESSAGE] = payload
+        ops[SEND_STATUS_FROM_SERVER] = Struct::Status.new(
+          code, details, trailing_metadata)
+        ops[RECV_CLOSE_ON_SERVER] = nil
+
+        @call.run_batch(ops)
       end
     end
 
@@ -336,6 +341,7 @@ module GRPC
         batch_result = @call.run_batch(
           SEND_INITIAL_METADATA => metadata,
           SEND_MESSAGE => req,
+          SEND_CLOSE_FROM_CLIENT => nil,
           RECV_INITIAL_METADATA => nil,
           RECV_MESSAGE => nil,
           RECV_STATUS_ON_CLIENT => nil)

@@ -65,8 +65,8 @@ module GRPC
     def handle_request_response(active_call, mth)
       req = active_call.remote_read
       resp = mth.call(req, active_call.single_req_view)
-      active_call.server_unary_response(resp,
-                                        metadata: active_call.output_metadata)
+      active_call.server_unary_response(
+        resp, trailing_metadata: active_call.output_metadata)
     end
 
     def run_server_method(active_call, mth)
@@ -77,8 +77,8 @@ module GRPC
         handle_request_response(active_call, mth)
       elsif client_streamer?
         resp = mth.call(active_call.multi_req_view)
-        active_call.server_unary_response(resp,
-                                          metadata: active_call.output_metadata)
+        active_call.server_unary_response(
+          resp, trailing_metadata: active_call.output_metadata)
       elsif server_streamer?
         req = active_call.remote_read
         replys = mth.call(req, active_call.single_req_view)
