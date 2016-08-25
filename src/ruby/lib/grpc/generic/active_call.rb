@@ -360,10 +360,8 @@ module GRPC
       op_is_done
       batch_result.check_status
       @call.close
+
       response
-    rescue GRPC::Core::CallError => e
-      finished  # checks for Cancelled
-      raise e
     end
 
     # client_streamer sends a stream of requests to a GRPC server, and
