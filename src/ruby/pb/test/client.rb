@@ -528,7 +528,7 @@ class NamedTests
     assert('payload type is wrong') do
       :COMPRESSABLE == resp.payload.type
     end
-    assert('payload body has the wrong length') do
+    assert("payload body has the wrong length. expected #{wanted_response_size} but got #{resp.payload.body.length}") do
       wanted_response_size == resp.payload.body.length
     end
     assert('payload body is invalid') do
