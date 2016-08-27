@@ -1,0 +1,439 @@
+I0715 15:38:32.650167174  126602 ev_epoll_linux.c:84]        epoll engine will be using signal: 36
+D0715 15:38:32.650205409  126602 ev_posix.c:106]             Using polling engine: epoll
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/../lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/bundler-1.12.5/lib
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/extensions/x86_64-linux/2.3.0/ruby-prof-0.15.9
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/google-protobuf-3.0.0.alpha.5.0.5.1-x86_64-linux/lib
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/2.3.0/x86_64-linux
+Measure Mode: wall_time
+Thread ID: 18993380
+Fiber ID: 22539240
+Total: 16.912454
+Sort by: self_time
+
+ %self      total      self      wait     child     calls  name
+  1.76     16.248     0.298    15.730     0.220    10001   GRPC::Core::Server#request_call
+  0.61     16.899     0.102     0.001    16.796        1   GRPC::RpcServer#loop_handle_server_calls
+  0.58      0.099     0.099     0.000     0.000    10000   Thread::Queue#<<
+  0.57      0.211     0.096     0.000     0.115    20005  *Thread::Mutex#synchronize
+  0.49      0.251     0.083     0.000     0.169    10000   GRPC::RpcServer#new_active_server_call
+  0.48      0.192     0.081     0.000     0.110    10000   <Class::Time>#at
+  0.32      0.098     0.054     0.000     0.044    10000   Numeric#quo
+  0.20      0.034     0.034     0.000     0.000    60001   Kernel#nil?
+  0.17      0.028     0.028     0.000     0.000    10001   Struct#initialize
+  0.14      0.023     0.023     0.000     0.000    10000   GRPC::Core::Call#metadata=
+  0.13      0.046     0.022     0.000     0.024    10000   GRPC::RpcServer#implemented?
+  0.12      0.021     0.021     0.000     0.000    10003   String#to_sym
+  0.12      0.044     0.021     0.000     0.023    10000   GRPC::RpcServer#available?
+  0.11      0.207     0.019     0.000     0.188    10000   GRPC::Pool#schedule
+  0.11      0.028     0.019     0.000     0.009    10000   Integer#to_r
+  0.11      0.046     0.019     0.000     0.027    10002   GRPC::RpcServer#running_state
+  0.10      0.016     0.016     0.000     0.000    10001   GRPC::RpcServer#rpc_descs
+  0.09      0.016     0.016     0.000     0.000    10000   Rational#/
+  0.09      0.015     0.015     0.000     0.000    30000   Struct::NewServerRpc#call
+  0.07      0.018     0.013     0.000     0.006    10000   GRPC::Pool#jobs_waiting
+  0.06      0.010     0.010     0.000     0.000    10001   GRPC::DefaultLogger#logger
+  0.06      0.010     0.010     0.000     0.000    10002   BasicObject#!
+  0.05      0.009     0.009     0.000     0.000    20000   Fixnum#div
+  0.05      0.008     0.008     0.000     0.000    10160   Symbol#==
+  0.05      0.008     0.008     0.000     0.000    10000   Fixnum#*
+  0.05      0.008     0.008     0.000     0.000    10002   Hash#key?
+  0.04      0.006     0.006     0.000     0.000    10001   GRPC::DefaultLogger::NoopLogger#info
+  0.04      0.006     0.006     0.000     0.000    10002   NilClass#nil?
+  0.03      0.006     0.006     0.000     0.000    10000   Thread::Queue#size
+  0.03      0.005     0.005     0.000     0.000    10000   Fixnum#<=
+  0.03      0.005     0.005     0.000     0.000    10000   Struct::NewServerRpc#method
+  0.03      0.005     0.005     0.000     0.000    10000   Fixnum#+
+  0.02      0.004     0.004     0.000     0.000    10000   Struct::NewServerRpc#metadata
+  0.02      0.008     0.004     0.000     0.004       24  *Kernel#require_relative
+  0.02      0.003     0.003     0.000     0.000       78   Module#module_eval
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Core::Server#initialize
+  0.00      0.012     0.000     0.000     0.012       14  *Kernel#require
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Core::Server#add_http2_port
+  0.00      0.000     0.000     0.000     0.000        1   IO#read
+  0.00      0.000     0.000     0.000     0.000        5   Kernel#methods
+  0.00      0.003     0.000     0.000     0.003       78   Forwardable#def_instance_delegator
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Core::Server#start
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#msgclass
+  0.00      0.000     0.000     0.000     0.000        1   <Class::GRPC::Core::ChannelCredentials>#set_default_roots_pem
+  0.00      0.000     0.000     0.000     0.000      427   Module#method_added
+  0.00      0.000     0.000     0.000     0.000        3   Thread#initialize
+  0.00      0.000     0.000     0.000     0.000       40   IO#set_encoding
+  0.00      0.000     0.000     0.000     0.000      239   Symbol#to_s
+  0.00      0.004     0.000     0.000     0.003        8   Array#each
+  0.00      0.000     0.000     0.000     0.000        5   Exception#backtrace
+  0.00      0.002     0.000     0.000     0.002       17  *Class#new
+  0.00     16.912     0.000     0.000    16.912        2   Global#[No method]
+  0.00      0.000     0.000     0.000     0.000        3   <Class::Thread>#new
+  0.00      0.000     0.000     0.000     0.000        1   Google::Protobuf::Internal::Builder#finalize_to_pool
+  0.00      0.000     0.000     0.000     0.000        2   <Class::Struct>#new
+  0.00      0.001     0.000     0.000     0.001        4   Class#initialize
+  0.00      0.000     0.000     0.000     0.000        1   Method#to_s
+  0.00      0.000     0.000     0.000     0.000       20   Module#define_method
+  0.00      0.000     0.000     0.000     0.000       49   Class#inherited
+  0.00      0.000     0.000     0.000     0.000       12   Array#delete
+  0.00      0.000     0.000     0.000     0.000        2   Hash#each_pair
+  0.00      0.000     0.000     0.000     0.000        5   Exception#exception
+  0.00      0.000     0.000     0.000     0.000        4   String#gsub!
+  0.00      0.000     0.000     0.000     0.000        9   Module#alias_method
+  0.00      0.000     0.000     0.000     0.000        3   Module#attr_reader
+  0.00      0.000     0.000     0.000     0.000        8   Module#extend_object
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::Builder#add_message
+  0.00      0.000     0.000     0.000     0.000       42   BasicObject#singleton_method_added
+  0.00      0.000     0.000     0.000     0.000        2   <Class::File>#expand_path
+  0.00      0.000     0.000     0.000     0.000        1   Interrupt#initialize
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#name=
+  0.00      0.000     0.000     0.000     0.000        1   File#initialize
+  0.00      0.000     0.000     0.000     0.000        2   Module#attr_writer
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#add_field
+  0.00      0.000     0.000     0.000     0.000       11   Module#include
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#initialize
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#type=
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::MessageBuilderContext#optional
+  0.00      0.000     0.000     0.000     0.000        2   String#sub
+  0.00      0.000     0.000     0.000     0.000       11   Module#append_features
+  0.00      0.000     0.000     0.000     0.000        1   <Module::GRPC::GenericService>#included
+  0.00      0.000     0.000     0.000     0.000        2   <Module::GRPC::GenericService>#underscore
+  0.00      0.000     0.000     0.000     0.000        2   Module#attr_accessor
+  0.00      0.000     0.000     0.000     0.000        1   SignalException#initialize
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#transition_running_state
+  0.00      0.000     0.000     0.000     0.000        2   Exception#initialize
+  0.00      0.000     0.000     0.000     0.000       30   IO#write
+  0.00     16.900     0.000     0.000    16.900        1   Object#main
+  0.00      0.000     0.000     0.000     0.000        9   BasicObject#initialize
+  0.00      0.000     0.000     0.000     0.000        1   IO#puts
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Pool#start
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Pool#initialize
+  0.00      0.000     0.000     0.000     0.000        7   Array#include?
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#add_rpc_descs_for
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#add_http2_port
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::GenericService::Dsl#rpc
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#name=
+  0.00      0.000     0.000     0.000     0.000        1   Google::Protobuf::DescriptorPool#build
+  0.00      0.000     0.000     0.000     0.000        1   IO#close
+  0.00      0.001     0.000     0.000     0.001        3   <Class::GRPC::ActiveCall>#view_class
+  0.00      0.000     0.000     0.000     0.000        2   GRPC::GenericService::Dsl#assert_can_marshal
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::DescriptorPool#lookup
+  0.00      0.004     0.000     0.000     0.004        6   Forwardable#def_instance_delegators
+  0.00      0.000     0.000     0.000     0.000        3   Module#===
+  0.00      0.000     0.000     0.000     0.000        3   Array#<<
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#unmarshal_proc
+  0.00      0.000     0.000     0.000     0.000        3   GRPC::GenericService::Dsl#unmarshal_class_method
+  0.00      0.000     0.000     0.000     0.000        7   GRPC::GenericService::Dsl#rpc_descs
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#handle
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::GenericService::Dsl#inherited
+  0.00      0.000     0.000     0.000     0.000        3   Hash#[]=
+  0.00      0.000     0.000     0.000     0.000        3   GRPC::GenericService::Dsl#marshal_class_method
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#number=
+  0.00      0.000     0.000     0.000     0.000        6   <Class::Google::Protobuf::RepeatedField>#define_array_wrapper_method
+  0.00      0.000     0.000     0.000     0.000        8   Module#extended
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcServer#assert_valid_service_class
+  0.00      0.000     0.000     0.000     0.000        1   String#split
+  0.00      0.000     0.000     0.000     0.000       12   <Class::Google::Protobuf::RepeatedField>#define_array_wrapper_with_result_method
+  0.00      0.000     0.000     0.000     0.000        8   Kernel#extend
+  0.00      0.000     0.000     0.000     0.000        1   Thread::ConditionVariable#broadcast
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::RpcServer#run
+  0.00      0.000     0.000     0.000     0.000        8   Kernel#is_a?
+  0.00      0.000     0.000     0.000     0.000        2   Module#name
+  0.00      0.000     0.000     0.000     0.000        1   Module#module_function
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::GenericService::Dsl#rpc_stub_class
+  0.00      0.000     0.000     0.000     0.000        1   <Class::#<Class:0x0000000279e440>>#new
+  0.00      0.000     0.000     0.000     0.000        1   <Class::File>#join
+  0.00      0.000     0.000     0.000     0.000        1   <Class::File>#dirname
+  0.00      0.000     0.000     0.000     0.000        2   Hash#[]
+  0.00      0.000     0.000     0.000     0.000        2   Kernel#proc
+  0.00      0.000     0.000     0.000     0.000        3  *BasicObject#instance_eval
+  0.00      0.000     0.000     0.000     0.000        1   <Class::Delegator>#const_missing
+  0.00      0.000     0.000     0.000     0.000        1   Kernel#puts
+  0.00      0.000     0.000     0.000     0.000        4   Array#size
+  0.00      0.000     0.000     0.000     0.000        2   Fixnum#zero?
+  0.00      0.000     0.000     0.000     0.000        3   Hash#size
+  0.00      0.000     0.000     0.000     0.000        2   Thread::ConditionVariable#initialize
+  0.00      0.000     0.000     0.000     0.000        1   Thread::Queue#initialize
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#request_response?
+  0.00      0.000     0.000     0.000     0.000        2   #<Class:0x0000000279e440>#output
+  0.00      0.000     0.000     0.000     0.000        1   Method#call
+  0.00      0.000     0.000     0.000     0.000        2   Kernel#method
+  0.00      0.000     0.000     0.000     0.000        2   String#tr!
+  0.00      0.000     0.000     0.000     0.000        2   Fixnum#>
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#label=
+  0.00      0.000     0.000     0.000     0.000        1   <Class::IO>#open
+  0.00      0.000     0.000     0.000     0.000        6   Module#private
+  0.00      0.000     0.000     0.000     0.000        2   Array#unshift
+  0.00      0.000     0.000     0.000     0.000        2   Array#length
+  0.00      0.000     0.000     0.000     0.000        4   Fixnum#==
+  0.00      0.000     0.000     0.000     0.000        4   Integer#to_i
+  0.00      0.000     0.000     0.000     0.000        2   Thread::Mutex#initialize
+  0.00      0.000     0.000     0.000     0.000        1   <Class::GRPC::RpcServer>#setup_connect_md_proc
+  0.00      0.000     0.000     0.000     0.000        1   Hash#merge!
+  0.00      0.000     0.000     0.000     0.000        1   #<Class:0x0000000279e440>#input
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#marshal_proc
+  0.00      0.000     0.000     0.000     0.000        1   Fixnum#-
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::MessageBuilderContext#initialize
+  0.00      0.000     0.000     0.000     0.000        3   <Class::Google::Protobuf::DescriptorPool>#generated_pool
+  0.00      0.000     0.000     0.000     0.000        1   String#==
+  0.00      0.000     0.000     0.000     0.000        2   Module#protected
+  0.00      0.000     0.000     0.000     0.000       10   Module#included
+  0.00      0.000     0.000     0.000     0.000        1   Module#const_get
+  0.00      0.000     0.000     0.000     0.000        1   Module#include?
+  0.00      0.000     0.000     0.000     0.000        2   String#downcase!
+  0.00      0.000     0.000     0.000     0.000        1   Array#[]
+
+* indicates recursively called methods
+Measure Mode: wall_time
+Thread ID: 26306460
+Fiber ID: 26305960
+Total: 16.898983
+Sort by: self_time
+
+ %self      total      self      wait     child     calls  name
+ 30.64     15.223     5.178    10.033     0.013     3335   Thread::Queue#pop
+  3.84      0.678     0.649     0.000     0.029    13336   GRPC::Core::Call#run_batch
+  0.64      0.133     0.108     0.000     0.025     6668   Time#to_s
+  0.53     16.899     0.089     0.000    16.810        1   Kernel#loop
+  0.36      0.098     0.060     0.000     0.038     3334   Struct#to_s
+  0.33      0.346     0.056     0.000     0.290     3334   GRPC::ActiveCall#remote_read
+  0.29      0.581     0.049     0.000     0.532     3334   GRPC::ActiveCall#remote_send
+  0.24      0.071     0.041     0.000     0.030    10002   Class#new
+  0.23      0.040     0.038     0.000     0.002     3334   <Class::Helloworld::HelloRequest>#decode
+  0.19      0.032     0.032     0.000     0.000    16670   Struct#initialize
+  0.17      0.029     0.029     0.000     0.000    20004   GRPC::DefaultLogger#logger
+  0.17      0.028     0.028     0.000     0.000     3334   Kernel#to_s
+  0.16      1.289     0.027     0.000     1.262     3334   GRPC::RpcDesc#run_server_method
+  0.16      0.247     0.027     0.000     0.220     3334   GRPC::RpcDesc#send_status
+  0.15      0.025     0.025     0.000     0.000    10002   Kernel#method
+  0.13      0.023     0.023     0.000     0.000    23338   NilClass#inspect
+  0.13      0.022     0.022     0.000     0.000     6668   String#inspect
+  0.13      0.022     0.022     0.000     0.000     3334   <Class::Helloworld::HelloReply>#encode
+  0.12      0.021     0.021     0.000     0.000     6668   GRPC::RpcServer#rpc_descs
+  0.12      0.020     0.020     0.000     0.000    13336   Fixnum#divmod
+  0.11      0.203     0.019     0.000     0.184     3334   GRPC::ActiveCall#send_status
+  0.11      0.123     0.019     0.000     0.104    13336   Method#call
+  0.11      0.025     0.018     0.000     0.007     3334   Helloworld::HelloRequest#inspect
+  0.11      0.018     0.018     0.000     0.000     3334   GRPC::ActiveCall#initialize
+  0.08      0.040     0.014     0.000     0.026     3334   GreeterServer#say_hello
+  0.08      0.038     0.014     0.000     0.025     3334   GRPC::RpcDesc#unmarshal_proc
+  0.07      0.013     0.013     0.000     0.000     6668   BasicObject#==
+  0.07      0.020     0.011     0.000     0.008     3334   <Class::Time>#now
+  0.07      0.011     0.011     0.000     0.000     6668   Kernel#proc
+  0.06      0.248     0.011     0.000     0.237     3334   <Class::GRPC::ActiveCall>#client_invoke
+  0.06      0.258     0.010     0.000     0.248     3334   GRPC::ActiveCall#start_call
+  0.06      0.010     0.010     0.000     0.000    16670   GRPC::DefaultLogger::NoopLogger#debug
+  0.06      0.010     0.010     0.000     0.000     3334   FalseClass#to_s
+  0.05      0.019     0.009     0.000     0.010     3334   GRPC::RpcDesc#request_response?
+  0.05      0.008     0.008     0.000     0.000     3334   String#to_sym
+  0.05      0.008     0.008     0.000     0.000    13336   Kernel#is_a?
+  0.05      0.008     0.008     0.000     0.000     3334   Helloworld::HelloReply#initialize
+  0.04      0.007     0.007     0.000     0.000     3334   GRPC::ActiveCall#output_metadata
+  0.04      0.010     0.007     0.000     0.003     3334   <Class::Struct::Status>#new
+  0.04      0.006     0.006     0.000     0.000    10002   Hash#[]
+  0.04      0.008     0.006     0.000     0.002     3334   Time#initialize
+  0.03      0.006     0.006     0.000     0.000     6668   Struct::NewServerRpc#deadline
+  0.03      0.006     0.006     0.000     0.000     3334   Fixnum#to_s
+  0.03      0.005     0.005     0.000     0.000     3334   Helloworld::HelloRequest#method_missing
+  0.03      0.005     0.005     0.000     0.000    10002   Kernel#nil?
+  0.03      0.005     0.005     0.000     0.000    10002   Struct::BatchResult#message
+  0.03      0.005     0.005     0.000     0.000     6668   Integer#round
+  0.03      0.011     0.005     0.000     0.006     3334   GRPC::RpcDesc#marshal_proc
+  0.03      0.015     0.004     0.000     0.011     3334   GRPC::ActiveCall#single_req_view
+  0.02      0.004     0.004     0.000     0.000     6668   #<Class:0x0000000279e440>#input
+  0.02      0.004     0.004     0.000     0.000     3334   GRPC::ActiveCall::SingleReqView#initialize
+  0.02      0.003     0.003     0.000     0.000     3334   Struct::NewServerRpc#method
+  0.02      0.003     0.003     0.000     0.000     6668   BasicObject#!
+  0.02      0.003     0.003     0.000     0.000     3334   GRPC::RpcServer#rpc_handlers
+  0.02      0.003     0.003     0.000     0.000     3334   Array#include?
+  0.02      0.003     0.003     0.000     0.000     3334   GRPC::DefaultLogger::NoopLogger#info
+  0.01      0.002     0.002     0.000     0.000     3334   Fixnum#+
+  0.01      0.002     0.002     0.000     0.000     3334   Struct::NewServerRpc#call
+  0.01      0.002     0.002     0.000     0.000     3334   Hash#[]=
+  0.01      0.002     0.002     0.000     0.000     3334   Helloworld::HelloRequest#initialize
+  0.01      0.002     0.002     0.000     0.000     3334   Fixnum#==
+  0.01      0.002     0.002     0.000     0.000     3334   String#to_s
+  0.01      0.002     0.002     0.000     0.000     3334   #<Class:0x0000000279e440>#marshal_method
+  0.01      0.002     0.002     0.000     0.000     3334   #<Class:0x0000000279e440>#output
+  0.01      0.002     0.002     0.000     0.000     3334   #<Class:0x0000000279e440>#unmarshal_method
+  0.01      0.002     0.002     0.000     0.000     3334   Kernel#class
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#start
+  0.00     16.899     0.000     0.000    16.899        1   Kernel#catch
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#loop_execute_jobs
+
+* indicates recursively called methods
+Measure Mode: wall_time
+Thread ID: 26306300
+Fiber ID: 26305900
+Total: 16.898916
+Sort by: self_time
+
+ %self      total      self      wait     child     calls  name
+  5.71     15.252     0.964    14.275     0.013     3334   Thread::Queue#pop
+  3.83      0.676     0.648     0.000     0.028    13332   GRPC::Core::Call#run_batch
+  0.61      0.126     0.104     0.000     0.022     6666   Time#to_s
+  0.52     16.899     0.088     0.000    16.811        1   Kernel#loop
+  0.35      0.090     0.059     0.000     0.031     3333   Struct#to_s
+  0.33      0.341     0.056     0.000     0.285     3333   GRPC::ActiveCall#remote_read
+  0.29      0.570     0.049     0.000     0.521     3333   GRPC::ActiveCall#remote_send
+  0.24      0.071     0.040     0.000     0.030     9999   Class#new
+  0.23      0.041     0.039     0.000     0.002     3333   <Class::Helloworld::HelloRequest>#decode
+  0.18      0.031     0.031     0.000     0.000    16665   Struct#initialize
+  0.17      0.028     0.028     0.000     0.000     3333   Kernel#to_s
+  0.17      0.028     0.028     0.000     0.000    19998   GRPC::DefaultLogger#logger
+  0.16      1.267     0.028     0.000     1.239     3333   GRPC::RpcDesc#run_server_method
+  0.16      0.243     0.027     0.000     0.216     3333   GRPC::RpcDesc#send_status
+  0.13      0.022     0.022     0.000     0.000     6666   String#inspect
+  0.13      0.022     0.022     0.000     0.000     3333   <Class::Helloworld::HelloReply>#encode
+  0.12      0.021     0.021     0.000     0.000     6666   GRPC::RpcServer#rpc_descs
+  0.12      0.020     0.020     0.000     0.000     9999   Kernel#method
+  0.11      0.199     0.019     0.000     0.179     3333   GRPC::ActiveCall#send_status
+  0.11      0.019     0.019     0.000     0.000     3333   GRPC::ActiveCall#initialize
+  0.11      0.122     0.018     0.000     0.103    13332   Method#call
+  0.11      0.026     0.018     0.000     0.008     3333   Helloworld::HelloRequest#inspect
+  0.10      0.018     0.018     0.000     0.000    13332   Fixnum#divmod
+  0.10      0.017     0.017     0.000     0.000    23331   NilClass#inspect
+  0.08      0.038     0.014     0.000     0.025     3333   GreeterServer#say_hello
+  0.08      0.038     0.013     0.000     0.025     3333   GRPC::RpcDesc#unmarshal_proc
+  0.08      0.013     0.013     0.000     0.000     6666   BasicObject#==
+  0.07      0.021     0.013     0.000     0.008     3333   <Class::Time>#now
+  0.07      0.012     0.012     0.000     0.000     6666   Kernel#proc
+  0.07      0.251     0.012     0.000     0.239     3333   <Class::GRPC::ActiveCall>#client_invoke
+  0.06      0.261     0.010     0.000     0.251     3333   GRPC::ActiveCall#start_call
+  0.06      0.010     0.010     0.000     0.000    16665   GRPC::DefaultLogger::NoopLogger#debug
+  0.06      0.019     0.009     0.000     0.010     3333   GRPC::RpcDesc#request_response?
+  0.05      0.008     0.008     0.000     0.000     3333   String#to_sym
+  0.05      0.008     0.008     0.000     0.000     3333   GRPC::ActiveCall#output_metadata
+  0.05      0.008     0.008     0.000     0.000     3333   Helloworld::HelloReply#initialize
+  0.05      0.008     0.008     0.000     0.000    13332   Kernel#is_a?
+  0.04      0.006     0.006     0.000     0.000     9999   Hash#[]
+  0.04      0.008     0.006     0.000     0.002     3333   Time#initialize
+  0.04      0.009     0.006     0.000     0.003     3333   <Class::Struct::Status>#new
+  0.03      0.006     0.006     0.000     0.000     3333   Fixnum#to_s
+  0.03      0.005     0.005     0.000     0.000     6666   Struct::NewServerRpc#deadline
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/rpc_server.rb:369:in `request_call': Interrupt
+	from /usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/rpc_server.rb:369:in `loop_handle_server_calls'
+	from /usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/rpc_server.rb:330:in `run'
+	from greeter_server.rb:59:in `main'
+	from greeter_server.rb:62:in `<top (required)>'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/lib/ruby-prof/compatibility.rb:104:in `load'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/lib/ruby-prof/compatibility.rb:104:in `start_script'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/bin/ruby-prof:292:in `run'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/bin/ruby-prof:340:in `<top (required)>'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/bin/ruby-prof:23:in `load'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/bin/ruby-prof:23:in `<main>'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/bin/ruby_executable_hooks:15:in `eval'
+	from /usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/bin/ruby_executable_hooks:15:in `<main>'
+  0.03      0.005     0.005     0.000     0.000     3333   Helloworld::HelloRequest#method_missing
+  0.03      0.005     0.005     0.000     0.000     9999   Kernel#nil?
+  0.03      0.016     0.005     0.000     0.011     3333   GRPC::ActiveCall#single_req_view
+  0.03      0.011     0.005     0.000     0.006     3333   GRPC::RpcDesc#marshal_proc
+  0.03      0.005     0.005     0.000     0.000     6666   Integer#round
+  0.03      0.005     0.005     0.000     0.000     9999   Struct::BatchResult#message
+  0.02      0.004     0.004     0.000     0.000     6666   #<Class:0x0000000279e440>#input
+  0.02      0.004     0.004     0.000     0.000     3333   GRPC::ActiveCall::SingleReqView#initialize
+  0.02      0.004     0.004     0.000     0.000     3333   FalseClass#to_s
+  0.02      0.003     0.003     0.000     0.000     3333   Array#include?
+  0.02      0.003     0.003     0.000     0.000     3333   GRPC::RpcServer#rpc_handlers
+  0.02      0.003     0.003     0.000     0.000     3333   Struct::NewServerRpc#method
+  0.02      0.003     0.003     0.000     0.000     6666   BasicObject#!
+  0.02      0.003     0.003     0.000     0.000     3333   GRPC::DefaultLogger::NoopLogger#info
+  0.01      0.002     0.002     0.000     0.000     3333   Struct::NewServerRpc#call
+  0.01      0.002     0.002     0.000     0.000     3333   Hash#[]=
+  0.01      0.002     0.002     0.000     0.000     3333   Fixnum#+
+  0.01      0.002     0.002     0.000     0.000     3333   String#to_s
+  0.01      0.002     0.002     0.000     0.000     3333   Helloworld::HelloRequest#initialize
+  0.01      0.002     0.002     0.000     0.000     3333   Fixnum#==
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#marshal_method
+  0.01      0.002     0.002     0.000     0.000     3333   Kernel#class
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#output
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#unmarshal_method
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#start
+  0.00     16.899     0.000     0.000    16.899        1   Kernel#catch
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#loop_execute_jobs
+
+* indicates recursively called methods
+Measure Mode: wall_time
+Thread ID: 26306160
+Fiber ID: 26305860
+Total: 16.898864
+Sort by: self_time
+
+ %self      total      self      wait     child     calls  name
+ 27.19     15.265     4.595    10.658     0.013     3334   Thread::Queue#pop
+  3.81      0.673     0.644     0.000     0.030    13332   GRPC::Core::Call#run_batch
+  0.63      0.129     0.106     0.000     0.023     6666   Time#to_s
+  0.52     16.899     0.088     0.000    16.811        1   Kernel#loop
+  0.34      0.088     0.058     0.000     0.030     3333   Struct#to_s
+  0.32      0.338     0.054     0.000     0.284     3333   GRPC::ActiveCall#remote_read
+  0.29      0.563     0.049     0.000     0.514     3333   GRPC::ActiveCall#remote_send
+  0.23      0.068     0.039     0.000     0.029     9999   Class#new
+  0.23      0.041     0.039     0.000     0.002     3333   <Class::Helloworld::HelloRequest>#decode
+  0.19      0.033     0.033     0.000     0.000    16665   Struct#initialize
+  0.17      0.028     0.028     0.000     0.000     3333   Kernel#to_s
+  0.16      1.252     0.028     0.000     1.225     3333   GRPC::RpcDesc#run_server_method
+  0.16      0.027     0.027     0.000     0.000    19998   GRPC::DefaultLogger#logger
+  0.16      0.243     0.027     0.000     0.215     3333   GRPC::RpcDesc#send_status
+  0.14      0.023     0.023     0.000     0.000     3333   <Class::Helloworld::HelloReply>#encode
+  0.13      0.022     0.022     0.000     0.000     6666   String#inspect
+  0.12      0.021     0.021     0.000     0.000     6666   GRPC::RpcServer#rpc_descs
+  0.12      0.028     0.020     0.000     0.008     3333   Helloworld::HelloRequest#inspect
+  0.12      0.200     0.020     0.000     0.180     3333   GRPC::ActiveCall#send_status
+  0.11      0.018     0.018     0.000     0.000     9999   Kernel#method
+  0.11      0.119     0.018     0.000     0.101    13332   Method#call
+  0.11      0.018     0.018     0.000     0.000    13332   Fixnum#divmod
+  0.11      0.018     0.018     0.000     0.000     3333   GRPC::ActiveCall#initialize
+  0.09      0.016     0.016     0.000     0.000    23331   NilClass#inspect
+  0.08      0.038     0.014     0.000     0.024     3333   GRPC::RpcDesc#unmarshal_proc
+  0.08      0.013     0.013     0.000     0.000     6666   Kernel#proc
+  0.07      0.013     0.013     0.000     0.000     6666   BasicObject#==
+  0.07      0.035     0.012     0.000     0.023     3333   GreeterServer#say_hello
+  0.07      0.020     0.012     0.000     0.008     3333   <Class::Time>#now
+  0.06      0.244     0.011     0.000     0.233     3333   <Class::GRPC::ActiveCall>#client_invoke
+  0.06      0.254     0.010     0.000     0.244     3333   GRPC::ActiveCall#start_call
+  0.06      0.010     0.010     0.000     0.000    16665   GRPC::DefaultLogger::NoopLogger#debug
+  0.05      0.018     0.009     0.000     0.009     3333   GRPC::RpcDesc#request_response?
+  0.05      0.008     0.008     0.000     0.000     3333   String#to_sym
+  0.04      0.008     0.008     0.000     0.000     3333   Helloworld::HelloReply#initialize
+  0.04      0.008     0.008     0.000     0.000    13332   Kernel#is_a?
+  0.04      0.007     0.007     0.000     0.000     3333   GRPC::ActiveCall#output_metadata
+  0.04      0.006     0.006     0.000     0.000     9999   Hash#[]
+  0.03      0.008     0.006     0.000     0.002     3333   Time#initialize
+  0.03      0.005     0.005     0.000     0.000     6666   Struct::NewServerRpc#deadline
+  0.03      0.005     0.005     0.000     0.000     3333   Helloworld::HelloRequest#method_missing
+  0.03      0.005     0.005     0.000     0.000     9999   Kernel#nil?
+  0.03      0.008     0.005     0.000     0.003     3333   <Class::Struct::Status>#new
+  0.03      0.005     0.005     0.000     0.000     9999   Struct::BatchResult#message
+  0.03      0.016     0.005     0.000     0.011     3333   GRPC::ActiveCall#single_req_view
+  0.03      0.005     0.005     0.000     0.000     6666   Integer#round
+  0.03      0.012     0.004     0.000     0.008     3333   GRPC::RpcDesc#marshal_proc
+  0.02      0.004     0.004     0.000     0.000     3333   Fixnum#to_s
+  0.02      0.004     0.004     0.000     0.000     6666   #<Class:0x0000000279e440>#input
+  0.02      0.004     0.004     0.000     0.000     3333   GRPC::ActiveCall::SingleReqView#initialize
+  0.02      0.003     0.003     0.000     0.000     3333   Struct::NewServerRpc#method
+  0.02      0.003     0.003     0.000     0.000     3333   Array#include?
+  0.02      0.003     0.003     0.000     0.000     6666   BasicObject#!
+  0.02      0.003     0.003     0.000     0.000     3333   GRPC::RpcServer#rpc_handlers
+  0.02      0.003     0.003     0.000     0.000     3333   FalseClass#to_s
+  0.02      0.003     0.003     0.000     0.000     3333   GRPC::DefaultLogger::NoopLogger#info
+  0.01      0.002     0.002     0.000     0.000     3333   Fixnum#+
+  0.01      0.002     0.002     0.000     0.000     3333   Struct::NewServerRpc#call
+  0.01      0.002     0.002     0.000     0.000     3333   Hash#[]=
+  0.01      0.002     0.002     0.000     0.000     3333   Helloworld::HelloRequest#initialize
+  0.01      0.002     0.002     0.000     0.000     3333   String#to_s
+  0.01      0.002     0.002     0.000     0.000     3333   Fixnum#==
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#marshal_method
+  0.01      0.002     0.002     0.000     0.000     3333   Kernel#class
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#output
+  0.01      0.002     0.002     0.000     0.000     3333   #<Class:0x0000000279e440>#unmarshal_method
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#start
+  0.00     16.899     0.000     0.000    16.899        1   Kernel#catch
+  0.00     16.899     0.000     0.000    16.899        1   GRPC::Pool#loop_execute_jobs
+
+* indicates recursively called methods

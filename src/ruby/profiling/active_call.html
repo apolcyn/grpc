@@ -1,0 +1,2909 @@
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/../lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0-railsexpress/gems/bundler-1.12.5/lib
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0-railsexpress/gems/ruby-prof-0.15.9/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0-railsexpress/extensions/x86_64-linux/2.3.0/ruby-prof-0.15.9
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0-railsexpress/gems/google-protobuf-3.0.0.alpha.5.0.5.1-x86_64-linux/lib
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/site_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/site_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/site_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/vendor_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/vendor_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/vendor_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0-railsexpress/lib/ruby/2.3.0/x86_64-linux
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <style media="all" type="text/css">
+    table {
+      border-collapse: collapse;
+      border: 1px solid #CCC;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      line-height: normal;
+      width: 100%;
+    }
+
+    th {
+      text-align: center;
+      border-top: 1px solid #FB7A31;
+      border-bottom: 1px solid #FB7A31;
+      background: #FFC;
+      padding: 0.3em;
+      border-left: 1px solid silver;
+    }
+
+    tr.break td {
+      border: 0;
+      border-top: 1px solid #FB7A31;
+      padding: 0;
+      margin: 0;
+    }
+
+    tr.method td {
+      font-weight: bold;
+    }
+
+    td {
+      padding: 0.3em;
+    }
+
+    td:first-child {
+      width: 190px;
+      }
+
+    td {
+      border-left: 1px solid #CCC;
+      text-align: center;
+    }
+
+    .method_name {
+      text-align: left;
+    }
+
+    tfoot td {
+      text-align: left;
+    }
+  </style>
+  </head>
+  <body>
+    <h1>Profile Report: allocations</h1>
+    <!-- Threads Table -->
+    <table>
+      <tr>
+        <th>Thread ID</th>
+        <th>Fiber ID</th>
+        <th>Total Time</th>
+      </tr>
+
+      <tr>
+        <td>19001100</td>
+        <td><a href="#24313100">24313100</a></td>
+        <td>250022.0</td>
+      </tr>
+
+    </table>
+    <!-- Methods Tables -->
+
+      <h2><a name="24313100">Thread 19001100, Fiber: 24313100</a></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>%Total</th>
+            <th>%Self</th>
+            <th>Total</th>
+            <th>Self</th>
+            <th>Wait</th>
+            <th>Child</th>
+            <th>Calls</th>
+            <th class="method_name">Name</th>
+            <th>Line</th>
+          </tr>
+        </thead>
+        <tbody>
+
+               <!-- Parents -->
+
+               <tr class="method">
+                 <td>100.00%</td>
+                 <td>0.00%</td>
+                 <td>250022.00</td>
+                 <td>5.00</td>
+                 <td>0.00</td>
+                 <td>250017.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Object_main_24313100">
+                      Object#main
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#71" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:71">71</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>250002.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>230002.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Integer_times_24313100">Integer#times</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#73" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:73">73</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10.00</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>8.00</td>
+                   <td>1/20002</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#72" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:72">72</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2.00</td>
+                   <td>2/2</td>
+                   <td class="method_name"><a href="#IO_puts_24313100">IO#puts</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Float_to_s_24313100">Float#to_s</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#_Class__Time__now_24313100">&lt;Class::Time&gt;#now</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Fixnum_to_s_24313100">Fixnum#to_s</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#72" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:72">72</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Time_-_24313100">Time#-</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#String_to_s_24313100">String#to_s</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#76" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:76">76</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Integer_to_i_24313100">Integer#to_i</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#73" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:73">73</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>250002.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>230002.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#73" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:73">73</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>99.99%</td>
+                 <td>8.00%</td>
+                 <td>250002.00</td>
+                 <td>20000.00</td>
+                 <td>0.00</td>
+                 <td>230002.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Integer_times_24313100">
+                      Integer#times
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>210002.00</td>
+                   <td>30001.00</td>
+                   <td>0.00</td>
+                   <td>180001.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_say_hello_24313100">Helloworld::Greeter::Stub#say_hello</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>20000.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__HelloReply_method_missing_24313100">Helloworld::HelloReply#method_missing</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>210002.00</td>
+                   <td>30001.00</td>
+                   <td>0.00</td>
+                   <td>180001.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Integer_times_24313100">Integer#times</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>83.99%</td>
+                 <td>12.00%</td>
+                 <td>210002.00</td>
+                 <td>30001.00</td>
+                 <td>0.00</td>
+                 <td>180001.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Helloworld__Greeter__Stub_say_hello_24313100">
+                      Helloworld::Greeter::Stub#say_hello
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#182" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:182">182</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>180001.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>180001.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_request_response_24313100">GRPC::ClientStub#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#184" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:184">184</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__DefaultLogger__NoopLogger_debug_24313100">GRPC::DefaultLogger::NoopLogger#debug</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#183" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:183">183</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__DefaultLogger_logger_24313100">GRPC::DefaultLogger#logger</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#183" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:183">183</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>180001.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>180001.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_say_hello_24313100">Helloworld::Greeter::Stub#say_hello</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#184" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:184">184</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>71.99%</td>
+                 <td>0.00%</td>
+                 <td>180001.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>180001.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__ClientStub_request_response_24313100">
+                      GRPC::ClientStub#request_response
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#148" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:148">148</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>140000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>130000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#158" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:158">158</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>40001.00</td>
+                   <td>10001.00</td>
+                   <td>0.00</td>
+                   <td>30000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_new_active_call_24313100">GRPC::ClientStub#new_active_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#154" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:154">154</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>140000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>130000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_request_response_24313100">GRPC::ClientStub#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#158" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:158">158</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>56.00%</td>
+                 <td>4.00%</td>
+                 <td>140000.00</td>
+                 <td>10000.00</td>
+                 <td>0.00</td>
+                 <td>130000.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__ActiveCall_request_response_24313100">
+                      GRPC::ActiveCall#request_response
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#305" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:305">305</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>90000.00</td>
+                   <td>90000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_run_batch_24313100">GRPC::Core::Call#run_batch</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#306" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:306">306</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>30000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Method_call_24313100">Method#call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Kernel_method_24313100">Kernel#method</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_close_24313100">GRPC::Core::Call#close</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#325" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:325">325</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_check_status_24313100">Struct::BatchResult#check_status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#324" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:324">324</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_op_is_done_24313100">GRPC::ActiveCall#op_is_done</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#323" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:323">323</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_metadata__24313100">GRPC::Core::Call#metadata=</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#321" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:321">321</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_metadata_24313100">Struct::BatchResult#metadata</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#321" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:321">321</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_status__24313100">GRPC::Core::Call#status=</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#320" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:320">320</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_trailing_metadata__24313100">GRPC::Core::Call#trailing_metadata=</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#318" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:318">318</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Struct__Status_metadata_24313100">Struct::Status#metadata</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#318" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:318">318</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000/70000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_status_24313100">Struct::BatchResult#status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#320" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:320">320</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#__Class_0x00000002945ca8__unmarshal_method_24313100">#&lt;Class:0x00000002945ca8&gt;#unmarshal_method</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_message_24313100">Struct::BatchResult#message</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#315" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:315">315</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000/40000</td>
+                   <td class="method_name"><a href="#Kernel_nil__24313100">Kernel#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#317" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:317">317</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>90000.00</td>
+                   <td>90000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#306" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:306">306</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>36.00%</td>
+                 <td>36.00%</td>
+                 <td>90000.00</td>
+                 <td>90000.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Call_run_batch_24313100">
+                      GRPC::Core::Call#run_batch
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#Struct_initialize_24313100">Struct#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>1.00</td>
+                   <td>1/20002</td>
+                   <td class="method_name"><a href="#_Class__GRPC__ClientStub__setup_channel_24313100">&lt;Class::GRPC::ClientStub&gt;#setup_channel</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#61" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:61">61</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10.00</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>8.00</td>
+                   <td>1/20002</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#72" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:72">72</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>20000.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#Integer_times_24313100">Integer#times</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>20000.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_new_active_call_24313100">GRPC::ClientStub#new_active_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#447" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:447">447</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>16.00%</td>
+                 <td>16.00%</td>
+                 <td>40010.00</td>
+                 <td>40002.00</td>
+                 <td>0.00</td>
+                 <td>8.00</td>
+                 <td>20002</td>
+                 <td class="method_name">
+                   <a name="Class_new_24313100">
+                     *Class#new
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>8.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>7.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_initialize_24313100">Helloworld::Greeter::Stub#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#GRPC__Core__Channel_initialize_24313100">GRPC::Core::Channel#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_initialize_24313100">GRPC::ActiveCall#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__HelloRequest_initialize_24313100">Helloworld::HelloRequest#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>40001.00</td>
+                   <td>10001.00</td>
+                   <td>0.00</td>
+                   <td>30000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_request_response_24313100">GRPC::ClientStub#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#154" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:154">154</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>16.00%</td>
+                 <td>4.00%</td>
+                 <td>40001.00</td>
+                 <td>10001.00</td>
+                 <td>0.00</td>
+                 <td>30000.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__ClientStub_new_active_call_24313100">
+                      GRPC::ClientStub#new_active_call
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#434" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:434">434</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>20000.00</td>
+                   <td>20000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#447" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:447">447</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Channel_create_call_24313100">GRPC::Core::Channel#create_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#441" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:441">441</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__Core__TimeConsts_from_relative_time_24313100">GRPC::Core::TimeConsts#from_relative_time</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#439" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:439">439</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/30004</td>
+                   <td class="method_name"><a href="#NilClass_nil__24313100">NilClass#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#446" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:446">446</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>30000.00</td>
+                   <td>30000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Method_call_24313100">Method#call</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>12.00%</td>
+                 <td>12.00%</td>
+                 <td>30000.00</td>
+                 <td>30000.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="_Class__Helloworld__HelloReply__decode_24313100">
+                      &lt;Class::Helloworld::HelloReply&gt;#decode
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__HelloReply_initialize_24313100">Helloworld::HelloReply#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>30000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>12.00%</td>
+                 <td>0.00%</td>
+                 <td>30000.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>30000.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Method_call_24313100">
+                      Method#call
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>30000.00</td>
+                   <td>30000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#_Class__Helloworld__HelloReply__decode_24313100">&lt;Class::Helloworld::HelloReply&gt;#decode</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>4.00%</td>
+                 <td>4.00%</td>
+                 <td>10000.00</td>
+                 <td>10000.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Kernel_method_24313100">
+                      Kernel#method
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>10000.00</td>
+                   <td>10000.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_new_active_call_24313100">GRPC::ClientStub#new_active_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#441" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:441">441</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>4.00%</td>
+                 <td>4.00%</td>
+                 <td>10000.00</td>
+                 <td>10000.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Channel_create_call_24313100">
+                      GRPC::Core::Channel#create_call
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>8.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>7.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>8.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>7.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Helloworld__Greeter__Stub_initialize_24313100">
+                      Helloworld::Greeter::Stub#initialize
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#170" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:170">170</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>6.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>6.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_initialize_24313100">GRPC::ClientStub#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#171" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:171">171</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Kernel_dup_24313100">Kernel#dup</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#171" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:171">171</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>6.00</td>
+                   <td>4.00</td>
+                   <td>0.00</td>
+                   <td>2.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_initialize_24313100">GRPC::ClientStub#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#103" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:103">103</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>6.00</td>
+                 <td>4.00</td>
+                 <td>0.00</td>
+                 <td>2.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="_Class__GRPC__ClientStub__setup_channel_24313100">
+                      &lt;Class::GRPC::ClientStub&gt;#setup_channel
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#47" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:47">47</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>1.00</td>
+                   <td>1/20002</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#61" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:61">61</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/20002</td>
+                   <td class="method_name"><a href="#Kernel_is_a__24313100">Kernel#is_a?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#58" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:58">58</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/30004</td>
+                   <td class="method_name"><a href="#NilClass_nil__24313100">NilClass#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#52" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:52">52</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>6.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>6.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_initialize_24313100">Helloworld::Greeter::Stub#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#171" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:171">171</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>6.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>6.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="GRPC__ClientStub_initialize_24313100">
+                      GRPC::ClientStub#initialize
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#98" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:98">98</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>6.00</td>
+                   <td>4.00</td>
+                   <td>0.00</td>
+                   <td>2.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#_Class__GRPC__ClientStub__setup_channel_24313100">&lt;Class::GRPC::ClientStub&gt;#setup_channel</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#103" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:103">103</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/30004</td>
+                   <td class="method_name"><a href="#NilClass_nil__24313100">NilClass#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#108" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:108">108</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>4/4</td>
+                   <td class="method_name"><a href="#IO_puts_24313100">IO#puts</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>2.00</td>
+                 <td>2.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>4</td>
+                 <td class="method_name">
+                   <a name="IO_write_24313100">
+                      IO#write
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2.00</td>
+                   <td>2/2</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>2.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>2.00</td>
+                 <td>2</td>
+                 <td class="method_name">
+                   <a name="IO_puts_24313100">
+                      IO#puts
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>2.00</td>
+                   <td>2.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>4/4</td>
+                   <td class="method_name"><a href="#IO_write_24313100">IO#write</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>1.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Float_to_s_24313100">
+                      Float#to_s
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>1.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="_Class__Time__now_24313100">
+                      &lt;Class::Time&gt;#now
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Time_initialize_24313100">Time#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>1.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Channel_initialize_24313100">
+                      GRPC::Core::Channel#initialize
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Hash_size_24313100">Hash#size</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_initialize_24313100">Helloworld::Greeter::Stub#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#171" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:171">171</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>1.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Kernel_dup_24313100">
+                      Kernel#dup
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Kernel_initialize_dup_24313100">Kernel#initialize_dup</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>1.00</td>
+                   <td>1.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#72" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:72">72</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>1.00</td>
+                 <td>1.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Fixnum_to_s_24313100">
+                      Fixnum#to_s
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Numeric_quo_24313100">Numeric#quo</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Fixnum_fdiv_24313100">
+                      Fixnum#fdiv
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Time_-_24313100">Time#-</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Numeric_quo_24313100">
+                      Numeric#quo
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Fixnum_fdiv_24313100">Fixnum#fdiv</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Time_-_24313100">Time#-</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Fixnum_-_24313100">
+                      Fixnum#-
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#77" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:77">77</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Time_-_24313100">
+                      Time#-
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Numeric_quo_24313100">Numeric#quo</a></td>
+                   <td></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Fixnum_-_24313100">Fixnum#-</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Time_initialize_24313100">Time#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Fixnum_+_24313100">
+                      Fixnum#+
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#_Class__Time__now_24313100">&lt;Class::Time&gt;#now</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Time_initialize_24313100">
+                      Time#initialize
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Fixnum_+_24313100">Fixnum#+</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#76" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:76">76</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="String_to_s_24313100">
+                      String#to_s
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Integer_times_24313100">Integer#times</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Helloworld__HelloReply_method_missing_24313100">
+                      Helloworld::HelloReply#method_missing
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#325" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:325">325</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Call_close_24313100">
+                      GRPC::Core::Call#close
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_check_status_24313100">Struct::BatchResult#check_status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#42" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:42">42</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>20000</td>
+                 <td class="method_name">
+                   <a name="Struct__Status_code_24313100">
+                      Struct::Status#code
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#324" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:324">324</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Struct__BatchResult_check_status_24313100">
+                      Struct::BatchResult#check_status
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#39" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:39">39</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#Struct__Status_code_24313100">Struct::Status#code</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#42" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:42">42</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/40000</td>
+                   <td class="method_name"><a href="#Kernel_nil__24313100">Kernel#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#40" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:40">40</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>40000/70000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_status_24313100">Struct::BatchResult#status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#48" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:48">48</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#323" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:323">323</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__ActiveCall_op_is_done_24313100">
+                      GRPC::ActiveCall#op_is_done
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#441" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:441">441</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/30004</td>
+                   <td class="method_name"><a href="#NilClass_nil__24313100">NilClass#nil?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#442" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:442">442</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#321" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:321">321</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Call_metadata__24313100">
+                      GRPC::Core::Call#metadata=
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#321" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:321">321</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Struct__BatchResult_metadata_24313100">
+                      Struct::BatchResult#metadata
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#320" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:320">320</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Call_status__24313100">
+                      GRPC::Core::Call#status=
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#318" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:318">318</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__Call_trailing_metadata__24313100">
+                      GRPC::Core::Call#trailing_metadata=
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#318" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:318">318</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Struct__Status_metadata_24313100">
+                      Struct::Status#metadata
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000/70000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#320" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:320">320</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>40000/70000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_check_status_24313100">Struct::BatchResult#check_status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#48" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:48">48</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>70000</td>
+                 <td class="method_name">
+                   <a name="Struct__BatchResult_status_24313100">
+                      Struct::BatchResult#status
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#_Class__Helloworld__HelloReply__decode_24313100">&lt;Class::Helloworld::HelloReply&gt;#decode</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Helloworld__HelloReply_initialize_24313100">
+                      Helloworld::HelloReply#initialize
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#62" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:62">62</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="__Class_0x00000002945ca8__unmarshal_method_24313100">
+                      #&lt;Class:0x00000002945ca8&gt;#unmarshal_method
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#315" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:315">315</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>20000</td>
+                 <td class="method_name">
+                   <a name="Struct__BatchResult_message_24313100">
+                      Struct::BatchResult#message
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>30000/40000</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_request_response_24313100">GRPC::ActiveCall#request_response</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#317" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:317">317</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/40000</td>
+                   <td class="method_name"><a href="#Struct__BatchResult_check_status_24313100">Struct::BatchResult#check_status</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#40" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:40">40</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>40000</td>
+                 <td class="method_name">
+                   <a name="Kernel_nil__24313100">
+                      Kernel#nil?
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/20000</td>
+                   <td class="method_name"><a href="#GRPC__Core__Call_run_batch_24313100">GRPC::Core::Call#run_batch</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>20000</td>
+                 <td class="method_name">
+                   <a name="Struct_initialize_24313100">
+                      Struct#initialize
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__ActiveCall_initialize_24313100">
+                      GRPC::ActiveCall#initialize
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#103" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:103">103</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#Kernel_is_a__24313100">Kernel#is_a?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#105" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:105">105</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_new_active_call_24313100">GRPC::ClientStub#new_active_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#439" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:439">439</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__Core__TimeConsts_from_relative_time_24313100">
+                      GRPC::Core::TimeConsts#from_relative_time
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb#51" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb:51">51</a></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#Kernel_is_a__24313100">Kernel#is_a?</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb#52" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb:52">52</a></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_say_hello_24313100">Helloworld::Greeter::Stub#say_hello</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#183" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:183">183</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__DefaultLogger__NoopLogger_debug_24313100">
+                      GRPC::DefaultLogger::NoopLogger#debug
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/logconfig.rb#47" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/logconfig.rb:47">47</a></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Helloworld__Greeter__Stub_say_hello_24313100">Helloworld::Greeter::Stub#say_hello</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb#183" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/service.rb:183">183</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="GRPC__DefaultLogger_logger_24313100">
+                      GRPC::DefaultLogger#logger
+                   </a>
+                 </td>
+                 <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/logconfig.rb#35" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/logconfig.rb:35">35</a></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/10000</td>
+                   <td class="method_name"><a href="#Class_new_24313100">Class#new</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>10000</td>
+                 <td class="method_name">
+                   <a name="Helloworld__HelloRequest_initialize_24313100">
+                      Helloworld::HelloRequest#initialize
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Object_main_24313100">Object#main</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb#73" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/greeter_client.rb:73">73</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Integer_to_i_24313100">
+                      Integer#to_i
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#GRPC__Core__Channel_initialize_24313100">GRPC::Core::Channel#initialize</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Hash_size_24313100">
+                      Hash#size
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/20002</td>
+                   <td class="method_name"><a href="#_Class__GRPC__ClientStub__setup_channel_24313100">&lt;Class::GRPC::ClientStub&gt;#setup_channel</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#58" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:58">58</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#GRPC__Core__TimeConsts_from_relative_time_24313100">GRPC::Core::TimeConsts#from_relative_time</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb#52" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/core/time_consts.rb:52">52</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/20002</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_initialize_24313100">GRPC::ActiveCall#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#105" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:105">105</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>20002</td>
+                 <td class="method_name">
+                   <a name="Kernel_is_a__24313100">
+                      Kernel#is_a?
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/30004</td>
+                   <td class="method_name"><a href="#_Class__GRPC__ClientStub__setup_channel_24313100">&lt;Class::GRPC::ClientStub&gt;#setup_channel</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#52" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:52">52</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>2/30004</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_initialize_24313100">GRPC::ClientStub#initialize</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#108" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:108">108</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>20000/30004</td>
+                   <td class="method_name"><a href="#GRPC__ClientStub_new_active_call_24313100">GRPC::ClientStub#new_active_call</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb#446" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/client_stub.rb:446">446</a></td>
+                 </tr>
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>10000/30004</td>
+                   <td class="method_name"><a href="#GRPC__ActiveCall_op_is_done_24313100">GRPC::ActiveCall#op_is_done</a></td>
+                   <td><a href="file:///usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb#442" title="/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/lib/grpc/generic/active_call.rb:442">442</a></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>30004</td>
+                 <td class="method_name">
+                   <a name="NilClass_nil__24313100">
+                      NilClass#nil?
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Kernel_initialize_dup_24313100">Kernel#initialize_dup</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Hash_initialize_copy_24313100">
+                      Hash#initialize_copy
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+               <!-- Parents -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Kernel_dup_24313100">Kernel#dup</a></td>
+                   <td></td>
+                 </tr>
+
+               <tr class="method">
+                 <td>0.00%</td>
+                 <td>0.00%</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>0.00</td>
+                 <td>1</td>
+                 <td class="method_name">
+                   <a name="Kernel_initialize_dup_24313100">
+                      Kernel#initialize_dup
+                   </a>
+                 </td>
+                 <td></td>
+               </tr>
+               <!-- Children -->
+
+                 <tr>
+                   <td>&nbsp;</td>
+                   <td>&nbsp;</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>0.00</td>
+                   <td>1/1</td>
+                   <td class="method_name"><a href="#Hash_initialize_copy_24313100">Hash#initialize_copy</a></td>
+                   <td></td>
+                 </tr>
+
+               <!-- Create divider row -->
+               <tr class="break"><td colspan="9"></td></tr>
+
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="9">* indicates recursively called methods</td>
+          </tr>
+        </tfoot>
+      </table>
+
+  </body>
+</html>

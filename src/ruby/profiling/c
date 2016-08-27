@@ -1,0 +1,193 @@
+I0715 15:38:36.280319203  126758 ev_epoll_linux.c:84]        epoll engine will be using signal: 36
+D0715 15:38:36.280364292  126758 ev_posix.c:106]             Using polling engine: epoll
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/../lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/bundler-1.12.5/lib
+/usr/local/google/home/apolcyn/grpc_workspace/grpc/src/ruby/profiling/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/ruby-prof-0.15.9/lib
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/extensions/x86_64-linux/2.3.0/ruby-prof-0.15.9
+/usr/local/google/home/apolcyn/.rvm/gems/ruby-2.3.0/gems/google-protobuf-3.0.0.alpha.5.0.5.1-x86_64-linux/lib
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/site_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby/2.3.0/x86_64-linux
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/vendor_ruby
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/2.3.0
+/usr/local/google/home/apolcyn/.rvm/rubies/ruby-2.3.0/lib/ruby/2.3.0/x86_64-linux
+"Greeting"
+Measure Mode: wall_time
+Thread ID: 5992680
+Fiber ID: 9552620
+Total: 9.059870
+Sort by: self_time
+
+ %self      total      self      wait     child     calls  name
+ 75.88      7.046     6.874     0.000     0.172    50000   GRPC::Core::Call#run_batch
+  2.03      6.020     0.184     0.000     5.836    10000   GRPC::ActiveCall#remote_read
+  1.90      0.172     0.172     0.000     0.000    60001   Struct#initialize
+  1.83      0.239     0.166     0.000     0.073    10000   Struct#to_s
+  1.46      0.198     0.133     0.000     0.065    20009  *Class#new
+  1.25      0.765     0.114     0.000     0.651    10000   GRPC::ActiveCall#remote_send
+  1.05      0.100     0.095     0.000     0.005    10000   <Class::Helloworld::HelloReply>#decode
+  0.95      0.086     0.086     0.000     0.000    10000   GRPC::Core::Channel#create_call
+  0.79      0.613     0.072     0.000     0.541    10000   GRPC::ActiveCall#finished
+  0.76      8.870     0.069     0.000     8.801    10000   Helloworld::Greeter::Stub#say_hello
+  0.74      0.067     0.067     0.000     0.000    10000   Kernel#to_s
+  0.71      8.515     0.064     0.000     8.451    10000   GRPC::ActiveCall#request_response
+  0.64      0.058     0.058     0.000     0.000    10000   <Class::Helloworld::HelloRequest>#encode
+  0.60      0.055     0.055     0.000     0.000    10000   GRPC::Core::Call#close
+  0.54      0.069     0.049     0.000     0.020    10000   Helloworld::HelloReply#inspect
+  0.54      9.046     0.049     0.000     8.997        1   Integer#times
+  0.50      0.247     0.045     0.000     0.202    10000   GRPC::ClientStub#new_active_call
+  0.49      0.044     0.044     0.000     0.000    20001   String#inspect
+  0.49      0.044     0.044     0.000     0.000    20001   Kernel#method
+  0.46      0.042     0.042     0.000     0.000    50000   GRPC::DefaultLogger#logger
+  0.45      0.041     0.041     0.000     0.000    10000   GRPC::ActiveCall#initialize
+  0.45      0.376     0.040     0.000     0.335    10000   GRPC::ActiveCall#writes_done
+  0.44      0.040     0.040     0.000     0.000    60000   NilClass#inspect
+  0.36      0.070     0.033     0.000     0.037    10000   Struct::BatchResult#check_status
+  0.32      0.029     0.029     0.000     0.000    50000   GRPC::DefaultLogger::NoopLogger#debug
+  0.32      0.187     0.029     0.000     0.159    20001   Method#call
+  0.30      8.789     0.027     0.000     8.762    10000   GRPC::ClientStub#request_response
+  0.30      0.649     0.027     0.000     0.622    10000   <Class::GRPC::ActiveCall>#client_invoke
+  0.25      0.023     0.023     0.000     0.000    10000   Helloworld::HelloReply#method_missing
+  0.25      0.022     0.022     0.000     0.000    70000   Struct::BatchResult#status
+  0.25      0.022     0.022     0.000     0.000    10000   Helloworld::HelloRequest#initialize
+  0.24      0.670     0.022     0.000     0.649    10000   GRPC::ActiveCall#start_call
+  0.21      0.019     0.019     0.000     0.000    10000   GRPC::Core::Call#metadata=
+  0.20      0.018     0.018     0.000     0.000    40001   Kernel#nil?
+  0.15      0.014     0.014     0.000     0.000    30007   Kernel#is_a?
+  0.14      0.013     0.013     0.000     0.000    10003   Hash#[]=
+  0.14      0.016     0.013     0.000     0.003    10000   GRPC::Core::TimeConsts#from_relative_time
+  0.13      0.012     0.012     0.000     0.000    30000   Struct::BatchResult#message
+  0.12      0.011     0.011     0.000     0.000    30005   NilClass#nil?
+  0.12      0.011     0.011     0.000     0.000    10000   GRPC::Core::Call#trailing_metadata=
+  0.12      0.011     0.011     0.000     0.000    10000   Struct::BatchResult#metadata
+  0.11      0.014     0.010     0.000     0.004    10000   GRPC::ActiveCall#op_is_done
+  0.10      0.009     0.009     0.000     0.000    10000   FalseClass#to_s
+  0.10      0.009     0.009     0.000     0.000    20000   Fixnum#==
+  0.09      0.008     0.008     0.000     0.000    10000   Hash#inspect
+  0.09      0.012     0.008     0.000     0.004    10000   BasicObject#!=
+  0.07      0.007     0.007     0.000     0.000    10000   GRPC::Core::Call#status=
+  0.07      0.006     0.006     0.000     0.000    20000   Struct::Status#code
+  0.07      0.006     0.006     0.000     0.000    10000   String#to_s
+  0.05      0.005     0.005     0.000     0.000    10000   Helloworld::HelloReply#initialize
+  0.05      0.005     0.005     0.000     0.000    10000   #<Class:0x000000010b5e90>#marshal_method
+  0.05      0.004     0.004     0.000     0.000    10000   Kernel#class
+  0.05      0.004     0.004     0.000     0.000    10000   #<Class:0x000000010b5e90>#unmarshal_method
+  0.04      0.004     0.004     0.000     0.000    10000   Struct::Status#metadata
+  0.04      0.008     0.004     0.000     0.004       24  *Kernel#require_relative
+  0.04      0.004     0.004     0.000     0.000       78   Module#module_eval
+  0.00      0.013     0.000     0.000     0.013       14  *Kernel#require
+  0.00      0.000     0.000     0.000     0.000        1   IO#read
+  0.00      0.004     0.000     0.000     0.004       78   Forwardable#def_instance_delegator
+  0.00      0.000     0.000     0.000     0.000        5   Kernel#methods
+  0.00      0.000     0.000     0.000     0.000        1   <Class::GRPC::Core::ChannelCredentials>#set_default_roots_pem
+  0.00      0.000     0.000     0.000     0.000      426   Module#method_added
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#msgclass
+  0.00      0.000     0.000     0.000     0.000       40   IO#set_encoding
+  0.00      0.004     0.000     0.000     0.004        8   Array#each
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::Core::Channel#initialize
+  0.00      0.000     0.000     0.000     0.000        1   Kernel#p
+  0.00      0.000     0.000     0.000     0.000      236   Symbol#to_s
+  0.00      0.000     0.000     0.000     0.000        1   Google::Protobuf::Internal::Builder#finalize_to_pool
+  0.00      0.000     0.000     0.000     0.000        2   <Class::Struct>#new
+  0.00      9.060     0.000     0.000     9.060        2   Global#[No method]
+  0.00      0.000     0.000     0.000     0.000       20   Module#define_method
+  0.00      0.000     0.000     0.000     0.000       49   Class#inherited
+  0.00      0.001     0.000     0.000     0.001        4   Class#initialize
+  0.00      0.000     0.000     0.000     0.000      156   Symbol#==
+  0.00      0.000     0.000     0.000     0.000        3   Module#attr_reader
+  0.00      0.000     0.000     0.000     0.000       12   Array#delete
+  0.00      0.000     0.000     0.000     0.000        8   Module#extend_object
+  0.00      0.000     0.000     0.000     0.000        2   <Class::File>#expand_path
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::Builder#add_message
+  0.00      0.000     0.000     0.000     0.000        9   Module#alias_method
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#add_field
+  0.00      0.000     0.000     0.000     0.000       42   BasicObject#singleton_method_added
+  0.00      0.000     0.000     0.000     0.000        2   String#gsub!
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Descriptor#name=
+  0.00      0.000     0.000     0.000     0.000        1   File#initialize
+  0.00      0.000     0.000     0.000     0.000        2   Module#attr_writer
+  0.00      0.000     0.000     0.000     0.000       11   Module#append_features
+  0.00      0.004     0.000     0.000     0.004        6   Forwardable#def_instance_delegators
+  0.00      0.000     0.000     0.000     0.000        2   String#sub
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#type=
+  0.00      0.000     0.000     0.000     0.000        8   Kernel#extend
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::MessageBuilderContext#optional
+  0.00      0.000     0.000     0.000     0.000        2   GRPC::GenericService::Dsl#assert_can_marshal
+  0.00      0.000     0.000     0.000     0.000       30   IO#write
+  0.00      0.000     0.000     0.000     0.000        1   <Class::GRPC::ClientStub>#setup_channel
+  0.00      0.000     0.000     0.000     0.000        2   Module#attr_accessor
+  0.00      9.046     0.000     0.000     9.046        1   Object#main
+  0.00      0.000     0.000     0.000     0.000        1   <Module::GRPC::GenericService>#included
+  0.00      0.000     0.000     0.000     0.000        1   IO#close
+  0.00      0.000     0.000     0.000     0.000        1   Hash#each_pair
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::DescriptorPool#lookup
+  0.00      0.000     0.000     0.000     0.000        1   Google::Protobuf::DescriptorPool#build
+  0.00      0.001     0.000     0.000     0.001        3   <Class::GRPC::ActiveCall>#view_class
+  0.00      0.000     0.000     0.000     0.000        1   String#tr!
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#number=
+  0.00      0.000     0.000     0.000     0.000       11   Module#include
+  0.00      0.000     0.000     0.000     0.000        1   IO#puts
+  0.00      0.000     0.000     0.000     0.000        3   GRPC::GenericService::Dsl#rpc_descs
+  0.00      0.000     0.000     0.000     0.000        6   <Class::Google::Protobuf::RepeatedField>#define_array_wrapper_method
+  0.00      0.000     0.000     0.000     0.000        7   Array#include?
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::ClientStub#initialize
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#unmarshal_proc
+  0.00      0.000     0.000     0.000     0.000        1   <Module::GRPC::GenericService>#underscore
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::GenericService::Dsl#rpc
+  0.00      0.000     0.000     0.000     0.000        1   String#split
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#name=
+  0.00      0.000     0.000     0.000     0.000        3  *BasicObject#instance_eval
+  0.00      0.000     0.000     0.000     0.000        1   <Class::IO>#open
+  0.00      0.000     0.000     0.000     0.000        1   Module#module_function
+  0.00      0.000     0.000     0.000     0.000        8   BasicObject#initialize
+  0.00      0.000     0.000     0.000     0.000        1   Array#size
+  0.00      0.000     0.000     0.000     0.000        1   Helloworld::Greeter::Stub#initialize
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#marshal_proc
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::GenericService::Dsl#rpc_stub_class
+  0.00      0.000     0.000     0.000     0.000        3   GRPC::GenericService::Dsl#marshal_class_method
+  0.00      0.000     0.000     0.000     0.000        1   <Class::Delegator>#const_missing
+  0.00      0.000     0.000     0.000     0.000        1   <Class::File>#dirname
+  0.00      0.000     0.000     0.000     0.000        1   String#to_sym
+  0.00      0.000     0.000     0.000     0.000        2   Fixnum#>
+  0.00      0.000     0.000     0.000     0.000       12   <Class::Google::Protobuf::RepeatedField>#define_array_wrapper_with_result_method
+  0.00      0.000     0.000     0.000     0.000        2   Module#protected
+  0.00      0.000     0.000     0.000     0.000       10   Module#included
+  0.00      0.000     0.000     0.000     0.000        6   Module#private
+  0.00      0.000     0.000     0.000     0.000        1   <Class::File>#join
+  0.00      0.000     0.000     0.000     0.000        1   Kernel#initialize_dup
+  0.00      0.000     0.000     0.000     0.000        1   <Class::#<Class:0x000000010b5e90>>#new
+  0.00      0.000     0.000     0.000     0.000        2   Array#length
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::FieldDescriptor#label=
+  0.00      0.000     0.000     0.000     0.000        2   Array#unshift
+  0.00      0.000     0.000     0.000     0.000        1   Hash#size
+  0.00      0.000     0.000     0.000     0.000        3   Hash#[]
+  0.00      0.000     0.000     0.000     0.000        1   Kernel#dup
+  0.00      0.000     0.000     0.000     0.000        2   BasicObject#!
+  0.00      0.000     0.000     0.000     0.000        1   GRPC::RpcDesc#request_response?
+  0.00      0.000     0.000     0.000     0.000        2   Kernel#proc
+  0.00      0.000     0.000     0.000     0.000        3   GRPC::GenericService::Dsl#unmarshal_class_method
+  0.00      0.000     0.000     0.000     0.000        1   Hash#key?
+  0.00      0.000     0.000     0.000     0.000        1   Fixnum#-
+  0.00      0.000     0.000     0.000     0.000        2   Google::Protobuf::Internal::MessageBuilderContext#initialize
+  0.00      0.000     0.000     0.000     0.000        8   Module#extended
+  0.00      0.000     0.000     0.000     0.000        1   Exception#initialize
+  0.00      0.000     0.000     0.000     0.000        1   String#downcase!
+  0.00      0.000     0.000     0.000     0.000        1   Array#[]
+  0.00      0.000     0.000     0.000     0.000        1   String#==
+  0.00      0.000     0.000     0.000     0.000        1   Exception#backtrace
+  0.00      0.000     0.000     0.000     0.000        1   String#+
+  0.00      0.000     0.000     0.000     0.000        1   Hash#initialize_copy
+  0.00      0.000     0.000     0.000     0.000        1   #<Class:0x000000010b5e90>#input
+  0.00      0.000     0.000     0.000     0.000        2   #<Class:0x000000010b5e90>#output
+  0.00      0.000     0.000     0.000     0.000        2   Module#name
+  0.00      0.000     0.000     0.000     0.000        3   <Class::Google::Protobuf::DescriptorPool>#generated_pool
+  0.00      0.000     0.000     0.000     0.000        1   Module#const_get
+  0.00      0.000     0.000     0.000     0.000        1   Exception#exception
+  0.00      0.000     0.000     0.000     0.000        1   Kernel#puts
+  0.00      0.000     0.000     0.000     0.000        1   Module#===
+
+* indicates recursively called methods
