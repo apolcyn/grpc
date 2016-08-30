@@ -106,7 +106,7 @@ task 'gem:native' do
     system "rake cross native gem RUBY_CC_VERSION=2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
     #Rake::Task['dlls'].execute
-    docker_for_windows "bundle && rake cross native gem RUBY_CC_VERSION=2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    docker_for_windows "bundle && rake cross native gem RUBY_CC_VERSION=2.3.0:2.1.5 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
 
