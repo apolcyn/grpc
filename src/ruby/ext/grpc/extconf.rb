@@ -93,13 +93,13 @@ end
 
 if grpc_config == 'dbg'
   puts "building for debug build"
-  $CFLAGS << ' -O0'
-  $CFLAGS << ' -fstack-check'
 end
 
 $LDFLAGS << ' -Wl,-wrap,memcpy' if RUBY_PLATFORM =~ /linux/
 $LDFLAGS << ' -static' if windows
 
+$CFLAGS << ' -O0 '
+$CFLAGS << ' -fstack-check '
 $CFLAGS << ' -std=c99 '
 $CFLAGS << ' -Wall '
 $CFLAGS << ' -Wextra '
