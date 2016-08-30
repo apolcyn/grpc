@@ -91,6 +91,12 @@ if grpc_config == 'gcov'
   $LDFLAGS << ' -fprofile-arcs -ftest-coverage -rdynamic'
 end
 
+if grpc_config == 'dbg'
+  puts "building for debug build"
+  $CFLAGS << ' -O0'
+  $CFLAGS << ' -fstack-check'
+end
+
 $LDFLAGS << ' -Wl,-wrap,memcpy' if RUBY_PLATFORM =~ /linux/
 $LDFLAGS << ' -static' if windows
 
