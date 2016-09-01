@@ -28,6 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using System;
+using System.Collections.Generic;
 using Grpc.Core;
 using Helloworld;
 
@@ -37,13 +38,20 @@ namespace GreeterClient
     {
         public static void Main(string[] args)
         {
-            Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
+            ChannelOption[] options = { new ChannelOption("grpc.default_compression_algorithm", 2) };
+            Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure, options);
 
             var client = new Greeter.GreeterClient(channel);
-            String user = "you";
+            string text = System.IO.File.ReadAllText("greeter_input");
+	    int count = 0;
 
-            var reply = client.SayHello(new HelloRequest { Name = user });
-            Console.WriteLine("Greeting: " + reply.Message);
+	    Metadata md = new Metadata { { new Metadata.Entry("grpc-internal-encoding-request", "gzip") } };
+
+	    for(;;) {
+	        count += 1;
+		Console.WriteLine("count number: " + count);
+		var reply = client.SayHello(new HelloRequest { Name = text }, md);
+	    }
 
             channel.ShutdownAsync().Wait();
             Console.WriteLine("Press any key to exit...");
