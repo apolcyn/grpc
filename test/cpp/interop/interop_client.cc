@@ -37,40 +37,7 @@
 #include <memory>
 
 #include <grpc++/channel.h>
-#include <grpc++/client_context.h>
-#include <grpc++/security/credentials.h>
-#include <grpc/grpc.h>
-#include <grpc/support/log.h>
-#include <grpc/support/string_util.h>
-#include <grpc/support/useful.h>
-
-#include "src/core/lib/transport/byte_stream.h"
-#include "src/proto/grpc/testing/empty.grpc.pb.h"
-#include "src/proto/grpc/testing/messages.grpc.pb.h"
-#include "src/proto/grpc/testing/test.grpc.pb.h"
-#include "test/cpp/interop/client_helper.h"
-#include "test/cpp/interop/interop_client.h"
-
-namespace grpc {
-namespace testing {
-
-namespace {
-// The same value is defined by the Java client.
-const std::vector<int> request_stream_sizes = {27182, 8, 1828, 45904};
-const std::vector<int> response_stream_sizes = {31415, 9, 2653, 58979};
-const int kNumResponseMessages = 2000;
-const int kResponseMessageSize = 1030;
-const int kReceiveDelayMilliSeconds = 20;
-const int kLargeRequestSize = 271828;
-const int kLargeResponseSize = 314159;
-
-void NoopChecks(const InteropClientContextInspector& inspector,
-                const SimpleRequest* request, const SimpleResponse* response) {}
-
-void UnaryCompressionChecks(const InteropClientContextInspector& inspector,
-                            const SimpleRequest* request,
-                            const SimpleResponse* response) {
-  const grpc_compression_algorithm received_compression =
+#include <grpc++/compression_algorithm received_compression =
       inspector.GetCallCompressionAlgorithm();
   if (request->response_compressed().value()) {
     if (received_compression == GRPC_COMPRESS_NONE) {
@@ -315,7 +282,7 @@ bool InteropClient::DoLargeUnary() {
 
 bool InteropClient::DoClientCompressedUnary() {
   // Probing for compression-checks support.
-  ClientContext probe_context;
+/*  ClientContext probe_context;
   SimpleRequest probe_req;
   SimpleResponse probe_res;
 
@@ -335,8 +302,8 @@ bool InteropClient::DoClientCompressedUnary() {
     return false;
   }
   gpr_log(GPR_DEBUG, "Compressed unary request probe succeeded. Proceeding.");
-
-  const std::vector<bool> compressions = {true, false};
+*/
+  const std::vector<bool> compressions = {true};
   for (size_t i = 0; i < compressions.size(); i++) {
     char* log_suffix;
     gpr_asprintf(&log_suffix, "(compression=%s)",
@@ -346,10 +313,12 @@ bool InteropClient::DoClientCompressedUnary() {
     SimpleRequest request;
     SimpleResponse response;
     request.mutable_expect_compressed()->set_value(compressions[i]);
-    if (!PerformLargeUnary(&request, &response, UnaryCompressionChecks)) {
-      gpr_log(GPR_ERROR, "Compressed unary request failed %s", log_suffix);
-      gpr_free(log_suffix);
-      return false;
+    for(int k = 0; k < 100000; k++) {
+      if (!PerformLargeUnary(&request, &response, UnaryCompressionChecks)) {
+        gpr_log(GPR_ERROR, "Compressed unary request failed %s", log_suffix);
+        gpr_free(log_suffix);
+        return false;
+      }
     }
 
     gpr_log(GPR_DEBUG, "Compressed unary request failed %s", log_suffix);
