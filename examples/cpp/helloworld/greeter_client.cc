@@ -65,6 +65,8 @@ class GreeterClient {
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
+    context.set_compression_algorithm(GRPC_COMPRESS_GZIP);
+
     // The actual RPC.
     Status status = stub_->SayHello(&context, request, &reply);
 
@@ -72,9 +74,10 @@ class GreeterClient {
     if (status.ok()) {
       return reply.message();
     } else {
-      std::cout << status.error_code() << ": " << status.error_message()
+      std::cerr << status.error_code() << ": " << status.error_message()
                 << std::endl;
-      return "RPC failed";
+      exit(-1);
+      //return "RPC failed";
     }
   }
 
@@ -87,11 +90,15 @@ int main(int argc, char** argv) {
   // are created. This channel models a connection to an endpoint (in this case,
   // localhost at port 50051). We indicate that the channel isn't authenticated
   // (use of InsecureChannelCredentials()).
+  std::string input;
+  std::getline(std::cin, input);
   GreeterClient greeter(grpc::CreateChannel(
       "localhost:50051", grpc::InsecureChannelCredentials()));
-  std::string user("world");
-  std::string reply = greeter.SayHello(user);
-  std::cout << "Greeter received: " << reply << std::endl;
+  std::string user(input);
+  for(int i = 0; i < 10000; i++) {
+    std::string reply = greeter.SayHello(user);
+    std::cout << "Greeter received: " << reply << std::endl;
+  }
 
   return 0;
 }

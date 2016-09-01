@@ -336,7 +336,7 @@ bool InteropClient::DoClientCompressedUnary() {
   }
   gpr_log(GPR_DEBUG, "Compressed unary request probe succeeded. Proceeding.");*/
 
-  const std::vector<bool> compressions = {true};
+  const std::vector<bool> compressions = {false};
   for (size_t i = 0; i < compressions.size(); i++) {
     char* log_suffix;
     gpr_asprintf(&log_suffix, "(compression=%s)",
