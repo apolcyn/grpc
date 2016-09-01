@@ -314,7 +314,7 @@ bool InteropClient::DoLargeUnary() {
 }
 
 bool InteropClient::DoClientCompressedUnary() {
-  // Probing for compression-checks support.
+  /*// Probing for compression-checks support.
   ClientContext probe_context;
   SimpleRequest probe_req;
   SimpleResponse probe_res;
@@ -334,9 +334,9 @@ bool InteropClient::DoClientCompressedUnary() {
     gpr_log(GPR_DEBUG, "Compressed unary request probe failed");
     return false;
   }
-  gpr_log(GPR_DEBUG, "Compressed unary request probe succeeded. Proceeding.");
+  gpr_log(GPR_DEBUG, "Compressed unary request probe succeeded. Proceeding.");*/
 
-  const std::vector<bool> compressions = {true, false};
+  const std::vector<bool> compressions = {true};
   for (size_t i = 0; i < compressions.size(); i++) {
     char* log_suffix;
     gpr_asprintf(&log_suffix, "(compression=%s)",
@@ -346,10 +346,12 @@ bool InteropClient::DoClientCompressedUnary() {
     SimpleRequest request;
     SimpleResponse response;
     request.mutable_expect_compressed()->set_value(compressions[i]);
-    if (!PerformLargeUnary(&request, &response, UnaryCompressionChecks)) {
-      gpr_log(GPR_ERROR, "Compressed unary request failed %s", log_suffix);
-      gpr_free(log_suffix);
-      return false;
+    for(int k = 0; k < 10000; k++) {
+      if (!PerformLargeUnary(&request, &response, UnaryCompressionChecks)) {
+        gpr_log(GPR_ERROR, "Compressed unary request failed %s", log_suffix);
+        gpr_free(log_suffix);
+        return false;
+      }
     }
 
     gpr_log(GPR_DEBUG, "Compressed unary request failed %s", log_suffix);

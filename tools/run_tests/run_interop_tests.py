@@ -119,7 +119,7 @@ class CSharpLanguage:
     return _SKIP_SERVER_COMPRESSION
 
   def unimplemented_test_cases_server(self):
-    return _SKIP_SERVER_COMPRESSION + 'client_compressed_streaming'
+    return _SKIP_SERVER_COMPRESSION + ['client_compressed_streaming']
     #return _SKIP_COMPRESSION
 
   def __str__(self):
