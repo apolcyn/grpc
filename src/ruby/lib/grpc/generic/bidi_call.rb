@@ -111,6 +111,12 @@ module GRPC
 
     private
 
+    def use_memory
+      h = Array.new
+      101.times { h.push('c') }
+      puts Hash.new(asdvasdv: "hello there", asdvas: h).inspect
+    end
+
     END_OF_READS = :end_of_reads
     END_OF_WRITES = :end_of_writes
 
@@ -153,6 +159,7 @@ module GRPC
         begin
           @req_view.send_initial_metadata unless @req_view.nil?
           @call.run_batch(SEND_MESSAGE => payload)
+          use_memory
         rescue GRPC::Core::CallError => e
           # This is almost definitely caused by a status arriving while still
           # writing. Don't re-throw the error
@@ -192,6 +199,7 @@ module GRPC
           GRPC.logger.debug("bidi-read-loop: #{count}")
           count += 1
           batch_result = read_using_run_batch
+          use_memory
 
           # handle the next message
           if batch_result.message.nil?
