@@ -778,6 +778,23 @@ VALUE call_completion_queue_pluck(VALUE self, VALUE tag) {
   return Qnil;
 }
 
+VALUE call_start_batch(VALUE self, VALUE batch_stack, VALUE tag) {
+  grpc_rb_call *call = NULL;
+  grpc_call_error err;
+  run_batch_stack* st = (run_batch_stack*)batch_stack;
+
+  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
+
+  err = grpc_call_start_batch(call->wrapped, st->ops, st->op_num, (void*)tag, NULL);
+  if (err != GRPC_CALL_OK) {
+    grpc_run_batch_stack_cleanup(st);
+    rb_raise(grpc_rb_eCallError,
+             "grpc_call_start_batch failed with %s (code=%d)",
+             grpc_call_error_detail_of(err), err);
+  }
+  return Qnil;
+}
+
 /* call-seq:
    ops = {
      GRPC::Core::CallOps::SEND_INITIAL_METADATA => <op_value>,
@@ -797,8 +814,6 @@ VALUE call_completion_queue_pluck(VALUE self, VALUE tag) {
    batch */
 static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   run_batch_stack st;
-  grpc_rb_call *call = NULL;
-  grpc_call_error err;
   VALUE result = Qnil;
   VALUE rb_write_flag = rb_ivar_get(self, id_write_flag);
   unsigned write_flag = 0;
@@ -807,7 +822,6 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
     rb_raise(grpc_rb_eCallError, "Cannot run batch on closed call");
     return Qnil;
   }
-  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
 
   /* Validate the ops args, adding them to a ruby array */
   if (TYPE(ops_hash) != T_HASH) {
@@ -822,14 +836,7 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
 
   /* call grpc_call_start_batch, then wait for it to complete using
    * pluck_event */
-  err = grpc_call_start_batch(call->wrapped, st.ops, st.op_num, tag, NULL);
-  if (err != GRPC_CALL_OK) {
-    grpc_run_batch_stack_cleanup(&st);
-    rb_raise(grpc_rb_eCallError,
-             "grpc_call_start_batch failed with %s (code=%d)",
-             grpc_call_error_detail_of(err), err);
-    return Qnil;
-  }
+  rb_funcall(self, rb_intern("call_start_batch"), 2, (VALUE)&st, (VALUE)tag);
 
   rb_funcall(self, rb_intern("call_completion_queue_pluck"), 1, (VALUE)tag);
 
@@ -965,6 +972,7 @@ void Init_grpc_call() {
   rb_define_method(grpc_rb_cCall, "set_credentials!",
                    grpc_rb_call_set_credentials, 1);
   rb_define_method(grpc_rb_cCall, "call_completion_queue_pluck", call_completion_queue_pluck, 1);
+  rb_define_method(grpc_rb_cCall, "call_start_batch", call_start_batch, 2);
 
   /* Ids used to support call attributes */
   id_metadata = rb_intern("metadata");
