@@ -49,6 +49,23 @@ Try it!
   > cd GreeterClient
   > dotnet run
   ```
+  
+Selecting the target framework
+-------------------------------
+
+The example in this directory can target 'net45' or 'netcoreapp1.0' (each of gRPC C#'s official targets).
+You can explicitly set the target framework when building and running the example, using the DotNetCore SDK. 
+
+For example, to explicitly run on 'netcoreapp1.0':
+```
+> cd GreeterServer
+> dotnet run -f netcoreapp1.0
+```
+
+```
+> cd GreeterClient
+> dotnet run -f netcoreapp1.0
+```
 
 Tutorial
 --------
