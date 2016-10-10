@@ -6,8 +6,8 @@
     "emitEntryPoint": "true"
   },
   "dependencies": {
-    "Google.Protobuf": "3.0.0",
-    "Grpc": "1.0.0",
+    "Google.Protobuf": "3.1.0",
+    "Grpc": "1.0.1",
     "Greeter": {
       "target": "project"
     }
@@ -20,6 +20,17 @@
       },
       "dependencies": {
 	"Microsoft.NETCore.Platforms": "1.0.1" 
+      }
+    },
+    "netcoreapp1.0": {
+      "imports": [
+        "portable-net45"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0"
+        }
       }
     }
   }
