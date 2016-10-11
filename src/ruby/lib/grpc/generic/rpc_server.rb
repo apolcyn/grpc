@@ -219,9 +219,9 @@ module GRPC
         return if @running_state != :running
         transition_running_state(:stopping)
       end
+      @pool.stop
       deadline = from_relative_time(@poll_period)
       @server.close(deadline)
-      @pool.stop
     end
 
     def running_state
@@ -332,7 +332,7 @@ module GRPC
     def available?(an_rpc)
       jobs_count, max = @pool.jobs_waiting, @max_waiting_requests
       GRPC.logger.info("waiting: #{jobs_count}, max: #{max}")
-      return an_rpc if @pool.jobs_waiting <= @max_waiting_requests
+      return an_rpc if @pool.jobs_waiting < @max_waiting_requests
       GRPC.logger.warn("NOT AVAILABLE: too many jobs_waiting: #{an_rpc}")
       noop = proc { |x| x }
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
