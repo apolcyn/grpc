@@ -32,18 +32,24 @@
  */
 
 #include <ruby/ruby.h>
+#include <pthread.h>
+#include <string.h>
 
 #include "rb_grpc_imports.generated.h"
 #include "rb_call.h"
 
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
+#include <grpc/support/sync.h>
+#include <grpc/support/log.h>
 #include <grpc/impl/codegen/compression_types.h>
 
 #include "rb_byte_buffer.h"
 #include "rb_call_credentials.h"
 #include "rb_completion_queue.h"
 #include "rb_grpc.h"
+
+gpr_mu fake_gil;
 
 /* grpc_rb_cCall is the Call class whose instances proxy grpc_call. */
 static VALUE grpc_rb_cCall;
@@ -93,12 +99,8 @@ static VALUE sym_message;
 static VALUE sym_status;
 static VALUE sym_cancelled;
 
-typedef struct grpc_rb_call {
-  grpc_call *wrapped;
-  grpc_completion_queue *queue;
-} grpc_rb_call;
 
-static void destroy_call(grpc_rb_call *call) {
+void destroy_call(grpc_rb_call *call) {
   /* Ensure that we only try to destroy the call once */
   if (call->wrapped != NULL) {
     grpc_call_destroy(call->wrapped);
@@ -109,7 +111,7 @@ static void destroy_call(grpc_rb_call *call) {
 }
 
 /* Destroys a Call. */
-static void grpc_rb_call_destroy(void *p) {
+void grpc_rb_call_destroy(void *p) {
   if (p == NULL) {
     return;
   }
@@ -646,6 +648,62 @@ static void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
   }
 }
 
+// FOR DEBUG
+static void break_grpc_run_batch_stack_fill_op(run_batch_stack *st, grpc_op_type this_op) {
+  const char *dummy_message = "\x1a\x00";
+  int dummy_message_len = 2;
+  /* Fill the ops array */
+  GPR_ASSERT(st->op_num == 0);
+  st->ops[st->op_num].flags = 0;
+  switch (this_op) {
+    case GRPC_OP_SEND_INITIAL_METADATA:
+      /* N.B. later there is no need to explicitly delete the metadata keys
+       * and values, they are references to data in ruby objects. */
+      st->ops[st->op_num].data.send_initial_metadata.count =
+          st->send_metadata.count;
+      st->ops[st->op_num].data.send_initial_metadata.metadata =
+          st->send_metadata.metadata;
+      break;
+    case GRPC_OP_SEND_MESSAGE:
+      // binary dump of simple req bm message
+      st->ops[st->op_num].data.send_message = grpc_rb_s_to_byte_buffer(
+          (char*)dummy_message, dummy_message_len);
+      GPR_ASSERT(st->write_flag == 0);
+      st->ops[st->op_num].flags = st->write_flag;
+      break;
+    case GRPC_OP_SEND_CLOSE_FROM_CLIENT:
+      break;
+    case GRPC_OP_SEND_STATUS_FROM_SERVER:
+      GPR_ASSERT(0);
+      break;
+    case GRPC_OP_RECV_INITIAL_METADATA:
+      st->ops[st->op_num].data.recv_initial_metadata = &st->recv_metadata;
+      break;
+    case GRPC_OP_RECV_MESSAGE:
+      st->ops[st->op_num].data.recv_message = &st->recv_message;
+      break;
+    case GRPC_OP_RECV_STATUS_ON_CLIENT:
+      st->ops[st->op_num].data.recv_status_on_client.trailing_metadata =
+          &st->recv_trailing_metadata;
+      st->ops[st->op_num].data.recv_status_on_client.status =
+          &st->recv_status;
+      st->ops[st->op_num].data.recv_status_on_client.status_details =
+          &st->recv_status_details;
+      st->ops[st->op_num].data.recv_status_on_client.status_details_capacity =
+          &st->recv_status_details_capacity;
+      break;
+    case GRPC_OP_RECV_CLOSE_ON_SERVER:
+      GPR_ASSERT(0);
+      break;
+    default:
+      GPR_ASSERT(0);
+  };
+  GPR_ASSERT(st->op_num == 0);
+  st->ops[st->op_num].op = this_op;
+  st->ops[st->op_num].reserved = NULL;
+  st->op_num++;
+}
+
 /* grpc_run_batch_stack_fill_ops fills the run_batch_stack ops array from
  * ops_hash */
 static void grpc_run_batch_stack_fill_ops(run_batch_stack *st, VALUE ops_hash) {
@@ -763,6 +821,152 @@ static VALUE grpc_run_batch_stack_build_result(run_batch_stack *st) {
   return result;
 }
 
+void grpc_c_break(grpc_rb_call *rb_call, grpc_op_type this_op) {
+  run_batch_stack st;
+  grpc_call_error err;
+  grpc_event ev;
+  void *tag = (void*)&st;
+  // no write flag
+  // fake like we're in ruby with gil
+  //
+
+  grpc_run_batch_stack_init(&st, 0);
+  break_grpc_run_batch_stack_fill_op(&st, this_op);
+
+  err = grpc_call_start_batch(rb_call->wrapped, st.ops, st.op_num, tag, NULL);
+
+  GPR_ASSERT(err == GRPC_CALL_OK);
+
+  ev = c_completion_queue_pluck(rb_call->queue, tag,
+                                 gpr_inf_future(GPR_CLOCK_REALTIME), NULL, &fake_gil);
+
+  if(!ev.success) {
+    fprintf(stderr, "pluck with op type: %d failed\n", this_op);
+  }
+  GPR_ASSERT(ev.success);
+
+  if(this_op == GRPC_OP_RECV_STATUS_ON_CLIENT) {
+    if(st.recv_status != GRPC_STATUS_OK) {
+      fprintf(stderr, "got a bad status: %d\n", st.recv_status);
+    }
+    GPR_ASSERT(st.recv_status == GRPC_STATUS_OK);
+  }
+
+  grpc_run_batch_stack_cleanup(&st);
+}
+
+// FOR DEBUG
+void grpc_c_break_call(grpc_rb_call *rb_call) {
+  grpc_c_break(rb_call, GRPC_OP_SEND_INITIAL_METADATA);
+  grpc_c_break(rb_call, GRPC_OP_SEND_MESSAGE);
+  grpc_c_break(rb_call, GRPC_OP_SEND_CLOSE_FROM_CLIENT);
+  grpc_c_break(rb_call, GRPC_OP_RECV_INITIAL_METADATA);
+  grpc_c_break(rb_call, GRPC_OP_RECV_MESSAGE);
+  grpc_c_break(rb_call, GRPC_OP_RECV_STATUS_ON_CLIENT);
+}
+
+
+void* do_call(void *param_channel) {
+   int i = 0;
+   int num_calls = 100;
+   grpc_rb_channel *channel = (grpc_rb_channel*)param_channel;
+   grpc_rb_call* call;
+
+   gpr_mu_lock(&fake_gil);
+   fprintf(stderr, "making %d calls on this stream\n", num_calls);
+
+   for(i = 0; i < num_calls; i++) {
+      // create new calls under lock
+      fprintf(stderr, "stream %p about to create and do new call\n", &num_calls);
+      call = grpc_c_channel_create_call(channel, (char*)"/grpc.testing.BenchmarkService/UnaryCall"
+          , (char*)"localhost:13000");
+
+      grpc_c_break_call(call);
+
+      // destroy old calls under lock
+      destroy_call(call);
+      fprintf(stderr, "stream %p just did and destroyed call\n", &num_calls);
+   }
+   gpr_mu_unlock(&fake_gil);
+   return NULL;
+}
+
+/* Destroys Channel instances. */
+static void grpc_c_repro_channel_free(grpc_rb_channel *channel) {
+    grpc_rb_channel *ch = NULL;
+    if (channel == NULL) {
+       return;
+    };
+    ch = channel;
+
+    if (ch->wrapped != NULL) {
+      grpc_channel_destroy(ch->wrapped);
+      grpc_rb_completion_queue_destroy(ch->queue);
+    }
+    gpr_free(channel);
+}
+
+void do_repro() {
+   int i, k;
+   int num_streams;
+   int num_chans;
+   pthread_t *thread_ids;
+   grpc_rb_channel **channels;
+   num_streams = 2;
+   num_chans = 2;
+
+   fprintf(stderr, "using %d streams and %d channels\n", num_streams, num_chans);
+
+   // alloc global memory and child threads under lock
+   gpr_mu_lock(&fake_gil);
+
+   thread_ids = gpr_malloc(sizeof(pthread_t) * num_streams * num_chans);
+   MEMZERO(thread_ids, pthread_t, num_streams * num_chans);
+
+   channels = gpr_malloc(sizeof(grpc_rb_channel*) * num_chans);
+   
+   // setup channels
+   for(i = 0; i < num_chans; i++) {
+      channels[i] = grpc_c_channel_alloc_init();
+   }
+
+   fprintf(stderr, "begin all\n");
+
+   for(i = 0; i < num_chans; i++) {
+     for(k = 0; k < num_streams; k++) {
+       if(pthread_create(thread_ids + (i * num_streams) + k, NULL, do_call, (void*)channels[i])) {
+         gpr_mu_unlock(&fake_gil);
+         fprintf(stderr, "Error creating thread\n");
+         GPR_ASSERT(0);
+       }
+     }
+   }
+
+   gpr_mu_unlock(&fake_gil);
+
+   for(i = 0; i < num_streams * num_chans; i++) {
+     if(pthread_join(thread_ids[i], NULL)) {
+       fprintf(stderr, "Error joining thread\n");
+       GPR_ASSERT(0);
+     }
+   }
+
+   for(i = 0; i < num_chans; i++) {
+     grpc_c_repro_channel_free(channels[i]);
+   }
+
+   free(thread_ids);
+   fprintf(stderr, "all done\n");
+}
+
+int grpc_c_repro_bm_error() {
+   gpr_mu_init(&fake_gil);
+   do_repro();
+   gpr_mu_destroy(&fake_gil);
+
+   return 0;
+}
+
 /* call-seq:
    ops = {
      GRPC::Core::CallOps::SEND_INITIAL_METADATA => <op_value>,
@@ -780,7 +984,7 @@ static VALUE grpc_run_batch_stack_build_result(run_batch_stack *st) {
    The order of ops specified in the batch has no significance.
    Only one operation of each type can be active at once in any given
    batch */
-static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
+VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   run_batch_stack st;
   grpc_rb_call *call = NULL;
   grpc_event ev;
@@ -809,6 +1013,7 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   /* call grpc_call_start_batch, then wait for it to complete using
    * pluck_event */
   err = grpc_call_start_batch(call->wrapped, st.ops, st.op_num, tag, NULL);
+  fprintf(stderr, "CALL: %d start_batch with tag %p\n", call->call_id, tag);
   if (err != GRPC_CALL_OK) {
     grpc_run_batch_stack_cleanup(&st);
     rb_raise(grpc_rb_eCallError,
@@ -816,16 +1021,43 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
              grpc_call_error_detail_of(err), err);
     return Qnil;
   }
+  fprintf(stderr, "CALL: %d pluck \n", call->call_id);
+  fprintf(stderr, "CALL: %d thread_id is %ld\n", call->call_id, pthread_self());
   ev = rb_completion_queue_pluck(call->queue, tag,
                                  gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
+  fprintf(stderr, "CALL: %d pluck_complete \n", call->call_id);
   if (!ev.success) {
+    fprintf(stderr, "CALL: %d pluck_fail\n", call->call_id);
     rb_raise(grpc_rb_eCallError, "call#run_batch failed somehow");
   }
+  fprintf(stderr, "CALL: %d pluck_success\n", call->call_id);
   /* Build and return the BatchResult struct result,
      if there is an error, it's reflected in the status */
   result = grpc_run_batch_stack_build_result(&st);
   grpc_run_batch_stack_cleanup(&st);
   return result;
+}
+
+VALUE grpc_rb_call_set_id(VALUE self, VALUE id) {
+  grpc_rb_call *call = NULL;
+  int newId;
+  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
+  newId = NUM2INT(id);
+  call->call_id = newId;
+  return Qnil;
+}
+
+VALUE grpc_rb_call_get_id(VALUE self) {
+  grpc_rb_call *call = NULL;
+  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
+  return INT2NUM(call->call_id);
+}
+
+VALUE grpc_rb_call_run_batch_debug(VALUE self, VALUE ops_hash) {
+  grpc_rb_call *call = NULL;
+  TypedData_Get_Struct(self, grpc_rb_call, &grpc_call_data_type, call);
+  fprintf(stderr, "CALL: %d in run_batch_debug\n", call->call_id);
+  return grpc_rb_call_run_batch(self, ops_hash);
 }
 
 static void Init_grpc_write_flags() {
@@ -935,12 +1167,15 @@ void Init_grpc_call() {
 
   /* Add ruby analogues of the Call methods. */
   rb_define_method(grpc_rb_cCall, "run_batch", grpc_rb_call_run_batch, 1);
+  rb_define_method(grpc_rb_cCall, "run_batch_debug", grpc_rb_call_run_batch_debug, 1);
   rb_define_method(grpc_rb_cCall, "cancel", grpc_rb_call_cancel, 0);
   rb_define_method(grpc_rb_cCall, "close", grpc_rb_call_close, 0);
   rb_define_method(grpc_rb_cCall, "peer", grpc_rb_call_get_peer, 0);
   rb_define_method(grpc_rb_cCall, "peer_cert", grpc_rb_call_get_peer_cert, 0);
   rb_define_method(grpc_rb_cCall, "status", grpc_rb_call_get_status, 0);
   rb_define_method(grpc_rb_cCall, "status=", grpc_rb_call_set_status, 1);
+  rb_define_method(grpc_rb_cCall, "call_id=", grpc_rb_call_set_id, 1);
+  rb_define_method(grpc_rb_cCall, "call_id", grpc_rb_call_get_id, 0);
   rb_define_method(grpc_rb_cCall, "metadata", grpc_rb_call_get_metadata, 0);
   rb_define_method(grpc_rb_cCall, "metadata=", grpc_rb_call_set_metadata, 1);
   rb_define_method(grpc_rb_cCall, "trailing_metadata",

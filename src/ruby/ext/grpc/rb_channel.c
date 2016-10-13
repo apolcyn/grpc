@@ -66,14 +66,6 @@ static VALUE grpc_rb_cChannel = Qnil;
 /* Used during the conversion of a hash to channel args during channel setup */
 static VALUE grpc_rb_cChannelArgs;
 
-/* grpc_rb_channel wraps a grpc_channel. */
-typedef struct grpc_rb_channel {
-  VALUE credentials;
-
-  /* The actual channel */
-  grpc_channel *wrapped;
-  grpc_completion_queue *queue;
-} grpc_rb_channel;
 
 /* Destroys Channel instances. */
 static void grpc_rb_channel_free(void *p) {
@@ -115,10 +107,47 @@ static rb_data_type_t grpc_channel_data_type = {
 
 /* Allocates grpc_rb_channel instances. */
 static VALUE grpc_rb_channel_alloc(VALUE cls) {
-  grpc_rb_channel *wrapper = ALLOC(grpc_rb_channel);
+  grpc_rb_channel *wrapper = gpr_malloc(sizeof(grpc_rb_channel));
   wrapper->wrapped = NULL;
   wrapper->credentials = Qnil;
   return TypedData_Wrap_Struct(cls, &grpc_channel_data_type, wrapper);
+}
+
+// FOR DEBUG
+grpc_rb_channel* grpc_c_channel_alloc_init() {
+  /// minimal c version
+  grpc_rb_channel *wrapper = gpr_malloc(sizeof(grpc_rb_channel));
+  grpc_channel *ch = NULL;
+  ch = grpc_insecure_channel_create("localhost:13000", NULL, NULL);
+  wrapper->queue = grpc_completion_queue_create(NULL);
+  wrapper->wrapped = ch;
+  wrapper->mu = gpr_malloc(sizeof(gpr_mu));
+  gpr_mu_init(wrapper->mu);
+  /// end minimal c version
+  return wrapper;
+}
+
+// FOR DEBUG
+grpc_rb_call* grpc_c_channel_create_call(grpc_rb_channel *wrapper, char *method, char *host) {
+  grpc_call *call = NULL;
+  grpc_rb_call *rb_call = NULL;
+  grpc_channel *ch = NULL;
+  grpc_completion_queue *cq = NULL;
+  int flags = GRPC_PROPAGATE_DEFAULTS;
+
+  cq = grpc_completion_queue_create(NULL);
+  GPR_ASSERT(cq != NULL);
+  ch = wrapper->wrapped;
+  GPR_ASSERT(ch != NULL);
+  call = grpc_channel_create_call(ch, NULL, flags, cq, method,
+                                  host, gpr_inf_future(GPR_CLOCK_REALTIME),
+                                      NULL);
+  GPR_ASSERT(call != NULL);
+  rb_call = gpr_malloc(sizeof(grpc_rb_call));
+  rb_call->wrapped = call;
+  rb_call->queue = cq;
+
+  return rb_call;
 }
 
 /*

@@ -89,6 +89,7 @@ class BenchmarkClient
                    payload: gtp.new(type: gtpt::COMPRESSABLE,
                                     body: nulls(simple_params.req_size)))
 
+    count = 0
     @child_threads = []
 
     (0..config.client_channels-1).each do |chan|
@@ -96,6 +97,8 @@ class BenchmarkClient
       st = config.server_targets
       stub = gtbss.new(st[chan % st.length], cred, **opts)
       (0..config.outstanding_rpcs_per_channel-1).each do |r|
+        cid = count
+        count += 1
         @child_threads << Thread.new {
           case config.load_params.load.to_s
           when 'closed_loop'
@@ -107,9 +110,9 @@ class BenchmarkClient
           end
           case config.rpc_type
           when :UNARY
-            unary_ping_ponger(req,stub,config,waiter)
+            unary_ping_ponger(req, stub,config,waiter, cid)
           when :STREAMING
-            streaming_ping_ponger(req,stub,config,waiter)
+            streaming_ping_ponger(req, stub,config,waiter)
           end
         }
       end
@@ -121,13 +124,17 @@ class BenchmarkClient
       sleep delay if delay > 0
     end
   end
-  def unary_ping_ponger(req, stub, config,waiter)
+  def unary_ping_ponger(req, stub, config,waiter, id)
+    STDERR.puts "START: #{id} "
     while !@done
       wait_to_issue(waiter)
       start = Time.now
-      resp = stub.unary_call(req)
+      STDERR.puts "BEGIN_CALL: #{id} "
+      resp = stub.unary_call(req, id, { 'call_id' => id.to_s })
+      STDERR.puts "END_CALL: #{id} "
       @histogram.add((Time.now-start)*1e9)
     end
+    STDERR.puts "END: #{id} "
   end
   def streaming_ping_ponger(req, stub, config, waiter)
     q = EnumeratorQueue.new(self)
@@ -164,8 +171,39 @@ class BenchmarkClient
   end
   def shutdown
     @done = true
+    count = 0
+    sleep 10
     @child_threads.each do |thread|
+      STDERR.puts "JOINING: #{count} "
+      STDERR.puts "STATUS of #{count} is #{thread.status}"
+      STDERR.puts "BT of #{count} is #{thread.backtrace}"
+      count += 1
       thread.join
     end
   end
 end
+
+def main
+  require_relative 'qps-common'
+  gtsr = Grpc::Testing::SimpleRequest
+  gtpt = Grpc::Testing::PayloadType
+  gtp = Grpc::Testing::Payload
+  req = gtsr.new(response_type: gtpt::COMPRESSABLE,
+                 response_size: 0,
+                 payload: gtp.new(type: gtpt::COMPRESSABLE,
+                                  body: nulls(0)))
+  File.open('bm_proto_dump', 'wb') {|file| file.write(gtsr.encode(req)) }
+  test_bin = File.open('bm_proto_dump', 'rb').read
+  STDERR.puts "binary read of proto is |#{test_bin}|"
+  STDERR.puts "|#{test_bin.inspect}|"
+  o = gtsr.decode(test_bin)
+  str = "\x1A\00"
+  t = gtsr.decode(str)
+  str.bytes.each do |b|
+    STDERR.puts "byte: |#{b}|"
+  end
+  STDERR.puts "#{o.inspect}"
+  STDERR.puts "#{t.inspect}"
+end
+  
+main

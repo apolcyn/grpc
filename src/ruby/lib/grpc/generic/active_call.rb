@@ -58,9 +58,9 @@ module GRPC
     include Core::TimeConsts
     include Core::CallOps
     extend Forwardable
-    attr_reader :deadline, :metadata_sent, :metadata_to_send
+    attr_reader :deadline, :metadata_sent, :metadata_to_send, :metadata_received
     def_delegators :@call, :cancel, :metadata, :write_flag, :write_flag=,
-                   :peer, :peer_cert, :trailing_metadata
+                   :peer, :peer_cert, :trailing_metadata, :get_id, :set_id
 
     # client_invoke begins a client invocation.
     #
@@ -182,8 +182,13 @@ module GRPC
     # finished waits until a client call is completed.
     #
     # It blocks until the remote endpoint acknowledges by sending a status.
-    def finished
-      batch_result = @call.run_batch(RECV_STATUS_ON_CLIENT => nil)
+    def finished(call_debug=false, receive_status=true)
+      batch_result = nil
+      if call_debug and receive_status
+        batch_result = @call.run_batch_debug(RECV_STATUS_ON_CLIENT => nil)
+      elsif receive_status
+        batch_result = @call.run_batch(RECV_STATUS_ON_CLIENT => nil)
+      end
       unless batch_result.status.nil?
         @call.trailing_metadata = batch_result.status.metadata
       end
@@ -221,8 +226,11 @@ module GRPC
       ops = {
         SEND_STATUS_FROM_SERVER => Struct::Status.new(code, details, metadata)
       }
+      fail unless assert_finished
       ops[RECV_CLOSE_ON_SERVER] = nil if assert_finished
+      STDERR.puts "SENDING CLOSE AND STATUS FOR: #{metadata['call_id']} "
       @call.run_batch(ops)
+      STDERR.puts "DONE SENDING CLOSE AND STATUS FOR: #{metadata['call_id']} "
       nil
     end
 
@@ -232,8 +240,9 @@ module GRPC
     # On receiving a message, it returns the response after unmarshalling it.
     # On receiving a status, it returns nil if the status is OK, otherwise
     # raising BadStatus
-    def remote_read
+    def remote_read(expected_no_md=false)
       ops = { RECV_MESSAGE => nil }
+      fail if expected_no_md and !@metadata_received
       ops[RECV_INITIAL_METADATA] = nil unless @metadata_received
       batch_result = @call.run_batch(ops)
       unless @metadata_received
@@ -241,6 +250,9 @@ module GRPC
         @metadata_received = true
       end
       unless batch_result.nil? || batch_result.message.nil?
+	STDERR.puts "1 about to try to unmarshal: |#{batch_result.message}|"
+	STDERR.puts "2 about to try to unmarshal: |#{batch_result.message.inspect}|"
+	STDERR.puts "3 about to try to unmarshal: |#{batch_result.message.bytes}|"
         res = @unmarshal.call(batch_result.message)
         return res
       end
@@ -314,7 +326,8 @@ module GRPC
     # @param metadata [Hash] metadata to be sent to the server. If a value is
     # a list, multiple metadata for its key are sent
     # @return [Object] the response received from the server
-    def request_response(req, metadata: {})
+    def request_response(req, id: 0, metadata: {})
+      @call.call_id = id
       merge_metadata_to_send(metadata) && send_initial_metadata
       remote_send(req)
       writes_done(false)
@@ -322,7 +335,7 @@ module GRPC
       finished unless response.is_a? Struct::Status
       response
     rescue GRPC::Core::CallError => e
-      finished  # checks for Cancelled
+      finished(call_debug=true)  # checks for Cancelled
       raise e
     end
 

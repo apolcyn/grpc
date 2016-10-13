@@ -37,6 +37,7 @@
 #include <ruby/ruby.h>
 
 #include <grpc/grpc.h>
+#include <grpc/support/sync.h>
 
 void grpc_rb_completion_queue_destroy(grpc_completion_queue *cq);
 
@@ -47,5 +48,8 @@ void grpc_rb_completion_queue_destroy(grpc_completion_queue *cq);
  */
 grpc_event rb_completion_queue_pluck(grpc_completion_queue *queue, void *tag,
                                      gpr_timespec deadline, void *reserved);
+
+grpc_event c_completion_queue_pluck(grpc_completion_queue *queue, void *tag,
+                                     gpr_timespec deadline, void *reserved, gpr_mu *fake_gil);
 
 #endif /* GRPC_RB_COMPLETION_QUEUE_H_ */

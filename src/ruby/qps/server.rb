@@ -46,6 +46,11 @@ class BenchmarkServiceImpl < Grpc::Testing::BenchmarkService::Service
   def unary_call(req, _call)
     sr = Grpc::Testing::SimpleResponse
     pl = Grpc::Testing::Payload
+    if req.nil?
+      STDERR.puts "RECEIVED_FROM: #{_call.metadata['call_id']} : nil "
+    else
+      STDERR.puts "RECEIVED_FROM: #{_call.metadata['call_id']} : #{req.inspect} "
+    end
     sr.new(payload: pl.new(body: nulls(req.response_size)))
   end
   def streaming_call(reqs)
@@ -55,7 +60,7 @@ end
 
 class BenchmarkServer
   def initialize(config, port)
-    if config.security_params
+    if config != nil and config.security_params
       certs = load_test_certs
       cred = GRPC::Core::ServerCredentials.new(
         nil, [{private_key: certs[1], cert_chain: certs[2]}], false)
@@ -63,16 +68,16 @@ class BenchmarkServer
       cred = :this_port_is_insecure
     end
     # Make sure server can handle the large number of calls in benchmarks
-    @server = GRPC::RpcServer.new(pool_size: 100, max_waiting_requests: 100)
+    @server = GRPC::RpcServer.new(pool_size: 1030, max_waiting_requests: 1030)
     @port = @server.add_http2_port("0.0.0.0:" + port.to_s, cred)
     @server.handle(BenchmarkServiceImpl.new)
     @start_time = Time.now
-    t = Thread.new {
-      @server.run
-    }
-    t.abort_on_exception
+  end
+  def run
+    @server.run
   end
   def mark(reset)
+    raise "not implemented"
     s = Grpc::Testing::ServerStats.new(time_elapsed:
                                        (Time.now-@start_time).to_f)
     @start_time = Time.now if reset
@@ -85,3 +90,22 @@ class BenchmarkServer
     @server.stop
   end
 end
+
+def main
+  options = {
+    'server_port' => 0
+  }
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: [--server_port <port>]'
+    opts.on('--server_port PORT', '<port>') do |v|
+      options['server_port'] = v
+    end
+  end.parse!
+
+  # Configure any errors with client or server child threads to surface
+  Thread.abort_on_exception = true
+  s = BenchmarkServer.new(nil, options['server_port'].to_s)
+  s.run
+end
+
+main

@@ -38,6 +38,13 @@
 
 #include <grpc/grpc.h>
 
+
+typedef struct grpc_rb_call {
+  int call_id;
+  grpc_call *wrapped;
+  grpc_completion_queue *queue;
+} grpc_rb_call;
+
 /* Gets the wrapped call from a VALUE. */
 grpc_call* grpc_rb_get_wrapped_call(VALUE v);
 

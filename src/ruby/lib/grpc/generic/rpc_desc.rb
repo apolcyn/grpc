@@ -67,9 +67,12 @@ module GRPC
       # might be reached, the handler could throw an unknown error, or a
       # well-behaved handler could throw a StatusError.
       if request_response?
-        req = active_call.remote_read
+        fail unless active_call.metadata_received
+        req = active_call.remote_read(expected_no_md=true)
         resp = mth.call(req, active_call.single_req_view)
+	STDERR.puts "rpc_desc.rb: sending |#{resp}|"
         active_call.remote_send(resp)
+	STDERR.puts "rpc_desc.rb: just sent |#{resp}|"
       elsif client_streamer?
         resp = mth.call(active_call.multi_req_view)
         active_call.remote_send(resp)
@@ -80,17 +83,17 @@ module GRPC
       else  # is a bidi_stream
         active_call.run_server_bidi(mth)
       end
-      send_status(active_call, OK, 'OK', active_call.output_metadata)
+      send_status(active_call, OK, 'OK', active_call.output_metadata.merge(active_call.metadata))
     rescue BadStatus => e
       # this is raised by handlers that want GRPC to send an application error
       # code and detail message and some additional app-specific metadata.
       GRPC.logger.debug("app err:#{active_call}, status:#{e.code}:#{e.details}")
       send_status(active_call, e.code, e.details, e.metadata)
-    rescue Core::CallError => e
+    rescue GRPC::Core::CallError => e
       # This is raised by GRPC internals but should rarely, if ever happen.
       # Log it, but don't notify the other endpoint..
       GRPC.logger.warn("failed call: #{active_call}\n#{e}")
-    rescue Core::OutOfTime
+    rescue GRPC::Core::OutOfTime
       # This is raised when active_call#method.call exceeeds the deadline
       # event.  Send a status of deadline exceeded
       GRPC.logger.warn("late call: #{active_call}")
@@ -100,6 +103,8 @@ module GRPC
       # Send back a UNKNOWN status to the client
       GRPC.logger.warn("failed handler: #{active_call}; sending status:UNKNOWN")
       GRPC.logger.warn(e)
+      STDERR.puts "ERROR from run_server method inspection is: #{e.inspect} "
+      STDERR.puts "BACKTRACE from error is: #{e.backtrace} "
       send_status(active_call, UNKNOWN, 'no reason given')
     end
 

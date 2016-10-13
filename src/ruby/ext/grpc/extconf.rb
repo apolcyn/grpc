@@ -110,7 +110,7 @@ puts 'Generating Makefile for ' + output
 create_makefile(output)
 
 strip_tool = RbConfig::CONFIG['STRIP']
-strip_tool = 'strip -x' if RUBY_PLATFORM =~ /darwin/
+strip_tool = 'echo not stripping' if RUBY_PLATFORM =~ /darwin/
 
 if grpc_config == 'opt'
   File.open('Makefile.new', 'w') do |o|

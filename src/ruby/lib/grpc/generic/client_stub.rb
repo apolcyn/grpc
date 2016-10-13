@@ -159,12 +159,13 @@ module GRPC
                          return_op: false,
                          parent: nil,
                          credentials: nil,
+                         id: 0,
                          metadata: {})
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,
                           credentials: credentials)
-      return c.request_response(req, metadata: metadata) unless return_op
+      return c.request_response(req, metadata: metadata, id: id) unless return_op
 
       # return the operation view of the active_call; define #execute as a
       # new method for this instance that invokes #request_response.

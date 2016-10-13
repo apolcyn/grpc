@@ -130,6 +130,7 @@ class SynchronousUnaryClient GRPC_FINAL : public SynchronousClient {
     grpc::Status s =
         stub->UnaryCall(&context, request_, &responses_[thread_idx]);
     entry->set_value((UsageTimer::Now() - start) * 1e9);
+    GPR_ASSERT(s.ok());
     return s.ok();
   }
 };

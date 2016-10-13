@@ -39,6 +39,9 @@
 
 #include <grpc/support/time.h>
 
+#include "rb_channel.h"
+#include "rb_call.h"
+
 /* grpc_rb_mGrpcCore is the module containing the ruby wrapper GRPC classes. */
 extern VALUE grpc_rb_mGrpcCore;
 

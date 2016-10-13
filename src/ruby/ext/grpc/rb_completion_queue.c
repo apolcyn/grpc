@@ -85,6 +85,35 @@ static void unblock_func(void *param) {
   next_call->interrupted = 1;
 }
 
+grpc_event c_completion_queue_pluck(grpc_completion_queue *queue, void *tag,
+                                     gpr_timespec deadline, void *reserved, gpr_mu *fake_gil) {
+  next_call_stack next_call;
+  MEMZERO(&next_call, next_call_stack, 1);
+  next_call.cq = queue;
+  next_call.timeout = deadline;
+  next_call.tag = tag;
+  next_call.event.type = GRPC_QUEUE_TIMEOUT;
+  (void)reserved;
+  /* Loop until we finish a pluck without an interruption. The internal
+     pluck function runs either until it is interrupted or it gets an
+     event, or time runs out.
+
+     The basic reason we need this relatively complicated construction is that
+     we need to re-acquire the GVL when an interrupt comes in, so that the ruby
+     interpreter can do what it needs to do with the interrupt. But we also need
+     to get back to plucking when the interrupt has been handled. */
+  do {
+    next_call.interrupted = 0;
+    gpr_mu_unlock(fake_gil);
+    grpc_rb_completion_queue_pluck_no_gil(&next_call);
+    gpr_mu_lock(fake_gil);
+    /* If an interrupt prevented pluck from returning useful information, then
+       any plucks that did complete must have timed out */
+  } while (next_call.interrupted &&
+           next_call.event.type == GRPC_QUEUE_TIMEOUT);
+  return next_call.event;
+}
+
 /* Does the same thing as grpc_completion_queue_pluck, while properly releasing
    the GVL and handling interrupts */
 grpc_event rb_completion_queue_pluck(grpc_completion_queue *queue, void *tag,

@@ -37,11 +37,25 @@
 #include <ruby/ruby.h>
 
 #include <grpc/grpc.h>
+#include "rb_call.h"
+
+/* grpc_rb_channel wraps a grpc_channel. */
+typedef struct grpc_rb_channel {
+  VALUE credentials;
+
+  /* The actual channel */
+  grpc_channel *wrapped;
+  grpc_completion_queue *queue;
+  gpr_mu *mu;
+} grpc_rb_channel;
 
 /* Initializes the Channel class. */
 void Init_grpc_channel();
 
 /* Gets the wrapped channel from the ruby wrapper */
 grpc_channel* grpc_rb_get_wrapped_channel(VALUE v);
+grpc_rb_channel* grpc_c_channel_alloc_init();
+
+grpc_rb_call* grpc_c_channel_create_call(grpc_rb_channel* channel, char*, char*);
 
 #endif /* GRPC_RB_CHANNEL_H_ */

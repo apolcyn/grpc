@@ -178,10 +178,11 @@ module GRPC
             marshal = desc.marshal_proc
             unmarshal = desc.unmarshal_proc(:output)
             route = "/#{route_prefix}/#{name}"
+            STDERR.puts "ADDING ROUTE: |#{route}| "
             if desc.request_response?
-              define_method(mth_name) do |req, metadata = {}|
+              define_method(mth_name) do |req, id = 0, metadata = {}|
                 GRPC.logger.debug("calling #{@host}:#{route}")
-                request_response(route, req, marshal, unmarshal, metadata)
+                request_response(route, req, marshal, unmarshal, id: id, metadata: metadata)
               end
             elsif desc.client_streamer?
               define_method(mth_name) do |reqs, metadata = {}|

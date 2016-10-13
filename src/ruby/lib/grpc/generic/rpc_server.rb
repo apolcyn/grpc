@@ -247,7 +247,9 @@ module GRPC
       # sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
                          metadata_received: true, started: false)
+      STDERR.puts "unavailable, sending status exhausted"
       c.send_status(GRPC::Core::StatusCodes::RESOURCE_EXHAUSTED, '')
+      STDERR.puts "unavailable, sent status exhausted"
       nil
     end
 
@@ -262,7 +264,9 @@ module GRPC
       # metadata hasn't been sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
                          metadata_received: true, started: false)
+      STDERR.puts "unimplemented. #{an_rpc.method} is not implemented. sending status unimplemented"
       c.send_status(GRPC::Core::StatusCodes::UNIMPLEMENTED, '')
+      STDERR.puts "unimplemented, sent status unimplemented"
       nil
     end
 
@@ -272,6 +276,7 @@ module GRPC
       while running_state == :running
         begin
           an_rpc = @server.request_call
+	  STDERR.puts "just received new call"
           break if (!an_rpc.nil?) && an_rpc.call.nil?
           active_call = new_active_server_call(an_rpc)
           unless active_call.nil?
@@ -309,8 +314,8 @@ module GRPC
         connect_md = @connect_md_proc.call(an_rpc.method, an_rpc.metadata)
       end
 
-      return nil unless available?(an_rpc)
-      return nil unless implemented?(an_rpc)
+      STDERR.puts "not available" and return nil unless available?(an_rpc)
+      STDERR.puts "not implemented" and return nil unless implemented?(an_rpc)
 
       # Create the ActiveCall. Indicate that metadata hasnt been sent yet.
       GRPC.logger.info("deadline is #{an_rpc.deadline}; (now=#{Time.now})")
