@@ -41,6 +41,7 @@
 #include <grpc/support/time.h>
 
 #include "test/cpp/qps/qps_worker.h"
+#include "test/cpp/qps/server.h"
 #include "test/cpp/util/test_config.h"
 
 DEFINE_int32(driver_port, 0, "Port for communication with driver");
@@ -54,9 +55,17 @@ namespace grpc {
 namespace testing {
 
 static void RunServer() {
-  QpsWorker worker(FLAGS_driver_port, FLAGS_server_port);
+  grpc::testing::ServerConfig server_config;
+  server_config.set_port(FLAGS_server_port);
+  server_config.set_server_type(grpc::testing::SYNC_SERVER);
 
-  while (!got_sigint && !worker.Done()) {
+  auto server = grpc::testing::CreateSynchronousServer(server_config);
+
+  if(!server) {
+    fprintf(stderr, "failed to create server\n");
+  }
+
+  while (!got_sigint) {
     gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
                                  gpr_time_from_seconds(5, GPR_TIMESPAN)));
   }
