@@ -1,5 +1,5 @@
-#!/bin/bash
-# Copyright 2015, Google Inc.
+#!/usr/bin/env python2.7
+# Copyright 2016, Google Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,27 +28,24 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set -ex
+# Uploads performance benchmark result file to bigquery.
 
-cd $(dirname $0)/../../..
+#import argparse
+#import calendar
+#import json
+#import os
+#import sys
+#import time
+#import uuid
+#
+#_PROJECT_ID='grpc-testing'
+#
+#
+#
+#argp = argparse.ArgumentParser(description='Upload result to blob store.')
+#argp.add_argument('--blobstore_result_table', required=True, default=None, type=str,
+#                  help='Blobstore "dataset.table" to upload results to.')
+#argp.add_argument('--file_to_upload', default='perf_report_text', type=str,
+#                  help='Report file to upload.')
 
-# TODO(jtattermusch): To be sure there are no running processes that would
-# mess with the results, be rough and reboot the slave here
-# and wait for it to come back online.
-ssh "${USER_AT_HOST}" "killall -9 qps_worker dotnet mono node ruby worker || true"
 
-# On Windows, killall is not supported & we need to kill all pending workers
-# before attempting to delete the workspace
-ssh "${USER_AT_HOST}" "ps -e | egrep 'qps_worker|dotnet' | awk '{print $1}' | xargs kill -9 || true"
-
-# cleanup after previous builds
-ssh "${USER_AT_HOST}" "rm -rf ~/performance_workspace && mkdir -p ~/performance_workspace"
-
-# push the current sources to the slave and unpack it.
-scp ../grpc.tar "${USER_AT_HOST}:~/performance_workspace"
-# Windows workaround: attempt to untar twice, first run is going to fail
-# with symlink creation error(s).
-ssh "${USER_AT_HOST}" "tar -xf ~/performance_workspace/grpc.tar -C ~/performance_workspace || tar -xf ~/performance_workspace/grpc.tar -C ~/performance_workspace"
-
-# For consistency with local run, invoke the kill_workers script remotely.
-ssh $TESTING_SSH_ARGS "${USER_AT_HOST}" "~/performance_workspace/grpc/tools/run_tests/performance/kill_workers.sh"

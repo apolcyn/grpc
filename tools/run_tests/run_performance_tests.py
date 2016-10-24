@@ -49,13 +49,17 @@ import tempfile
 import time
 import traceback
 import uuid
+import report_utils
+from distutils.spawn import find_executable
 
 
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
 
-_REMOTE_HOST_USERNAME = 'jenkins'
+_REMOTE_HOST_USERNAME = os.environ.get('REMOTE_HOST_USERNAME') or 'jenkins'
+
+_PERF_REPORT_OUTPUT_DIR = 'perf_reports'
 
 
 class QpsWorkerJob:
@@ -80,14 +84,20 @@ class QpsWorkerJob:
       self._job = None
 
 
-def create_qpsworker_job(language, shortname=None,
-                         port=10000, remote_host=None):
-  cmdline = language.worker_cmdline() + ['--driver_port=%s' % port]
+def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None, perf_cmd=None):
+  cmdline = []
+  if perf_cmd:
+    cmdline.extend(perf_cmd)
+
+  cmdline.extend(language.worker_cmdline() + ['--driver_port=%s' % port])
+  print("cmdline for qpsworker is: " + repr(cmdline))
   if remote_host:
     user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
-    cmdline = ['ssh',
-               str(user_at_host),
-               'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)]
+
+    ssh_cmd = ['ssh']
+    ssh_cmd.extend('-i /home/apolcyn/.ssh/my-ssh-key'.split(' '))
+    ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
+    cmdline = ssh_cmd
     host_and_port='%s:%s' % (remote_host, port)
   else:
     host_and_port='localhost:%s' % port
@@ -259,7 +269,7 @@ def build_on_remote_hosts(hosts, languages=scenario_config.LANGUAGES.keys(), bui
     sys.exit(1)
 
 
-def create_qpsworkers(languages, worker_hosts):
+def create_qpsworkers(languages, worker_hosts, perf_cmd=None):
   """Creates QPS workers (but does not start them)."""
   if not worker_hosts:
     # run two workers locally (for each language)
@@ -275,10 +285,24 @@ def create_qpsworkers(languages, worker_hosts):
                                shortname= 'qps_worker_%s_%s' % (language,
                                                                 worker_idx),
                                port=worker[1] + language.worker_port_offset(),
-                               remote_host=worker[0])
+                               remote_host=worker[0],
+                               perf_cmd=perf_cmd)
           for language in languages
           for worker_idx, worker in enumerate(workers)]
 
+
+def perf_report_processor_job(worker_host, output_filename):
+  print('Creating perf report collection job for %s' % worker_host)
+  user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
+  
+  cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s \
+         tools/run_tests/performance/process_perf_reports.sh" \
+          % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR)
+  return jobset.JobSpec(cmdline=cmd,
+                        timeout_seconds=3 * 60,
+                        shell=True,
+                        verbose_success=True,
+                        shortname='process perf report')
 
 Scenario = collections.namedtuple('Scenario', 'jobspec workers name')
 
@@ -403,6 +427,9 @@ argp.add_argument('--netperf',
                   action='store_const',
                   const=True,
                   help='Run netperf benchmark as one of the scenarios.')
+argp.add_argument('--perf',
+                  #nargs='+',
+                  help='Wrap QPS workers in a perf command, with arguments to perf specified here.')
 
 args = argp.parse_args()
 
@@ -410,7 +437,6 @@ languages = set(scenario_config.LANGUAGES[l]
                 for l in itertools.chain.from_iterable(
                       scenario_config.LANGUAGES.iterkeys() if x == 'all' else [x]
                       for x in args.language))
-
 
 # Put together set of remote hosts where to run and build
 remote_hosts = set()
@@ -433,7 +459,15 @@ if not args.remote_driver_host:
 if not args.dry_run:
   build_on_remote_hosts(remote_hosts, languages=[str(l) for l in languages], build_local=build_local)
 
-qpsworker_jobs = create_qpsworkers(languages, args.remote_worker_host)
+perf_cmd = None
+if args.perf:
+  # Expect /usr/bin/perf to be installed here, as is usual
+  perf_cmd = ['/usr/bin/perf'] 
+  perf_cmd.extend(args.perf.split(' '))
+  # -o so perf will write to the file when we stop the worker
+  perf_cmd.extend('-o perf.data'.split(' '))
+
+qpsworker_jobs = create_qpsworkers(languages, args.remote_worker_host, perf_cmd=perf_cmd)
 
 # get list of worker addresses for each language.
 workers_by_lang = dict([(str(language), []) for language in languages])
@@ -455,6 +489,8 @@ if not scenarios:
 total_scenario_failures = 0
 qps_workers_killed = 0
 merged_resultset = {}
+perf_report_failures = 0
+
 for scenario in scenarios:
   if args.dry_run:
     print(scenario.name)
@@ -472,10 +508,29 @@ for scenario in scenarios:
       # Consider qps workers that need to be killed as failures
       qps_workers_killed += finish_qps_workers(scenario.workers)
 
+if total_scenario_failures > 0 or qps_workers_killed > 0:
+  print ("%s scenarios failed and %s qps worker jobs killed" % (total_scenario_failures, qps_workers_killed))
+  sys.exit(1)
+
+# Collect perf text reports and flamegraphs if perf_cmd was used
+if perf_cmd:
+  perf_report_jobs = []
+  profile_output_files = []
+  for _, worker_host in enumerate(remote_hosts):
+    output_filename = '%s_perf_profile_report' % worker_host
+    # base filename from the name of the worker, create .txt and .svg versions of it
+    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
+    perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
+
+  jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
+  perf_report_failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
+  jobset.message('END', 'Collecting perf reports from qps workers', do_newline=True)
+
+  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
+  if perf_report_failures > 0:
+    print("%s perf report collection jobs failed" % repr(perf_report_failures))
+    sys.exit(1)
 
 report_utils.render_junit_xml_report(merged_resultset, 'report.xml',
                                      suite_name='benchmarks')
 
-if total_scenario_failures > 0 or qps_workers_killed > 0:
-  print ("%s scenarios failed and %s qps worker jobs killed" % (total_scenario_failures, qps_workers_killed))
-  sys.exit(1)
