@@ -56,21 +56,21 @@ xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=linux\artifacts\* pr
 xcopy /Y /I ..\..\architecture=x86,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x86\
 xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x64\
 
-%DOTNET% restore .
+%DOTNET% restore . || goto :error
 
-%DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts
-%DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts
-%DOTNET% pack --configuration Release Grpc.HealthCheck\project.json --output ..\..\artifacts
+%DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts || goto :error
+%DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts || goto :error
+%DOTNET% pack --configuration Release Grpc.HealthCheck\project.json --output ..\..\artifacts || goto :error
 
-%NUGET% pack Grpc.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts
-%NUGET% pack Grpc.Tools.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts
+%NUGET% pack Grpc.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts || goto :error
+%NUGET% pack Grpc.Tools.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts 
 
 @rem copy resulting nuget packages to artifacts directory
-xcopy /Y /I *.nupkg ..\..\artifacts\
+xcopy /Y /I *.nupkg ..\..\artifacts\ || goto :error
 
 @rem create a zipfile with the artifacts as well
 powershell -Command "Add-Type -Assembly 'System.IO.Compression.FileSystem'; [System.IO.Compression.ZipFile]::CreateFromDirectory('..\..\artifacts', 'csharp_nugets_windows_dotnetcli.zip');"
-xcopy /Y /I csharp_nugets_windows_dotnetcli.zip ..\..\artifacts\
+xcopy /Y /I csharp_nugets_windows_dotnetcli.zip ..\..\artifacts\ || goto :error
 
 goto :EOF
 
