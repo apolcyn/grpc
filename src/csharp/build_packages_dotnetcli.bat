@@ -56,7 +56,7 @@ xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=linux\artifacts\* pr
 xcopy /Y /I ..\..\architecture=x86,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x86\
 xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x64\
 
-%DOTNET% restore . || goto :error
+%DOTNET% restore **/project.json || goto :error
 
 %DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts || goto :error
 %DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts || goto :error
