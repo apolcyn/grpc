@@ -37,7 +37,7 @@ set DOTNET="C:\Program Files\dotnet\dotnet.exe"
 
 set -ex
 
-mkdir -p ../../artifacts/
+mkdir -p ..\..\artifacts\
 
 @rem Collect the artifacts built by the previous build step if running on Jenkins
 @rem TODO(jtattermusch): is there a better way to do this?
@@ -58,12 +58,12 @@ xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=macos\artifacts\* pr
 
 %DOTNET% restore .
 
-%DOTNET% pack --configuration Release Grpc.Core/project.json --output ../../artifacts
-%DOTNET% pack --configuration Release Grpc.Auth/project.json --output ../../artifacts
-%DOTNET% pack --configuration Release Grpc.HealthCheck/project.json --output ../../artifacts
+%DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts
+%DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts
+%DOTNET% pack --configuration Release Grpc.HealthCheck\project.json --output ..\..\artifacts
 
-%NUGET% pack Grpc.nuspec -Version "1.0.1" -OutputDirectory ../../artifacts
-%NUGET% pack Grpc.Tools.nuspec -Version "1.0.1" -OutputDirectory ../../artifacts
+%NUGET% pack Grpc.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts
+%NUGET% pack Grpc.Tools.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts
 
 @rem copy resulting nuget packages to artifacts directory
 xcopy /Y /I *.nupkg ..\..\artifacts\
