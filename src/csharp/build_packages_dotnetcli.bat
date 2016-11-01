@@ -34,7 +34,7 @@ set PROTOBUF_VERSION=3.0.0
 
 @rem Adjust the location of nuget.exe
 set NUGET=C:\nuget\nuget.exe
-set DOTNET="C:\Program Files\dotnet\dotnet"
+set DOTNET="C:\Program Files\dotnet\dotnet.exe"
 
 set -ex
 
