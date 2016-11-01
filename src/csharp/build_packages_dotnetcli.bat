@@ -70,8 +70,8 @@ xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=macos\artifacts\* pr
 xcopy /Y /I *.nupkg ..\..\artifacts\
 
 @rem create a zipfile with the artifacts as well
-powershell -Command "Add-Type -Assembly 'System.IO.Compression.FileSystem'; [System.IO.Compression.ZipFile]::CreateFromDirectory('..\..\artifacts', 'csharp_nugets_obsolete.zip');"
-xcopy /Y /I csharp_nugets_obsolete.zip ..\..\artifacts\
+powershell -Command "Add-Type -Assembly 'System.IO.Compression.FileSystem'; [System.IO.Compression.ZipFile]::CreateFromDirectory('..\..\artifacts', 'csharp_nugets_windows_dotnetcli.zip');"
+xcopy /Y /I csharp_nugets_windows_dotnetcli.zip ..\..\artifacts\
 
 goto :EOF
 
