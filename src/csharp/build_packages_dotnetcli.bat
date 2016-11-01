@@ -33,7 +33,7 @@ set PROTOBUF_VERSION=3.0.0
 
 @rem Adjust the location of nuget.exe
 set NUGET=C:\nuget\nuget.exe
-set DOTNET="C:\Program Files\dotnet\dotnet.exe"
+set DOTNET=dotnet
 
 set -ex
 
@@ -56,11 +56,11 @@ xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=linux\artifacts\* pr
 xcopy /Y /I ..\..\architecture=x86,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x86\
 xcopy /Y /I ..\..\architecture=x64,language=protoc,platform=macos\artifacts\* protoc_plugins\macosx_x64\
 
-& %DOTNET% restore **/project.json || goto :error
+%DOTNET% restore **/project.json || goto :error
 
-& %DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts || goto :error
-& %DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts || goto :error
-& %DOTNET% pack --configuration Release Grpc.HealthCheck\project.json --output ..\..\artifacts || goto :error
+%DOTNET% pack --configuration Release Grpc.Core\project.json --output ..\..\artifacts || goto :error
+%DOTNET% pack --configuration Release Grpc.Auth\project.json --output ..\..\artifacts || goto :error
+%DOTNET% pack --configuration Release Grpc.HealthCheck\project.json --output ..\..\artifacts || goto :error
 
 %NUGET% pack Grpc.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts || goto :error
 %NUGET% pack Grpc.Tools.nuspec -Version "1.0.1" -OutputDirectory ..\..\artifacts 
