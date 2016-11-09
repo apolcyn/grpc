@@ -515,8 +515,10 @@ if total_scenario_failures > 0 or qps_workers_killed > 0:
 if perf_cmd:
   perf_report_jobs = []
   profile_output_files = []
+  profile_count = 0
   for _, worker_host in enumerate(remote_hosts):
-    output_filename = '%s_perf_profile_report' % worker_host
+    output_filename = '%s_perf_profile_report_number_%d' % (worker_host, profile_count)
+    profile_count += 1
     # base filename from the name of the worker, create .txt and .svg versions of it
     profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
     perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
