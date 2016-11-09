@@ -57,7 +57,7 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
 
-_REMOTE_HOST_USERNAME = os.environ.get('REMOTE_HOST_USERNAME') or 'jenkins'
+_REMOTE_HOST_USERNAME = 'jenkins'
 
 _PERF_REPORT_OUTPUT_DIR = 'perf_reports'
 
@@ -95,7 +95,6 @@ def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None,
     user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
 
     ssh_cmd = ['ssh']
-    ssh_cmd.extend('-i /home/apolcyn/.ssh/my-ssh-key'.split(' '))
     ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
     cmdline = ssh_cmd
     host_and_port='%s:%s' % (remote_host, port)

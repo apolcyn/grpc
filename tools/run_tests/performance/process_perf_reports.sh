@@ -4,23 +4,23 @@ mkdir -p $OUTPUT_DIR
 echo "creating perf text report on remote host $USER_AT_HOST"
 
 # "perf report -i" to not wait for terminal input
-ssh $TESTING_SSH_ARGS $USER_AT_HOST "cd ~/performance_workspace/grpc && perf report -i perf.data -v --header > $OUTPUT_FILENAME"
+ssh $USER_AT_HOST "cd ~/performance_workspace/grpc && perf report -i perf.data -v --header > $OUTPUT_FILENAME"
 
-ssh $TESTING_SSH_ARGS $USER_AT_HOST "cd ~/performance_workspace/grpc && gzip $OUTPUT_FILENAME"
+ssh $USER_AT_HOST "cd ~/performance_workspace/grpc && gzip $OUTPUT_FILENAME"
 
 echo "copying perf text report from $USER_AT_HOST to here"
-scp $TESTING_SSH_ARGS $USER_AT_HOST:~/performance_workspace/grpc/${OUTPUT_FILENAME}.gz "${OUTPUT_DIR}/${OUTPUT_FILENAME}.gz"
+scp $USER_AT_HOST:~/performance_workspace/grpc/${OUTPUT_FILENAME}.gz "${OUTPUT_DIR}/${OUTPUT_FILENAME}.gz"
 
 gzip -d -f $OUTPUT_DIR/${OUTPUT_FILENAME}.gz
 mv $OUTPUT_DIR/${OUTPUT_FILENAME} $OUTPUT_DIR/${OUTPUT_FILENAME}.txt
 
 # Generate Flame graphs
 echo "running perf script on $USER_AT_HOST with perf.data"
-ssh $TESTING_SSH_ARGS $USER_AT_HOST "cd ~/performance_workspace/grpc && perf script -i perf.data > out.perf"
+ssh $USER_AT_HOST "cd ~/performance_workspace/grpc && perf script -i perf.data > out.perf"
 
-ssh $TESTING_SSH_ARGS $USER_AT_HOST "cd ~/performance_workspace/grpc && gzip out.perf"
+ssh $USER_AT_HOST "cd ~/performance_workspace/grpc && gzip out.perf"
 
-scp $TESTING_SSH_ARGS $USER_AT_HOST:~/performance_workspace/grpc/out.perf.gz .
+scp $USER_AT_HOST:~/performance_workspace/grpc/out.perf.gz .
 
 gzip -d -f out.perf.gz
 

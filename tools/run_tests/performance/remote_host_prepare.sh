@@ -51,4 +51,4 @@ scp ../grpc.tar "${USER_AT_HOST}:~/performance_workspace"
 ssh "${USER_AT_HOST}" "tar -xf ~/performance_workspace/grpc.tar -C ~/performance_workspace || tar -xf ~/performance_workspace/grpc.tar -C ~/performance_workspace"
 
 # For consistency with local run, invoke the kill_workers script remotely.
-ssh $TESTING_SSH_ARGS "${USER_AT_HOST}" "~/performance_workspace/grpc/tools/run_tests/performance/kill_workers.sh"
+ssh "${USER_AT_HOST}" "~/performance_workspace/grpc/tools/run_tests/performance/kill_workers.sh"
