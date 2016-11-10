@@ -33,4 +33,5 @@ set -ex
 cd $(dirname $0)/../../..
 
 # execute the build script remotely
-ssh "${USER_AT_HOST}" "CONFIG=${CONFIG} ~/performance_workspace/grpc/tools/run_tests/performance/build_performance.sh $*"
+
+ssh "${USER_AT_HOST}" "BUILD_QPS_DRIVER=false CONFIG=${CONFIG} ~/performance_workspace/grpc/tools/run_tests/performance/build_performance.sh $*"

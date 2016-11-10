@@ -65,11 +65,12 @@ _PERF_REPORT_OUTPUT_DIR = 'perf_reports'
 class QpsWorkerJob:
   """Encapsulates a qps worker server job."""
 
-  def __init__(self, spec, language, host_and_port):
+  def __init__(self, spec, language, host_and_port, perf_data_base_name=None):
     self._spec = spec
     self.language = language
     self.host_and_port = host_and_port
     self._job = None
+    self.perf_data_base_name = perf_data_base_name
 
   def start(self):
     self._job = jobset.Job(self._spec, newline_on_success=True, travis=True, add_env={})
@@ -85,28 +86,33 @@ class QpsWorkerJob:
 
 
 def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None, perf_cmd=None):
-  cmdline = []
-  if perf_cmd:
-    cmdline.extend(perf_cmd)
+  cmdline = (language.worker_cmdline() + ['--driver_port=%s' % port])
 
-  cmdline.extend(language.worker_cmdline() + ['--driver_port=%s' % port])
-  print("cmdline for qpsworker is: " + repr(cmdline))
   if remote_host:
-    user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
-
-    ssh_cmd = ['ssh']
-    ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
-    cmdline = ssh_cmd
     host_and_port='%s:%s' % (remote_host, port)
   else:
     host_and_port='localhost:%s' % port
+
+  perf_data_base_name = None
+  if perf_cmd:
+    perf_data_base_name = '%s-%s' % (host_and_port, shortname)
+    # specify -o output file so perf.data gets collected when worker stopped
+    cmdline = perf_cmd + ('-o %s-perf.data' % perf_data_base_name).split(' ') + cmdline
+
+  if remote_host:
+    user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
+    ssh_cmd = ['ssh']
+    ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
+    cmdline = ssh_cmd
+
+  print("cmdline for qpsworker is: " + repr(cmdline))
 
   jobspec = jobset.JobSpec(
       cmdline=cmdline,
       shortname=shortname,
       timeout_seconds=5*60,  # workers get restarted after each scenario
       verbose_success=True)
-  return QpsWorkerJob(jobspec, language, host_and_port)
+  return QpsWorkerJob(jobspec, language, host_and_port, perf_data_base_name)
 
 
 def create_scenario_jobspec(scenario_json, workers, remote_host=None,
@@ -290,13 +296,20 @@ def create_qpsworkers(languages, worker_hosts, perf_cmd=None):
           for worker_idx, worker in enumerate(workers)]
 
 
-def perf_report_processor_job(worker_host, output_filename):
+def perf_report_processor_job(worker_host, perf_base_name, output_filename):
   print('Creating perf report collection job for %s' % worker_host)
-  user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
-  
-  cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s \
-         tools/run_tests/performance/process_perf_reports.sh" \
-          % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR)
+  cmd = ''
+
+  if worker_host != 'localhost':
+    user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
+    cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
+         tools/run_tests/performance/process_remote_perf_reports.sh" \
+          % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name)
+  else:
+    cmd = "OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
+          tools/run_tests/performance/process_local_perf_reports.sh" \
+          % (output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name)
+
   return jobset.JobSpec(cmdline=cmd,
                         timeout_seconds=3 * 60,
                         shell=True,
@@ -395,6 +408,31 @@ def finish_qps_workers(jobs):
   print('All QPS workers finished.')
   return num_killed
 
+profile_output_files = []
+
+# Collect perf text reports and flamegraphs if perf_cmd was used
+# Note the base names of perf text reports are used when creating and processing
+# perf data. The scenario name uniqifies the output name in the final
+# perf reports directory. 
+# Alos, the perf profiles need to be fetched and processed after each scenario
+# in order to avoid clobbering the output files.
+def run_collect_perf_profile_jobs(hosts_and_base_names, scenario_name):
+  perf_report_jobs = []
+  global profile_output_files
+  for host_and_port in hosts_and_base_names:
+    perf_base_name = hosts_and_base_names[host_and_port]
+    output_filename = '%s-%s' % (scenario_name, perf_base_name)
+    # from the base filename, create .txt and .svg versions of it
+    host = host_and_port.split(':')[0]
+    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
+    perf_report_jobs.append(perf_report_processor_job(host, perf_base_name, output_filename))
+
+  jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
+  failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
+  jobset.message('END', 'Collecting perf reports from qps workers', do_newline=True)
+  return failures
+
+
 argp = argparse.ArgumentParser(description='Run performance tests.')
 argp.add_argument('-l', '--language',
                   choices=['all'] + sorted(scenario_config.LANGUAGES.keys()),
@@ -463,8 +501,6 @@ if args.perf:
   # Expect /usr/bin/perf to be installed here, as is usual
   perf_cmd = ['/usr/bin/perf'] 
   perf_cmd.extend(args.perf.split(' '))
-  # -o so perf will write to the file when we stop the worker
-  perf_cmd.extend('-o perf.data'.split(' '))
 
 qpsworker_jobs = create_qpsworkers(languages, args.remote_worker_host, perf_cmd=perf_cmd)
 
@@ -494,6 +530,7 @@ for scenario in scenarios:
   if args.dry_run:
     print(scenario.name)
   else:
+    scenario_failures = 0
     try:
       for worker in scenario.workers:
         worker.start()
@@ -506,32 +543,23 @@ for scenario in scenarios:
     finally:
       # Consider qps workers that need to be killed as failures
       qps_workers_killed += finish_qps_workers(scenario.workers)
+      if perf_cmd and scenario_failures == 0:
+        workers_and_base_names = {}
+        for worker in scenario.workers:
+          if not worker.perf_data_base_name:
+            raise Exception('using perf buf perf report filename is unspecified')
+          workers_and_base_names[worker.host_and_port] = worker.perf_data_base_name
+        perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
 
 if total_scenario_failures > 0 or qps_workers_killed > 0:
   print ("%s scenarios failed and %s qps worker jobs killed" % (total_scenario_failures, qps_workers_killed))
   sys.exit(1)
 
-# Collect perf text reports and flamegraphs if perf_cmd was used
-if perf_cmd:
-  perf_report_jobs = []
-  profile_output_files = []
-  profile_count = 0
-  for _, worker_host in enumerate(remote_hosts):
-    output_filename = '%s_perf_profile_report_number_%d' % (worker_host, profile_count)
-    profile_count += 1
-    # base filename from the name of the worker, create .txt and .svg versions of it
-    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
-    perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
-
-  jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
-  perf_report_failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
-  jobset.message('END', 'Collecting perf reports from qps workers', do_newline=True)
-
-  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
-  if perf_report_failures > 0:
-    print("%s perf report collection jobs failed" % repr(perf_report_failures))
-    sys.exit(1)
-
 report_utils.render_junit_xml_report(merged_resultset, 'report.xml',
                                      suite_name='benchmarks')
 
+if perf_cmd:
+  # write the index fil to the output dir, with all profiles from all scenarios/workers
+  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
+  if perf_report_failures > 0:
+    print ("%s perf profile collection jobs failed" % perf_report_failures)
