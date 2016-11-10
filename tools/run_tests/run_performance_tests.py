@@ -65,11 +65,12 @@ _PERF_REPORT_OUTPUT_DIR = 'perf_reports'
 class QpsWorkerJob:
   """Encapsulates a qps worker server job."""
 
-  def __init__(self, spec, language, host_and_port):
+  def __init__(self, spec, language, host_and_port, perf_data_base_name=None):
     self._spec = spec
     self.language = language
     self.host_and_port = host_and_port
     self._job = None
+    self.perf_data_base_name = perf_data_base_name
 
   def start(self):
     self._job = jobset.Job(self._spec, newline_on_success=True, travis=True, add_env={})
@@ -85,11 +86,7 @@ class QpsWorkerJob:
 
 
 def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None, perf_cmd=None):
-  cmdline = []
-  if perf_cmd:
-    cmdline.extend(perf_cmd)
-
-  cmdline.extend(language.worker_cmdline() + ['--driver_port=%s' % port])
+  cmdline = (language.worker_cmdline() + ['--driver_port=%s' % port])
   print("cmdline for qpsworker is: " + repr(cmdline))
   if remote_host:
     user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
@@ -101,12 +98,17 @@ def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None,
   else:
     host_and_port='localhost:%s' % port
 
+  perf_data_base_name = None
+  if perf_cmd:
+    perf_data_base_name = '%s-%s' % (host_and_port, shortname)
+    cmdline = perf_cmd + ('-o %s-perf.data' % perf_data_base_name).split(' ')
+
   jobspec = jobset.JobSpec(
       cmdline=cmdline,
       shortname=shortname,
       timeout_seconds=5*60,  # workers get restarted after each scenario
       verbose_success=True)
-  return QpsWorkerJob(jobspec, language, host_and_port)
+  return QpsWorkerJob(jobspec, language, host_and_port, perf_data_base_name)
 
 
 def create_scenario_jobspec(scenario_json, workers, remote_host=None,
@@ -292,11 +294,18 @@ def create_qpsworkers(languages, worker_hosts, perf_cmd=None):
 
 def perf_report_processor_job(worker_host, output_filename):
   print('Creating perf report collection job for %s' % worker_host)
-  user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
-  
-  cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s \
-         tools/run_tests/performance/process_perf_reports.sh" \
+  cmd = ''
+
+  if worker_host != 'localhost':
+    user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
+    cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s \
+         tools/run_tests/performance/process_remote_perf_reports.sh" \
           % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR)
+  else:
+    cmd = "OUTPUT_FILENAME=%s OUTPUT_DIR=%s \
+          tools/run_tests/performance/process_local_perf_reports.sh" \
+          % (output_filename, _PERF_REPORT_OUTPUT_DIR)
+
   return jobset.JobSpec(cmdline=cmd,
                         timeout_seconds=3 * 60,
                         shell=True,
@@ -402,12 +411,11 @@ perf_report_failures = 0
 def run_collect_perf_profile_jobs(hosts_and_filenames):
   perf_report_jobs = []
   profile_output_files = []
-  for host, output_filename in enumerate(hosts_and_filenames):
-    output_filename = '%s_perf_profile_report_number_%d' % (worker_host, profile_count)
-    profile_count += 1
+  for host_and_port, output_filename in enumerate(hosts_and_filenames):
     # from the base filename, create .txt and .svg versions of it
+    host = host_and_port.split(':')[0]
     profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
-    perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
+    perf_report_jobs.append(perf_report_processor_job(host, output_filename))
 
   jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
   failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
@@ -529,7 +537,9 @@ for scenario in scenarios:
       if perf_cmd and scenario_failures == 0:
         workers_and_filenames = {}
         for worker in scenario.workers:
-          workers_and_filenames[worker.name] = '%s-%s' % (scenario.name, worker.host_and_port)
+          if not worker.perf_data_base_name:
+            raise Exception('using perf buf perf report filename is unspecified')
+          workers_and_filenames[worker.host_and_port] = worker.perf_data_base_name
         run_collect_perf_profile_jobs(workers_and_filenames)
 
 if total_scenario_failures > 0 or qps_workers_killed > 0:
