@@ -87,13 +87,8 @@ class QpsWorkerJob:
 
 def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None, perf_cmd=None):
   cmdline = (language.worker_cmdline() + ['--driver_port=%s' % port])
-  print("cmdline for qpsworker is: " + repr(cmdline))
-  if remote_host:
-    user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
 
-    ssh_cmd = ['ssh']
-    ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
-    cmdline = ssh_cmd
+  if remote_host:
     host_and_port='%s:%s' % (remote_host, port)
   else:
     host_and_port='localhost:%s' % port
@@ -101,8 +96,16 @@ def create_qpsworker_job(language, shortname=None, port=10000, remote_host=None,
   perf_data_base_name = None
   if perf_cmd:
     perf_data_base_name = '%s-%s' % (host_and_port, shortname)
-    # specify -o output file so perf.data collected when worker stopped
+    # specify -o output file so perf.data gets collected when worker stopped
     cmdline = perf_cmd + ('-o %s-perf.data' % perf_data_base_name).split(' ') + cmdline
+
+  if remote_host:
+    user_at_host = '%s@%s' % (_REMOTE_HOST_USERNAME, remote_host)
+    ssh_cmd = ['ssh']
+    ssh_cmd.extend([str(user_at_host), 'cd ~/performance_workspace/grpc/ && %s' % ' '.join(cmdline)])
+    cmdline = ssh_cmd
+
+  print("cmdline for qpsworker is: " + repr(cmdline))
 
   jobspec = jobset.JobSpec(
       cmdline=cmdline,
