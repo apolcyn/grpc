@@ -395,6 +395,27 @@ def finish_qps_workers(jobs):
   print('All QPS workers finished.')
   return num_killed
 
+perf_report_failures = 0
+
+
+# Collect perf text reports and flamegraphs if perf_cmd was used
+def run_collect_perf_profile_jobs(hosts_and_filenames):
+  perf_report_jobs = []
+  profile_output_files = []
+  for host, output_filename in enumerate(hosts_and_filenames):
+    output_filename = '%s_perf_profile_report_number_%d' % (worker_host, profile_count)
+    profile_count += 1
+    # from the base filename, create .txt and .svg versions of it
+    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
+    perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
+
+  jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
+  failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
+  perf_report_failures += failures
+  jobset.message('END', 'Collecting perf reports from qps workers', do_newline=True)
+  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
+
+
 argp = argparse.ArgumentParser(description='Run performance tests.')
 argp.add_argument('-l', '--language',
                   choices=['all'] + sorted(scenario_config.LANGUAGES.keys()),
@@ -488,7 +509,6 @@ if not scenarios:
 total_scenario_failures = 0
 qps_workers_killed = 0
 merged_resultset = {}
-perf_report_failures = 0
 
 for scenario in scenarios:
   if args.dry_run:
@@ -506,32 +526,18 @@ for scenario in scenarios:
     finally:
       # Consider qps workers that need to be killed as failures
       qps_workers_killed += finish_qps_workers(scenario.workers)
+      if perf_cmd and scenario_failures == 0:
+        workers_and_filenames = {}
+        for worker in scenario.workers:
+          workers_and_filenames[worker.name] = '%s-%s' % (scenario.name, worker.host_and_port)
+        run_collect_perf_profile_jobs(workers_and_filenames)
 
 if total_scenario_failures > 0 or qps_workers_killed > 0:
   print ("%s scenarios failed and %s qps worker jobs killed" % (total_scenario_failures, qps_workers_killed))
   sys.exit(1)
 
-# Collect perf text reports and flamegraphs if perf_cmd was used
-if perf_cmd:
-  perf_report_jobs = []
-  profile_output_files = []
-  profile_count = 0
-  for _, worker_host in enumerate(remote_hosts):
-    output_filename = '%s_perf_profile_report_number_%d' % (worker_host, profile_count)
-    profile_count += 1
-    # base filename from the name of the worker, create .txt and .svg versions of it
-    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
-    perf_report_jobs.append(perf_report_processor_job(worker_host, output_filename))
-
-  jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
-  perf_report_failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
-  jobset.message('END', 'Collecting perf reports from qps workers', do_newline=True)
-
-  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
-  if perf_report_failures > 0:
-    print("%s perf report collection jobs failed" % repr(perf_report_failures))
-    sys.exit(1)
-
 report_utils.render_junit_xml_report(merged_resultset, 'report.xml',
                                      suite_name='benchmarks')
 
+if perf_cmd and perf_report_failures > 0:
+  print ("%s perf profile collection jobs failed" % perf_report_failures)

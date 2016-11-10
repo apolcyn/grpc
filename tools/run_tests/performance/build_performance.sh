@@ -40,7 +40,10 @@ CONFIG=${CONFIG:-opt}
 # TODO(jtattermusch): not embedding OpenSSL breaks the C# build because
 # grpc_csharp_ext needs OpenSSL embedded and some intermediate files from
 # this build will be reused.
-make CONFIG=${CONFIG} EMBED_OPENSSL=true EMBED_ZLIB=true qps_worker qps_json_driver -j8
+if [[ $BUILD_QPS_DRIVER != "false" ]]
+then
+  make CONFIG=${CONFIG} EMBED_OPENSSL=true EMBED_ZLIB=true qps_worker qps_json_driver -j8
+fi
 
 for language in $@
 do
