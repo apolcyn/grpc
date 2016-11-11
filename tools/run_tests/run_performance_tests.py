@@ -551,15 +551,18 @@ for scenario in scenarios:
           workers_and_base_names[worker.host_and_port] = worker.perf_data_base_name
         perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
 
+# Still write the index.html even if some scenarios failed.
+# 'profile_output_files' will only have names for scenarios that passed
+if perf_cmd:
+  # write the index fil to the output dir, with all profiles from all scenarios/workers
+  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
+
 if total_scenario_failures > 0 or qps_workers_killed > 0:
   print ("%s scenarios failed and %s qps worker jobs killed" % (total_scenario_failures, qps_workers_killed))
   sys.exit(1)
 
 report_utils.render_junit_xml_report(merged_resultset, 'report.xml',
                                      suite_name='benchmarks')
-
-if perf_cmd:
-  # write the index fil to the output dir, with all profiles from all scenarios/workers
-  report_utils.render_perf_profiling_results('%s/index.html' % _PERF_REPORT_OUTPUT_DIR, profile_output_files)
-  if perf_report_failures > 0:
-    print ("%s perf profile collection jobs failed" % perf_report_failures)
+if perf_report_failures > 0:
+  print ("%s perf profile collection jobs failed" % perf_report_failures)
+  sys.exit(1)
