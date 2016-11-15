@@ -234,7 +234,6 @@ class Job(object):
     cmdline = self._spec.cmdline
     if measure_cpu_costs:
       cmdline = ['time', '--portability'] + cmdline
-    print(' cmdline is ' + repr(cmdline))
     try_start = lambda: subprocess.Popen(args=cmdline,
                                          stderr=subprocess.STDOUT,
                                          stdout=self._tempfile,
