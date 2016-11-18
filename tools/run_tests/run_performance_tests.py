@@ -462,23 +462,22 @@ argp.add_argument('--netperf',
                   const=True,
                   help='Run netperf benchmark as one of the scenarios.')
 argp.add_argument('--perf_args',
-                  help=""" 
-                          Example usage: "--perf_args=record -F 99 -g".
-                          Wrap QPS workers in a perf command
-                          with the arguments to perf specified here. 
-                          Text and ".svg" flame graph profiles will be 
-                          created for each Qps Worker on each scenario. 
-                          Files will output to "<repo_root>/perf_reports" 
-                          directory.
-                          Note that the perf "-g" flag is necessary for
-                          flame graphs generation to work, only text profile
-                          creation will work if left out.
-                          Also note that the entire "--perf_args=<arg(s)>" must
-                          be wrapped in quotes as in the example usage.
-                          If the --"perg_args" is unspecified, "perf" will 
-                          not be used at all.
-                          See http://www.brendangregg.com/perf.html 
-                          for more general perf examples""")
+                  help=('Example usage: "--perf_args=record -F 99 -g". '
+                        'Wrap QPS workers in a perf command '
+                        'with the arguments to perf specified here. '
+                        'Text and ".svg" flame graph profiles will be '
+                        'created for each Qps Worker on each scenario. '
+                        'Files will output to "<repo_root>/perf_reports" '
+                        'directory. '
+                        'Note that the perf "-g" flag is necessary for '
+                        'flame graphs generation to work, only text profile '
+                        'creation will work if left out. '
+                        'Also note that the entire "--perf_args=<arg(s)>" must '
+                        'be wrapped in quotes as in the example usage. '
+                        'If the "--perg_args" is unspecified, "perf" will '
+                        'not be used at all. '
+                        'See http://www.brendangregg.com/perf.html '
+                        'for more general perf examples.'))
 
 args = argp.parse_args()
 
