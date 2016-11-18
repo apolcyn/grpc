@@ -158,3 +158,7 @@ echo 0 | sudo tee /proc/sys/kernel/perf_event_paranoid
 # see http://stackoverflow.com/questions/21284906/perf-couldnt-record-kernel-reference-relocation-symbol
 echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
 
+# Fetch scripts to generate flame graphs from perf data collected
+# on benchmarks
+git clone -v https://github.com/brendangregg/FlameGraph ~/FlameGraph
+

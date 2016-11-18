@@ -462,7 +462,23 @@ argp.add_argument('--netperf',
                   const=True,
                   help='Run netperf benchmark as one of the scenarios.')
 argp.add_argument('--perf_args',
-                  help='Wrap QPS workers in a perf command, with arguments to perf specified here.')
+                  help=""" 
+                          Example usage: "--perf_args=record -F 99 -g".
+                          Wrap QPS workers in a perf command
+                          with the arguments to perf specified here. 
+                          Text and ".svg" flame graph profiles will be 
+                          created for each Qps Worker on each scenario. 
+                          Files will output to "<repo_root>/perf_reports" 
+                          directory.
+                          Note that the perf "-g" flag is necessary for
+                          flame graphs generation to work, only text profile
+                          creation will work if left out.
+                          Also note that the entire "--perf_args=<arg(s)>" must
+                          be wrapped in quotes as in the example usage.
+                          If the --"perg_args" is unspecified, "perf" will 
+                          not be used at all.
+                          See http://www.brendangregg.com/perf.html 
+                          for more general perf examples""")
 
 args = argp.parse_args()
 
@@ -497,7 +513,7 @@ perf_cmd = None
 if args.perf_args:
   # Expect /usr/bin/perf to be installed here, as is usual
   perf_cmd = ['/usr/bin/perf'] 
-  perf_cmd.extend(args.perf_args.split(' '))
+  perf_cmd.extend(re.split('\s+', args.perf_args))
 
 qpsworker_jobs = create_qpsworkers(languages, args.remote_worker_host, perf_cmd=perf_cmd)
 
@@ -537,9 +553,6 @@ for scenario in scenarios:
       total_scenario_failures += scenario_failures
       merged_resultset = dict(itertools.chain(merged_resultset.iteritems(),
                                               resultset.iteritems()))
-    finally:
-      # Consider qps workers that need to be killed as failures
-      qps_workers_killed += finish_qps_workers(scenario.workers)
       if perf_cmd and scenario_failures == 0:
         workers_and_base_names = {}
         for worker in scenario.workers:
@@ -547,6 +560,10 @@ for scenario in scenarios:
             raise Exception('using perf buf perf report filename is unspecified')
           workers_and_base_names[worker.host_and_port] = worker.perf_file_base_name
         perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
+
+    finally:
+      # Consider qps workers that need to be killed as failures
+      qps_workers_killed += finish_qps_workers(scenario.workers)
 
 # Still write the index.html even if some scenarios failed.
 # 'profile_output_files' will only have names for scenarios that passed
