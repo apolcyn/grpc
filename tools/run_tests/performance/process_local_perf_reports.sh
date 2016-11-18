@@ -40,4 +40,4 @@ perf report -i $PERF_DATA_FILE  -v > ${OUTPUT_DIR}/${OUTPUT_FILENAME}.txt
 echo "running perf script on $PERF_DATA_FILE"
 perf script -i $PERF_DATA_FILE > $PERF_SCRIPT_OUTPUT
 
-~/FlameGraph/stackcollapse-perf.pl --kernel $PERF_SCRIPT_OUTPUT | ~/FlameGraph/flamegraph.pl --color=java --hash > ${OUTPUT_DIR}/${OUTPUT_FILENAME}.svg
+~/FlameGraph/stackcollapse-perf.pl $PERF_SCRIPT_OUTPUT | ~/FlameGraph/flamegraph.pl > ${OUTPUT_DIR}/${OUTPUT_FILENAME}.svg

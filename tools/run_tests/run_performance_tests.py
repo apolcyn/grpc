@@ -552,17 +552,18 @@ for scenario in scenarios:
       total_scenario_failures += scenario_failures
       merged_resultset = dict(itertools.chain(merged_resultset.iteritems(),
                                               resultset.iteritems()))
-      if perf_cmd and scenario_failures == 0:
-        workers_and_base_names = {}
-        for worker in scenario.workers:
-          if not worker.perf_file_base_name:
-            raise Exception('using perf buf perf report filename is unspecified')
-          workers_and_base_names[worker.host_and_port] = worker.perf_file_base_name
-        perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
-
     finally:
       # Consider qps workers that need to be killed as failures
       qps_workers_killed += finish_qps_workers(scenario.workers)
+
+    if perf_cmd and scenario_failures == 0:
+      workers_and_base_names = {}
+      for worker in scenario.workers:
+        if not worker.perf_file_base_name:
+          raise Exception('using perf buf perf report filename is unspecified')
+        workers_and_base_names[worker.host_and_port] = worker.perf_file_base_name
+      perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
+
 
 # Still write the index.html even if some scenarios failed.
 # 'profile_output_files' will only have names for scenarios that passed
