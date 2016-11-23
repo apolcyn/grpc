@@ -294,9 +294,22 @@ static char *dns_factory_get_default_host_name(grpc_resolver_factory *factory,
   return gpr_strdup(path);
 }
 
+static char* dns_factory_get_host(grpc_resolver_factory *factory,
+                                  char *uri) {
+  return uri;
+}
+
+static char* dns_factory_host_with_port(grpc_resolver_factory *factory,
+                                        char *host, char *port) {
+  return host;
+}
+
 static const grpc_resolver_factory_vtable dns_factory_vtable = {
     dns_factory_ref, dns_factory_unref, dns_factory_create_resolver,
-    dns_factory_get_default_host_name, "dns"};
+    dns_factory_get_default_host_name,
+    dns_factory_get_host,
+    dns_factory_host_with_port,
+    "dns"};
 static grpc_resolver_factory dns_resolver_factory = {&dns_factory_vtable};
 
 static grpc_resolver_factory *dns_resolver_factory_create() {
