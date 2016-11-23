@@ -30,6 +30,8 @@
 # AUTO-GENERATED FROM `$REPO_ROOT/templates/src/python/grpcio/grpc_core_dependencies.py.template`!!!
 
 CORE_SOURCE_FILES = [
+  'src/core/ext/client_channel/resolver_registry.c',
+  'src/core/ext/client_channel/uri_parser.c',
   'src/core/lib/profiling/basic_timers.c',
   'src/core/lib/profiling/stap_timers.c',
   'src/core/lib/support/alloc.c',

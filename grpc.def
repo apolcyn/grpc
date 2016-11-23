@@ -151,6 +151,7 @@ EXPORTS
     gpr_empty_slice
     grpc_slice_cmp
     grpc_slice_str_cmp
+    grpc_slice_is_equivalent
     grpc_slice_buffer_init
     grpc_slice_buffer_destroy
     grpc_slice_buffer_add
@@ -207,6 +208,8 @@ EXPORTS
     gpr_histogram_merge_contents
     gpr_join_host_port
     gpr_split_host_port
+    get_host_from_uri
+    add_port_to_host
     gpr_log
     gpr_log_message
     gpr_set_log_verbosity

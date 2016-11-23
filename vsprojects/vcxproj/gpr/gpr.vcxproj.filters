@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="$(SolutionDir)\..\src\core\ext\client_channel\resolver_registry.c">
+      <Filter>src\core\ext\client_channel</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\..\src\core\ext\client_channel\uri_parser.c">
+      <Filter>src\core\ext\client_channel</Filter>
+    </ClCompile>
     <ClCompile Include="$(SolutionDir)\..\src\core\lib\profiling\basic_timers.c">
       <Filter>src\core\lib\profiling</Filter>
     </ClCompile>
@@ -248,6 +254,12 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(SolutionDir)\..\src\core\ext\client_channel\resolver_registry.h">
+      <Filter>src\core\ext\client_channel</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)\..\src\core\ext\client_channel\uri_parser.h">
+      <Filter>src\core\ext\client_channel</Filter>
+    </ClInclude>
     <ClInclude Include="$(SolutionDir)\..\src\core\lib\profiling\timers.h">
       <Filter>src\core\lib\profiling</Filter>
     </ClInclude>
@@ -307,6 +319,12 @@
     </Filter>
     <Filter Include="src\core">
       <UniqueIdentifier>{c5e1baa7-de77-beb1-9675-942261648f79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core\ext">
+      <UniqueIdentifier>{6b18ab5c-c4aa-e58a-b953-b0138226038f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core\ext\client_channel">
+      <UniqueIdentifier>{33b27808-eab8-cbf2-8baf-5454b1a0ff90}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\core\lib">
       <UniqueIdentifier>{52037bcb-5719-a548-224d-834fbe569045}</UniqueIdentifier>

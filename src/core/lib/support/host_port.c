@@ -39,6 +39,7 @@
 #include <grpc/support/log.h>
 #include <grpc/support/string_util.h>
 #include "src/core/lib/support/string.h"
+#include "src/core/ext/client_channel/resolver_registry.h"
 
 int gpr_join_host_port(char **out, const char *host, int port) {
   if (host[0] != '[' && strchr(host, ':') != NULL) {
@@ -107,4 +108,14 @@ int gpr_split_host_port(const char *name, char **host, char **port) {
   }
 
   return 1;
+}
+
+char* get_host_from_uri(const char *uri) {
+  grpc_resolver_factory *factory = grpc_resolver_factory_lookup_by_uri(uri);
+  return factory->vtable->get_host(factory, (char*)uri);
+}
+
+char* add_port_to_host(const char *host, const char *port) {
+  grpc_resolver_factory *factory = grpc_resolver_factory_lookup_by_uri(host);
+  return factory->vtable->host_with_port(factory, (char*)host, (char*)port);
 }

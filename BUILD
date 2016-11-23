@@ -47,6 +47,8 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
   name = "gpr",
   srcs = [
+    "src/core/ext/client_channel/resolver_registry.h",
+    "src/core/ext/client_channel/uri_parser.h",
     "src/core/lib/profiling/timers.h",
     "src/core/lib/support/backoff.h",
     "src/core/lib/support/block_annotate.h",
@@ -59,6 +61,8 @@ cc_library(
     "src/core/lib/support/thd_internal.h",
     "src/core/lib/support/time_precise.h",
     "src/core/lib/support/tmpfile.h",
+    "src/core/ext/client_channel/resolver_registry.c",
+    "src/core/ext/client_channel/uri_parser.c",
     "src/core/lib/profiling/basic_timers.c",
     "src/core/lib/profiling/stap_timers.c",
     "src/core/lib/support/alloc.c",
@@ -1881,6 +1885,8 @@ cc_library(
 objc_library(
   name = "gpr_objc",
   srcs = [
+    "src/core/ext/client_channel/resolver_registry.c",
+    "src/core/ext/client_channel/uri_parser.c",
     "src/core/lib/profiling/basic_timers.c",
     "src/core/lib/profiling/stap_timers.c",
     "src/core/lib/support/alloc.c",
@@ -1964,6 +1970,8 @@ objc_library(
     "include/grpc/impl/codegen/sync_generic.h",
     "include/grpc/impl/codegen/sync_posix.h",
     "include/grpc/impl/codegen/sync_windows.h",
+    "src/core/ext/client_channel/resolver_registry.h",
+    "src/core/ext/client_channel/uri_parser.h",
     "src/core/lib/profiling/timers.h",
     "src/core/lib/support/backoff.h",
     "src/core/lib/support/block_annotate.h",

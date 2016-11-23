@@ -59,6 +59,10 @@ GPRAPI int gpr_join_host_port(char **out, const char *host, int port);
    failure. */
 GPRAPI int gpr_split_host_port(const char *name, char **host, char **port);
 
+GPRAPI char* get_host_from_uri(const char *uri);
+
+GPRAPI char* add_port_to_host(const char *uri, const char* port);
+
 #ifdef __cplusplus
 }
 #endif

@@ -108,6 +108,14 @@ static grpc_resolver_factory *lookup_factory_by_uri(grpc_uri *uri) {
   return lookup_factory(uri->scheme);
 }
 
+grpc_resolver_factory *grpc_resolver_factory_lookup_by_uri(const char *name) {
+  grpc_uri *uri = grpc_uri_parse(name, 0);
+  grpc_resolver_factory *f = lookup_factory_by_uri(uri);
+  grpc_uri_destroy(uri);
+  if (f) grpc_resolver_factory_ref(f);
+  return f;
+}
+
 static grpc_resolver_factory *resolve_factory(const char *target,
                                               grpc_uri **uri) {
   char *tmp;

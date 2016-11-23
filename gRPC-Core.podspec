@@ -189,7 +189,9 @@ Pod::Spec.new do |s|
     ss.dependency 'BoringSSL', '~> 7.0'
 
     # To save you from scrolling, this is the last part of the podspec.
-    ss.source_files = 'src/core/lib/profiling/timers.h',
+    ss.source_files = 'src/core/ext/client_channel/resolver_registry.h',
+                      'src/core/ext/client_channel/uri_parser.h',
+                      'src/core/lib/profiling/timers.h',
                       'src/core/lib/support/backoff.h',
                       'src/core/lib/support/block_annotate.h',
                       'src/core/lib/support/env.h',
@@ -201,6 +203,8 @@ Pod::Spec.new do |s|
                       'src/core/lib/support/thd_internal.h',
                       'src/core/lib/support/time_precise.h',
                       'src/core/lib/support/tmpfile.h',
+                      'src/core/ext/client_channel/resolver_registry.c',
+                      'src/core/ext/client_channel/uri_parser.c',
                       'src/core/lib/profiling/basic_timers.c',
                       'src/core/lib/profiling/stap_timers.c',
                       'src/core/lib/support/alloc.c',
@@ -636,7 +640,9 @@ Pod::Spec.new do |s|
                       'src/core/ext/census/tracing.c',
                       'src/core/plugin_registry/grpc_plugin_registry.c'
 
-    ss.private_header_files = 'src/core/lib/profiling/timers.h',
+    ss.private_header_files = 'src/core/ext/client_channel/resolver_registry.h',
+                              'src/core/ext/client_channel/uri_parser.h',
+                              'src/core/lib/profiling/timers.h',
                               'src/core/lib/support/backoff.h',
                               'src/core/lib/support/block_annotate.h',
                               'src/core/lib/support/env.h',

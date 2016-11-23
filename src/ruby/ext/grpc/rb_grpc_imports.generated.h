@@ -518,6 +518,9 @@ extern grpc_slice_cmp_type grpc_slice_cmp_import;
 typedef int(*grpc_slice_str_cmp_type)(grpc_slice a, const char *b);
 extern grpc_slice_str_cmp_type grpc_slice_str_cmp_import;
 #define grpc_slice_str_cmp grpc_slice_str_cmp_import
+typedef int(*grpc_slice_is_equivalent_type)(grpc_slice a, grpc_slice b);
+extern grpc_slice_is_equivalent_type grpc_slice_is_equivalent_import;
+#define grpc_slice_is_equivalent grpc_slice_is_equivalent_import
 typedef void(*grpc_slice_buffer_init_type)(grpc_slice_buffer *sb);
 extern grpc_slice_buffer_init_type grpc_slice_buffer_init_import;
 #define grpc_slice_buffer_init grpc_slice_buffer_init_import
@@ -686,6 +689,12 @@ extern gpr_join_host_port_type gpr_join_host_port_import;
 typedef int(*gpr_split_host_port_type)(const char *name, char **host, char **port);
 extern gpr_split_host_port_type gpr_split_host_port_import;
 #define gpr_split_host_port gpr_split_host_port_import
+typedef char*(*get_host_from_uri_type)(const char *uri);
+extern get_host_from_uri_type get_host_from_uri_import;
+#define get_host_from_uri get_host_from_uri_import
+typedef char*(*add_port_to_host_type)(const char *uri, const char* port);
+extern add_port_to_host_type add_port_to_host_import;
+#define add_port_to_host add_port_to_host_import
 typedef void(*gpr_log_type)(const char *file, int line, gpr_log_severity severity, const char *format, ...) GPR_PRINT_FORMAT_CHECK(4, 5);
 extern gpr_log_type gpr_log_import;
 #define gpr_log gpr_log_import
