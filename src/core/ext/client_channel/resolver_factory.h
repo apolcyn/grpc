@@ -61,6 +61,12 @@ struct grpc_resolver_factory_vtable {
   /** Implementation of grpc_resolver_factory_get_default_authority */
   char *(*get_default_authority)(grpc_resolver_factory *factory, grpc_uri *uri);
 
+  char *(*get_host)(grpc_resolver_factory *factory,
+                    char *uri);
+
+  char *(*host_with_port)(grpc_resolver_factory *factory,
+                    char *host, char *port);
+
   /** URI scheme that this factory implements */
   const char *scheme;
 };
