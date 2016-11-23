@@ -76,10 +76,20 @@ static void test_get_host_succeeds(grpc_resolver_factory *dns, char *uri, char *
   GPR_ASSERT(!strcmp(actual, expected));
 }
 
+static void test_host_with_port_succeeds(grpc_resolver_factory *dns, char *host, char *port, char *expected) {
+  char* actual = dns->vtable->host_with_port(dns, host, port);
+  GPR_ASSERT(!strcmp(actual, expected));
+}
+
 static void test_get_host(grpc_resolver_factory *dns) {
   test_get_host_succeeds(dns, "dns:10.2.1.1:1234", "10.2.1.1");
   test_get_host_succeeds(dns, "dns:10.2.1.1", "10.2.1.1");
   test_get_host_succeeds(dns, "ipv4:www.google.com", "www.google.com");
+}
+
+static void test_host_with_port(grpc_resolver_factory *dns) {
+  test_host_with_port_succeeds(dns, "10.2.1.1", "1234", "10.2.1.1:1234");
+  test_host_with_port_succeeds(dns, "www.google.com", "1234", "www.google.com:1234");
 }
 
 int main(int argc, char **argv) {
@@ -95,6 +105,7 @@ int main(int argc, char **argv) {
   test_fails(dns, "ipv4://8.8.8.8/8.8.8.8:8888");
 
   test_get_host(dns);
+  test_host_with_port(dns);
 
   grpc_resolver_factory_unref(dns);
   grpc_shutdown();
