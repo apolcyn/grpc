@@ -41,4 +41,4 @@ scp $USER_AT_HOST:~/performance_workspace/grpc/$PERF_SCRIPT_OUTPUT.gz .
 
 gzip -d -f $PERF_SCRIPT_OUTPUT.gz
 
-~/FlameGraph/stackcollapse-perf.pl --kernel $PERF_SCRIPT_OUTPUT | ~/FlameGraph/flamegraph.pl --color=java --hash --minwidth 0.01 > ${OUTPUT_DIR}/${OUTPUT_FILENAME}.svg
+~/FlameGraph/stackcollapse-perf.pl --kernel $PERF_SCRIPT_OUTPUT | ~/FlameGraph/flamegraph.pl --color=java --hash > ${OUTPUT_DIR}/${OUTPUT_FILENAME}.svg
