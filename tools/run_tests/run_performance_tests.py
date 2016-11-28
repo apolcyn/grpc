@@ -293,6 +293,29 @@ def create_qpsworkers(languages, worker_hosts, perf_cmd=None):
           for worker_idx, worker in enumerate(workers)]
 
 
+def perf_report_processor_job(worker_host, perf_base_name, output_filename, output_flamegraph=false):
+  print('Creating perf report collection job for %s' % worker_host)
+  if output_flamegraph:
+    exe_report_suffix = 'flamegraphs'
+  else
+    exe_report_suffix = 'text_reports'
+
+  if worker_host != 'localhost':
+    user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
+    cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
+         tools/run_tests/performance/process_remote_perf_%s.sh" \
+          % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name, exe_report_suffix)
+  else:
+    cmd = "OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
+          tools/run_tests/performance/process_local_perf_%s.sh" \
+          % (output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name, exe_report_suffix)
+
+  return jobset.JobSpec(cmdline=cmd,
+                        timeout_seconds=3*60,
+                        shell=True,
+                        verbose_success=True,
+                        shortname='process perf report')
+
 def perf_report_processor_job(worker_host, perf_base_name, output_filename):
   print('Creating perf report collection job for %s' % worker_host)
   cmd = ''
@@ -300,11 +323,11 @@ def perf_report_processor_job(worker_host, perf_base_name, output_filename):
   if worker_host != 'localhost':
     user_at_host = "%s@%s" % (_REMOTE_HOST_USERNAME, worker_host)
     cmd = "USER_AT_HOST=%s OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
-         tools/run_tests/performance/process_remote_perf_reports.sh" \
+         tools/run_tests/performance/process_remote_perf_text_reports.sh" \
           % (user_at_host, output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name)
   else:
     cmd = "OUTPUT_FILENAME=%s OUTPUT_DIR=%s PERF_BASE_NAME=%s\
-          tools/run_tests/performance/process_local_perf_reports.sh" \
+          tools/run_tests/performance/process_local_perf_text_reports.sh" \
           % (output_filename, _PERF_REPORT_OUTPUT_DIR, perf_base_name)
 
   return jobset.JobSpec(cmdline=cmd,
@@ -419,10 +442,16 @@ def run_collect_perf_profile_jobs(hosts_and_base_names, scenario_name):
   for host_and_port in hosts_and_base_names:
     perf_base_name = hosts_and_base_names[host_and_port]
     output_filename = '%s-%s' % (scenario_name, perf_base_name)
-    # from the base filename, create .txt and .svg versions of it
+    # from the base filename, create output filename of the types chosen
     host = host_and_port.split(':')[0]
-    profile_output_files.extend(['%s.txt' % output_filename, '%s.svg' % output_filename])
-    perf_report_jobs.append(perf_report_processor_job(host, perf_base_name, output_filename))
+    if 'text' in args.perf_output:
+      profile_output_files.append('%s.txt' % output_filename)
+      job = perf_report_processor_job(host, perf_base_name, output_filename, output_flamegraph=false)
+      perf_report_jobs.append(job)
+    if 'flamegraph' in args.perf_output:
+      profile_output_files.append('%s.svg' % output_filename)
+      job = perf_report_processor_job(host, perf_base_name, output_filename, output_flamegraph=true)
+      perf_report_jobs.append(job)
 
   jobset.message('START', 'Collecting perf reports from qps workers', do_newline=True)
   failures, _ = jobset.run(perf_report_jobs, newline_on_success=True, maxjobs=1)
@@ -480,6 +509,11 @@ argp.add_argument('--perf_args',
                         'not be used at all. '
                         'See http://www.brendangregg.com/perf.html '
                         'for more general perf examples.'))
+argp.add_argument('--perf_output',
+                  choices=['text', 'flamegraphs']
+                  nargs='+',
+                  default=['text'],
+                  help='Output type from perf (.e.g, flamegraphs or text)')
 
 args = argp.parse_args()
 
@@ -563,8 +597,7 @@ for scenario in scenarios:
       for worker in scenario.workers:
         if not worker.perf_file_base_name:
           raise Exception('using perf buf perf report filename is unspecified')
-        workers_and_base_names[worker.host_and_port] = worker.perf_file_base_name
-      perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
+        workers_and_base_names[worker.host_and_port] = worker.perf_file_base_name perf_report_failures += run_collect_perf_profile_jobs(workers_and_base_names, scenario.name)
 
 
 # Still write the index.html even if some scenarios failed.
