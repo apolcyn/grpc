@@ -444,7 +444,7 @@ void create_and_run_unary_calls() {
    pthread_t *thread_ids;
    grpc_wrapped_channel **channels;
    num_streams = 2; // The error seems to occur frequently with just 2 channels and 2 streams
-   num_chans = 2;   // Need some parrallelism to make the error occur though.
+   num_chans = 1;   // Need some parrallelism to make the error occur though.
 
    fprintf(stderr, "using %d streams and %d channels\n", num_streams, num_chans);
 
