@@ -180,6 +180,7 @@ void grpc_byte_buffer_read_and_discard(grpc_byte_buffer *buffer) {
     gpr_slice_unref(next);
   }
   grpc_byte_buffer_reader_destroy(&reader);
+  grpc_byte_buffer_destroy(buffer);
 }
 
 /* grpc_run_batch_stack_cleanup ensures the run_batch_stack is properly
@@ -194,10 +195,6 @@ void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
 
   if (st->recv_status_details != NULL) {
     gpr_free(st->recv_status_details);
-  }
-
-  if (st->recv_message != NULL) {
-    grpc_byte_buffer_destroy(st->recv_message);
   }
 
   for (i = 0; i < st->op_num; i++) {
