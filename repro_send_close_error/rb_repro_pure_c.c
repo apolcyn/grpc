@@ -95,14 +95,14 @@ grpc_byte_buffer* gprc_s_to_byte_buffer(char *string, size_t length);
 grpc_event run_completion_queue_pluck_mimick_ruby(grpc_completion_queue *queue, void *tag,
                                      gpr_timespec deadline, void *reserved);
 void grpc_completion_queue_shutdown_and_destroy(grpc_completion_queue *cq);
-static void grpc_channel_wrapper_free(grpc_wrapped_channel *ch);
+void grpc_channel_wrapper_free(grpc_wrapped_channel *ch);
 void destroy_call(grpc_wrapped_call *call);
 grpc_wrapped_channel* grpc_channel_alloc_init();
 grpc_wrapped_call* grpc_channel_create_wrapped_call(grpc_wrapped_channel *wrapper, char *method, char *host);
-static void grpc_run_batch_stack_init(run_batch_stack *st,
+void grpc_run_batch_stack_init(run_batch_stack *st,
                                       unsigned write_flag);
-static void grpc_run_batch_stack_cleanup(run_batch_stack *st);
-static void grpc_run_batch_stack_fill_op(run_batch_stack *st, grpc_op_type this_op);
+void grpc_run_batch_stack_cleanup(run_batch_stack *st);
+void grpc_run_batch_stack_fill_op(run_batch_stack *st, grpc_op_type this_op);
 void grpc_run_batch(grpc_wrapped_call *wrapped_call, grpc_op_type this_op);
 void grpc_run_request_response_mimick_ruby(grpc_wrapped_call *wrapped_call);
 void create_and_run_unary_calls();
@@ -154,7 +154,7 @@ grpc_wrapped_call* grpc_channel_create_wrapped_call(grpc_wrapped_channel *wrappe
 
 /* grpc_run_batch_stack_init ensures the run_batch_stack is properly
  * initialized */
-static void grpc_run_batch_stack_init(run_batch_stack *st,
+void grpc_run_batch_stack_init(run_batch_stack *st,
                                       unsigned write_flag) {
   memset(st, 0, sizeof(run_batch_stack));
   grpc_metadata_array_init(&st->send_metadata);
@@ -184,7 +184,7 @@ void grpc_byte_buffer_read_and_discard(grpc_byte_buffer *buffer) {
 
 /* grpc_run_batch_stack_cleanup ensures the run_batch_stack is properly
  * cleaned up */
-static void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
+void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
   size_t i = 0;
 
   grpc_metadata_array_destroy(&st->send_metadata);
@@ -213,7 +213,7 @@ static void grpc_run_batch_stack_cleanup(run_batch_stack *st) {
 }
 
 /* Destroys Channel instances. */
-static void grpc_channel_wrapper_free(grpc_wrapped_channel *channel) {
+void grpc_channel_wrapper_free(grpc_wrapped_channel *channel) {
     grpc_wrapped_channel *ch = NULL;
     if (channel == NULL) {
        return;
@@ -228,7 +228,7 @@ static void grpc_channel_wrapper_free(grpc_wrapped_channel *channel) {
 }
 
 /* Calls grpc_completion_queue_pluck, this called without holding the "GIL" as is done in ruby */
-static void *grpc_completion_queue_pluck_no_gil(next_call_stack* next_call) {
+void *grpc_completion_queue_pluck_no_gil(next_call_stack* next_call) {
   gpr_timespec increment = gpr_time_from_millis(20, GPR_TIMESPAN);
   gpr_timespec deadline;
   do {
@@ -299,7 +299,7 @@ grpc_byte_buffer* grpc_s_to_byte_buffer(char *string, size_t length) {
 // This is a modified version of how core ops are set up in ruby. It is tweaked
 // for the case of this repro, for which we're only making client-side unary calls,
 // and we're always sending the same hard-coded message
-static void grpc_run_batch_stack_fill_op(run_batch_stack *st, grpc_op_type this_op) {
+void grpc_run_batch_stack_fill_op(run_batch_stack *st, grpc_op_type this_op) {
   GPR_ASSERT(st->op_num == 0);
   st->ops[st->op_num].flags = 0; // not using the write flag to buffer sends
   switch (this_op) {
@@ -440,53 +440,44 @@ void* make_calls_on_stream(void *param_channel) {
 void create_and_run_unary_calls() {
    int i, k;
    int num_streams;
-   int num_chans;
    pthread_t *thread_ids;
    grpc_wrapped_channel **channels;
    num_streams = 2; // The error seems to occur frequently with just 2 channels and 2 streams
-   num_chans = 1;   // Need some parrallelism to make the error occur though.
 
-   fprintf(stderr, "using %d streams and %d channels\n", num_streams, num_chans);
+   fprintf(stderr, "using %d streams\n", num_streams);
 
    // mimick single-threaded GIL use as best as possible
    gpr_mu_lock(&fake_gil);
 
-   thread_ids = gpr_malloc(sizeof(pthread_t) * num_streams * num_chans);
-   memset(thread_ids, 0, sizeof(pthread_t) * num_streams * num_chans);
+   thread_ids = gpr_malloc(sizeof(pthread_t) * num_streams);
+   memset(thread_ids, 0, sizeof(pthread_t) * num_streams);
 
-   channels = gpr_malloc(sizeof(grpc_wrapped_channel*) * num_chans);
+   channels = gpr_malloc(sizeof(grpc_wrapped_channel*));
 
    // setup channels
-   for(i = 0; i < num_chans; i++) {
-      channels[i] = grpc_channel_alloc_init();
-   }
+   channels[0] = grpc_channel_alloc_init();
 
    fprintf(stderr, "begin streams\n");
 
    // create a separate thread for each stream, that just repeatedly makes unary calls
-   for(i = 0; i < num_chans; i++) {
-     for(k = 0; k < num_streams; k++) {
-       if(pthread_create(thread_ids + (i * num_streams) + k, NULL, make_calls_on_stream, (void*)channels[i])) {
-         gpr_mu_unlock(&fake_gil);
-         fprintf(stderr, "Error creating thread\n");
-         exit(1);
-       }
+   for(k = 0; k < num_streams; k++) {
+     if(pthread_create(&thread_ids[k], NULL, make_calls_on_stream, (void*)channels[0])) {
+       gpr_mu_unlock(&fake_gil);
+       fprintf(stderr, "Error creating thread\n");
+       exit(1);
      }
    }
 
    // release the "GIL" and let streams start making calls
    gpr_mu_unlock(&fake_gil);
 
-   for(i = 0; i < num_streams * num_chans; i++) {
+   for(i = 0; i < num_streams; i++) {
      if(pthread_join(thread_ids[i], NULL)) {
        fprintf(stderr, "Error joining thread\n");
        exit(1);
      }
    }
-
-   for(i = 0; i < num_chans; i++) {
-     grpc_channel_wrapper_free(channels[i]);
-   }
+   grpc_channel_wrapper_free(channels[0]);
 
    free(thread_ids);
 }
