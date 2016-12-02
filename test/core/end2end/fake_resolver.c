@@ -195,14 +195,14 @@ static char* fake_resolver_get_default_authority(grpc_resolver_factory* factory,
   return gpr_strdup(path);
 }
 
-static char* get_host(grpc_resolver_factory *factory, char *uri) { return uri; }
+static void split_host_port(grpc_resolver_factory *factory, char *uri, char **host, char **port) { GPR_ASSERT(0); }
 
-static char* host_with_port(grpc_resolver_factory *factory, char* host, char* port) { return host; }
+static char* join_host_port(grpc_resolver_factory *factory, char* host, char* port) { GPR_ASSERT(0); return NULL; }
 
 static const grpc_resolver_factory_vtable fake_resolver_factory_vtable = {
     fake_resolver_factory_ref, fake_resolver_factory_unref,
     fake_resolver_create, fake_resolver_get_default_authority,
-    get_host, host_with_port, "test"};
+    split_host_port, join_host_port, "test"};
 
 static grpc_resolver_factory fake_resolver_factory = {
     &fake_resolver_factory_vtable};

@@ -294,21 +294,17 @@ static char *dns_factory_get_default_host_name(grpc_resolver_factory *factory,
   return gpr_strdup(path);
 }
 
-static char* dns_factory_get_host(grpc_resolver_factory *factory,
-                                  char *uri_text) {
-  char *host, *port;
+static void dns_factory_split_host_port(grpc_resolver_factory *factory,
+                                        char *uri_text, char **host, char **port) {
   grpc_uri* uri;
 
   uri = grpc_uri_parse(uri_text, 0);
-  gpr_split_host_port(uri->path, &host, &port);
+  gpr_split_host_port(uri->path, host, port);
 
-  gpr_free(port);
   grpc_uri_destroy(uri);
-
-  return host;
 }
 
-static char* dns_factory_host_with_port(grpc_resolver_factory *factory,
+static char* dns_factory_join_host_port(grpc_resolver_factory *factory,
                                         char *host, char *port) {
   char *out;
   int port_num;
@@ -321,8 +317,8 @@ static char* dns_factory_host_with_port(grpc_resolver_factory *factory,
 static const grpc_resolver_factory_vtable dns_factory_vtable = {
     dns_factory_ref, dns_factory_unref, dns_factory_create_resolver,
     dns_factory_get_default_host_name,
-    dns_factory_get_host,
-    dns_factory_host_with_port,
+    dns_factory_split_host_port,
+    dns_factory_join_host_port,
     "dns"};
 static grpc_resolver_factory dns_resolver_factory = {&dns_factory_vtable};
 
