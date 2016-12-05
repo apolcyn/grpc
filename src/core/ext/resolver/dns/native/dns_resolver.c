@@ -32,6 +32,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include <grpc/support/alloc.h>
@@ -298,7 +299,8 @@ static void dns_factory_split_host_port(grpc_resolver_factory *factory,
                                         char *uri_text, char **host, char **port) {
   grpc_uri* uri;
 
-  uri = grpc_uri_parse(uri_text, 0);
+  uri = grpc_uri_parse(uri_text, 1);
+
   gpr_split_host_port(uri->path, host, port);
 
   grpc_uri_destroy(uri);
