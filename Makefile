@@ -2867,6 +2867,7 @@ PUBLIC_HEADERS_C += \
     include/grpc/impl/codegen/sync_posix.h \
     include/grpc/impl/codegen/sync_windows.h \
     include/grpc/grpc_security.h \
+    include/grpc/client_channel.h \
     include/grpc/census.h \
 
 LIBGRPC_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBGRPC_SRC))))
@@ -3138,6 +3139,7 @@ PUBLIC_HEADERS_C += \
     include/grpc/impl/codegen/sync_windows.h \
     include/grpc/grpc_cronet.h \
     include/grpc/grpc_security.h \
+    include/grpc/client_channel.h \
 
 LIBGRPC_CRONET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBGRPC_CRONET_SRC))))
 
@@ -3642,6 +3644,7 @@ PUBLIC_HEADERS_C += \
     include/grpc/impl/codegen/sync_generic.h \
     include/grpc/impl/codegen/sync_posix.h \
     include/grpc/impl/codegen/sync_windows.h \
+    include/grpc/client_channel.h \
     include/grpc/census.h \
 
 LIBGRPC_UNSECURE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBGRPC_UNSECURE_SRC))))
@@ -4257,6 +4260,7 @@ PUBLIC_HEADERS_CXX += \
     include/grpc/slice.h \
     include/grpc/slice_buffer.h \
     include/grpc/status.h \
+    include/grpc/client_channel.h \
     include/grpc/census.h \
 
 LIBGRPC++_CRONET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBGRPC++_CRONET_SRC))))
@@ -6999,19 +7003,6 @@ endif
 
 
 LIBBENCHMARK_SRC = \
-    third_party/benchmark/src/benchmark.cc \
-    third_party/benchmark/src/benchmark_register.cc \
-    third_party/benchmark/src/colorprint.cc \
-    third_party/benchmark/src/commandlineflags.cc \
-    third_party/benchmark/src/complexity.cc \
-    third_party/benchmark/src/console_reporter.cc \
-    third_party/benchmark/src/csv_reporter.cc \
-    third_party/benchmark/src/json_reporter.cc \
-    third_party/benchmark/src/reporter.cc \
-    third_party/benchmark/src/sleep.cc \
-    third_party/benchmark/src/string_util.cc \
-    third_party/benchmark/src/sysinfo.cc \
-    third_party/benchmark/src/timers.cc \
 
 PUBLIC_HEADERS_CXX += \
 

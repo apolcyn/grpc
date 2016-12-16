@@ -378,6 +378,8 @@ filegroups:
   uses:
   - grpc_codegen
 - name: grpc_client_channel
+  public_headers:
+  - include/grpc/client_channel.h
   headers:
   - src/core/ext/client_channel/client_channel.h
   - src/core/ext/client_channel/client_channel_factory.h

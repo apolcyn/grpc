@@ -48,6 +48,10 @@ static int g_number_of_resolvers = 0;
 static char g_default_resolver_prefix[DEFAULT_RESOLVER_PREFIX_MAX_LENGTH] =
     "dns:///";
 
+void grpc_resolver_factory_lookup_by_uri_string(const char *uri) {
+  gpr_log(GPR_INFO, "hello fron resolver factory");
+}
+
 void grpc_resolver_registry_init() {}
 
 void grpc_resolver_registry_shutdown(void) {
@@ -103,7 +107,7 @@ grpc_resolver_factory *grpc_resolver_factory_lookup(const char *name) {
   return f;
 }
 
-static grpc_resolver_factory *lookup_factory_by_uri(grpc_uri *uri) {
+grpc_resolver_factory *lookup_factory_by_uri(grpc_uri *uri) {
   if (!uri) return NULL;
   return lookup_factory(uri->scheme);
 }

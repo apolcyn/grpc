@@ -163,6 +163,7 @@ Gem::Specification.new do |s|
   s.files += %w( include/grpc/impl/codegen/sync_posix.h )
   s.files += %w( include/grpc/impl/codegen/sync_windows.h )
   s.files += %w( include/grpc/grpc_security.h )
+  s.files += %w( include/grpc/client_channel.h )
   s.files += %w( include/grpc/census.h )
   s.files += %w( src/core/lib/channel/channel_args.h )
   s.files += %w( src/core/lib/channel/channel_stack.h )

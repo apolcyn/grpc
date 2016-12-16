@@ -572,6 +572,7 @@ cc_library(
     "include/grpc/impl/codegen/sync_posix.h",
     "include/grpc/impl/codegen/sync_windows.h",
     "include/grpc/grpc_security.h",
+    "include/grpc/client_channel.h",
     "include/grpc/census.h",
   ],
   includes = [
@@ -969,6 +970,7 @@ cc_library(
     "include/grpc/impl/codegen/sync_windows.h",
     "include/grpc/grpc_cronet.h",
     "include/grpc/grpc_security.h",
+    "include/grpc/client_channel.h",
   ],
   includes = [
     "include",
@@ -1348,6 +1350,7 @@ cc_library(
     "include/grpc/impl/codegen/sync_generic.h",
     "include/grpc/impl/codegen/sync_posix.h",
     "include/grpc/impl/codegen/sync_windows.h",
+    "include/grpc/client_channel.h",
     "include/grpc/census.h",
   ],
   includes = [
@@ -1974,6 +1977,7 @@ cc_library(
     "include/grpc/slice.h",
     "include/grpc/slice_buffer.h",
     "include/grpc/status.h",
+    "include/grpc/client_channel.h",
     "include/grpc/census.h",
   ],
   includes = [
@@ -2570,6 +2574,7 @@ objc_library(
     "include/grpc/impl/codegen/sync_posix.h",
     "include/grpc/impl/codegen/sync_windows.h",
     "include/grpc/grpc_security.h",
+    "include/grpc/client_channel.h",
     "include/grpc/census.h",
     "src/core/lib/channel/channel_args.h",
     "src/core/lib/channel/channel_stack.h",

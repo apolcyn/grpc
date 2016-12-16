@@ -180,6 +180,7 @@ Pod::Spec.new do |s|
                       'include/grpc/impl/codegen/sync_posix.h',
                       'include/grpc/impl/codegen/sync_windows.h',
                       'include/grpc/grpc_security.h',
+                      'include/grpc/client_channel.h',
                       'include/grpc/census.h'
   end
   s.subspec 'Implementation' do |ss|

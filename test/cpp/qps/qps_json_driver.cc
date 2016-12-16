@@ -44,6 +44,8 @@
 #include "test/cpp/qps/report.h"
 #include "test/cpp/util/benchmark_config.h"
 
+#include "include/grpc/client_channel.h"
+
 DEFINE_string(scenarios_file, "",
               "JSON file containing an array of Scenario objects");
 DEFINE_string(scenarios_json, "",
@@ -217,6 +219,8 @@ static bool QpsDriver() {
 
 int main(int argc, char** argv) {
   grpc::testing::InitBenchmark(&argc, &argv, true);
+
+  grpc_resolver_factory_lookup_by_uri_string(NULL);
 
   bool ok = grpc::testing::QpsDriver();
 
