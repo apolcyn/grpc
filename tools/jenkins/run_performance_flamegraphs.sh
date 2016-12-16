@@ -35,20 +35,21 @@ set -ex
 cd $(dirname $0)/../..
 
 # scalability with 32cores c++ benchmarks
-tools/run_tests/run_performance_tests.py \
-    -l c++ \
-    --category scalable \
-    --remote_worker_host grpc-performance-server-32core grpc-performance-client-32core grpc-performance-client2-32core \
-    --perf_args "record -F 97 --call-graph dwarf"
-    || EXIT_CODE=1
+#tools/run_tests/run_performance_tests.py \
+#    -l c++ \
+#    --category scalable \
+#    --remote_worker_host grpc-performance-server-32core grpc-performance-client-32core grpc-performance-client2-32core \
+#    --perf_args "record -F 97 --call-graph dwarf" \
+#    || EXIT_CODE=1
 
 # scalability with 32cores go benchmarks
 tools/run_tests/run_performance_tests.py \
     -l go \
     --category scalable \
-    --remote_worker_host grpc-performance-server-32core grpc-performance-client-32core grpc-performance-client2-32core \
-    --perf_args "record -F 97 -g"
+    --perf_args "record -F 97 -g" \
     || EXIT_CODE=1
+
+#    --remote_worker_host grpc-performance-server-32core grpc-performance-client-32core grpc-performance-client2-32core \
 
 exit $EXIT_CODE
 
