@@ -2442,6 +2442,16 @@ targets:
   - gpr
   exclude_iomgrs:
   - uv
+- name: resolver_registry_test
+  build: test
+  language: c
+  src:
+  - test/core/client_channel/resolvers/resolver_registry_test.c
+  deps:
+  - grpc_test_util
+  - grpc
+  - gpr_test_util
+  - gpr
 - name: resource_quota_test
   cpu_cost: 30
   build: test

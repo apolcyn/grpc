@@ -62,7 +62,7 @@ struct grpc_resolver_factory_vtable {
   char *(*get_default_authority)(grpc_resolver_factory *factory, grpc_uri *uri);
 
   void (*split_host_port)(grpc_resolver_factory *factory,
-                    char *uri, char **host, char **port);
+                    char *authority, char **host, char **port);
 
   char *(*join_host_port)(grpc_resolver_factory *factory,
                     char *host, char *port);

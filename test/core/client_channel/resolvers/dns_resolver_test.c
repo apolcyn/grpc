@@ -71,10 +71,10 @@ static void test_fails(grpc_resolver_factory *factory, const char *string) {
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-static void test_split_host_port_succeeds(grpc_resolver_factory *dns, char *uri, char *expected_host, char *expected_port) {
+static void test_split_host_port_succeeds(grpc_resolver_factory *dns, char *authority, char *expected_host, char *expected_port) {
   char *host, *port;
-  gpr_log(GPR_DEBUG, "test: split_host_port(dns, '%s', &host, &port). Expected host: '%s'. Expected port: '%s'", uri, expected_host, expected_port);
-  dns->vtable->split_host_port(dns, uri, &host, &port);
+  gpr_log(GPR_DEBUG, "test: split_host_port(dns, '%s', &host, &port). Expected host: '%s'. Expected port: '%s'", authority, expected_host, expected_port);
+  dns->vtable->split_host_port(dns, authority, &host, &port);
   gpr_log(GPR_DEBUG, "actual host: %s", host);
   gpr_log(GPR_DEBUG, "actual port: %s", port);
   GPR_ASSERT(!strcmp(host, expected_host));
@@ -82,18 +82,19 @@ static void test_split_host_port_succeeds(grpc_resolver_factory *dns, char *uri,
   gpr_log(GPR_DEBUG, "test succeeds");
 }
 
-static void test_join_host_port_succeeds(grpc_resolver_factory *dns, char *host, char *port, char *expected_uri) {
-  char* actual_uri;
+static void test_join_host_port_succeeds(grpc_resolver_factory *dns, char *host, char *port, char *expected_authority) {
+  char* actual_authority;
 
-  gpr_log(GPR_DEBUG, "test: join_host_port(dns, '%s', '%s') should return '%s'", host, port, expected_uri);
-  actual_uri = dns->vtable->join_host_port(dns, host, port);
-  GPR_ASSERT(!strcmp(actual_uri, expected_uri));
+  gpr_log(GPR_DEBUG, "test: join_host_port(dns, '%s', '%s') should return '%s'", host, port, expected_authority);
+  actual_authority = dns->vtable->join_host_port(dns, host, port);
+  gpr_log(GPR_DEBUG, "actual authority: %s", actual_authority);
+  GPR_ASSERT(!strcmp(actual_authority, expected_authority));
   gpr_log(GPR_DEBUG, "test succeeds");
 }
 
 static void test_split_host_port(grpc_resolver_factory *dns) {
-  test_split_host_port_succeeds(dns, "dns:10.2.1.1:1234", "10.2.1.1", "1234");
-  test_split_host_port_succeeds(dns, "dns:www.google.com:1234", "www.google.com", "1234");
+  test_split_host_port_succeeds(dns, "10.2.1.1:1234", "10.2.1.1", "1234");
+  test_split_host_port_succeeds(dns, "www.google.com:1234", "www.google.com", "1234");
 }
 
 static void test_join_host_port(grpc_resolver_factory *dns) {

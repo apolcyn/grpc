@@ -170,3 +170,61 @@ char *grpc_resolver_factory_add_default_prefix_if_needed(const char *target) {
   grpc_uri_destroy(uri);
   return canonical_target == NULL ? gpr_strdup(target) : canonical_target;
 }
+
+static grpc_uri *uri_parse_maybe_no_schema(char *host) {
+  grpc_uri *parsed_uri = NULL;
+  char *tmp = NULL;
+
+  parsed_uri = grpc_uri_parse(host, 1);
+  if (parsed_uri->scheme == NULL) {
+    grpc_uri_destroy(parsed_uri);
+    gpr_asprintf(&tmp, "%s%s", g_default_resolver_prefix, host);
+    parsed_uri = grpc_uri_parse(tmp, 1);
+    if (parsed_uri->scheme == NULL) {
+      grpc_uri_destroy(grpc_uri_parse(host, 0));
+      grpc_uri_destroy(grpc_uri_parse(tmp, 0));
+      gpr_log(GPR_ERROR, "don't know how to resolve '%s' or '%s'", host, tmp);
+    }
+    gpr_free(tmp);
+  }
+
+  return parsed_uri;
+}
+
+char* grpc_uri_join_host_port(char *host, char *port) {
+  grpc_resolver_factory *factory;
+  grpc_uri *parsed_uri;
+  char *out = NULL;
+
+  parsed_uri = uri_parse_maybe_no_schema(host);
+  factory = grpc_resolver_factory_lookup(parsed_uri->scheme);
+  out = factory->vtable->join_host_port(factory, parsed_uri->authority, port);
+  grpc_uri_destroy(parsed_uri);
+
+  return out;
+}
+
+void grpc_uri_split_host_port(char *uri, char **host, char **port) {
+  grpc_uri *parsed_uri = NULL;
+  grpc_resolver_factory *factory = NULL;
+
+  parsed_uri = uri_parse_maybe_no_schema(uri);
+  if (parsed_uri == NULL) {
+    gpr_log(GPR_ERROR, "couldn't parse %s into valid uri", uri);
+    *host = NULL;
+    *port = NULL;
+    return;
+  }
+  factory = grpc_resolver_factory_lookup(parsed_uri->scheme);
+  if (factory == NULL) {
+    gpr_log(GPR_ERROR, "coudn't find factory for schema: %s", parsed_uri->scheme);
+    grpc_uri_destroy(parsed_uri);
+    *host = NULL;
+    *port = NULL;
+    return;
+  }
+  gpr_log(GPR_INFO, "split %s into host port", parsed_uri->authority);
+  factory->vtable->split_host_port(factory, parsed_uri->authority, host, port);
+  gpr_log(GPR_INFO, "destroy uri");
+  grpc_uri_destroy(parsed_uri);
+}

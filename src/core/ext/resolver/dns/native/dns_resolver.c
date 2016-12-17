@@ -296,14 +296,8 @@ static char *dns_factory_get_default_host_name(grpc_resolver_factory *factory,
 }
 
 static void dns_factory_split_host_port(grpc_resolver_factory *factory,
-                                        char *uri_text, char **host, char **port) {
-  grpc_uri* uri;
-
-  uri = grpc_uri_parse(uri_text, 1);
-
-  gpr_split_host_port(uri->path, host, port);
-
-  grpc_uri_destroy(uri);
+                                        char *authority, char **host, char **port) {
+  gpr_split_host_port(authority, host, port);
 }
 
 static char* dns_factory_join_host_port(grpc_resolver_factory *factory,
@@ -312,7 +306,8 @@ static char* dns_factory_join_host_port(grpc_resolver_factory *factory,
   int port_num;
 
   port_num = atoi(port);
-  gpr_join_host_port(&out, host, port_num);
+  GPR_ASSERT(port_num != 0);
+  GPR_ASSERT(gpr_join_host_port(&out, host, port_num) != -1);
   return out;
 }
 

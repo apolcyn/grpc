@@ -79,4 +79,8 @@ char *grpc_get_default_authority(const char *target);
     default prefix if needed. */
 char *grpc_resolver_factory_add_default_prefix_if_needed(const char *target);
 
+char *grpc_uri_join_host_port(char *host, char *port);
+
+void grpc_uri_split_host_port(char *uri, char **host, char **port);
+
 #endif /* GRPC_CORE_EXT_CLIENT_CHANNEL_RESOLVER_REGISTRY_H */

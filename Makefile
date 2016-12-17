@@ -1024,6 +1024,7 @@ percent_decode_fuzzer: $(BINDIR)/$(CONFIG)/percent_decode_fuzzer
 percent_encode_fuzzer: $(BINDIR)/$(CONFIG)/percent_encode_fuzzer
 percent_encoding_test: $(BINDIR)/$(CONFIG)/percent_encoding_test
 resolve_address_test: $(BINDIR)/$(CONFIG)/resolve_address_test
+resolver_registry_test: $(BINDIR)/$(CONFIG)/resolver_registry_test
 resource_quota_test: $(BINDIR)/$(CONFIG)/resource_quota_test
 secure_channel_create_test: $(BINDIR)/$(CONFIG)/secure_channel_create_test
 secure_endpoint_test: $(BINDIR)/$(CONFIG)/secure_endpoint_test
@@ -1355,6 +1356,7 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/no_server_test \
   $(BINDIR)/$(CONFIG)/percent_encoding_test \
   $(BINDIR)/$(CONFIG)/resolve_address_test \
+  $(BINDIR)/$(CONFIG)/resolver_registry_test \
   $(BINDIR)/$(CONFIG)/resource_quota_test \
   $(BINDIR)/$(CONFIG)/secure_channel_create_test \
   $(BINDIR)/$(CONFIG)/secure_endpoint_test \
@@ -1751,6 +1753,8 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/percent_encoding_test || ( echo test percent_encoding_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resolve_address_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resolve_address_test || ( echo test resolve_address_test failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_registry_test"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_registry_test || ( echo test resolver_registry_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resource_quota_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resource_quota_test || ( echo test resource_quota_test failed ; exit 1 )
 	$(E) "[RUN]     Testing secure_channel_create_test"
@@ -10611,6 +10615,38 @@ deps_resolve_address_test: $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_REGISTRY_TEST_SRC = \
+    test/core/client_channel/resolvers/resolver_registry_test.c \
+
+RESOLVER_REGISTRY_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_REGISTRY_TEST_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_registry_test: openssl_dep_error
+
+else
+
+
+
+$(BINDIR)/$(CONFIG)/resolver_registry_test: $(RESOLVER_REGISTRY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LD) $(LDFLAGS) $(RESOLVER_REGISTRY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/resolver_registry_test
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/core/client_channel/resolvers/resolver_registry_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
+
+deps_resolver_registry_test: $(RESOLVER_REGISTRY_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_REGISTRY_TEST_OBJS:.o=.dep)
 endif
 endif
 
