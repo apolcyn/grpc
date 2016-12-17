@@ -32,6 +32,7 @@
  */
 
 #include "src/core/ext/client_channel/uri_parser.h"
+#include "src/core/ext/client_channel/resolver_registry.h"
 
 #include <string.h>
 
@@ -48,13 +49,18 @@
 /** a size_t default value... maps to all 1's */
 #define NOT_SET (~(size_t)0)
 
-void grpc_uri_join_host_port(char **out, char *host, char *port) {
+char* grpc_uri_join_host_port(char *host, char *port) {
   gpr_log(GPR_INFO, "hello from join host port");
+  grpc_uri *parsed_uri = grpc_uri_parse(host, 0);
+  grpc_resolver_factory *factory = grpc_resolver_factory_lookup(parsed_uri->scheme);
+  return factory->vtable->join_host_port(factory, parsed_uri->authority, port);
 }
 
-char* grpc_uri_split_host_port(char *host, char *port) {
+void grpc_uri_split_host_port(char *uri, char **host, char **port) {
   gpr_log(GPR_INFO, "hello from split host port");
-  return NULL;
+  grpc_uri *parsed_uri = grpc_uri_parse(uri, 0);
+  grpc_resolver_factory *factory = grpc_resolver_factory_lookup(parsed_uri->scheme);
+  factory->vtable->split_host_port(factory, parsed_uri->authority, host, port);
 }
 
 static grpc_uri *bad_uri(const char *uri_text, size_t pos, const char *section,

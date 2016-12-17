@@ -60,8 +60,8 @@ const char *grpc_uri_get_query_arg(const grpc_uri *uri, const char *key);
 /** destroy a uri */
 void grpc_uri_destroy(grpc_uri *uri);
 
-void grpc_uri_join_host_port(char **uri, char *host, char *port);
+char *grpc_uri_join_host_port(char *host, char *port);
 
-char *grpc_uri_split_host_port(char *host, char *port);
+void grpc_uri_split_host_port(char *uri, char **host, char **port);
 
 #endif /* GRPC_CORE_EXT_CLIENT_CHANNEL_URI_PARSER_H */
