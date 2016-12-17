@@ -123,6 +123,13 @@ static void test_query_parts() {
   }
 }
 
+static void test_split_host_port_succeeds(char *uri, char *expected_host, char *expected_port) {
+  char *actual_host, *actual_port;
+  grpc_uri_split_host_port(uri, &actual_host, &actual_port);
+  GPR_ASSERT(0 == strcmp(expected_host, actual_host));
+  GPR_ASSERT(0 == strcmp(expected_port, actual_port));
+}
+
 int main(int argc, char **argv) {
   grpc_test_init(argc, argv);
   test_succeeds("http://www.google.com", "http", "www.google.com", "", "", "");
@@ -150,5 +157,11 @@ int main(int argc, char **argv) {
   test_fails("http://foo?bar#lol#");
 
   test_query_parts();
+
+//  test_split_host_port_succeeds("dns:///foo:2181", "foo", "2181");
+//  test_split_host_port_succeeds("foo:2181", "foo", "2181");
+//
+//  test_split_host_port_succeeds("zookeeper://127.0.0.1:2181/foo/bar", "zookeeper", "2181");
+//  test_split_host_port_succeeds("127.0.0.1:2181/foo/bar", "zookeeper", "2181");
   return 0;
 }
