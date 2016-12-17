@@ -44,7 +44,9 @@
 extern "C" {
 #endif
 
-void grpc_resolver_factory_lookup_by_uri_string(const char *uri);
+void grpc_uri_join_host_port(char **uri, char *host, char *port);
+
+char *grpc_uri_split_host_port(char *host, char *port);
 
 #ifdef __cplusplus
 }

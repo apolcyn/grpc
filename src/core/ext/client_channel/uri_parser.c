@@ -48,6 +48,15 @@
 /** a size_t default value... maps to all 1's */
 #define NOT_SET (~(size_t)0)
 
+void grpc_uri_join_host_port(char **out, char *host, char *port) {
+  gpr_log(GPR_INFO, "hello from join host port");
+}
+
+char* grpc_uri_split_host_port(char *host, char *port) {
+  gpr_log(GPR_INFO, "hello from split host port");
+  return NULL;
+}
+
 static grpc_uri *bad_uri(const char *uri_text, size_t pos, const char *section,
                          int suppress_errors) {
   char *line_prefix;

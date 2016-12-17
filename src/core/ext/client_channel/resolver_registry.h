@@ -71,8 +71,6 @@ grpc_resolver_factory *grpc_resolver_factory_lookup(const char *name);
  *  reference to it */
 grpc_resolver_factory *lookup_factory_by_uri(grpc_uri *uri);
 
-void grpc_resolver_factory_lookup_by_uri_string(const char *uri);
-
 /** Given a target, return a (freshly allocated with gpr_malloc) string
     representing the default authority to pass from a client. */
 char *grpc_get_default_authority(const char *target);

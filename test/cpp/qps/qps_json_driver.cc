@@ -220,7 +220,9 @@ static bool QpsDriver() {
 int main(int argc, char** argv) {
   grpc::testing::InitBenchmark(&argc, &argv, true);
 
-  grpc_resolver_factory_lookup_by_uri_string(NULL);
+  grpc_uri_join_host_port(NULL, NULL, NULL);
+
+  grpc_uri_split_host_port(NULL, NULL);
 
   bool ok = grpc::testing::QpsDriver();
 
