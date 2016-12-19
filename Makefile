@@ -956,6 +956,7 @@ fling_test: $(BINDIR)/$(CONFIG)/fling_test
 gen_hpack_tables: $(BINDIR)/$(CONFIG)/gen_hpack_tables
 gen_legal_metadata_characters: $(BINDIR)/$(CONFIG)/gen_legal_metadata_characters
 gen_percent_encoding_tables: $(BINDIR)/$(CONFIG)/gen_percent_encoding_tables
+generic_uri_parse_test: $(BINDIR)/$(CONFIG)/generic_uri_parse_test
 goaway_server_test: $(BINDIR)/$(CONFIG)/goaway_server_test
 gpr_avl_test: $(BINDIR)/$(CONFIG)/gpr_avl_test
 gpr_backoff_test: $(BINDIR)/$(CONFIG)/gpr_backoff_test
@@ -1024,7 +1025,6 @@ percent_decode_fuzzer: $(BINDIR)/$(CONFIG)/percent_decode_fuzzer
 percent_encode_fuzzer: $(BINDIR)/$(CONFIG)/percent_encode_fuzzer
 percent_encoding_test: $(BINDIR)/$(CONFIG)/percent_encoding_test
 resolve_address_test: $(BINDIR)/$(CONFIG)/resolve_address_test
-resolver_registry_test: $(BINDIR)/$(CONFIG)/resolver_registry_test
 resource_quota_test: $(BINDIR)/$(CONFIG)/resource_quota_test
 secure_channel_create_test: $(BINDIR)/$(CONFIG)/secure_channel_create_test
 secure_endpoint_test: $(BINDIR)/$(CONFIG)/secure_endpoint_test
@@ -1300,6 +1300,7 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/fling_server \
   $(BINDIR)/$(CONFIG)/fling_stream_test \
   $(BINDIR)/$(CONFIG)/fling_test \
+  $(BINDIR)/$(CONFIG)/generic_uri_parse_test \
   $(BINDIR)/$(CONFIG)/goaway_server_test \
   $(BINDIR)/$(CONFIG)/gpr_avl_test \
   $(BINDIR)/$(CONFIG)/gpr_backoff_test \
@@ -1356,7 +1357,6 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/no_server_test \
   $(BINDIR)/$(CONFIG)/percent_encoding_test \
   $(BINDIR)/$(CONFIG)/resolve_address_test \
-  $(BINDIR)/$(CONFIG)/resolver_registry_test \
   $(BINDIR)/$(CONFIG)/resource_quota_test \
   $(BINDIR)/$(CONFIG)/secure_channel_create_test \
   $(BINDIR)/$(CONFIG)/secure_endpoint_test \
@@ -1655,6 +1655,8 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/fling_stream_test || ( echo test fling_stream_test failed ; exit 1 )
 	$(E) "[RUN]     Testing fling_test"
 	$(Q) $(BINDIR)/$(CONFIG)/fling_test || ( echo test fling_test failed ; exit 1 )
+	$(E) "[RUN]     Testing generic_uri_parse_test"
+	$(Q) $(BINDIR)/$(CONFIG)/generic_uri_parse_test || ( echo test generic_uri_parse_test failed ; exit 1 )
 	$(E) "[RUN]     Testing goaway_server_test"
 	$(Q) $(BINDIR)/$(CONFIG)/goaway_server_test || ( echo test goaway_server_test failed ; exit 1 )
 	$(E) "[RUN]     Testing gpr_avl_test"
@@ -1753,8 +1755,6 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/percent_encoding_test || ( echo test percent_encoding_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resolve_address_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resolve_address_test || ( echo test resolve_address_test failed ; exit 1 )
-	$(E) "[RUN]     Testing resolver_registry_test"
-	$(Q) $(BINDIR)/$(CONFIG)/resolver_registry_test || ( echo test resolver_registry_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resource_quota_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resource_quota_test || ( echo test resource_quota_test failed ; exit 1 )
 	$(E) "[RUN]     Testing secure_channel_create_test"
@@ -2798,6 +2798,7 @@ LIBGRPC_SRC = \
     src/core/ext/client_channel/client_channel_plugin.c \
     src/core/ext/client_channel/connector.c \
     src/core/ext/client_channel/default_initial_connect_string.c \
+    src/core/ext/client_channel/generic_uri_parse.c \
     src/core/ext/client_channel/http_connect_handshaker.c \
     src/core/ext/client_channel/initial_connect_string.c \
     src/core/ext/client_channel/lb_policy.c \
@@ -3072,6 +3073,7 @@ LIBGRPC_CRONET_SRC = \
     src/core/ext/client_channel/client_channel_plugin.c \
     src/core/ext/client_channel/connector.c \
     src/core/ext/client_channel/default_initial_connect_string.c \
+    src/core/ext/client_channel/generic_uri_parse.c \
     src/core/ext/client_channel/http_connect_handshaker.c \
     src/core/ext/client_channel/initial_connect_string.c \
     src/core/ext/client_channel/lb_policy.c \
@@ -3581,6 +3583,7 @@ LIBGRPC_UNSECURE_SRC = \
     src/core/ext/client_channel/client_channel_plugin.c \
     src/core/ext/client_channel/connector.c \
     src/core/ext/client_channel/default_initial_connect_string.c \
+    src/core/ext/client_channel/generic_uri_parse.c \
     src/core/ext/client_channel/http_connect_handshaker.c \
     src/core/ext/client_channel/initial_connect_string.c \
     src/core/ext/client_channel/lb_policy.c \
@@ -4134,6 +4137,7 @@ LIBGRPC++_CRONET_SRC = \
     src/core/ext/client_channel/client_channel_plugin.c \
     src/core/ext/client_channel/connector.c \
     src/core/ext/client_channel/default_initial_connect_string.c \
+    src/core/ext/client_channel/generic_uri_parse.c \
     src/core/ext/client_channel/http_connect_handshaker.c \
     src/core/ext/client_channel/initial_connect_string.c \
     src/core/ext/client_channel/lb_policy.c \
@@ -8443,6 +8447,38 @@ endif
 endif
 
 
+GENERIC_URI_PARSE_TEST_SRC = \
+    test/core/client_channel/generic_uri_parse_test.c \
+
+GENERIC_URI_PARSE_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(GENERIC_URI_PARSE_TEST_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/generic_uri_parse_test: openssl_dep_error
+
+else
+
+
+
+$(BINDIR)/$(CONFIG)/generic_uri_parse_test: $(GENERIC_URI_PARSE_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LD) $(LDFLAGS) $(GENERIC_URI_PARSE_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/generic_uri_parse_test
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/core/client_channel/generic_uri_parse_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
+
+deps_generic_uri_parse_test: $(GENERIC_URI_PARSE_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(GENERIC_URI_PARSE_TEST_OBJS:.o=.dep)
+endif
+endif
+
+
 GOAWAY_SERVER_TEST_SRC = \
     test/core/end2end/goaway_server_test.c \
 
@@ -10615,38 +10651,6 @@ deps_resolve_address_test: $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
-endif
-endif
-
-
-RESOLVER_REGISTRY_TEST_SRC = \
-    test/core/client_channel/resolvers/resolver_registry_test.c \
-
-RESOLVER_REGISTRY_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_REGISTRY_TEST_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/resolver_registry_test: openssl_dep_error
-
-else
-
-
-
-$(BINDIR)/$(CONFIG)/resolver_registry_test: $(RESOLVER_REGISTRY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LD) $(LDFLAGS) $(RESOLVER_REGISTRY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/resolver_registry_test
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/core/client_channel/resolvers/resolver_registry_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-
-deps_resolver_registry_test: $(RESOLVER_REGISTRY_TEST_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(RESOLVER_REGISTRY_TEST_OBJS:.o=.dep)
 endif
 endif
 

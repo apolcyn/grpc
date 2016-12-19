@@ -166,39 +166,3 @@ char *grpc_resolver_factory_add_default_prefix_if_needed(const char *target) {
   grpc_uri_destroy(uri);
   return canonical_target == NULL ? gpr_strdup(target) : canonical_target;
 }
-
-char* grpc_generic_join_host_port(char *host, char *port) {
-  grpc_resolver_factory *factory;
-  grpc_uri *parsed_uri;
-  char *out = NULL;
-  char *canonical_target = NULL;
-
-  factory = resolve_factory(host, &parsed_uri, &canonical_target);
-  if(factory == NULL) {
-    gpr_log(GPR_ERROR, "couldn't find factory for %s", host);
-    return NULL;
-  }
-  out = factory->vtable->join_host_port(factory, parsed_uri->authority, port);
-  grpc_uri_destroy(parsed_uri);
-
-  return out;
-}
-
-void grpc_generic_split_host_port(char *uri, char **host, char **port) {
-  grpc_uri *parsed_uri = NULL;
-  grpc_resolver_factory *factory = NULL;
-  char *canonical_target = NULL;
-
-  factory = resolve_factory(uri, &parsed_uri, &canonical_target);
-  if (factory == NULL) {
-    gpr_log(GPR_ERROR, "coudn't find factory for uri: %s", uri);
-    *host = NULL;
-    *port = NULL;
-    return;
-  }
-  gpr_log(GPR_INFO, "canonical target is %s", canonical_target);
-  gpr_log(GPR_INFO, "split %s into host port", parsed_uri->authority);
-  factory->vtable->split_host_port(factory, parsed_uri->authority, host, port);
-  gpr_log(GPR_INFO, "destroy uri");
-  grpc_uri_destroy(parsed_uri);
-}
