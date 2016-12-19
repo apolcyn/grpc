@@ -66,7 +66,8 @@ int join_host_port(grpc_host_port_parser *parser, char **joined_host_port, const
 int split_host_port(grpc_host_port_parser *parser, char *joined_host_port, const char **host, const char **port);
 
 int grpc_generic_join_host_port(char **joined_host_port, const char *host, const char *port);
-
 int grpc_generic_split_host_port(const char *joined_host_port, char **host, char **port);
+
+void grpc_register_host_port_parser(grpc_host_port_parser *parser);
 
 #endif /* GRPC_CORE_EXT_CLIENT_CHANNEL_GENERIC_URI_PARSE */

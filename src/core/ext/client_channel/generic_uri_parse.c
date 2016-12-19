@@ -81,7 +81,7 @@ int default_host_port_parser_join_host_port(grpc_host_port_parser *parser, char 
 
   GPR_ASSERT(strlen(port) > 0);
   numeric_port = strtol(port, &endptr, 10);
-  GPR_ASSERT(endptr == 0);
+  GPR_ASSERT(*endptr == 0);
 
   return gpr_join_host_port(joined_host_port, host, (int)numeric_port);
 }
