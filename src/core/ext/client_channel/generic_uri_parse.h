@@ -56,6 +56,9 @@ struct grpc_host_port_parser_vtable {
   const char *scheme;
 };
 
+void grpc_default_host_port_parser_init(void);
+void grpc_default_host_port_parser_shutdown(void);
+
 void grpc_host_port_parser_ref(grpc_host_port_parser *parser);
 void grpc_host_port_parser_unref(grpc_host_port_parser *parser);
 

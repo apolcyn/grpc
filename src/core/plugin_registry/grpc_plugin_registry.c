@@ -50,7 +50,11 @@ extern void grpc_resolver_sockaddr_shutdown(void);
 extern void grpc_load_reporting_plugin_init(void);
 extern void grpc_load_reporting_plugin_shutdown(void);
 extern void census_grpc_plugin_init(void);
+extern void census_grpc_plugin_init(void);
+extern void nsus_grpc_plugin_shutdown(void);
 extern void census_grpc_plugin_shutdown(void);
+extern void grpc_default_host_port_parser_init(void);
+extern void grpc_default_host_port_parser_shutdown(void);
 
 void grpc_register_built_in_plugins(void) {
   grpc_register_plugin(grpc_chttp2_plugin_init,
@@ -71,4 +75,6 @@ void grpc_register_built_in_plugins(void) {
                        grpc_load_reporting_plugin_shutdown);
   grpc_register_plugin(census_grpc_plugin_init,
                        census_grpc_plugin_shutdown);
+  grpc_register_plugin(grpc_default_host_port_parser_init,
+                       grpc_default_host_port_parser_shutdown);
 }
