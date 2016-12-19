@@ -150,6 +150,5 @@ int main(int argc, char **argv) {
   test_fails("http://foo?bar#lol#");
 
   test_query_parts();
-
   return 0;
 }
