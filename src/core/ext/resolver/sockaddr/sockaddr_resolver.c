@@ -212,10 +212,6 @@ static void sockaddr_factory_ref(grpc_resolver_factory *factory) {}
 
 static void sockaddr_factory_unref(grpc_resolver_factory *factory) {}
 
-static void no_op_split_host_port(grpc_resolver_factory *factory, char *uri, char **host, char **port) { GPR_ASSERT(0); }
-
-static char* no_op_join_host_port(grpc_resolver_factory *factory, char *host, char *port) { GPR_ASSERT(0); return NULL; }
-
 #define DECL_FACTORY(name)                                                  \
   static grpc_resolver *name##_factory_create_resolver(                     \
       grpc_resolver_factory *factory, grpc_resolver_args *args) {           \
@@ -223,8 +219,7 @@ static char* no_op_join_host_port(grpc_resolver_factory *factory, char *host, ch
   }                                                                         \
   static const grpc_resolver_factory_vtable name##_factory_vtable = {       \
       sockaddr_factory_ref, sockaddr_factory_unref,                         \
-      name##_factory_create_resolver, name##_get_default_authority,         \
-      no_op_split_host_port, no_op_join_host_port, #name};                         \
+      name##_factory_create_resolver, name##_get_default_authority, #name}; \
   static grpc_resolver_factory name##_resolver_factory = {                  \
       &name##_factory_vtable}
 

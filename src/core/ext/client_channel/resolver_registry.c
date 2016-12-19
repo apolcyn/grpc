@@ -167,7 +167,7 @@ char *grpc_resolver_factory_add_default_prefix_if_needed(const char *target) {
   return canonical_target == NULL ? gpr_strdup(target) : canonical_target;
 }
 
-char* grpc_uri_join_host_port(char *host, char *port) {
+char* grpc_generic_join_host_port(char *host, char *port) {
   grpc_resolver_factory *factory;
   grpc_uri *parsed_uri;
   char *out = NULL;
@@ -184,7 +184,7 @@ char* grpc_uri_join_host_port(char *host, char *port) {
   return out;
 }
 
-void grpc_uri_split_host_port(char *uri, char **host, char **port) {
+void grpc_generic_split_host_port(char *uri, char **host, char **port) {
   grpc_uri *parsed_uri = NULL;
   grpc_resolver_factory *factory = NULL;
   char *canonical_target = NULL;

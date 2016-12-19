@@ -32,8 +32,6 @@
  */
 
 #include <string.h>
-#include <stdio.h>
-#include <unistd.h>
 
 #include <grpc/support/alloc.h>
 #include <grpc/support/host_port.h>
@@ -295,28 +293,9 @@ static char *dns_factory_get_default_host_name(grpc_resolver_factory *factory,
   return gpr_strdup(path);
 }
 
-static void dns_factory_split_host_port(grpc_resolver_factory *factory,
-                                        char *authority, char **host, char **port) {
-  gpr_split_host_port(authority, host, port);
-}
-
-static char* dns_factory_join_host_port(grpc_resolver_factory *factory,
-                                        char *host, char *port) {
-  char *out;
-  int port_num;
-
-  port_num = atoi(port);
-  GPR_ASSERT(port_num != 0);
-  GPR_ASSERT(gpr_join_host_port(&out, host, port_num) != -1);
-  return out;
-}
-
 static const grpc_resolver_factory_vtable dns_factory_vtable = {
     dns_factory_ref, dns_factory_unref, dns_factory_create_resolver,
-    dns_factory_get_default_host_name,
-    dns_factory_split_host_port,
-    dns_factory_join_host_port,
-    "dns"};
+    dns_factory_get_default_host_name, "dns"};
 static grpc_resolver_factory dns_resolver_factory = {&dns_factory_vtable};
 
 static grpc_resolver_factory *dns_resolver_factory_create() {
