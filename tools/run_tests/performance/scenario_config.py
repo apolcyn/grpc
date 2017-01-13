@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 # Copyright 2016, Google Inc.
 # All rights reserved.
 #
@@ -30,6 +31,10 @@
 # performance scenario configuration for various languages
 
 import math
+import json
+import argparse
+import sys
+import re
 
 WARMUP_SECONDS=5
 JAVA_WARMUP_SECONDS=15  # Java needs more warmup time for JIT to kick in.
@@ -726,3 +731,39 @@ LANGUAGES = {
     'python' : PythonLanguage(),
     'go' : GoLanguage(),
 }
+
+
+def print_scenario_json(scenario_regex):
+  all_scenarios = []
+  for l in LANGUAGES.keys():
+    for s in LANGUAGES[l].scenarios():
+      if re.match(scenario_regex, s['name']):
+        all_scenarios.append(remove_nonproto_fields(s))
+  print(json.dumps({'scenarios': all_scenarios}))
+
+
+def print_scenario_names(lang):
+  for l in LANGUAGES.keys():
+    for scenario in LANGUAGES[l].scenarios():
+      print('%s' % scenario['name'])
+
+
+def main():
+  argp = argparse.ArgumentParser(description='Print performance scenario configs')
+  argp.add_argument('-r', '--scenario_regex',
+                    required=False,
+                    help='Print json of all configs matching regex, passable to qps_json_driver')
+  argp.add_argument('-l', '--list_scenario_names',
+                    default=False,
+                    action='store_const',
+                    const=True,
+                    help='List the names of all scenario configs.')
+  args = argp.parse_args()
+
+  if args.scenario_regex:
+    print_scenario_json(args.scenario_regex)
+
+  if args.list_scenario_names:
+    print_scenario_names()
+
+if __name__ == "__main__": main()
