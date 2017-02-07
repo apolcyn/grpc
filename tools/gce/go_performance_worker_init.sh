@@ -63,5 +63,5 @@ echo 4096 | sudo tee /proc/sys/kernel/perf_event_mlock_kb
 # on benchmarks
 git clone -v https://github.com/brendangregg/FlameGraph ~/FlameGraph
 
-git clone -v https://github.com/apolcyn/net.git ../../../net
-git clone -v https://github.com/apolcyn/grpc-go.git ../../../grpc-go
+git clone -v https://github.com/apolcyn/net.git ~/net
+git clone -v https://github.com/apolcyn/grpc-go.git ~/grpc-go
