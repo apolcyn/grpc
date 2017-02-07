@@ -34,15 +34,15 @@ cd $(dirname $0)/../../..
 
 export GOPATH=$(pwd)/../gopath
 
+# use own version of x/net
+rm -rf "${GOPATH}/src/golang.org/x/net"
+git clone --recursive ../net ${GOPATH}/src/golang.org/x/net
+
 # Get grpc-go and the dependencies but get rid of the upstream/master version
 go get google.golang.org/grpc
 rm -rf "${GOPATH}/src/google.golang.org/grpc"
 
 # Get the revision of grpc-go we want to test
 git clone --recursive ../grpc-go ${GOPATH}/src/google.golang.org/grpc
-
-# use own version of x/net
-rm -rf "${GOPATH}/src/golang.org/x/net"
-git clone --recursive ../net ${GOPATH}/src/golang.org/x/net
 
 (cd ${GOPATH}/src/google.golang.org/grpc/benchmark/worker && go install)
