@@ -690,8 +690,8 @@ class GoLanguage:
               rpc_type=rpc_type.upper(),
               req_size=size,
               resp_size=size,
-              client_type='SYNC_CLIENT' % synchronicity.upper(),
-              server_type='SYNC_SERVER' % synchronicity.upper(),
+              client_type='SYNC_CLIENT',
+              server_type='SYNC_SERVER',
               unconstrained_client='async',
               secure=secure,
               categories=[SWEEP])
