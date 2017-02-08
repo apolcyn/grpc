@@ -34,12 +34,14 @@ set -ex
 # Enter the gRPC repo root
 cd $(dirname $0)/../..
 
-# run 8core client vs 8core server
+# Run performance tests on machines that are far away from each other.
+# Attempt to see performance of flow control over netpertf latency.
+# NOTE: focusing on single stream tests
 tools/run_tests/run_performance_tests.py \
     -l go \
     --netperf \
-    --category scalable \
-    -r go_protobuf_sync_unary_ping_pong_insecure \
+    --category sweep \
+    -r .*ping_pong* \
     --bq_result_table apolcyn_test.performance_high_latency \
     --remote_worker_host grpc-performance-2core grpc-performance-asia-east-2core \
     --xml_report report_high_latency_2core.xml \
