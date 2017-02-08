@@ -640,20 +640,18 @@ class GoLanguage:
       yield _ping_pong_scenario(
           'go_generic_sync_streaming_ping_pong_%s' % secstr, rpc_type='STREAMING',
           client_type='SYNC_CLIENT', server_type='ASYNC_GENERIC_SERVER',
-          use_generic_payload=True, async_server_threads=1,
+          use_generic_payload=True,
           secure=secure,
           categories=smoketest_categories)
 
       yield _ping_pong_scenario(
           'go_protobuf_sync_streaming_ping_pong_%s' % secstr, rpc_type='STREAMING',
           client_type='SYNC_CLIENT', server_type='SYNC_SERVER',
-          async_server_threads=1,
           secure=secure)
 
       yield _ping_pong_scenario(
           'go_protobuf_sync_unary_ping_pong_%s' % secstr, rpc_type='UNARY',
           client_type='SYNC_CLIENT', server_type='SYNC_SERVER',
-          async_server_threads=1,
           secure=secure,
           categories=smoketest_categories)
 
@@ -686,13 +684,12 @@ class GoLanguage:
       for size in geometric_progression(1, 1024*1024*1024+1, 32):
         for rpc_type in ['unary', 'streaming']:
           yield _ping_pong_scenario(
-              'go_protobuf_sync_%s_ping_pong_%s_%db' % (rpc_type, secstr, size),
+              'go_protobuf_sync_%s_ping_pong_%s_%sdb' % (rpc_type, secstr, size),
               rpc_type=rpc_type.upper(),
-              req_size=size,
-              resp_size=size,
               client_type='SYNC_CLIENT',
               server_type='SYNC_SERVER',
-              unconstrained_client='async',
+              req_size=size,
+              resp_size=size,
               secure=secure,
               categories=[SWEEP])
 
