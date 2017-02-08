@@ -38,12 +38,15 @@ CONFIG=${CONFIG:-opt}
 # build C++ qps worker & driver always - we need at least the driver to
 # run any of the scenarios.
 # TODO(jtattermusch): C++ worker and driver are not buildable on Windows yet
-if [ "$OSTYPE" != "msys" && "$ON_REMOTE" != "true" ]
+if [ "$OSTYPE" != "msys" ]
 then
-  # TODO(jtattermusch): not embedding OpenSSL breaks the C# build because
-  # grpc_csharp_ext needs OpenSSL embedded and some intermediate files from
-  # this build will be reused.
-  make CONFIG=${CONFIG} EMBED_OPENSSL=true EMBED_ZLIB=true qps_worker qps_json_driver -j8
+  if [ "$ON_REMOTE" != "true" ]
+  then
+    # TODO(jtattermusch): not embedding OpenSSL breaks the C# build because
+    # grpc_csharp_ext needs OpenSSL embedded and some intermediate files from
+    # this build will be reused.
+    make CONFIG=${CONFIG} EMBED_OPENSSL=true EMBED_ZLIB=true qps_worker qps_json_driver -j8
+  fi
 fi
 
 for language in $@
