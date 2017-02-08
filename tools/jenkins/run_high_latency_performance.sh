@@ -36,10 +36,10 @@ cd $(dirname $0)/../..
 
 # run 8core client vs 8core server
 tools/run_tests/run_performance_tests.py \
-    -l c++ java csharp go \
+    -l go \
     --netperf \
     --category scalable \
-    -r scenario_regex .*protobuf.*unary.*ping_pong_insecure$ \
+    -r scenario_regex go_protobuf_sync_unary_ping_pong_insecure \
     --bq_result_table performance_test.performance_high_latency \
     --remote_worker_host grpc-performance-2core grpc-performance-asia-east-2core \
     --xml_report report_high_latency_2core.xml \
