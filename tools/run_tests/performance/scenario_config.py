@@ -681,7 +681,7 @@ class GoLanguage:
           secure=secure,
           categories=[SCALABLE])
 
-      for size in geometric_progression(1, 1024*1024*1024+1, 32):
+      for size in geometric_progression(1, 1024*1024*1024+1, 8):
         for rpc_type in ['unary', 'streaming']:
           yield _ping_pong_scenario(
               'go_protobuf_sync_%s_ping_pong_%s_%sdb' % (rpc_type, secstr, size),

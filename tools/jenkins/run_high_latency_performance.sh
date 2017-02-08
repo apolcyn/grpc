@@ -41,7 +41,7 @@ tools/run_tests/run_performance_tests.py \
     -l go \
     --netperf \
     --category sweep \
-    -r .*ping_pong* \
+    -r .*unary.*ping_pong* \
     --bq_result_table apolcyn_test.performance_high_latency \
     --remote_worker_host grpc-performance-2core grpc-performance-asia-east-2core \
     --xml_report report_high_latency_2core.xml \
