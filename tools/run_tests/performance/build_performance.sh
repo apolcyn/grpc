@@ -38,7 +38,7 @@ CONFIG=${CONFIG:-opt}
 # build C++ qps worker & driver always - we need at least the driver to
 # run any of the scenarios.
 # TODO(jtattermusch): C++ worker and driver are not buildable on Windows yet
-if [ "$OSTYPE" != "msys" ]
+if [ "$OSTYPE" != "msys" && "$ON_REMOTE" != "true" ]
 then
   # TODO(jtattermusch): not embedding OpenSSL breaks the C# build because
   # grpc_csharp_ext needs OpenSSL embedded and some intermediate files from
