@@ -683,6 +683,20 @@ class GoLanguage:
           secure=secure,
           categories=[SCALABLE])
 
+      for size in geometric_progression(1, 1024*1024*1024+1, 8):
+        for rpc_type in ['unary', 'streaming']
+          yield _ping_pong_scenario(
+              'go_protobuf_sync_%s_ping_pong_%s_%db' % (rpc_type, secstr, size),
+              rpc_type=rpc_type.upper(),
+              req_size=size,
+              resp_size=size,
+              client_type='SYNC_CLIENT' % synchronicity.upper(),
+              server_type='SYNC_SERVER' % synchronicity.upper(),
+              unconstrained_client='async',
+              secure=secure,
+              categories=[SWEEP])
+
+
       # TODO(jtattermusch): add scenarios go vs C++
 
   def __str__(self):
