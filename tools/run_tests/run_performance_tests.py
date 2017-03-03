@@ -56,7 +56,7 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
 
-_REMOTE_HOST_USERNAME = 'jenkins'
+_REMOTE_HOST_USERNAME = os.environ.get('REMOTE_HOST_USERNAME') or 'jenkins'
 
 
 class QpsWorkerJob:
