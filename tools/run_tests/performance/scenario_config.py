@@ -244,7 +244,7 @@ class CXXLanguage:
           categories=smoketest_categories+[SCALABLE],
           excluded_poll_engines = ['poll-cv'])
 
-      for rpc_type in ['unary', 'streaming']:
+      for rpc_type in ['unary', 'streaming', 'streaming_from_client', 'streaming_from_server']:
         for synchronicity in ['sync', 'async']:
           yield _ping_pong_scenario(
               'cpp_protobuf_%s_%s_ping_pong_%s' % (synchronicity, rpc_type, secstr),
