@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env ruby
+
 # Copyright 2015, Google Inc.
 # All rights reserved.
 #
@@ -28,16 +29,40 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set -ex
+# server-side repro of
+# https://github.com/GoogleCloudPlatform/google-cloud-ruby/issues/1327
 
-# change to grpc repo root
-cd $(dirname $0)/../../..
+require_relative './end2end_common'
 
-EXIT_CODE=0
-ruby src/ruby/end2end/sig_handling_driver.rb || EXIT_CODE=1
-ruby src/ruby/end2end/channel_state_driver.rb || EXIT_CODE=1
-ruby src/ruby/end2end/channel_closing_driver.rb || EXIT_CODE=1
-ruby src/ruby/end2end/sig_int_during_channel_watch_driver.rb || EXIT_CODE=1
-ruby src/ruby/end2end/killed_client_thread_driver.rb || EXIT_CODE=1
-ruby src/ruby/end2end/killed_server_thread_driver.rb || EXIT_CODE=1
-exit $EXIT_CODE
+def main
+  client_control_port = ''
+  server_port = ''
+  OptionParser.new do |opts|
+    opts.on('--client_control_port=P', String) do |p|
+      client_control_port = p
+    end
+    opts.on('--server_port=P', String) do |p|
+      server_port = p
+    end
+  end.parse!
+
+  srv = GRPC::RpcServer.new
+  thd = Thread.new do
+    srv.add_http2_port("0.0.0.0:#{client_control_port}", :this_port_is_insecure)
+    srv.handle(Echo::EchoServer::Service.new)
+    srv.run
+  end
+  srv.wait_till_running
+
+  STDERR.puts "client's server started"
+
+  stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
+                                    :this_channel_is_insecure)
+
+  # notify the driver that this process' server has stared
+  stub.echo(Echo::EchoRequest.new(request: 'hello'))
+
+  thd.join
+end
+
+main
