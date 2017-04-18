@@ -23,12 +23,10 @@ def main
   server_runner = ServerRunner.new(EchoServerImpl)
   server_port = server_runner.run
 
-  sleep 1
-
   STDERR.puts 'start client'
   _, client_pid = start_client('channel_state_client.rb', server_port)
 
-  sleep 3
+  sleep 1
 
   Process.kill('SIGTERM', client_pid)
 

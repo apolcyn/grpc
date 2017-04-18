@@ -24,8 +24,6 @@ def main
   server_runner = ServerRunner.new(EchoServerImpl)
   server_port = server_runner.run
 
-  sleep 1
-
   STDERR.puts 'start client'
   control_stub, client_pid = start_client('sig_handling_client.rb', server_port)
 

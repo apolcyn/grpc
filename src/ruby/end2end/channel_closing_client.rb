@@ -41,6 +41,8 @@ def main
     end
   end.parse!
 
+  notify_server_that_client_started(server_port)
+
   ch = GRPC::Core::Channel.new("localhost:#{server_port}", {},
                                :this_channel_is_insecure)
 

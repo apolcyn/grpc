@@ -26,3 +26,7 @@ message DoEchoRpcRequest {
 }
 
 message Void{}
+
+service ClientWaiter {
+  rpc ClientStarted(Void) returns (Void) {}
+}

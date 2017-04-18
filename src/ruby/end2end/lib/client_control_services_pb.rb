@@ -35,4 +35,18 @@ module ClientControl
 
     Stub = Service.rpc_stub_class
   end
+  module ClientWaiter
+    class Service
+
+      include GRPC::GenericService
+
+      self.marshal_class_method = :encode
+      self.unmarshal_class_method = :decode
+      self.service_name = 'client_control.ClientWaiter'
+
+      rpc :ClientStarted, Void, Void
+    end
+
+    Stub = Service.rpc_stub_class
+  end
 end

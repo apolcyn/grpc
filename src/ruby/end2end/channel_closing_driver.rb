@@ -24,17 +24,15 @@ def main
   server_runner = ServerRunner.new(EchoServerImpl)
   server_port = server_runner.run
 
-  sleep 1
-
   STDERR.puts 'start client'
   control_stub, client_pid = start_client('channel_closing_client.rb',
                                           server_port)
+  server_runner.wait_until_client_started
 
-  sleep 3
+  control_stub.shutdown(ClientControl::Void.new)
 
   begin
     Timeout.timeout(10) do
-      control_stub.shutdown(ClientControl::Void.new)
       Process.wait(client_pid)
     end
   rescue Timeout::Error

@@ -38,6 +38,37 @@ class EchoServerImpl < Echo::EchoServer::Service
   end
 end
 
+# ClientWaiterImpl provides a way to get notified that a
+# child "client" process has started.
+class ClientWaiterImpl < ClientControl::ClientWaiter::Service
+  def initialize(client_started_mu, client_started_cv, client_started)
+    @mu = client_started_mu
+    @cv = client_started_cv
+    @client_started = client_started
+  end
+
+  def client_started(_, _)
+    @mu.synchronize do
+      @client_started.set_true
+      @cv.signal
+    end
+    ClientControl::Void.new
+  end
+end
+
+# Mutable boolean
+class BoolHolder
+  attr_reader :val
+
+  def init
+    @val = false
+  end
+
+  def set_true
+    @val = true
+  end
+end
+
 # ServerRunner starts an "echo server" that test clients can make calls to
 class ServerRunner
   def initialize(service_impl)
@@ -49,11 +80,25 @@ class ServerRunner
     port = @srv.add_http2_port('0.0.0.0:0', :this_port_is_insecure)
     @srv.handle(@service_impl)
 
+    @client_started_cv = ConditionVariable.new
+    @client_started_mu = Mutex.new
+    @client_started = BoolHolder.new
+
+    @srv.handle(ClientWaiterImpl.new(@client_started_mu,
+                                     @client_started_cv,
+                                     @client_started))
+
     @thd = Thread.new do
       @srv.run
     end
     @srv.wait_till_running
     port
+  end
+
+  def wait_until_client_started
+    @client_started_mu.synchronize do
+      @client_started_cv.wait(@client_started_mu) until @client_started.val
+    end
   end
 
   def stop
@@ -75,10 +120,16 @@ def start_client(client_main, server_port)
                              client_path,
                              "--client_control_port=#{client_control_port}",
                              "--server_port=#{server_port}")
-  sleep 1
+
   control_stub = ClientControl::ClientController::Stub.new(
     "localhost:#{client_control_port}", :this_channel_is_insecure)
   [control_stub, client_pid]
+end
+
+def notify_server_that_client_started(server_port)
+  stub = ClientControl::ClientWaiter::Stub.new("localhost:#{server_port}",
+                                               :this_channel_is_insecure)
+  stub.client_started(ClientControl::Void.new)
 end
 
 def cleanup(control_stub, client_pid, server_runner)
