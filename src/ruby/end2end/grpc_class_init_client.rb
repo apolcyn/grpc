@@ -69,7 +69,9 @@ def main
     fail "bad --grpc_class=#{grpc_class} param"
   end
 
-  th = Thread.new { test_proc.call }
+  th = Thread.new do
+ #   test_proc.call
+  end
   test_proc.call
   th.join
 end
