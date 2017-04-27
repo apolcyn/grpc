@@ -77,14 +77,10 @@ typedef struct grpc_rb_channel {
   grpc_completion_queue *cq;
 } grpc_rb_channel;
 
-typedef struct guarded_channel {
-  gpr_mu mu;
-  int count;
-}
-
 typedef struct bg_watched_channel {
   grpc_channel *channel;
   struct bg_watched_channel *next;
+  int destroyed_by_abort;
 } bg_watched_channel;
 
 bg_watched_channel *bg_watched_channel_list_head = NULL;
@@ -102,9 +98,24 @@ static gpr_cv global_connection_polling_cv;
 static int abort_channel_polling = 0;
 static int channel_polling_thread_started = 0;
 
-static int bg_watched_channel_list_contains_channel(grpc_channel *channel);
+static bg_watched_channel *bg_watched_channel_list_lookup_channel(grpc_channel *channel);
 static void bg_watched_channel_list_add_channel(grpc_channel *channel);
 static void bg_watched_channel_list_remove_channel(grpc_channel *channel);
+
+/* Avoids destroying a channel twice. */
+static void grpc_rb_channel_safe_destroy(grpc_channel *channel) {
+  bg_watched_channel *bg = NULL;
+
+  gpr_mu_lock(&global_connection_polling_mu);
+  bg = bg_watched_channel_list_lookup_channel(channel);
+  if (bg != NULL) {
+    if (!bg->destroyed_by_abort) {
+      grpc_channel_destroy(channel);
+    }
+    bg_watched_channel_list_remove_channel(channel);
+  }
+  gpr_mu_unlock(&global_connection_polling_mu);
+}
 
 /* Destroys Channel instances. */
 static void grpc_rb_channel_free(void *p) {
@@ -116,7 +127,7 @@ static void grpc_rb_channel_free(void *p) {
   ch = (grpc_rb_channel *)p;
 
   if (ch->wrapped != NULL) {
-    grpc_channel_destroy(ch->wrapped);
+    grpc_rb_channel_safe_destroy(ch->wrapped);
     grpc_completion_queue_shutdown(ch->cq);
     grpc_completion_queue_destroy(ch->cq);
     ch->wrapped = NULL;
@@ -362,7 +373,7 @@ static VALUE grpc_rb_channel_destroy(VALUE self) {
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
   ch = wrapper->wrapped;
   if (ch != NULL) {
-    grpc_channel_destroy(ch);
+    grpc_rb_channel_safe_destroy(ch);
     grpc_completion_queue_shutdown(wrapper->cq);
     grpc_completion_queue_destroy(wrapper->cq);
     wrapper->wrapped = NULL;
@@ -386,18 +397,18 @@ static VALUE grpc_rb_channel_get_target(VALUE self) {
 }
 
 /* Needs to be called under global_connection_polling_mu */
-static int bg_watched_channel_list_contains_channel(grpc_channel *channel) {
+static bg_watched_channel *bg_watched_channel_list_lookup_channel(grpc_channel *channel) {
   bg_watched_channel *watched = bg_watched_channel_list_head;
 
   gpr_log(GPR_DEBUG, "check contains");
   while (watched != NULL) {
     if (watched->channel == channel) {
-      return 1;
+      return watched;
     }
     watched = watched->next;
   }
 
-  return 0;
+  return NULL;
 }
 
 /* Needs to be called under global_connection_polling_mu */
@@ -405,7 +416,7 @@ static void bg_watched_channel_list_add_channel(grpc_channel *channel) {
   bg_watched_channel *watched = gpr_zalloc(sizeof(bg_watched_channel));
 
   gpr_log(GPR_DEBUG, "add bg");
-  GPR_ASSERT(!bg_watched_channel_list_contains_channel(channel));
+  GPR_ASSERT(!bg_watched_channel_list_lookup_channel(channel));
   watched->channel = channel;
   watched->next = bg_watched_channel_list_head;
   bg_watched_channel_list_head = watched;
@@ -416,7 +427,7 @@ static void bg_watched_channel_list_remove_channel(grpc_channel *channel) {
   bg_watched_channel *bg = NULL;
 
   gpr_log(GPR_DEBUG, "remove bg");
-  GPR_ASSERT(bg_watched_channel_list_contains_channel(channel));
+  GPR_ASSERT(bg_watched_channel_list_lookup_channel(channel));
   if (bg_watched_channel_list_head->channel == channel) {
     bg = bg_watched_channel_list_head;
     bg_watched_channel_list_head = bg_watched_channel_list_head->next;
@@ -447,16 +458,11 @@ static void grpc_rb_channel_try_register_connection_polling(
   conn_state = grpc_channel_check_connectivity_state(wrapped_channel, 0);
   // avoid posting work to the channel polling cq if it's been shutdown
   if (!abort_channel_polling && conn_state != GRPC_CHANNEL_SHUTDOWN) {
-    if (!bg_watched_channel_list_contains_channel(wrapped_channel)) {
+    if (!bg_watched_channel_list_lookup_channel(wrapped_channel)) {
       bg_watched_channel_list_add_channel(wrapped_channel);
     }
     grpc_channel_watch_connectivity_state(
         wrapped_channel, conn_state, gpr_inf_future(GPR_CLOCK_REALTIME), channel_polling_cq, wrapped_channel);
-  }
-  if (conn_state == GRPC_CHANNEL_SHUTDOWN) {
-    if (bg_watched_channel_list_contains_channel(wrapped_channel)) {
-      bg_watched_channel_list_remove_channel(wrapped_channel);
-    }
   }
   gpr_mu_unlock(&global_connection_polling_mu);
 }
@@ -506,6 +512,7 @@ static void run_poll_channels_loop_unblocking_func(void *arg) {
   bg = bg_watched_channel_list_head;
   while(bg != NULL) {
     grpc_channel_destroy(bg->channel);
+    bg->destroyed_by_abort = 1;
     bg = bg->next;
   }
 

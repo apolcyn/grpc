@@ -70,7 +70,7 @@ def main
   end
 
   th = Thread.new do
- #   test_proc.call
+    test_proc.call
   end
   test_proc.call
   th.join
