@@ -128,8 +128,7 @@ static void grpc_rb_channel_free(void *p) {
 
   if (ch->wrapped != NULL) {
     grpc_rb_channel_safe_destroy(ch->wrapped);
-    grpc_completion_queue_shutdown(ch->cq);
-    grpc_completion_queue_destroy(ch->cq);
+    grpc_rb_completion_queue_safe_destroy(ch->cq);
     ch->wrapped = NULL;
   }
 
@@ -374,8 +373,7 @@ static VALUE grpc_rb_channel_destroy(VALUE self) {
   ch = wrapper->wrapped;
   if (ch != NULL) {
     grpc_rb_channel_safe_destroy(ch);
-    grpc_completion_queue_shutdown(wrapper->cq);
-    grpc_completion_queue_destroy(wrapper->cq);
+    grpc_rb_completion_queue_safe_destroy(wrapper->cq);
     wrapper->wrapped = NULL;
   }
 
