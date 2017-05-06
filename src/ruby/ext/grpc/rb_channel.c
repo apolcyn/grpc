@@ -310,6 +310,13 @@ static void *wait_for_watch_state_op_complete_without_gvl(void *arg) {
   return return_value;
 }
 
+static void watch_connectivity_state_unblocking_func() {
+  gpr_mu_unlock(&global_connection_polling_mu);
+  abort_channel_polling = 1;
+  gpr_cv_broadcast(&global_connection_polling_cv);
+  gpr_mu_lock(&global_connection_polling_mu);
+}
+
 /* Wait until the channel's connectivity state becomes different from
  * "last_state", or "deadline" expires.
  * Returns true if the the channel's connectivity state becomes
@@ -355,7 +362,8 @@ static VALUE grpc_rb_channel_watch_connectivity_state(VALUE self,
 
   // Rely on the aborting or lack-of-starting of the main "channel watching"
   // thread background loop to cancel and finish early if needed.
-  op_success = rb_thread_call_without_gvl(wait_for_watch_state_op_complete_without_gvl, &stack, NULL, NULL);
+  op_success = rb_thread_call_without_gvl(
+      wait_for_watch_state_op_complete_without_gvl, &stack, watch_connectivity_state_unblocking_func, NULL);
   gpr_free(op);
 
   return op_success ? Qtrue : Qfalse;
