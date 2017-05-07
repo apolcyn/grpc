@@ -294,7 +294,7 @@ static void *wait_for_watch_state_op_complete_without_gvl(void *arg) {
   watch_state_stack *stack = (watch_state_stack*)arg;
   gpr_timespec deadline = stack->deadline;
   watch_state_op *op = stack->op;
-  void *return_value = (void*)0;
+  void *success = (void*)0;
 
   gpr_mu_lock(&global_connection_polling_mu);
   while(!op->op.api_callback_args.called_back &&
@@ -303,11 +303,11 @@ static void *wait_for_watch_state_op_complete_without_gvl(void *arg) {
     gpr_cv_wait(&global_connection_polling_cv, &global_connection_polling_mu, deadline);
   }
   if (op->op.api_callback_args.called_back && op->op.api_callback_args.success) {
-    return_value = (void*)1;
+    success = (void*)1;
   }
   gpr_mu_unlock(&global_connection_polling_mu);
 
-  return return_value;
+  return success;
 }
 
 static void watch_connectivity_state_unblocking_func() {
