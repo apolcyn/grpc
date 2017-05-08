@@ -34,11 +34,41 @@
 
 require_relative './end2end_common'
 
+def construct_many(test_proc)
+  thds = []
+  4.times do
+    thds << Thread.new do
+      20.times do
+        test_proc.call
+      end
+    end
+  end
+  20.times do
+    test_proc.call
+  end
+  thds.each { |t| t.join }
+end
+
+def run_gc_stress_test(test_proc)
+  GC.disable
+  construct_many(test_proc)
+
+  GC.enable
+  construct_many(test_proc)
+
+  GC.start(full_mark: true, immediate_sweep: true)
+  construct_many(test_proc)
+end
+
 def main
   grpc_class = ''
+  gc_stress = false
   OptionParser.new do |opts|
     opts.on('--grpc_class=P', String) do |p|
       grpc_class = p
+    end
+    opts.on('--gc_stress=P') do |p|
+      gc_stress = p
     end
   end.parse!
 
@@ -69,11 +99,14 @@ def main
     fail "bad --grpc_class=#{grpc_class} param"
   end
 
-  th = Thread.new do
-    test_proc.call
+  if gc_stress == 'true'
+    run_gc_stress_test(test_proc)
+    return
   end
+
+  thd = Thread.new { test_proc.call }
   test_proc.call
-  th.join
+  thd.join
 end
 
 main

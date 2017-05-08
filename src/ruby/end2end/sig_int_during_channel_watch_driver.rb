@@ -65,7 +65,7 @@ def main
 
   client_exit_code = $CHILD_STATUS
   if client_exit_code != 0
-    fail "sig int during channel watch client failed, exit code #{client_exit_code}"
+    fail "sig_int_during_channel_watch_client failed: #{client_exit_code}"
   end
 
   server_runner.stop

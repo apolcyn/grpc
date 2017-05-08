@@ -122,20 +122,13 @@ void bg_watched_channel_list_add_channel(grpc_channel *channel);
 void bg_watched_channel_list_remove_channel(grpc_channel *channel);
 void run_poll_channels_loop_unblocking_func(void* arg);
 
+// Needs to be called under global_connection_polling_mu
 void grpc_rb_channel_watch_connection_state_op_complete(watch_state_op* op, int success) {
-  gpr_mu_lock(&global_connection_polling_mu);
-  if (abort_channel_polling) {
-    // API watches exit without waiting for completion in case of abort
-    gpr_free(op);
-    gpr_mu_unlock(&global_connection_polling_mu);
-    return;
-  }
   GPR_ASSERT(!op->op.api_callback_args.called_back);
   op->op.api_callback_args.called_back = 1;
   op->op.api_callback_args.success = success;
-  // there can be only one call blocked on this
+  // wake up the watch API call thats waiting on this op
   gpr_cv_broadcast(&global_connection_polling_cv);
-  gpr_mu_unlock(&global_connection_polling_mu);
 }
 
 /* Avoids destroying a channel twice. */
@@ -149,6 +142,7 @@ void grpc_rb_channel_safe_destroy(grpc_channel *channel) {
       grpc_channel_destroy(channel);
     }
     bg_watched_channel_list_remove_channel(channel);
+    gpr_free(bg);
   }
   gpr_mu_unlock(&global_connection_polling_mu);
 }
@@ -248,7 +242,9 @@ VALUE grpc_rb_channel_init(int argc, VALUE *argv, VALUE self) {
 
   wrapper->wrapped = ch;
 
+  gpr_mu_lock(&global_connection_polling_mu);
   grpc_rb_channel_try_register_connection_polling(wrapper->wrapped, 1);
+  gpr_mu_unlock(&global_connection_polling_mu);
 
   if (args.args != NULL) {
     xfree(args.args); /* Allocated by grpc_rb_hash_convert_to_channel_args */
@@ -296,8 +292,9 @@ VALUE grpc_rb_channel_get_connectivity_state(int argc, VALUE *argv,
     // the case in which the channel polling thread
     // failed to start just always shows shutdown state.
     out = LONG2NUM(GRPC_CHANNEL_SHUTDOWN);
+  } else {
+    out = LONG2NUM(grpc_channel_check_connectivity_state(wrapper->wrapped, grpc_try_to_connect));
   }
-  out = LONG2NUM(grpc_channel_check_connectivity_state(wrapper->wrapped, grpc_try_to_connect));
   gpr_mu_unlock(&global_connection_polling_mu);
   return out;
 }
@@ -318,9 +315,8 @@ void *wait_for_watch_state_op_complete_without_gvl(void *arg) {
     if (op->op.api_callback_args.success) {
       success = (void*)1;
     }
-    // dont free in case of abort, op hasnt been called back yet
-    gpr_free(op);
   }
+  gpr_free(op);
   gpr_mu_unlock(&global_connection_polling_mu);
 
   return success;
@@ -473,6 +469,7 @@ bg_watched_channel *bg_watched_channel_list_lookup_channel(grpc_channel *channel
 
   gpr_log(GPR_DEBUG, "check contains");
   while (watched != NULL) {
+    GPR_ASSERT(watched->channel);
     if (watched->channel == channel) {
       return watched;
     }
@@ -500,16 +497,13 @@ void bg_watched_channel_list_remove_channel(grpc_channel *channel) {
   gpr_log(GPR_DEBUG, "remove bg");
   GPR_ASSERT(bg_watched_channel_list_lookup_channel(channel));
   if (bg_watched_channel_list_head->channel == channel) {
-    bg = bg_watched_channel_list_head;
     bg_watched_channel_list_head = bg_watched_channel_list_head->next;
-    gpr_free(bg);
     return;
   }
   bg = bg_watched_channel_list_head;
   while (bg != NULL && bg->next != NULL) {
     if (bg->next->channel == channel) {
       bg->next = bg->next->next;
-      gpr_free(bg->next);
       return;
     }
     bg = bg->next;
@@ -517,21 +511,17 @@ void bg_watched_channel_list_remove_channel(grpc_channel *channel) {
   GPR_ASSERT(0);
 }
 
-// Either start polling channel connection state or signal that it's free to
-// destroy.
-// Not safe to call while a channel's connection state is polled.
+// Needs to be called under global_connection_poolling_mu
 void grpc_rb_channel_try_register_connection_polling(
   grpc_channel *wrapped_channel, int first_time_register) {
   grpc_connectivity_state conn_state;
   watch_state_op *op = NULL;
 
-  gpr_mu_lock(&global_connection_polling_mu);
   GPR_ASSERT(channel_polling_thread_started || abort_channel_polling);
   // avoid posting work to the channel polling cq if it's been shutdown
   if (!abort_channel_polling) {
     conn_state = grpc_channel_check_connectivity_state(wrapped_channel, 0);
     if (conn_state == GRPC_CHANNEL_SHUTDOWN) {
-      gpr_mu_unlock(&global_connection_polling_mu);
       return;
     }
     if (first_time_register) {
@@ -546,7 +536,6 @@ void grpc_rb_channel_try_register_connection_polling(
     grpc_channel_watch_connectivity_state(
         wrapped_channel, conn_state, gpr_inf_future(GPR_CLOCK_REALTIME), channel_polling_cq, op);
   }
-  gpr_mu_unlock(&global_connection_polling_mu);
 }
 
 // Note this loop breaks out with a single call of
@@ -573,7 +562,8 @@ void *run_poll_channels_loop_no_gil(void *arg) {
     if (event.type == GRPC_QUEUE_SHUTDOWN) {
       break;
     }
-    if (event.type == GRPC_OP_COMPLETE) {
+    gpr_mu_lock(&global_connection_polling_mu);
+    if (!abort_channel_polling && event.type == GRPC_OP_COMPLETE) {
       op = (watch_state_op*)event.tag;
       if (op->op_type == CONTINUOUS_WATCH) {
         grpc_rb_channel_try_register_connection_polling((grpc_channel *)op->op.continuous_watch_callback_args.wrapped_channel, 0);
@@ -584,6 +574,7 @@ void *run_poll_channels_loop_no_gil(void *arg) {
         GPR_ASSERT(0);
       }
     }
+    gpr_mu_unlock(&global_connection_polling_mu);
   }
   grpc_completion_queue_destroy(channel_polling_cq);
   gpr_log(GPR_DEBUG, "GRPC_RUBY: run_poll_channels_loop_no_gil - exit connection polling loop");
