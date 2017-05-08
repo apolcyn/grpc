@@ -58,11 +58,9 @@ def main
            'It likely hangs when ended abruptly'
   end
 
-  client_exit_code = $CHILD_STATUS
-  if client_exit_code != 0
-    fail "channel state client failed, exit code #{client_exit_code}"
-  end
-
+  # The interrupt in the child process should cause it to
+  # exit a non-zero status, so don't check it here.
+  # This test mainly tries to catch deadlock.
   server_runner.stop
 end
 

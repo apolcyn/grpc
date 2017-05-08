@@ -65,7 +65,7 @@ def main
 
   client_exit_code = $CHILD_STATUS
   if client_exit_code != 0
-    fail "channel closing client failed, exit code #{client_exit_code}"
+    fail "forking client client failed, exit code #{client_exit_code}"
   end
 
   server_runner.stop
