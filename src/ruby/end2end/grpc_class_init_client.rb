@@ -46,7 +46,7 @@ def construct_many(test_proc)
   20.times do
     test_proc.call
   end
-  thds.each { |t| t.join }
+  thds.each(&:join)
 end
 
 def run_gc_stress_test(test_proc)
@@ -58,6 +58,33 @@ def run_gc_stress_test(test_proc)
 
   GC.start(full_mark: true, immediate_sweep: true)
   construct_many(test_proc)
+end
+
+def get_test_proc(grpc_class)
+  case grpc_class
+  when 'channel'
+    return proc do
+      GRPC::Core::Channel.new('dummy_host', nil, :this_channel_is_insecure)
+    end
+  when 'server'
+    return proc do
+      GRPC::Core::Server.new({})
+    end
+  when 'channel_credentials'
+    return proc do
+      GRPC::Core::ChannelCredentials.new
+    end
+  when 'call_credentials'
+    return proc do
+      GRPC::Core::CallCredentials.new(proc { |noop| noop })
+    end
+  when 'compression_options'
+    return proc do
+      GRPC::Core::CompressionOptions.new
+    end
+  else
+    fail "bad --grpc_class=#{grpc_class} param"
+  end
 end
 
 def main
@@ -72,32 +99,7 @@ def main
     end
   end.parse!
 
-  test_proc = nil
-
-  case grpc_class
-  when 'channel'
-    test_proc = proc do
-      GRPC::Core::Channel.new('dummy_host', nil, :this_channel_is_insecure)
-    end
-  when 'server'
-    test_proc = proc do
-      GRPC::Core::Server.new({})
-    end
-  when 'channel_credentials'
-    test_proc = proc do
-      GRPC::Core::ChannelCredentials.new
-    end
-  when 'call_credentials'
-    test_proc = proc do
-      GRPC::Core::CallCredentials.new(proc { |noop| noop })
-    end
-  when 'compression_options'
-    test_proc = proc do
-      GRPC::Core::CompressionOptions.new
-    end
-  else
-    fail "bad --grpc_class=#{grpc_class} param"
-  end
+  test_proc = get_test_proc(grpc_class)
 
   if gc_stress == 'true'
     run_gc_stress_test(test_proc)

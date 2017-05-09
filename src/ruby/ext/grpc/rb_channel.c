@@ -68,12 +68,19 @@ VALUE grpc_rb_cChannel = Qnil;
 /* Used during the conversion of a hash to channel args during channel setup */
 VALUE grpc_rb_cChannelArgs;
 
+typedef struct bg_watched_channel {
+  grpc_channel *channel;
+  struct bg_watched_channel *next;
+  int channel_destroyed;
+  int refcount; // must only be accessed under global_connection_polling_mu
+} bg_watched_channel;
+
 /* grpc_rb_channel wraps a grpc_channel. */
 typedef struct grpc_rb_channel {
   VALUE credentials;
 
-  /* The actual channel */
-  grpc_channel *wrapped;
+  /* The actual channel (protected in a wrapper to tell when it's safe to destroy) */
+  bg_watched_channel *bg_wrapped;
 } grpc_rb_channel;
 
 typedef enum {
@@ -91,23 +98,14 @@ typedef struct watch_state_op {
       int called_back;
     } api_callback_args;
     struct {
-      grpc_channel *wrapped_channel;
+      bg_watched_channel *bg;
     } continuous_watch_callback_args;
   } op;
 } watch_state_op;
 
-typedef struct bg_watched_channel {
-  grpc_channel *channel;
-  struct bg_watched_channel *next;
-  int destroyed_by_abort;
-} bg_watched_channel;
-
 bg_watched_channel *bg_watched_channel_list_head = NULL;
 
-/* Forward declarations of functions involved in temporary fix to
- * https://github.com/grpc/grpc/issues/9941 */
-void grpc_rb_channel_try_register_connection_polling(
-    grpc_channel *wrapper, int first_time_register);
+void grpc_rb_channel_try_register_connection_polling(bg_watched_channel *bg);
 void *wait_until_channel_polling_thread_started_no_gil(void*);
 void wait_until_channel_polling_thread_started_unblocking_func(void*);
 
@@ -117,9 +115,9 @@ gpr_cv global_connection_polling_cv;
 int abort_channel_polling = 0;
 int channel_polling_thread_started = 0;
 
-bg_watched_channel *bg_watched_channel_list_lookup_channel(grpc_channel *channel);
-void bg_watched_channel_list_add_channel(grpc_channel *channel);
-void bg_watched_channel_list_remove_channel(grpc_channel *channel);
+int bg_watched_channel_list_lookup(bg_watched_channel *bg);
+bg_watched_channel *bg_watched_channel_list_create_and_add(grpc_channel *channel);
+void bg_watched_channel_list_free_and_remove(bg_watched_channel *bg);
 void run_poll_channels_loop_unblocking_func(void* arg);
 
 // Needs to be called under global_connection_polling_mu
@@ -132,17 +130,16 @@ void grpc_rb_channel_watch_connection_state_op_complete(watch_state_op* op, int 
 }
 
 /* Avoids destroying a channel twice. */
-void grpc_rb_channel_safe_destroy(grpc_channel *channel) {
-  bg_watched_channel *bg = NULL;
-
+void grpc_rb_channel_safe_destroy(bg_watched_channel *bg) {
   gpr_mu_lock(&global_connection_polling_mu);
-  bg = bg_watched_channel_list_lookup_channel(channel);
-  if (bg != NULL) {
-    if (!bg->destroyed_by_abort) {
-      grpc_channel_destroy(channel);
-    }
-    bg_watched_channel_list_remove_channel(channel);
-    gpr_free(bg);
+  GPR_ASSERT(bg_watched_channel_list_lookup(bg));
+  if (!bg->channel_destroyed) {
+    grpc_channel_destroy(bg->channel);
+    bg->channel_destroyed = 1;
+  }
+  bg->refcount--;
+  if (bg->refcount == 0) {
+    bg_watched_channel_list_free_and_remove(bg);
   }
   gpr_mu_unlock(&global_connection_polling_mu);
 }
@@ -156,9 +153,9 @@ void grpc_rb_channel_free(void *p) {
   gpr_log(GPR_DEBUG, "channel GC function called!");
   ch = (grpc_rb_channel *)p;
 
-  if (ch->wrapped != NULL) {
-    grpc_rb_channel_safe_destroy(ch->wrapped);
-    ch->wrapped = NULL;
+  if (ch->bg_wrapped != NULL) {
+    grpc_rb_channel_safe_destroy(ch->bg_wrapped);
+    ch->bg_wrapped = NULL;
   }
 
   xfree(p);
@@ -191,7 +188,7 @@ rb_data_type_t grpc_channel_data_type = {"grpc_channel",
 /* Allocates grpc_rb_channel instances. */
 VALUE grpc_rb_channel_alloc(VALUE cls) {
   grpc_rb_channel *wrapper = ALLOC(grpc_rb_channel);
-  wrapper->wrapped = NULL;
+  wrapper->bg_wrapped = NULL;
   wrapper->credentials = Qnil;
   return TypedData_Wrap_Struct(cls, &grpc_channel_data_type, wrapper);
 }
@@ -240,10 +237,9 @@ VALUE grpc_rb_channel_init(int argc, VALUE *argv, VALUE self) {
 
   GPR_ASSERT(ch);
 
-  wrapper->wrapped = ch;
-
   gpr_mu_lock(&global_connection_polling_mu);
-  grpc_rb_channel_try_register_connection_polling(wrapper->wrapped, 1);
+  wrapper->bg_wrapped = bg_watched_channel_list_create_and_add(ch);
+  grpc_rb_channel_try_register_connection_polling(wrapper->bg_wrapped);
   gpr_mu_unlock(&global_connection_polling_mu);
 
   if (args.args != NULL) {
@@ -255,7 +251,6 @@ VALUE grpc_rb_channel_init(int argc, VALUE *argv, VALUE self) {
     return Qnil;
   }
   rb_ivar_set(self, id_target, target);
-  wrapper->wrapped = ch;
   return self;
 }
 
@@ -273,7 +268,6 @@ VALUE grpc_rb_channel_get_connectivity_state(int argc, VALUE *argv,
   VALUE try_to_connect_param = Qfalse;
   int grpc_try_to_connect = 0;
   grpc_rb_channel *wrapper = NULL;
-  grpc_channel *ch = NULL;
   VALUE out;
 
   /* "01" == 0 mandatory args, 1 (try_to_connect) is optional */
@@ -281,8 +275,7 @@ VALUE grpc_rb_channel_get_connectivity_state(int argc, VALUE *argv,
   grpc_try_to_connect = RTEST(try_to_connect_param) ? 1 : 0;
 
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
-  ch = wrapper->wrapped;
-  if (ch == NULL) {
+  if (wrapper->bg_wrapped == NULL) {
     rb_raise(rb_eRuntimeError, "closed!");
     return Qnil;
   }
@@ -293,7 +286,7 @@ VALUE grpc_rb_channel_get_connectivity_state(int argc, VALUE *argv,
     // failed to start just always shows shutdown state.
     out = LONG2NUM(GRPC_CHANNEL_SHUTDOWN);
   } else {
-    out = LONG2NUM(grpc_channel_check_connectivity_state(wrapper->wrapped, grpc_try_to_connect));
+    out = LONG2NUM(grpc_channel_check_connectivity_state(wrapper->bg_wrapped->channel, grpc_try_to_connect));
   }
   gpr_mu_unlock(&global_connection_polling_mu);
   return out;
@@ -304,17 +297,13 @@ void *wait_for_watch_state_op_complete_without_gvl(void *arg) {
   void *success = (void*)0;
 
   gpr_mu_lock(&global_connection_polling_mu);
-  while(!op->op.api_callback_args.called_back &&
-        !abort_channel_polling) {
+  while(!op->op.api_callback_args.called_back) {
     gpr_cv_wait(&global_connection_polling_cv,
                 &global_connection_polling_mu,
                 gpr_inf_future(GPR_CLOCK_REALTIME));
   }
-  if (op->op.api_callback_args.called_back) {
-    GPR_ASSERT(!abort_channel_polling);
-    if (op->op.api_callback_args.success) {
-      success = (void*)1;
-    }
+  if (op->op.api_callback_args.success) {
+    success = (void*)1;
   }
   gpr_free(op);
   gpr_mu_unlock(&global_connection_polling_mu);
@@ -338,7 +327,7 @@ VALUE grpc_rb_channel_watch_connectivity_state(VALUE self,
 
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
 
-  if (wrapper->wrapped == NULL) {
+  if (wrapper->bg_wrapped == NULL) {
     rb_raise(rb_eRuntimeError, "closed!");
     return Qnil;
   }
@@ -357,12 +346,11 @@ VALUE grpc_rb_channel_watch_connectivity_state(VALUE self,
   }
   op = gpr_zalloc(sizeof(watch_state_op));
   op->op_type = WATCH_STATE_API;
+  // one ref for this thread and another for the callback-running thread
   grpc_channel_watch_connectivity_state(
-      wrapper->wrapped, NUM2LONG(last_state), grpc_rb_time_timeval(deadline, 0), channel_polling_cq, op);
+      wrapper->bg_wrapped->channel, NUM2LONG(last_state), grpc_rb_time_timeval(deadline, 0), channel_polling_cq, op);
   gpr_mu_unlock(&global_connection_polling_mu);
 
-  // Rely on the aborting or lack-of-starting of the main "channel watching"
-  // thread background loop to cancel and finish early if needed.
   op_success = rb_thread_call_without_gvl(
       wait_for_watch_state_op_complete_without_gvl, op, run_poll_channels_loop_unblocking_func, NULL);
 
@@ -378,7 +366,6 @@ VALUE grpc_rb_channel_create_call(VALUE self, VALUE parent, VALUE mask,
   grpc_rb_channel *wrapper = NULL;
   grpc_call *call = NULL;
   grpc_call *parent_call = NULL;
-  grpc_channel *ch = NULL;
   grpc_completion_queue *cq = NULL;
   int flags = GRPC_PROPAGATE_DEFAULTS;
   grpc_slice method_slice;
@@ -400,8 +387,7 @@ VALUE grpc_rb_channel_create_call(VALUE self, VALUE parent, VALUE mask,
 
   cq = grpc_completion_queue_create(NULL);
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
-  ch = wrapper->wrapped;
-  if (ch == NULL) {
+  if (wrapper->bg_wrapped == NULL) {
     rb_raise(rb_eRuntimeError, "closed!");
     return Qnil;
   }
@@ -409,7 +395,7 @@ VALUE grpc_rb_channel_create_call(VALUE self, VALUE parent, VALUE mask,
   method_slice =
       grpc_slice_from_copied_buffer(RSTRING_PTR(method), RSTRING_LEN(method));
 
-  call = grpc_channel_create_call(ch, parent_call, flags, cq, method_slice,
+  call = grpc_channel_create_call(wrapper->bg_wrapped->channel, parent_call, flags, cq, method_slice,
                                   host_slice_ptr,
                                   grpc_rb_time_timeval(deadline,
                                                        /* absolute time */ 0),
@@ -437,13 +423,11 @@ VALUE grpc_rb_channel_create_call(VALUE self, VALUE parent, VALUE mask,
 /* Closes the channel, calling it's destroy method */
 VALUE grpc_rb_channel_destroy(VALUE self) {
   grpc_rb_channel *wrapper = NULL;
-  grpc_channel *ch = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
-  ch = wrapper->wrapped;
-  if (ch != NULL) {
-    grpc_rb_channel_safe_destroy(ch);
-    wrapper->wrapped = NULL;
+  if (wrapper->bg_wrapped != NULL) {
+    grpc_rb_channel_safe_destroy(wrapper->bg_wrapped);
+    wrapper->bg_wrapped = NULL;
   }
 
   return Qnil;
@@ -456,7 +440,7 @@ VALUE grpc_rb_channel_get_target(VALUE self) {
   char *target = NULL;
 
   TypedData_Get_Struct(self, grpc_rb_channel, &grpc_channel_data_type, wrapper);
-  target = grpc_channel_get_target(wrapper->wrapped);
+  target = grpc_channel_get_target(wrapper->bg_wrapped->channel);
   res = rb_str_new2(target);
   gpr_free(target);
 
@@ -464,46 +448,49 @@ VALUE grpc_rb_channel_get_target(VALUE self) {
 }
 
 /* Needs to be called under global_connection_polling_mu */
-bg_watched_channel *bg_watched_channel_list_lookup_channel(grpc_channel *channel) {
-  bg_watched_channel *watched = bg_watched_channel_list_head;
+int bg_watched_channel_list_lookup(bg_watched_channel *target) {
+  bg_watched_channel *cur = bg_watched_channel_list_head;
 
   gpr_log(GPR_DEBUG, "check contains");
-  while (watched != NULL) {
-    GPR_ASSERT(watched->channel);
-    if (watched->channel == channel) {
-      return watched;
+  while (cur != NULL) {
+    if (cur == target) {
+      return 1;
     }
-    watched = watched->next;
+    cur = cur->next;
   }
 
-  return NULL;
+  return 0;
 }
 
 /* Needs to be called under global_connection_polling_mu */
-void bg_watched_channel_list_add_channel(grpc_channel *channel) {
+bg_watched_channel *bg_watched_channel_list_create_and_add(grpc_channel *channel) {
   bg_watched_channel *watched = gpr_zalloc(sizeof(bg_watched_channel));
 
   gpr_log(GPR_DEBUG, "add bg");
-  GPR_ASSERT(!bg_watched_channel_list_lookup_channel(channel));
   watched->channel = channel;
   watched->next = bg_watched_channel_list_head;
+  watched->refcount = 1;
   bg_watched_channel_list_head = watched;
+  return watched;
 }
 
 /* Needs to be called under global_connection_polling_mu */
-void bg_watched_channel_list_remove_channel(grpc_channel *channel) {
+void bg_watched_channel_list_free_and_remove(bg_watched_channel *target) {
   bg_watched_channel *bg = NULL;
 
   gpr_log(GPR_DEBUG, "remove bg");
-  GPR_ASSERT(bg_watched_channel_list_lookup_channel(channel));
-  if (bg_watched_channel_list_head->channel == channel) {
-    bg_watched_channel_list_head = bg_watched_channel_list_head->next;
+  GPR_ASSERT(bg_watched_channel_list_lookup(target));
+  GPR_ASSERT(target->channel_destroyed && target->refcount == 0);
+  if (bg_watched_channel_list_head == target) {
+    bg_watched_channel_list_head = target->next;
+    gpr_free(target);
     return;
   }
   bg = bg_watched_channel_list_head;
   while (bg != NULL && bg->next != NULL) {
-    if (bg->next->channel == channel) {
+    if (bg->next == target) {
       bg->next = bg->next->next;
+      gpr_free(target);
       return;
     }
     bg = bg->next;
@@ -512,30 +499,39 @@ void bg_watched_channel_list_remove_channel(grpc_channel *channel) {
 }
 
 // Needs to be called under global_connection_poolling_mu
-void grpc_rb_channel_try_register_connection_polling(
-  grpc_channel *wrapped_channel, int first_time_register) {
+void grpc_rb_channel_try_register_connection_polling(bg_watched_channel *bg) {
   grpc_connectivity_state conn_state;
   watch_state_op *op = NULL;
 
   GPR_ASSERT(channel_polling_thread_started || abort_channel_polling);
-  // avoid posting work to the channel polling cq if it's been shutdown
-  if (!abort_channel_polling) {
-    conn_state = grpc_channel_check_connectivity_state(wrapped_channel, 0);
-    if (conn_state == GRPC_CHANNEL_SHUTDOWN) {
-      return;
-    }
-    if (first_time_register) {
-      GPR_ASSERT(!bg_watched_channel_list_lookup_channel(wrapped_channel));
-      bg_watched_channel_list_add_channel(wrapped_channel);
-    } else {
-      GPR_ASSERT(bg_watched_channel_list_lookup_channel(wrapped_channel));
-    }
-    op = gpr_zalloc(sizeof(watch_state_op));
-    op->op_type = CONTINUOUS_WATCH;
-    op->op.continuous_watch_callback_args.wrapped_channel = wrapped_channel;
-    grpc_channel_watch_connectivity_state(
-        wrapped_channel, conn_state, gpr_inf_future(GPR_CLOCK_REALTIME), channel_polling_cq, op);
+
+  if (bg->refcount == 0) {
+    GPR_ASSERT(bg->channel_destroyed);
+    bg_watched_channel_list_free_and_remove(bg);
+    return;
   }
+  GPR_ASSERT(bg->refcount == 1);
+  if (bg->channel_destroyed) {
+    GPR_ASSERT(abort_channel_polling);
+    return;
+  }
+  if (abort_channel_polling) {
+    return;
+  }
+
+  conn_state = grpc_channel_check_connectivity_state(bg->channel, 0);
+  if (conn_state == GRPC_CHANNEL_SHUTDOWN) {
+    return;
+  }
+  GPR_ASSERT(bg_watched_channel_list_lookup(bg));
+  // prevent bg from being free'd by GC while background thread is watching it
+  bg->refcount++;
+
+  op = gpr_zalloc(sizeof(watch_state_op));
+  op->op_type = CONTINUOUS_WATCH;
+  op->op.continuous_watch_callback_args.bg = bg;
+  grpc_channel_watch_connectivity_state(
+      bg->channel, conn_state, gpr_inf_future(GPR_CLOCK_REALTIME), channel_polling_cq, op);
 }
 
 // Note this loop breaks out with a single call of
@@ -547,6 +543,7 @@ void grpc_rb_channel_try_register_connection_polling(
 void *run_poll_channels_loop_no_gil(void *arg) {
   grpc_event event;
   watch_state_op *op = NULL;
+  bg_watched_channel *bg = NULL;
   (void)arg;
   gpr_log(GPR_DEBUG, "GRPC_RUBY: run_poll_channels_loop_no_gil - begin");
 
@@ -563,10 +560,12 @@ void *run_poll_channels_loop_no_gil(void *arg) {
       break;
     }
     gpr_mu_lock(&global_connection_polling_mu);
-    if (!abort_channel_polling && event.type == GRPC_OP_COMPLETE) {
+    if (event.type == GRPC_OP_COMPLETE) {
       op = (watch_state_op*)event.tag;
       if (op->op_type == CONTINUOUS_WATCH) {
-        grpc_rb_channel_try_register_connection_polling((grpc_channel *)op->op.continuous_watch_callback_args.wrapped_channel, 0);
+        bg = (bg_watched_channel*)op->op.continuous_watch_callback_args.bg;
+        bg->refcount--;
+        grpc_rb_channel_try_register_connection_polling(bg);
         gpr_free(op);
       } else if(op->op_type == WATCH_STATE_API) {
         grpc_rb_channel_watch_connection_state_op_complete((watch_state_op*)event.tag, event.success);
@@ -598,8 +597,10 @@ void run_poll_channels_loop_unblocking_func(void *arg) {
   // force pending watches to end by switching to shutdown state
   bg = bg_watched_channel_list_head;
   while(bg != NULL) {
-    grpc_channel_destroy(bg->channel);
-    bg->destroyed_by_abort = 1;
+    if (!bg->channel_destroyed) {
+      grpc_channel_destroy(bg->channel);
+      bg->channel_destroyed = 1;
+    }
     bg = bg->next;
   }
 
@@ -748,5 +749,5 @@ void Init_grpc_channel() {
 grpc_channel *grpc_rb_get_wrapped_channel(VALUE v) {
   grpc_rb_channel *wrapper = NULL;
   TypedData_Get_Struct(v, grpc_rb_channel, &grpc_channel_data_type, wrapper);
-  return wrapper->wrapped;
+  return wrapper->bg_wrapped->channel;
 }
