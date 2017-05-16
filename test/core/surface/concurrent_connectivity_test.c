@@ -61,7 +61,6 @@
 #define DELAY_MILLIS 10
 #define POLL_MILLIS 3000
 
-#define NUM_THREADS_SHORT_TIMEOUTS 100
 #define NUM_OUTER_LOOPS_SHORT_TIMEOUTS 10
 #define NUM_INNER_LOOPS_SHORT_TIMEOUTS 100
 #define DELAY_MILLIS_SHORT_TIMEOUTS 1
@@ -275,19 +274,22 @@ void watches_with_short_timeouts(void *addr) {
   }
 }
 
+// This test tries to catch deadlock situations.
+// With short timeouts on "watches" and long timeouts on cq next calls,
+// so that a QUEUE_TIMEOUT likely means that something is stuck.
 int run_concurrent_watches_with_short_timeouts_test() {
   grpc_init();
 
-  gpr_thd_id threads[NUM_THREADS_SHORT_TIMEOUTS];
+  gpr_thd_id threads[NUM_THREADS];
 
   char *localhost = gpr_strdup("localhost:54321");
   gpr_thd_options options = gpr_thd_options_default();
   gpr_thd_options_set_joinable(&options);
 
-  for (size_t i = 0; i < NUM_THREADS_SHORT_TIMEOUTS; ++i) {
+  for (size_t i = 0; i < NUM_THREADS; ++i) {
     gpr_thd_new(&threads[i], watches_with_short_timeouts, localhost, &options);
   }
-  for (size_t i = 0; i < NUM_THREADS_SHORT_TIMEOUTS; ++i) {
+  for (size_t i = 0; i < NUM_THREADS; ++i) {
     gpr_thd_join(threads[i]);
   }
   gpr_free(localhost);
