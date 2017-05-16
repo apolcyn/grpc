@@ -195,8 +195,9 @@ typedef struct watcher_timer_init_arg {
   gpr_timespec deadline;
 } watcher_timer_init_arg;
 
-static void watcher_timer_init(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error_ignored) {
-  watcher_timer_init_arg *wa = (watcher_timer_init_arg*)arg;
+static void watcher_timer_init(grpc_exec_ctx *exec_ctx, void *arg,
+                               grpc_error *error_ignored) {
+  watcher_timer_init_arg *wa = (watcher_timer_init_arg *)arg;
 
   grpc_timer_init(exec_ctx, &wa->w->alarm,
                   gpr_convert_clock_type(wa->deadline, GPR_CLOCK_MONOTONIC),
@@ -243,9 +244,9 @@ void grpc_channel_watch_connectivity_state(
 
   if (client_channel_elem->filter == &grpc_client_channel_filter) {
     GRPC_CHANNEL_INTERNAL_REF(channel, "watch_channel_connectivity");
-    grpc_client_channel_watch_connectivity_state(&exec_ctx, client_channel_elem,
-                                                 grpc_cq_pollset(cq), &w->state,
-                                                 &w->on_complete, &w->watcher_timer_init);
+    grpc_client_channel_watch_connectivity_state(
+        &exec_ctx, client_channel_elem, grpc_cq_pollset(cq), &w->state,
+        &w->on_complete, &w->watcher_timer_init);
   } else {
     abort();
   }

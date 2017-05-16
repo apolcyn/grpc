@@ -1428,7 +1428,7 @@ static void external_connectivity_watcher_list_remove(
     }
     w = w->next;
   }
-  GPR_UNREACHABLE_CODE();
+  GPR_UNREACHABLE_CODE(return );
 }
 
 int grpc_client_channel_num_external_connectivity_watchers(
@@ -1490,7 +1490,8 @@ static void watch_connectivity_state_locked(grpc_exec_ctx *exec_ctx, void *arg,
 
 void grpc_client_channel_watch_connectivity_state(
     grpc_exec_ctx *exec_ctx, grpc_channel_element *elem, grpc_pollset *pollset,
-    grpc_connectivity_state *state, grpc_closure *on_complete, grpc_closure *watcher_timer_init) {
+    grpc_connectivity_state *state, grpc_closure *on_complete,
+    grpc_closure *watcher_timer_init) {
   channel_data *chand = elem->channel_data;
   external_connectivity_watcher *w = gpr_zalloc(sizeof(*w));
   w->chand = chand;

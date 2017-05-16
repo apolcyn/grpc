@@ -64,7 +64,8 @@
 #define NUM_OUTER_LOOPS_SHORT_TIMEOUTS 10
 #define NUM_INNER_LOOPS_SHORT_TIMEOUTS 100
 #define DELAY_MILLIS_SHORT_TIMEOUTS 1
-// in a successful test run, POLL_MILLIS should never be reached beause all runs should
+// in a successful test run, POLL_MILLIS should never be reached beause all runs
+// should
 // end after the shorter delay_millis
 #define POLL_MILLIS_SHORT_TIMEOUTS 30000
 
