@@ -65,7 +65,7 @@
 #define NUM_INNER_LOOPS_SHORT_TIMEOUTS 100
 #define DELAY_MILLIS_SHORT_TIMEOUTS 1
 // in a successful test run, POLL_MILLIS should never be reached beause all runs should
-// end in timeouts
+// end after the shorter delay_millis
 #define POLL_MILLIS_SHORT_TIMEOUTS 30000
 
 static void *tag(int n) { return (void *)(uintptr_t)n; }

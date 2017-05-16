@@ -1467,8 +1467,6 @@ static void watch_connectivity_state_locked(grpc_exec_ctx *exec_ctx, void *arg,
   external_connectivity_watcher *found = NULL;
   if (w->state != NULL) {
     external_connectivity_watcher_list_append(w->chand, w);
-    // init the timer only now that the watcher has been added to the list,
-    // to avoid early timeouts.
     grpc_closure_run(exec_ctx, w->watcher_timer_init, GRPC_ERROR_NONE);
     grpc_closure_init(&w->my_closure, on_external_watch_complete, w,
                       grpc_schedule_on_exec_ctx);
