@@ -40,11 +40,23 @@ $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
 require 'grpc'
 require 'helloworld_services_pb'
 
+Thread.abort_on_exception = true
+
 def main
   stub = Helloworld::Greeter::Stub.new('localhost:50051', :this_channel_is_insecure)
   user = ARGV.size > 0 ?  ARGV[0] : 'world'
-  message = stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
-  p "Greeting: #{message}"
+  ch = GRPC::Core::Channel.new('localhost:50051', nil, :this_channel_is_insecure)
+  thd = Thread.new do
+    loop do
+      ch.watch_connectivity_state(ch.connectivity_state(false), Time.now)
+    end
+  end
+  loop do
+    message = stub.say_hello(Helloworld::HelloRequest.new(name: user)).message
+    p "Greeting: #{message}"
+    p "#{(`ps -o rss= -p #{Process.pid}`.to_i * 1024).to_f / 2**20}"
+    sleep 5
+  end
 end
 
 main
