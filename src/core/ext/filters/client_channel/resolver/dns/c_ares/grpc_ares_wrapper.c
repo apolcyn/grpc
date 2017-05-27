@@ -158,6 +158,7 @@ static void on_hostbyname_done_cb(void *arg, int status, int timeouts,
   grpc_ares_hostbyname_request *hr = (grpc_ares_hostbyname_request *)arg;
   grpc_ares_request *r = hr->parent_request;
   gpr_mu_lock(&r->mu);
+  gpr_log(GPR_INFO, "on hotbyname done cb");
   if (status == ARES_SUCCESS) {
     GRPC_ERROR_UNREF(r->error);
     r->error = GRPC_ERROR_NONE;
@@ -367,9 +368,11 @@ static grpc_ares_request *grpc_dns_lookup_ares_impl(
   }
   grpc_ares_hostbyname_request *hr = create_hostbyname_request(
       r, host, strhtons(port), false /* is_balancer */);
+  gpr_log(GPR_DEBUG, "send a query for A record");
   ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb, hr);
   if (check_grpclb) {
     /* Query the SRV record */
+    gpr_log(GPR_DEBUG, "send a query for SRV record");
     grpc_ares_request_ref(r);
     char *service_name;
     gpr_asprintf(&service_name, "_grpclb._tcp.%s", host);
@@ -462,7 +465,9 @@ static void on_dns_lookup_done_cb(grpc_exec_ctx *exec_ctx, void *arg,
   }
   grpc_closure_sched(exec_ctx, r->on_resolve_address_done,
                      GRPC_ERROR_REF(error));
-  grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
+  if (r->lb_addrs != NULL) {
+    grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
+  }
   gpr_free(r);
 }
 
