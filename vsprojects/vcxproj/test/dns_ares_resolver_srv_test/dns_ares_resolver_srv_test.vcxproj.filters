@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)\..\test\core\client_channel\resolvers\dns_ares_resolver_srv_test.c">
+      <Filter>test\core\client_channel\resolvers</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Filter Include="test">
+      <UniqueIdentifier>{084aca94-b415-c0ce-3258-2d5fa0bfb67d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test\core">
+      <UniqueIdentifier>{964a76e4-afb2-b58e-4d87-41c8ba6a1566}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test\core\client_channel">
+      <UniqueIdentifier>{294664da-6db3-f42f-fe0e-79521bd5acc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="test\core\client_channel\resolvers">
+      <UniqueIdentifier>{90123941-d356-34d3-06f9-4aea870c449b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
+

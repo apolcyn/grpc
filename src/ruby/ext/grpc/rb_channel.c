@@ -83,7 +83,7 @@ typedef struct grpc_rb_channel {
   gpr_mu channel_mu;
   gpr_cv channel_cv;
 } grpc_rb_channel;
-
+t
 /* Forward declarations of functions involved in temporary fix to
  * https://github.com/grpc/grpc/issues/9941 */
 static void grpc_rb_channel_try_register_connection_polling(
