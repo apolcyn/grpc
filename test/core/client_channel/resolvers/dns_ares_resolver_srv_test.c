@@ -45,6 +45,7 @@
 #include "src/core/lib/iomgr/timer.h"
 #include "test/core/util/test_config.h"
 #include "src/core/lib/support/env.h"
+#include "src/core/lib/iomgr/sockaddr_utils.h"
 
 static gpr_mu g_mu;
 static grpc_combiner *g_combiner;
@@ -135,13 +136,16 @@ int main(int argc, char **argv) {
 
   GPR_ASSERT(result != NULL);
   GPR_ASSERT(result->num_args == 1);
-  grpc_arg arg = ((grpc_arg*)result)[0];
+  grpc_arg arg = result->args[0];
   GPR_ASSERT(arg.type == GRPC_ARG_POINTER);
   GPR_ASSERT(strcmp(arg.key, GRPC_ARG_LB_ADDRESSES) == 0);
   grpc_lb_addresses *addresses = (grpc_lb_addresses*)arg.value.pointer.p;
   GPR_ASSERT(addresses->num_addresses == 1);
   grpc_lb_address addr = addresses->addresses[0];
-  GPR_ASSERT(strcmp(addr.address.addr, "1.2.3.4") == 0);
+  char *str;
+  grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
+  gpr_log(GPR_INFO, "%s", str);
+  GPR_ASSERT(strcmp(str, "1.2.3.4:443") == 0);
   GPR_ASSERT(!addr.is_balancer);
 
   grpc_channel_args_destroy(&exec_ctx, result);
