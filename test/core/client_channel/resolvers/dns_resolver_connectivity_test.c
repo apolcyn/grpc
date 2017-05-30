@@ -43,32 +43,24 @@
 #include "src/core/lib/iomgr/resolve_address.h"
 #include "src/core/lib/iomgr/timer.h"
 #include "test/core/util/test_config.h"
+#include "src/core/lib/support/env.h"
+#include "src/core/lib/support/string.h"
+
+#include "src/core/ext/filters/client_channel/resolver.h"
+#include "src/core/ext/filters/client_channel/resolver_registry.h"
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
+#include "src/core/lib/channel/channel_args.h"
+#include "src/core/lib/iomgr/combiner.h"
+#include "src/core/lib/iomgr/resolve_address.h"
+#include "src/core/lib/iomgr/timer.h"
+#include "test/core/util/test_config.h"
+#include "src/core/lib/support/env.h"
+
+#include "src/core/lib/iomgr/sockaddr_utils.h"
+#include "src/core/lib/iomgr/sockaddr.h"
 
 static gpr_mu g_mu;
-static bool g_fail_resolution = true;
 static grpc_combiner *g_combiner;
-
-static void my_resolve_address(grpc_exec_ctx *exec_ctx, const char *addr,
-                               const char *default_port,
-                               grpc_pollset_set *interested_parties,
-                               grpc_closure *on_done,
-                               grpc_resolved_addresses **addrs) {
-  gpr_mu_lock(&g_mu);
-  GPR_ASSERT(0 == strcmp("test", addr));
-  grpc_error *error = GRPC_ERROR_NONE;
-  if (g_fail_resolution) {
-    g_fail_resolution = false;
-    gpr_mu_unlock(&g_mu);
-    error = GRPC_ERROR_CREATE_FROM_STATIC_STRING("Forced Failure");
-  } else {
-    gpr_mu_unlock(&g_mu);
-    *addrs = gpr_malloc(sizeof(**addrs));
-    (*addrs)->naddrs = 1;
-    (*addrs)->addrs = gpr_malloc(sizeof(*(*addrs)->addrs));
-    (*addrs)->addrs[0].len = 123;
-  }
-  grpc_closure_sched(exec_ctx, on_done, error);
-}
 
 static grpc_resolver *create_resolver(grpc_exec_ctx *exec_ctx,
                                       const char *name) {
@@ -134,33 +126,45 @@ static void call_resolver_next_after_locking(grpc_exec_ctx *exec_ctx,
 }
 
 int main(int argc, char **argv) {
+  gpr_setenv("GRPC_DNS_RESOLVER", "native");
   grpc_test_init(argc, argv);
 
   grpc_init();
   gpr_mu_init(&g_mu);
   g_combiner = grpc_combiner_create(NULL);
-  grpc_resolve_address = my_resolve_address;
-  grpc_channel_args *result = (grpc_channel_args *)1;
+  grpc_channel_args *result = (grpc_channel_args *)0;
 
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
-  grpc_resolver *resolver = create_resolver(&exec_ctx, "dns:test");
+  grpc_resolver *resolver = create_resolver(&exec_ctx, "dns:///arecord.test.apolcyntest");
   gpr_event ev1;
   gpr_event_init(&ev1);
   call_resolver_next_after_locking(
       &exec_ctx, resolver, &result,
       grpc_closure_create(on_done, &ev1, grpc_schedule_on_exec_ctx));
   grpc_exec_ctx_flush(&exec_ctx);
-  GPR_ASSERT(wait_loop(5, &ev1));
-  GPR_ASSERT(result == NULL);
+  GPR_ASSERT(wait_loop(500, &ev1));
 
-  gpr_event ev2;
-  gpr_event_init(&ev2);
-  call_resolver_next_after_locking(
-      &exec_ctx, resolver, &result,
-      grpc_closure_create(on_done, &ev2, grpc_schedule_on_exec_ctx));
-  grpc_exec_ctx_flush(&exec_ctx);
-  GPR_ASSERT(wait_loop(30, &ev2));
   GPR_ASSERT(result != NULL);
+  GPR_ASSERT(result->num_args == 1);
+  grpc_arg arg = result->args[0];
+  GPR_ASSERT(arg.type == GRPC_ARG_POINTER);
+  GPR_ASSERT(strcmp(arg.key, GRPC_ARG_LB_ADDRESSES) == 0);
+  grpc_lb_addresses *addresses = (grpc_lb_addresses*)arg.value.pointer.p;
+  GPR_ASSERT(addresses->num_addresses == 1);
+  grpc_lb_address addr = addresses->addresses[0];
+  char *out = gpr_dump(addr.address.addr, addr.address.len, GPR_DUMP_HEX);
+  gpr_log(GPR_INFO, "here is the address: %s", out);
+  grpc_resolved_address resolved_addrv4_out;
+  struct sockaddr_in sockaddr = *((struct sockaddr_in*)addr.address.addr);
+  if (grpc_sockaddr_is_v4mapped(&addr.address, &resolved_addrv4_out)) {
+    gpr_log(GPR_INFO, "ipv4 mapped");
+    sockaddr = *((struct sockaddr_in*)resolved_addrv4_out.addr);
+  } else {
+    gpr_log(GPR_INFO, "ipv6 mapped");
+  }
+  gpr_log(GPR_INFO, "%X", sockaddr.sin_addr.s_addr);
+  GPR_ASSERT(sockaddr.sin_addr.s_addr == 0x01020304);
+  GPR_ASSERT(!addr.is_balancer);
 
   grpc_channel_args_destroy(&exec_ctx, result);
   GRPC_RESOLVER_UNREF(&exec_ctx, resolver, "test");

@@ -160,6 +160,7 @@ static void on_hostbyname_done_cb(void *arg, int status, int timeouts,
   grpc_ares_hostbyname_request *hr = (grpc_ares_hostbyname_request *)arg;
   grpc_ares_request *r = hr->parent_request;
   gpr_mu_lock(&r->mu);
+  gpr_log(GPR_INFO, "on hotbyname done cb");
   if (status == ARES_SUCCESS) {
     GRPC_ERROR_UNREF(r->error);
     r->error = GRPC_ERROR_NONE;
@@ -369,9 +370,11 @@ void grpc_dns_lookup_ares(grpc_exec_ctx *exec_ctx, const char *dns_server,
   }
   grpc_ares_hostbyname_request *hr = create_hostbyname_request(
       r, host, strhtons(port), false /* is_balancer */);
+  gpr_log(GPR_DEBUG, "send a query for A record");
   ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb, hr);
   if (check_grpclb) {
     /* Query the SRV record */
+    gpr_log(GPR_DEBUG, "send a query for SRV record");
     grpc_ares_request_ref(r);
     char *service_name;
     gpr_asprintf(&service_name, "_grpclb._tcp.%s", host);
