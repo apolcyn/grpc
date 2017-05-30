@@ -34,7 +34,9 @@
 #include "src/core/ext/census/intrusive_hash_map.h"
 #include <string.h>
 
-extern bool hm_index_compare(const hm_index *A, const hm_index *B);
+bool hm_index_compare(const hm_index *A, const hm_index *B) {
+  return (A->item == B->item && A->bucket_index == B->bucket_index);
+}
 
 /* Simple hashing function that takes lower 32 bits. */
 static inline uint32_t chunked_vector_hasher(uint64_t key) {
