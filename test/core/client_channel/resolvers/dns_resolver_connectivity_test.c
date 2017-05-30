@@ -152,18 +152,10 @@ int main(int argc, char **argv) {
   grpc_lb_addresses *addresses = (grpc_lb_addresses*)arg.value.pointer.p;
   GPR_ASSERT(addresses->num_addresses == 1);
   grpc_lb_address addr = addresses->addresses[0];
-  char *out = gpr_dump(addr.address.addr, addr.address.len, GPR_DUMP_HEX);
-  gpr_log(GPR_INFO, "here is the address: %s", out);
-  grpc_resolved_address resolved_addrv4_out;
-  struct sockaddr_in sockaddr = *((struct sockaddr_in*)addr.address.addr);
-  if (grpc_sockaddr_is_v4mapped(&addr.address, &resolved_addrv4_out)) {
-    gpr_log(GPR_INFO, "ipv4 mapped");
-    sockaddr = *((struct sockaddr_in*)resolved_addrv4_out.addr);
-  } else {
-    gpr_log(GPR_INFO, "ipv6 mapped");
-  }
-  gpr_log(GPR_INFO, "%X", sockaddr.sin_addr.s_addr);
-  GPR_ASSERT(sockaddr.sin_addr.s_addr == 0x01020304);
+  char *str;
+  grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
+  gpr_log(GPR_INFO, "%s", str);
+  GPR_ASSERT(strcmp(str, "1.2.3.4:443") == 0);
   GPR_ASSERT(!addr.is_balancer);
 
   grpc_channel_args_destroy(&exec_ctx, result);
