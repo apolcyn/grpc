@@ -1,4 +1,4 @@
-ii/*
+/*
  *
  * Copyright 2015, Google Inc.
  * All rights reserved.
@@ -31,17 +31,20 @@ ii/*
  *
  */
 
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/iomgr/resolve_address.h"
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
+#include <grpc/support/host_port.h>
 
 #include "src/core/lib/iomgr/executor.h"
 #include "src/core/lib/iomgr/iomgr.h"
 #include "test/core/util/test_config.h"
 #include "src/core/lib/support/string.h"
 #include "src/core/lib/support/env.h"
+#include "./src/core/lib/iomgr/sockaddr_utils.h"
 
 extern void grpc_resolver_dns_ares_init();
 extern void grpc_resolver_dns_ares_shutdown();
@@ -53,6 +56,7 @@ static gpr_timespec test_deadline(void) {
 typedef struct args_struct {
   gpr_event ev;
   grpc_resolved_addresses *addrs;
+  grpc_lb_addresses *lb_addrs;
   gpr_atm done_atm;
   gpr_mu *mu;
   grpc_pollset *pollset;
@@ -68,6 +72,7 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   args->pollset_set = grpc_pollset_set_create();
   grpc_pollset_set_add_pollset(exec_ctx, args->pollset_set, args->pollset);
   args->addrs = NULL;
+  args->lb_addrs = NULL;
   gpr_atm_rel_store(&args->done_atm, 0);
 }
 
@@ -84,6 +89,9 @@ void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_exec_ctx_flush(exec_ctx);
   grpc_pollset_destroy(exec_ctx, args->pollset);
   gpr_free(args->pollset);
+  if (args->lb_addrs) {
+    grpc_lb_addresses_destroy(exec_ctx, args->lb_addrs);
+  }
 }
 
 static gpr_timespec n_sec_deadline(int seconds) {
@@ -116,12 +124,33 @@ static void poll_pollset_until_request_done(args_struct *args) {
   gpr_event_set(&args->ev, (void *)1);
 }
 
-static void must_succeed(grpc_exec_ctx *exec_ctx, void *argsp,
-                         grpc_error *err) {
-  args_struct *args = argsp;
-  GPR_ASSERT(err == GRPC_ERROR_NONE);
-  GPR_ASSERT(args->addrs != NULL);
-  GPR_ASSERT(args->addrs->naddrs > 0);
+//static void must_succeed(grpc_exec_ctx *exec_ctx, void *argsp,
+//                         grpc_error *err) {
+//  args_struct *args = argsp;
+//  GPR_ASSERT(err == GRPC_ERROR_NONE);
+//  GPR_ASSERT(args->addrs != NULL);
+//  GPR_ASSERT(args->addrs->naddrs > 0);
+//  gpr_atm_rel_store(&args->done_atm, 1);
+//  gpr_mu_lock(args->mu);
+//  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
+//  gpr_mu_unlock(args->mu);
+//}
+//
+static void check_srv_result(grpc_exec_ctx *exec_ctx, void *args, grpc_error *err) {
+  grpc_lb_addresses *addresses = *((grpc_lb_addresses**)lb_addrs);
+  GPR_ASSERT(addresses);
+  gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
+  GPR_ASSERT(addresses->num_addresses == 1);
+  grpc_lb_address addr = addresses->addresses[0];
+  char *str;
+  grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
+  gpr_log(GPR_INFO, "%s", str);
+  char *host;
+  char *port;
+  gpr_split_host_port(str, &host, &port);
+  // TODO(apolcyn) figure out what to do with the port
+  GPR_ASSERT(gpr_stricmp(host, "5.6.7.8") == 0);
+  GPR_ASSERT(addr.is_balancer);
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
@@ -164,10 +193,10 @@ static void test_resolves_srv(void) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
-  grpc_resolve_address(
-      &exec_ctx, /* _grpclb._tcp. */ /* "mylbtest.test.apolcyntest" */ "mytestlb.test.apolcyntest", NULL, args.pollset_set,
-      grpc_closure_create(must_succeed, &args, grpc_schedule_on_exec_ctx),
-      &args.addrs);
+  grpc_dns_lookup_ares(
+      &exec_ctx, NULL, /* _grpclb._tcp. */ "mylbtest.test.apolcyntest" /* "mytestlb.test.apolcyntest" */, "443", args.pollset_set,
+      grpc_closure_create(check_srv_result, &args.lb_addrs, grpc_schedule_on_exec_ctx),
+      &args.lb_addrs, true /* check lb */);
   grpc_exec_ctx_flush(&exec_ctx);
   poll_pollset_until_request_done(&args);
   args_finish(&exec_ctx, &args);

@@ -454,7 +454,9 @@ static void on_dns_lookup_done_cb(grpc_exec_ctx *exec_ctx, void *arg,
   }
   grpc_closure_sched(exec_ctx, r->on_resolve_address_done,
                      GRPC_ERROR_REF(error));
-  grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
+  if (r->lb_addrs != NULL) {
+    grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
+  }
   gpr_free(r);
 }
 
