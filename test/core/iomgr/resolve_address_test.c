@@ -184,7 +184,7 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *a
   gpr_split_host_port(str, &host, &port);
   // TODO(apolcyn) figure out what to do with the port
   GPR_ASSERT(gpr_stricmp(host, "5.6.7.8") == 0);
-  GPR_ASSERT(addr.is_balancer);
+  GPR_ASSERT(!addr.is_balancer);
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
@@ -249,7 +249,7 @@ static void test_resolves(void) {
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
   new_arg.key = GRPC_ARG_SERVER_URI;
-  new_arg.value.string = "localhost:1";///*_grpclb._tcp. */ "mylbtest.test.apolcyntest"; /* "mytestlb.test.apolcyntest" */ // "443"
+  new_arg.value.string = /* _grpclb._tcp. */ /* "mylbtest.test.apolcyntest"; */ "mytestlb.test.apolcyntest"; // "443"
 
   args.channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
 
