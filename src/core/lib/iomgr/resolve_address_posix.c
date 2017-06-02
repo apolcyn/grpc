@@ -190,8 +190,6 @@ static void resolve_address_impl(grpc_exec_ctx *exec_ctx, const char *name,
                                  grpc_closure *on_done,
                                  grpc_resolved_addresses **addrs) {
   request *r = gpr_malloc(sizeof(request));
-  gpr_log(GPR_ERROR, "bad resolve address impl is called");
-  exit(1);
   grpc_closure_init(&r->request_closure, do_request_thread, r,
                     grpc_executor_scheduler);
   r->name = gpr_strdup(name);

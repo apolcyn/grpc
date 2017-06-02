@@ -44,7 +44,11 @@
 #include "test/core/util/test_config.h"
 #include "src/core/lib/support/string.h"
 #include "src/core/lib/support/env.h"
-#include "./src/core/lib/iomgr/sockaddr_utils.h"
+#include "src/core/lib/iomgr/sockaddr_utils.h"
+#include "src/core/lib/channel/channel_args.h"
+#include "src/core/ext/filters/client_channel/client_channel.h"
+#include "src/core/ext/filters/client_channel/resolver_registry.h"
+#include "src/core/lib/iomgr/combiner.h"
 
 extern void grpc_resolver_dns_ares_init();
 extern void grpc_resolver_dns_ares_shutdown();
@@ -61,6 +65,8 @@ typedef struct args_struct {
   gpr_mu *mu;
   grpc_pollset *pollset;
   grpc_pollset_set *pollset_set;
+  grpc_combiner *lock;
+  grpc_channel_args *channel_args;
 } args_struct;
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
@@ -73,7 +79,9 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_pollset_set_add_pollset(exec_ctx, args->pollset_set, args->pollset);
   args->addrs = NULL;
   args->lb_addrs = NULL;
+  args->lock = grpc_combiner_create(NULL);
   gpr_atm_rel_store(&args->done_atm, 0);
+  args->channel_args = NULL;
 }
 
 void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
@@ -136,10 +144,36 @@ static void poll_pollset_until_request_done(args_struct *args) {
 //  gpr_mu_unlock(args->mu);
 //}
 //
-static void check_srv_result(grpc_exec_ctx *exec_ctx, void *args, grpc_error *err) {
-  grpc_lb_addresses *addresses = *((grpc_lb_addresses**)lb_addrs);
-  GPR_ASSERT(addresses);
+//static void check_srv_result(grpc_exec_ctx *exec_ctx, void *argsp, grpc_error *err) {
+//  grpc_lb_addresses *addresses = argsp;
+//  GPR_ASSERT(addresses);
+//  gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
+//  GPR_ASSERT(addresses->num_addresses == 1);
+//  grpc_lb_address addr = addresses->addresses[0];
+//  char *str;
+//  grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
+//  gpr_log(GPR_INFO, "%s", str);
+//  char *host;
+//  char *port;
+//  gpr_split_host_port(str, &host, &port);
+//  // TODO(apolcyn) figure out what to do with the port
+//  GPR_ASSERT(gpr_stricmp(host, "5.6.7.8") == 0);
+//  GPR_ASSERT(addr.is_balancer);
+//  gpr_atm_rel_store(&args->done_atm, 1);
+//  gpr_mu_lock(args->mu);
+//  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
+//  gpr_mu_unlock(args->mu);
+//}
+
+static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *argsp, grpc_error *err) {
+  args_struct *args = argsp;
+  grpc_channel_args *channel_args = args->channel_args;
+  const grpc_arg *channel_arg = grpc_channel_args_find(channel_args, GRPC_ARG_LB_ADDRESSES);
+  GPR_ASSERT(channel_arg != NULL);
+  GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
+  grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
   gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
+
   GPR_ASSERT(addresses->num_addresses == 1);
   grpc_lb_address addr = addresses->addresses[0];
   char *str;
@@ -180,23 +214,55 @@ static void check_srv_result(grpc_exec_ctx *exec_ctx, void *args, grpc_error *er
 //  grpc_exec_ctx_finish(&exec_ctx);
 //}
 //
-static void test_resolves_srv(void) {
-  if (gpr_stricmp("ares", gpr_getenv("GRPC_DNS_RESOLVER")) != 0) {
-    gpr_log(GPR_INFO, "skipping test");
-    return;
-  }
-  char *resolve_srv = gpr_getenv("GRPC_RESOLVE_SRV");
-  if (!resolve_srv || gpr_stricmp("", resolve_srv) == 0) {
-    gpr_log(GPR_INFO, "skipping test");
-  }
-  gpr_log(GPR_INFO, "start resolves srv test");
+//static void test_resolves_srv(void) {
+//  if (gpr_stricmp("ares", gpr_getenv("GRPC_DNS_RESOLVER")) != 0) {
+//    gpr_log(GPR_INFO, "skipping test");
+//    return;
+//  }
+//  char *resolve_srv = gpr_getenv("GRPC_RESOLVE_SRV");
+//  if (!resolve_srv || gpr_stricmp("", resolve_srv) == 0) {
+//    gpr_log(GPR_INFO, "skipping test");
+//  }
+//  gpr_log(GPR_INFO, "start resolves srv test");
+//  grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
+//  args_struct args;
+//  args_init(&exec_ctx, &args);
+//  grpc_dns_lookup_ares(
+//      &exec_ctx, NULL, /* _grpclb._tcp. */ "mylbtest.test.apolcyntest" /* "mytestlb.test.apolcyntest" */, "443", args.pollset_set,
+//      grpc_closure_create(check_srv_result, &args.lb_addrs, grpc_schedule_on_exec_ctx),
+//      &args.lb_addrs, true /* check lb */);
+//  grpc_exec_ctx_flush(&exec_ctx);
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&exec_ctx, &args);
+//  grpc_exec_ctx_finish(&exec_ctx);
+//  gpr_log(GPR_INFO, "end resolves srv test");
+//}
+
+static void test_resolves(void) {
+  gpr_log(GPR_INFO, "running for resolver %s", gpr_getenv("GRPC_DNS_RESOLVER"));
+//  char *target = /* _grpclb._tcp. "mylbtest.test.apolcyntest" */ "mytestlb.test.apolcyntest"; // "443"
+
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
-  grpc_dns_lookup_ares(
-      &exec_ctx, NULL, /* _grpclb._tcp. */ "mylbtest.test.apolcyntest" /* "mytestlb.test.apolcyntest" */, "443", args.pollset_set,
-      grpc_closure_create(check_srv_result, &args.lb_addrs, grpc_schedule_on_exec_ctx),
-      &args.lb_addrs, true /* check lb */);
+
+  grpc_arg new_arg;
+  new_arg.type = GRPC_ARG_STRING;
+  new_arg.key = GRPC_ARG_SERVER_URI;
+  new_arg.value.string = "localhost:1";///*_grpclb._tcp. */ "mylbtest.test.apolcyntest"; /* "mytestlb.test.apolcyntest" */ // "443"
+
+  args.channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
+
+  grpc_resolver *resolver = grpc_resolver_create(&exec_ctx, new_arg.value.string, args.channel_args,
+    args.pollset_set, args.lock);
+
+  grpc_closure on_resolver_result_changed;
+  grpc_closure_init(&on_resolver_result_changed,
+      check_channel_arg_srv_result_locked, (void*)&args,
+      grpc_combiner_scheduler(args.lock, false));
+
+  grpc_resolver_next_locked(&exec_ctx, resolver, &args.channel_args, &on_resolver_result_changed);
+
   grpc_exec_ctx_flush(&exec_ctx);
   poll_pollset_until_request_done(&args);
   args_finish(&exec_ctx, &args);
@@ -320,12 +386,22 @@ static void test_resolves_srv(void) {
 //  }
 //}
 //
+extern void grpc_resolver_dns_native_init(void);
+extern void grpc_resolver_dns_native_shutdown(void);
+
 int main(int argc, char **argv) {
   grpc_test_init(argc, argv);
   grpc_executor_init();
   grpc_iomgr_init();
   grpc_iomgr_start();
-  grpc_resolver_dns_ares_init();
+  if (gpr_stricmp(gpr_getenv("GRPC_DNS_RESOLVER"), "native") == 0) {
+    grpc_resolver_dns_native_init();
+  } else if (gpr_stricmp(gpr_getenv("GRPC_DNS_RESOLVER"), "ares") == 0) {
+    grpc_resolver_dns_ares_init();
+  } else {
+    gpr_log(GPR_INFO, "bad GRPC_DNS_RESOLVER var: %s", gpr_getenv("GRPC_DNS_RESOLVER"));
+    abort();
+  }
   //test_localhost();
   //test_default_port();
   //test_non_numeric_default_port();
@@ -334,13 +410,15 @@ int main(int argc, char **argv) {
   //test_ipv6_without_port();
   //test_invalid_ip_addresses();
   //test_unparseable_hostports();
-  gpr_setenv("GRPC_DNS_RESOLVER", "ares");
-  test_resolves_srv();
+  //gpr_setenv("GRPC_DNS_RESOLVER", "ares");
+  //test_resolves_srv();
+  test_resolves();
   {
     grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
     grpc_executor_shutdown(&exec_ctx);
     grpc_iomgr_shutdown(&exec_ctx);
     grpc_resolver_dns_ares_shutdown(&exec_ctx);
+    grpc_resolver_dns_native_shutdown();
     grpc_exec_ctx_finish(&exec_ctx);
   }
   return 0;
