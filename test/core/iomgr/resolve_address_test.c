@@ -67,6 +67,8 @@ typedef struct args_struct {
   grpc_pollset_set *pollset_set;
   grpc_combiner *lock;
   grpc_channel_args *channel_args;
+  int expect_is_balancer;
+  char *target_name;
 } args_struct;
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
@@ -184,7 +186,7 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *a
   gpr_split_host_port(str, &host, &port);
   // TODO(apolcyn) figure out what to do with the port
   GPR_ASSERT(gpr_stricmp(host, "5.6.7.8") == 0);
-  GPR_ASSERT(!addr.is_balancer);
+  GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
@@ -238,36 +240,59 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *a
 //  gpr_log(GPR_INFO, "end resolves srv test");
 //}
 
-static void test_resolves(void) {
+static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   gpr_log(GPR_INFO, "running for resolver %s", gpr_getenv("GRPC_DNS_RESOLVER"));
 //  char *target = /* _grpclb._tcp. "mylbtest.test.apolcyntest" */ "mytestlb.test.apolcyntest"; // "443"
-
-  grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
-  args_struct args;
-  args_init(&exec_ctx, &args);
-
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
   new_arg.key = GRPC_ARG_SERVER_URI;
-  new_arg.value.string = /* _grpclb._tcp. */ /* "mylbtest.test.apolcyntest"; */ "mytestlb.test.apolcyntest"; // "443"
+  new_arg.value.string = args->target_name;
 
-  args.channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
+  args->channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
 
-  grpc_resolver *resolver = grpc_resolver_create(&exec_ctx, new_arg.value.string, args.channel_args,
-    args.pollset_set, args.lock);
+  grpc_resolver *resolver = grpc_resolver_create(exec_ctx, new_arg.value.string, args->channel_args,
+    args->pollset_set, args->lock);
 
   grpc_closure on_resolver_result_changed;
   grpc_closure_init(&on_resolver_result_changed,
-      check_channel_arg_srv_result_locked, (void*)&args,
-      grpc_combiner_scheduler(args.lock, false));
+      check_channel_arg_srv_result_locked, (void*)args,
+      grpc_combiner_scheduler(args->lock, false));
 
-  grpc_resolver_next_locked(&exec_ctx, resolver, &args.channel_args, &on_resolver_result_changed);
+  grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args, &on_resolver_result_changed);
 
-  grpc_exec_ctx_flush(&exec_ctx);
-  poll_pollset_until_request_done(&args);
+  grpc_exec_ctx_flush(exec_ctx);
+  poll_pollset_until_request_done(args);
+  gpr_log(GPR_INFO, "end resolves srv test");
+}
+
+/* _grpclb._tcp. */ /* "mylbtest.test.apolcyntest"; */ /* "mytestlb.test.apolcyntest"; */ // "443"
+
+static void test_resolves_backend(void) {
+  grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
+  args_struct args;
+  args_init(&exec_ctx, &args);
+  args.expect_is_balancer = 0;
+  args.target_name = "mytestlb.test.apolcyntest";
+
+  test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
-  gpr_log(GPR_INFO, "end resolves srv test");
+}
+
+static void test_resolves_balancer(void) {
+  if (gpr_stricmp(gpr_getenv("GRPC_DNS_RESOLVER"), "native") == 0) {
+    gpr_log(GPR_INFO, "skipping test_resolves_balancer since using native resolver");
+    return;
+  }
+  grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
+  args_struct args;
+  args_init(&exec_ctx, &args);
+  args.expect_is_balancer = 1;
+  args.target_name = "mylbtest.test.apolcyntest";
+
+  test_resolves(&exec_ctx, &args);
+  args_finish(&exec_ctx, &args);
+  grpc_exec_ctx_finish(&exec_ctx);
 }
 
 //static void test_default_port(void) {
@@ -394,6 +419,9 @@ int main(int argc, char **argv) {
   grpc_executor_init();
   grpc_iomgr_init();
   grpc_iomgr_start();
+  if (gpr_getenv("GRPC_DNS_RESOLVER") == NULL) {
+    gpr_setenv("GRPC_DNS_RESOLVER", "ares");
+  }
   if (gpr_stricmp(gpr_getenv("GRPC_DNS_RESOLVER"), "native") == 0) {
     grpc_resolver_dns_native_init();
   } else if (gpr_stricmp(gpr_getenv("GRPC_DNS_RESOLVER"), "ares") == 0) {
@@ -412,7 +440,8 @@ int main(int argc, char **argv) {
   //test_unparseable_hostports();
   //gpr_setenv("GRPC_DNS_RESOLVER", "ares");
   //test_resolves_srv();
-  test_resolves();
+  test_resolves_backend();
+  test_resolves_balancer();
   {
     grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
     grpc_executor_shutdown(&exec_ctx);
