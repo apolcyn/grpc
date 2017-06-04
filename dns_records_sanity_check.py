@@ -59,11 +59,57 @@ def check_dns_record(command, expected):
       fail_error(found, expected)
     i += 1
 
-check_dns_record(
-  command='dig A mytestlb.test.apolcyntest.',
-  expected='mytestlb.test.apolcyntest. 21000 IN	A 5.6.7.8')
+def sanity_check_dns_records():
+  check_dns_record(
+    command='dig A mytestlb.test.apolcyntest.',
+    expected='mytestlb.test.apolcyntest. 21000 IN	A 5.6.7.8')
 
-check_dns_record(
-  command='dig SRV _grpclb._tcp.mylbtest.test.apolcyntest.',
-  expected=('_grpclb._tcp.mylbtest.test.apolcyntest. '
-            '300 IN SRV 0 0 1234 mytestlb.test.apolcyntest.'))
+  check_dns_record(
+    command='dig SRV _grpclb._tcp.mylbtest.test.apolcyntest.',
+    expected=('_grpclb._tcp.mylbtest.test.apolcyntest. '
+              '300 IN SRV 0 0 1234 mytestlb.test.apolcyntest.'))
+
+class CLanguage(object):
+  def __init__(self):
+    self.name = 'c-core'
+
+  def build_cmd(self):
+    return ('python tools/run_tests/run_tests.py '
+            '-l c -r resolve_address_test --build_only').split(' ')
+
+  def test_runner_cmd(self):
+    return ['bins/opt/resolve_address_test']
+
+class JavaLanguage(object):
+  def __init__(self):
+    self.name = 'java'
+  
+  def build_cmd(self):
+    return 'echo java build cmd'.split(' ')
+
+  def test_runner_cmd(self):
+    return 'echo java test runner cmd'.split(' ')
+
+class GoLanguage(object):
+  def __init__(self):
+    self.name = 'go'
+  
+  def build_cmd(self):
+    return 'echo go build cmd'.split(' ')
+
+  def test_runner_cmd(self):
+    return 'echo go test runner cmd'.split(' ')
+
+languages = [CLanguage(), JavaLanguage(), GoLanguage()]
+
+sanity_check_dns_records()
+
+for l in languages:
+  print('build %s' % l.name)
+  out = subprocess.check_output(l.build_cmd())
+  print(out)
+
+for l in languages:
+  print('run %s' % l.name)
+  out = subprocess.check_output(l.test_runner_cmd())
+  print(out)
