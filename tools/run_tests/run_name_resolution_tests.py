@@ -107,6 +107,9 @@ class CLanguage(object):
     self.name = 'c-core'
 
   def build_cmd(self):
+    # make build_tests_resolve_address_test tools_resolve_address_test
+    # CC=gcc, CXX=g++, LD=gcc, LDXX=g++
+
     cmd = ('python tools/run_tests/run_tests.py '
            '-l c -r resolve_address_test --build_only').split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
