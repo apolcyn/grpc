@@ -12229,7 +12229,7 @@ endif
 
 
 RESOLVE_SRV_RECORDS_SRC = \
-    test/core/client_channel/resolve_srv_records.c \
+    test/core/naming_end2end/resolve_srv_records.c \
 
 RESOLVE_SRV_RECORDS_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVE_SRV_RECORDS_SRC))))
 ifeq ($(NO_SECURE),true)
@@ -12249,7 +12249,7 @@ $(BINDIR)/$(CONFIG)/resolve_srv_records: $(RESOLVE_SRV_RECORDS_OBJS) $(LIBDIR)/$
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/core/client_channel/resolve_srv_records.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
+$(OBJDIR)/$(CONFIG)/test/core/naming_end2end/resolve_srv_records.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
 
 deps_resolve_srv_records: $(RESOLVE_SRV_RECORDS_OBJS:.o=.dep)
 

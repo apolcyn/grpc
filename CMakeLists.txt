@@ -7923,7 +7923,7 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 
 add_executable(resolve_srv_records
-  test/core/client_channel/resolve_srv_records.c
+  test/core/naming_end2end/resolve_srv_records.c
 )
 
 

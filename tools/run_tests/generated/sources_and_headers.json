@@ -1869,7 +1869,7 @@
     "language": "c", 
     "name": "resolve_srv_records", 
     "src": [
-      "test/core/client_channel/resolve_srv_records.c"
+      "test/core/naming_end2end/resolve_srv_records.c"
     ], 
     "third_party": false, 
     "type": "target"
