@@ -40,9 +40,67 @@ import name_resolution.dns_records_config as dns_records_config
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
+def _fail_error(cmd, found, expected):
+  expected_str = ''
+  for e in expected:
+    expected_str += ' '.join(e)
+    expected_str += '\n'
+  jobset.message('FAILED', ('A dns records sanity check failed.\n'
+                            '\"%s\" yielded bad record: \n'
+                            '  Found: \n'
+                            '    %s\n  Expected: \n'
+                            '    %s') % (cmd, found and ' '.join(found), expected_str))
+  sys.exit(1)
 
-def _shortname(name, cmd):
+
+def _matches_any(parsed_record, candidates):
+  for e in candidates:
+    if len(e) == len(parsed_record):
+      matches = True
+      for i in range(len(e)):
+        if e[i] != parsed_record[i]:
+          matches = False
+      if matches:
+        return True
+  return False
+
+
+def check_dns_record(command, expected_data):
+  output = subprocess.check_output(re.split('\s+', command))
+  lines = output.splitlines()
+
+  found = None
+  i = 0
+  for l in lines:
+    if l == ';; ANSWER SECTION:':
+      found = i # re.split('\s+', lines[i + 1])
+      break
+    i += 1
+
+  if found is None or len(expected_data) > len(lines) - found:
+    _fail_error(command, found, expected_data)
+  for l in lines[found:found+len(expected_data)]:
+    parsed = re.split('\s+', lines[i + 1])
+    if not _matches_any(parsed, expected_data):
+      _fail_error(command, parsed, expected_data)
+
+
+def sanity_check_dns_records(dns_records):
+  for r in dns_records:
+    cmd = 'dig %s %s' % (r.record_type, r.record_name)
+    expected_data = []
+    for d in r.record_data.split(','):
+      expected_line = '%s %s %s %s %s' % (r.record_name, r.ttl, r.record_class, r.record_type, d)
+      expected_data.append(expected_line.split(' '))
+  
+      check_dns_record(
+        command=cmd,
+        expected_data=expected_data)
+
+
+def shortname(name, cmd):
   return '%s - %s' % (name, ' '.join(cmd))
+
 
 class CLanguage(object):
   def __init__(self):
@@ -51,7 +109,7 @@ class CLanguage(object):
   def build_cmd(self):
     cmd = ('python tools/run_tests/run_tests.py '
            '-l c -r resolve_address_test --build_only').split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
+    return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
             
 
   def test_runner_cmd(self):
@@ -64,7 +122,7 @@ class CLanguage(object):
              'GRPC_VERBOSITY': 'DEBUG',
              'GRPC_DNS_RESOLVER': resolver}
       specs.append(jobset.JobSpec(cmd,
-                                  shortname=_shortname(l.name, cmd),
+                                  shortname=shortname(l.name, cmd),
                                   environ=env))
     return specs
 
@@ -78,7 +136,7 @@ class JavaLanguage(object):
 
   def test_runner_cmd(self):
     cmd = 'echo java test runner cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
+    return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
 class GoLanguage(object):
   def __init__(self):
@@ -86,15 +144,17 @@ class GoLanguage(object):
 
   def build_cmd(self):
     cmd = 'echo go build cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
+    return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
   def test_runner_cmd(self):
     cmd = 'echo go test runner cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
+    return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
 languages = [CLanguage(), JavaLanguage(), GoLanguage()]
 
 results = {}
+
+sanity_check_dns_records(dns_records_config.DNS_RECORDS)
 
 build_jobs = []
 run_jobs = []
