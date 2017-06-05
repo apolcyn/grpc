@@ -1446,7 +1446,6 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/pollset_set_test \
   $(BINDIR)/$(CONFIG)/resolve_address_posix_test \
   $(BINDIR)/$(CONFIG)/resolve_address_test \
-  $(BINDIR)/$(CONFIG)/resolve_srv_records \
   $(BINDIR)/$(CONFIG)/resource_quota_test \
   $(BINDIR)/$(CONFIG)/secure_channel_create_test \
   $(BINDIR)/$(CONFIG)/secure_endpoint_test \
@@ -1919,8 +1918,6 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/resolve_address_posix_test || ( echo test resolve_address_posix_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resolve_address_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resolve_address_test || ( echo test resolve_address_test failed ; exit 1 )
-	$(E) "[RUN]     Testing resolve_srv_records"
-	$(Q) $(BINDIR)/$(CONFIG)/resolve_srv_records || ( echo test resolve_srv_records failed ; exit 1 )
 	$(E) "[RUN]     Testing resource_quota_test"
 	$(Q) $(BINDIR)/$(CONFIG)/resource_quota_test || ( echo test resource_quota_test failed ; exit 1 )
 	$(E) "[RUN]     Testing secure_channel_create_test"

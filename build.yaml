@@ -2780,7 +2780,7 @@ targets:
   - gpr_test_util
   - gpr
 - name: resolve_srv_records
-  build: test
+  build: private
   language: c
   src:
   - test/core/client_channel/resolve_srv_records.c
