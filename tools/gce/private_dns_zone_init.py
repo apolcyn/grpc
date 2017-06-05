@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Copyright 2015, Google Inc.
 # All rights reserved.
 #
@@ -28,58 +28,69 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Creates a DNS managed zone on GCE.
+# Populates a DNS managed zone on DNS with records for testing
 
-set -ex
+import argparse
+import subprocess
 
-cd $(dirname $0)
+ZONE_DNS = 'test.apolcyntest.'
+ZONE_NAME = 'apolcyn-zone'
+TTL = '2100'
 
-ZONE_DNS='test.apolcyntest.'
-ZONE_NAME='apolcyn-zone'
+argp = argparse.ArgumentParser(description='')
+argp.add_argument('--dry_run', default=False, action='store_const', const=True,
+                  help='Print the commands that would be ran, without running them')
+args = argp.parse_args()
 
-TTL='2100'
 
 class DnsRecord(object):
-  def __init__(self, record_type, record_name, record_data)
+  def __init__(self, record_type, record_name, record_data):
     self.record_type = record_type
     self.record_name = record_name
     self.record_data = record_data
 
+
 ipv4_single_target_dns = 'ipv4-single-target.%s' % ZONE_DNS
 ipv6_single_target_dns = 'ipv6-single-target.%s' % ZONE_DNS
-
 ipv4_multi_target_dns = 'ipv4-multi-target.%s' % ZONE_DNS
 ipv6_multi_target_dns = 'ipv6-multi-target.%s' % ZONE_DNS
 
 records = [
     DnsRecord('A', ipv4_single_target_dns, '1.2.3.4'),
-    DnsRecord('A', ipv4_multi_target_dns, '100.1.1.1,100.2.2.2,100.3.3.3'),
+    DnsRecord('A', ipv4_multi_target_dns, ','.join(['100.1.1.1',
+                                                    '100.2.2.2',
+                                                    '100.3.3.3'])),
     DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1005'),
     DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1001',
                                                        '2607:f8b0:400a:801::1002',
-                                                       '2607:f8b0:400a:801::1003']),
-    DnsRecord('SRV', 'srv-%s' ipv4_single_target_dns, ipv4_single_target_dns),
+                                                       '2607:f8b0:400a:801::1003'])),
+    DnsRecord('SRV', 'srv-%s' % ipv4_single_target_dns, ipv4_single_target_dns),
     DnsRecord('SRV', 'srv-%s' % ipv4_multi_target_dns, ipv4_multi_target_dns),
     DnsRecord('SRV', 'srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
     DnsRecord('SRV', 'srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
 ]
 
 cmds = []
-
 cmds.append('gcloud dns record-sets transaction start -z=\"%s\"' % ZONE_NAME)
 
 for r in records:
   cmds.append(('gcloud dns record-sets transaction add '
-               '-z=\"%s\" '
-               '--name=\"%s\" '
-               '--type=\"%s\" '
-               '--ttl=\"%s\" '
-               '\"%s\"') % ZONE_NAME,
-                           r.record_name,
-                           r.record_type,
-                           TTL,
-                           r.record_data)
+               ' -z=\"%s\" '
+               ' --name=\"%s\" '
+               ' --type=\"%s\" '
+               ' --ttl=\"%s\" '
+               ' \"%s\"') % (ZONE_NAME,
+                            r.record_name,
+                            r.record_type,
+                            TTL,
+                            r.record_data))
 
 cmds.append('gcloud dns record-sets transaction describe -z=\"%s\"' % ZONE_NAME)
 cmds.append('gcloud dns record-sets transaction execute -z=\"%s\"' % ZONE_NAME)
 cmds.append('gcloud dns record-sets list -z=\"%s\"' % ZONE_NAME)
+
+for c in cmds:
+  if args.dry_run:
+    print(c)
+  else:
+    subprocess.call(c.split(' '))
