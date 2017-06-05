@@ -385,7 +385,6 @@ add_dependencies(buildtests_c combiner_test)
 add_dependencies(buildtests_c compression_test)
 add_dependencies(buildtests_c concurrent_connectivity_test)
 add_dependencies(buildtests_c connection_refused_test)
-add_dependencies(buildtests_c dns_ares_resolver_srv_test)
 add_dependencies(buildtests_c dns_resolver_connectivity_test)
 add_dependencies(buildtests_c dns_resolver_test)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
@@ -5382,37 +5381,6 @@ target_include_directories(connection_refused_test
 )
 
 target_link_libraries(connection_refused_test
-  ${_gRPC_ALLTARGETS_LIBRARIES}
-  grpc_test_util
-  grpc
-  gpr_test_util
-  gpr
-)
-
-endif (gRPC_BUILD_TESTS)
-if (gRPC_BUILD_TESTS)
-
-add_executable(dns_ares_resolver_srv_test
-  test/core/client_channel/resolvers/dns_ares_resolver_srv_test.c
-)
-
-
-target_include_directories(dns_ares_resolver_srv_test
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-  PRIVATE ${BORINGSSL_ROOT_DIR}/include
-  PRIVATE ${PROTOBUF_ROOT_DIR}/src
-  PRIVATE ${BENCHMARK_ROOT_DIR}/include
-  PRIVATE ${ZLIB_ROOT_DIR}
-  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
-  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
-  PRIVATE ${CARES_INCLUDE_DIR}
-  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
-  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
-  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
-)
-
-target_link_libraries(dns_ares_resolver_srv_test
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc_test_util
   grpc

@@ -461,30 +461,6 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c", 
-    "name": "dns_ares_resolver_srv_test", 
-    "platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ]
-  }, 
-  {
-    "args": [], 
-    "ci_platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ], 
-    "cpu_cost": 0.1, 
-    "exclude_configs": [], 
-    "exclude_iomgrs": [
-      "uv"
-    ], 
-    "flaky": false, 
-    "gtest": false, 
-    "language": "c", 
     "name": "dns_resolver_connectivity_test", 
     "platforms": [
       "linux", 
