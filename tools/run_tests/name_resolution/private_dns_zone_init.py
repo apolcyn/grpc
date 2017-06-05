@@ -44,12 +44,8 @@ argp.add_argument('--list_records', default=False, action='store_const', const=T
 args = argp.parse_args()
 
 
-if args.list_records:
-  subprocess.call(('gcloud dns record-sets list -z=\"%s\"' % dns_records_config.ZONE_NAME).split(' '))
-  sys.exit(0)
-
 cmds = []
-cmds.append('gcloud dns record-sets transaction start -z=\"%s\"' % dns_records_config.ZONE_NAME)
+cmds.append('gcloud dns record-sets transaction start -z=%s' % dns_records_config.ZONE_NAME)
 
 for r in dns_records_config.DNS_RECORDS:
   cmds.append(('gcloud dns record-sets transaction add '
@@ -67,11 +63,14 @@ cmds.append('gcloud dns record-sets transaction describe -z=\"%s\"' % dns_record
 cmds.append('gcloud dns record-sets transaction execute -z=\"%s\"' % dns_records_config.ZONE_NAME)
 cmds.append('gcloud dns record-sets list -z=\"%s\"' % dns_records_config.ZONE_NAME)
 
-if args.dry_run:
-  print('printing commands that would be run:')
-
-for c in cmds:
+if args.list_records:
+  subprocess.call(('gcloud dns record-sets list -z=%s' % dns_records_config.ZONE_NAME).split(' '))
+else:
   if args.dry_run:
-    print(c)
-  else:
-    subprocess.call(c.split(' '))
+    print('printing commands that would be run:')
+
+  for c in cmds:
+    if args.dry_run:
+      print(c)
+    else:
+      subprocess.call(c.split(' '))
