@@ -42,8 +42,12 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
 def _fail_error(found, expected):
+  expected_str = ''
+  for e in expected:
+    expected_str += ' '.join(e)
+    expected_str += '\n'
   print('bad record: %s.\n Expected %s' %
-    (' '.join(found), ' '.join(expected)))
+    (found and ' '.join(found), expected_str))
   sys.exit(1)
 
 
@@ -52,7 +56,7 @@ def _matches_any(parsed_record, candidates):
     if len(e) == len(parsed_record):
       matches = True
       for i in range(len(e)):
-        if e[i] != parsed_record[i]
+        if e[i] != parsed_record[i]:
           matches = False
       if matches:
         return True
@@ -62,7 +66,6 @@ def _matches_any(parsed_record, candidates):
 def check_dns_records(command, expected):
   output = subprocess.check_output(re.split('\s+', command))
   lines = output.splitlines()
-  expected = re.split('\s+', expected)
 
   found = None
   i = 0
@@ -72,7 +75,7 @@ def check_dns_records(command, expected):
       break
     i += 1
 
-  if len(expected) > len(lines) - found:
+  if found is None or len(expected) > len(lines) - found:
     _fail_error(found, expected)
   for l in lines[found:found+len(expected)]:
     parsed = re.split('\s+', lines[i + 1])
@@ -82,9 +85,9 @@ def check_dns_records(command, expected):
 
 def sanity_check_dns_records(dns_records):
   for r in dns_records:
-    cmd = 'dig %s %s' % (r.record_type, r.record_name))
+    cmd = 'dig %s %s' % (r.record_type, r.record_name)
     expected = []
-    for d in cmd.data.split(',')
+    for d in r.record_data.split(','):
       expected_line = '%s %s %s %s %s' % (r.record_name, r.ttl, r.record_class, r.record_type, d)
       expected.append(expected_line.split(' '))
 

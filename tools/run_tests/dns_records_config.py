@@ -63,5 +63,6 @@ def _create_records_for_testing():
       DnsRecord('SRV', 'srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
       DnsRecord('SRV', 'srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
   ]
+  return records
 
 DNS_RECORDS = _create_records_for_testing()
