@@ -1,5 +1,6 @@
 %YAML 1.2
 --- |
+  #!/bin/sh
   # Commands for populating DNS records in GCE that are used in testing.
   #
   # This file has been automatically generated from a template file.
@@ -36,13 +37,13 @@
   # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <%!
-    ZONE_DNS='test.apolcyntest.'
-    ZONE_NAME='apolcyn-zone'
-    TTL='2100'
+    ZONE_DNS = 'test.apolcyntest.'
+    ZONE_NAME = 'apolcyn-zone'
+    TTL = '2100'
 
 
     class DnsRecord(object):
-      def __init__(self, record_type, record_name, record_data)
+      def __init__(self, record_type, record_name, record_data):
         self.record_type = record_type
         self.record_name = record_name
         self.record_data = record_data
@@ -55,12 +56,14 @@
 
     records = [
         DnsRecord('A', ipv4_single_target_dns, '1.2.3.4'),
-        DnsRecord('A', ipv4_multi_target_dns, '100.1.1.1,100.2.2.2,100.3.3.3'),
+        DnsRecord('A', ipv4_multi_target_dns, ','.join(['100.1.1.1',
+                                                        '100.2.2.2',
+                                                        '100.3.3.3'])),
         DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1005'),
         DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1001',
                                                            '2607:f8b0:400a:801::1002',
-                                                           '2607:f8b0:400a:801::1003']),
-        DnsRecord('SRV', 'srv-%s' ipv4_single_target_dns, ipv4_single_target_dns),
+                                                           '2607:f8b0:400a:801::1003'])),
+        DnsRecord('SRV', 'srv-%s' % ipv4_single_target_dns, ipv4_single_target_dns),
         DnsRecord('SRV', 'srv-%s' % ipv4_multi_target_dns, ipv4_multi_target_dns),
         DnsRecord('SRV', 'srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
         DnsRecord('SRV', 'srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
@@ -70,24 +73,23 @@
     cmds.append('gcloud dns record-sets transaction start -z=\"%s\"' % ZONE_NAME)
 
     for r in records:
-      cmds.append(('gcloud dns record-sets transaction add '
-                   '-z=\"%s\" '
-                   '--name=\"%s\" '
-                   '--type=\"%s\" '
-                   '--ttl=\"%s\" '
-                 '\"%s\"') % ZONE_NAME,
-                             r.record_name,
-                             r.record_type,
-                             TTL,
-                             r.record_data)
+      cmds.append(('gcloud dns record-sets transaction add \\\n'
+                   '   -z=\"%s\" \\\n'
+                   '   --name=\"%s\" \\\n'
+                   '   --type=\"%s\" \\\n'
+                   '   --ttl=\"%s\" \\\n'
+                   '   \"%s\"') % (ZONE_NAME,
+                                r.record_name,
+                                r.record_type,
+                                TTL,
+                                r.record_data))
 
     cmds.append('gcloud dns record-sets transaction describe -z=\"%s\"' % ZONE_NAME)
     cmds.append('gcloud dns record-sets transaction execute -z=\"%s\"' % ZONE_NAME)
     cmds.append('gcloud dns record-sets list -z=\"%s\"' % ZONE_NAME)
-
   %>
 
-  # Creates a DNS managed zone on GCE.
+  # Populates a DNS managed zone with records, for use in testing
 
   set -ex
 
@@ -95,4 +97,5 @@
 
   % for cmd in cmds:
   ${cmd}
+
   % endfor
