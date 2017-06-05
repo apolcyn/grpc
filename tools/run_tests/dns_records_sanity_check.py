@@ -41,13 +41,13 @@ import dns_records_config
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
-def _fail_error(found, expected):
+def _fail_error(cmd, found, expected):
   expected_str = ''
   for e in expected:
     expected_str += ' '.join(e)
     expected_str += '\n'
-  print('bad record: %s.\n Expected %s' %
-    (found and ' '.join(found), expected_str))
+  jobset.message('FAILED', '\"%s\" yielded bad record: \n  Found: \n    %s\n  Expected: \n    %s' %
+    (cmd, found and ' '.join(found), expected_str))
   sys.exit(1)
 
 
@@ -63,7 +63,7 @@ def _matches_any(parsed_record, candidates):
   return False
 
 
-def check_dns_records(command, expected):
+def check_dns_record(command, expected_data):
   output = subprocess.check_output(re.split('\s+', command))
   lines = output.splitlines()
 
@@ -75,109 +75,25 @@ def check_dns_records(command, expected):
       break
     i += 1
 
-  if found is None or len(expected) > len(lines) - found:
-    _fail_error(found, expected)
-  for l in lines[found:found+len(expected)]:
+  if found is None or len(expected_data) > len(lines) - found:
+    _fail_error(command, found, expected_data)
+  for l in lines[found:found+len(expected_data)]:
     parsed = re.split('\s+', lines[i + 1])
-    if not _matches_any(parsed, expected):
-      _fail_error(parsed, expected)
+    if not _matches_any(parsed, expected_data):
+      _fail_error(command, parsed, expected_data)
 
 
 def sanity_check_dns_records(dns_records):
   for r in dns_records:
     cmd = 'dig %s %s' % (r.record_type, r.record_name)
-    expected = []
+    expected_data = []
     for d in r.record_data.split(','):
       expected_line = '%s %s %s %s %s' % (r.record_name, r.ttl, r.record_class, r.record_type, d)
-      expected.append(expected_line.split(' '))
+      expected_data.append(expected_line.split(' '))
 
-    check_dns_records(
+    check_dns_record(
       command=cmd,
-      expected=expected)
+      expected_data=expected_data)
 
-
-def _shortname(name, cmd):
-  return '%s - %s' % (name, ' '.join(cmd))
-
-class CLanguage(object):
-  def __init__(self):
-    self.name = 'c-core'
-
-  def build_cmd(self):
-    cmd = ('python tools/run_tests/run_tests.py '
-           '-l c -r resolve_address_test --build_only').split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
-            
-
-  def test_runner_cmd(self):
-    specs = []
-    cmd = [_ROOT + '/bins/opt/resolve_address_test']
-    for resolver in ['native', 'ares']:
-      env = {'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH':
-                 _ROOT + '/src/core/tsi/test_creds/ca.pem',
-             'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
-             'GRPC_VERBOSITY': 'DEBUG',
-             'GRPC_DNS_RESOLVER': resolver}
-      specs.append(jobset.JobSpec(cmd,
-                                  shortname=_shortname(l.name, cmd),
-                                  environ=env))
-    return specs
-
-class JavaLanguage(object):
-  def __init__(self):
-    self.name = 'java'
-  
-  def build_cmd(self):
-    cmd = 'echo java build cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=l.name)]
-
-  def test_runner_cmd(self):
-    cmd = 'echo java test runner cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
-
-class GoLanguage(object):
-  def __init__(self):
-    self.name = 'go'
-
-  def build_cmd(self):
-    cmd = 'echo go build cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
-
-  def test_runner_cmd(self):
-    cmd = 'echo go test runner cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
-
-languages = [CLanguage(), JavaLanguage(), GoLanguage()]
 
 sanity_check_dns_records(dns_records_config.DNS_RECORDS)
-
-results = {}
-
-build_jobs = []
-run_jobs = []
-for l in languages:
-  build_jobs.extend(l.build_cmd())
-  run_jobs.extend(l.test_runner_cmd())
-
-def _build():
-  num_failures, _ = jobset.run(
-    build_jobs, maxjobs=3, stop_on_failure=True,
-    newline_on_success=True)
-  return num_failures
-
-def _run():
-  num_failures, resultset = jobset.run(
-    run_jobs, maxjobs=3, stop_on_failure=True,
-    newline_on_success=True)
-  report_utils.render_junit_xml_report(resultset, 'naming.xml',
-    suite_name='naming_test')
-
-  return num_failures
-
-#if _build():
-#  jobset.message('FAILED', 'Some of the tests failed to build')
-#  sys.exit(1)
-#
-#if _run():
-#  jobset.message('FAILED', 'Some tests failed (but the build succeeded)')
-#  sys.exit(2)
