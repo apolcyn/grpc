@@ -36,44 +36,62 @@ import os
 import python_utils.jobset as jobset
 import python_utils.report_utils as report_utils
 
+import dns_records_config
+
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
-def check_dns_record(command, expected):
+def _fail_error(found, expected):
+  print('bad record: %s.\n Expected %s' %
+    (' '.join(found), ' '.join(expected)))
+  sys.exit(1)
+
+
+def _matches_any(parsed_record, candidates):
+  for e in candidates:
+    if len(e) == len(parsed_record):
+      matches = True
+      for i in range(len(e)):
+        if e[i] != parsed_record[i]
+          matches = False
+      if matches:
+        return True
+  return False
+
+
+def check_dns_records(command, expected):
   output = subprocess.check_output(re.split('\s+', command))
   lines = output.splitlines()
   expected = re.split('\s+', expected)
-  
+
   found = None
   i = 0
   for l in lines:
     if l == ';; ANSWER SECTION:':
-      found = re.split('\s+', lines[i + 1])
+      found = i # re.split('\s+', lines[i + 1])
       break
     i += 1
 
-  def fail_error(found, expected):
-    print('bad record: %s.\n Expected %s' %
-      (' '.join(found), ' '.join(expected)))
-    sys.exit(1)
-  
-  if len(expected) != len(found):
-    fail_error(found, expected)
-  i = 0
-  for w in expected:
-    if w != found[i]:
-      fail_error(found, expected)
-    i += 1
+  if len(expected) > len(lines) - found:
+    _fail_error(found, expected)
+  for l in lines[found:found+len(expected)]:
+    parsed = re.split('\s+', lines[i + 1])
+    if not _matches_any(parsed, expected):
+      _fail_error(parsed, expected)
 
-def sanity_check_dns_records():
-  check_dns_record(
-    command='dig A mytestlb.test.apolcyntest.',
-    expected='mytestlb.test.apolcyntest. 21000 IN	A 5.6.7.8')
 
-  check_dns_record(
-    command='dig SRV _grpclb._tcp.mylbtest.test.apolcyntest.',
-    expected=('_grpclb._tcp.mylbtest.test.apolcyntest. '
-              '300 IN SRV 0 0 1234 mytestlb.test.apolcyntest.'))
+def sanity_check_dns_records(dns_records):
+  for r in dns_records:
+    cmd = 'dig %s %s' % (r.record_type, r.record_name))
+    expected = []
+    for d in cmd.data.split(',')
+      expected_line = '%s %s %s %s %s' % (r.record_name, r.ttl, r.record_class, r.record_type, d)
+      expected.append(expected_line.split(' '))
+
+    check_dns_records(
+      command=cmd,
+      expected=expected)
+
 
 def _shortname(name, cmd):
   return '%s - %s' % (name, ' '.join(cmd))
@@ -117,7 +135,7 @@ class JavaLanguage(object):
 class GoLanguage(object):
   def __init__(self):
     self.name = 'go'
-  
+
   def build_cmd(self):
     cmd = 'echo go build cmd'.split(' ')
     return [jobset.JobSpec(cmd, shortname=_shortname(l.name, cmd))]
@@ -128,7 +146,7 @@ class GoLanguage(object):
 
 languages = [CLanguage(), JavaLanguage(), GoLanguage()]
 
-sanity_check_dns_records()
+sanity_check_dns_records(dns_records_config.DNS_RECORDS)
 
 results = {}
 
@@ -153,10 +171,10 @@ def _run():
 
   return num_failures
 
-if _build():
-  jobset.message('FAILED', 'Some of the tests failed to build')
-  sys.exit(1)
-
-if _run():
-  jobset.message('FAILED', 'Some tests failed (but the build succeeded)')
-  sys.exit(2)
+#if _build():
+#  jobset.message('FAILED', 'Some of the tests failed to build')
+#  sys.exit(1)
+#
+#if _run():
+#  jobset.message('FAILED', 'Some tests failed (but the build succeeded)')
+#  sys.exit(2)
