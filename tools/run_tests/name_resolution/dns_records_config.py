@@ -30,9 +30,11 @@
 
 # Source of truth for DNS records used in testing on GCE
 
-ZONE_DNS = 'test.apolcyntest.'
-ZONE_NAME = 'apolcyn-zone'
+ZONE_DNS = 'test.expgrpctesting.'
+ZONE_NAME = 'exp-grcp-testing'
 TTL = '2100'
+
+SRV_PORT='1234'
 
 
 class DnsRecord(object):
@@ -42,6 +44,15 @@ class DnsRecord(object):
     self.record_data = record_data
     self.record_class = 'IN'
     self.ttl = TTL
+    if self.record_type == 'SRV':
+      self.target_port = SRV_PORT
+
+  def uploadable_data(self):
+    if self.record_type == 'SRV':
+      return ['0 0 %s %s' % (self.target_port, self.record_data)]
+
+    # A or AAAself.record_data.split(','):A record:
+    return self.record_data.split(',')
 
 def _create_records_for_testing():
   ipv4_single_target_dns = 'ipv4-single-target.%s' % ZONE_DNS
@@ -51,17 +62,17 @@ def _create_records_for_testing():
 
   records = [
       DnsRecord('A', ipv4_single_target_dns, '1.2.3.4'),
-      DnsRecord('A', ipv4_multi_target_dns, ','.join(['100.1.1.1',
-                                                      '100.2.2.2',
-                                                      '100.3.3.3'])),
-      DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1005'),
-      DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1001',
-                                                         '2607:f8b0:400a:801::1002',
-                                                         '2607:f8b0:400a:801::1003'])),
-      DnsRecord('SRV', 'srv-%s' % ipv4_single_target_dns, ipv4_single_target_dns),
-      DnsRecord('SRV', 'srv-%s' % ipv4_multi_target_dns, ipv4_multi_target_dns),
-      DnsRecord('SRV', 'srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
-      DnsRecord('SRV', 'srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
+      DnsRecord('A', ipv4_multi_target_dns, ','.join(['1.2.3.5',
+                                                      '1.2.3.6',
+                                                      '1.2.3.7'])),
+      DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1001'),
+      DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1002',
+                                                         '2607:f8b0:400a:801::1003',
+                                                         '2607:f8b0:400a:801::1004'])),
+      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_single_target_dns, ipv4_single_target_dns),
+      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_multi_target_dns, ipv4_multi_target_dns),
+      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
+      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
   ]
   return records
 

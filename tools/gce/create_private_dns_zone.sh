@@ -35,7 +35,7 @@ set -ex
 cd $(dirname $0)
 
 DNS_NAME=test.apolcyntest.
-ZONE_NAME=apolcyn-zone
+ZONE_NAME=
 
 # creates a DNS private zone in GCE
 gcloud alpha dns managed-zones create --dns-name="$DNS_NAME" --description="A zone" "$ZONE_NAME" --visibility=private --networks=default
