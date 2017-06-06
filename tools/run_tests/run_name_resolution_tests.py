@@ -113,16 +113,19 @@ class CLanguage(object):
 
   def test_runner_cmd(self):
     specs = []
-    cmd = [_ROOT + '/bins/opt/resolve_address_test']
-    for resolver in ['native', 'ares']:
-      env = {'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH':
-                 _ROOT + '/src/core/tsi/test_creds/ca.pem',
-             'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
-             'GRPC_VERBOSITY': 'DEBUG',
-             'GRPC_DNS_RESOLVER': resolver}
-      specs.append(jobset.JobSpec(cmd,
-                                  shortname=shortname(l.name, cmd),
-                                  environ=env))
+    cmd = [_ROOT + '/bins/opt/resolve_srv_records']
+    for r in dns_record_config.DNS_RECORDS:
+      if r.record_type == 'SRV':
+        for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
+          expected_ips = get_expected_ip_end_results_for_srv_record(srv_record)
+          env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
+                 'GRPC_VERBOSITY': 'DEBUG',
+                 'GRPC_DNS_RESOLVER': resolver,
+                 'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name,
+                 'GRPC_DNS_TEST_EXPECTED_IPS': expected_ips}
+          specs.append(jobset.JobSpec(cmd,
+                                      shortname=shortname(l.name, cmd),
+                                      environ=env))
     return specs
 
 class JavaLanguage(object):

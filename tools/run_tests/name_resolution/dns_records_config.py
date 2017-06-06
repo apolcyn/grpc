@@ -65,4 +65,10 @@ def _create_records_for_testing():
   ]
   return records
 
+def get_expected_ip_end_results_for_srv_record(srv_record, dns_records):
+  for r in dns_records:
+    if r.record_name == srv_record.record_data:
+      return r.record_data
+  fail(Exception('no ip record found for target of srv record: %s' % srv_record))
+
 DNS_RECORDS = _create_records_for_testing()
