@@ -72,6 +72,7 @@ def check_dns_record(command, expected_data):
   found = None
   i = 0
   for l in lines:
+    l = l.strip()
     if l == ';; ANSWER SECTION:':
       found = i # re.split('\s+', lines[i + 1])
       break
@@ -92,7 +93,7 @@ def sanity_check_dns_records(dns_records):
     for d in r.record_data.split(','):
       expected_line = '%s %s %s %s %s' % (r.record_name, r.ttl, r.record_class, r.record_type, d)
       expected_data.append(expected_line.split(' '))
-  
+
       check_dns_record(
         command=cmd,
         expected_data=expected_data)
@@ -107,13 +108,8 @@ class CLanguage(object):
     self.name = 'c-core'
 
   def build_cmd(self):
-    # make build_tests_resolve_address_test tools_resolve_address_test
-    # CC=gcc, CXX=g++, LD=gcc, LDXX=g++
-
-    cmd = ('python tools/run_tests/run_tests.py '
-           '-l c -r resolve_address_test --build_only').split(' ')
+    cmd = 'make resolve_srv_records CC=gcc CXX=g++ LD=gcc LDXX=g++'.split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
-            
 
   def test_runner_cmd(self):
     specs = []
@@ -132,13 +128,13 @@ class CLanguage(object):
 class JavaLanguage(object):
   def __init__(self):
     self.name = 'java'
-  
+
   def build_cmd(self):
-    cmd = 'echo java build cmd'.split(' ')
+    cmd = 'echo TODO: add java build cmd'.split(' ')
     return [jobset.JobSpec(cmd, shortname=l.name)]
 
   def test_runner_cmd(self):
-    cmd = 'echo java test runner cmd'.split(' ')
+    cmd = 'echo TODO: add java test runner cmd'.split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
 class GoLanguage(object):
@@ -146,11 +142,11 @@ class GoLanguage(object):
     self.name = 'go'
 
   def build_cmd(self):
-    cmd = 'echo go build cmd'.split(' ')
+    cmd = 'echo TODO: add go build cmd'.split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
   def test_runner_cmd(self):
-    cmd = 'echo go test runner cmd'.split(' ')
+    cmd = 'echo TODO: add go test runner cmd'.split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
 languages = [CLanguage(), JavaLanguage(), GoLanguage()]
