@@ -64,14 +64,14 @@ typedef struct string_list_node {
 
 static string_list_node* parse_expected(char *expected_ips) {
   char *p = expected_ips;
-  string_list_node *head = NULL;
+  string_list_node *prev_head = NULL;
   string_list_node *new_node = NULL;
 
   while (*p) {
     if (*p == ',') {
       new_node->target[new_node->length] = 0;
-      new_node->next = head;
-      head = new_node;
+      new_node->next = prev_head;
+      prev_head = new_node;
       new_node = NULL;
     } else {
       if (new_node == NULL) {
@@ -82,7 +82,10 @@ static string_list_node* parse_expected(char *expected_ips) {
     }
     p++;
   }
-  return head;
+  if (new_node) {
+    new_node->next = prev_head;
+  }
+  return new_node;
 }
 
 static int matches_any(char *found_ip, string_list_node *candidates_head) {
@@ -197,6 +200,7 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *a
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
   gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
+  gpr_log(GPR_INFO, "list size: %d", (int)list_size(args->expected_ips_head));
 
   GPR_ASSERT(addresses->num_addresses == list_size(args->expected_ips_head));
   for (size_t i = 0; i < addresses->num_addresses; i++) {

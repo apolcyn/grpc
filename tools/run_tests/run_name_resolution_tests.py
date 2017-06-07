@@ -121,7 +121,7 @@ class CLanguage(object):
           env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
                  'GRPC_VERBOSITY': 'DEBUG',
                  'GRPC_DNS_RESOLVER': resolver,
-                 'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name,
+                 'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name.replace('_grpclb._tcp.', ''),
                  'GRPC_DNS_TEST_EXPECTED_IPS': expected_ips}
           specs.append(jobset.JobSpec(cmd,
                                       shortname=shortname(l.name, cmd),
@@ -171,11 +171,19 @@ def _build():
   return num_failures
 
 def _run():
-  num_failures, resultset = jobset.run(
-    run_jobs, maxjobs=3, stop_on_failure=True,
-    newline_on_success=True)
+  num_failures = 0
+  for j in run_jobs:
+    print('here is the cmd:')
+    for k, v in j.environ.iteritems():
+      print('%s=%s' % (k, v))
+    print(j.cwd)
+    _, _= jobset.run(
+      [j], maxjobs=3, stop_on_failure=True,
+      newline_on_success=True)
+
   report_utils.render_junit_xml_report(resultset, 'naming.xml',
     suite_name='naming_test')
+
 
   return num_failures
 
