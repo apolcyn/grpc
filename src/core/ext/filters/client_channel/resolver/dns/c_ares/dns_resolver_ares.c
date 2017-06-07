@@ -210,7 +210,6 @@ static void dns_ares_next_locked(grpc_exec_ctx *exec_ctx,
   r->target_result = target_result;
   if (r->resolved_version == 0 && !r->resolving) {
     gpr_backoff_reset(&r->backoff_state);
-    gpr_log(GPR_INFO, "start resolving locked");
     dns_ares_start_resolving_locked(exec_ctx, r);
   } else {
     dns_ares_maybe_finish_next_locked(exec_ctx, r);
