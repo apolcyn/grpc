@@ -110,6 +110,19 @@ static size_t list_size(string_list_node *head) {
   return count;
 }
 
+static char *dup_maybe_remove_zone_id(char *addr) {
+  char *out = gpr_zalloc(strlen(addr) + 1);
+  int i = 0;
+  while (addr[i]) {
+    if (addr[i] == '%') {
+      return out; 
+    }
+    out[i] = addr[i];
+    i++;
+  }
+  return out;
+}
+
 static gpr_timespec test_deadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
 }
@@ -211,9 +224,11 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *a
     char *host;
     char *port;
     gpr_split_host_port(str, &host, &port);
+    char *cleaned = dup_maybe_remove_zone_id(host);
     // TODO(apolcyn) figure out what to do with the port
     GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
-    GPR_ASSERT(matches_any(host, args->expected_ips_head));
+    GPR_ASSERT(matches_any(cleaned, args->expected_ips_head));
+    gpr_free(cleaned);
   }
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
@@ -281,9 +296,13 @@ int main(int argc, char **argv) {
     gpr_log(GPR_INFO, "expected ips param not passed in");
   }
   if (srv_record_name && strlen(srv_record_name) != 0) {
+    gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
+    gpr_log(GPR_INFO, "    expect IPS: %s", expected_ips);
     test_resolves_balancer(srv_record_name, expected_ips);
   }
   if (ip_record_name && strlen(ip_record_name) != 0) {
+    gpr_log(GPR_INFO, "    attempt to resolve: %s", ip_record_name);
+    gpr_log(GPR_INFO, "    expect IPS: %s", expected_ips);
     test_resolves_backend(ip_record_name, expected_ips);
   }
   grpc_shutdown();

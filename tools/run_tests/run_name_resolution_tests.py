@@ -108,7 +108,7 @@ class CLanguage(object):
     self.name = 'c-core'
 
   def build_cmd(self):
-    cmd = 'make resolve_srv_records CC=gcc CXX=g++ LD=gcc LDXX=g++'.split(' ')
+    cmd = 'make resolve_srv_records CC=gcc CXX=g++ LD=gcc LDXX=g++ GRPC_CONFIG=dbg'.split(' ')
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
   def test_runner_cmd(self):
@@ -171,19 +171,12 @@ def _build():
   return num_failures
 
 def _run():
-  num_failures = 0
-  for j in run_jobs:
-    print('here is the cmd:')
-    for k, v in j.environ.iteritems():
-      print('%s=%s' % (k, v))
-    print(j.cwd)
-    _, _= jobset.run(
-      [j], maxjobs=3, stop_on_failure=True,
-      newline_on_success=True)
+  num_failures, resultset = jobset.run(
+    run_jobs, maxjobs=3, stop_on_failure=True,
+    newline_on_success=True)
 
   report_utils.render_junit_xml_report(resultset, 'naming.xml',
     suite_name='naming_test')
-
 
   return num_failures
 
