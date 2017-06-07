@@ -44,14 +44,8 @@ class DnsRecord(object):
     self.record_data = record_data
     self.record_class = 'IN'
     self.ttl = TTL
-    if self.record_type == 'SRV':
-      self.target_port = SRV_PORT
 
   def uploadable_data(self):
-    if self.record_type == 'SRV':
-      return ['0 0 %s %s' % (self.target_port, self.record_data)]
-
-    # A or AAAself.record_data.split(','):A record:
     return self.record_data.split(',')
 
 def _create_records_for_testing():
@@ -69,17 +63,17 @@ def _create_records_for_testing():
       DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1002',
                                                          '2607:f8b0:400a:801::1003',
                                                          '2607:f8b0:400a:801::1004'])),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_single_target_dns, ipv4_single_target_dns),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_multi_target_dns, ipv4_multi_target_dns),
-      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_single_target_dns, ipv6_single_target_dns),
-      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_multi_target_dns, ipv6_multi_target_dns),
+      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_single_target_dns)),
+      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_multi_target_dns)),
+      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_single_target_dns)),
+      DnsRecord('SRV', '_grcplb._tcp.srv-%s' % ipv6_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_multi_target_dns)),
   ]
   return records
 
 def get_expected_ip_end_results_for_srv_record(srv_record, dns_records):
   for r in dns_records:
-    if r.record_name == srv_record.record_data:
+    if r.record_name == srv_record.record_data.split(' ')[3]:
       return r.record_data
-  fail(Exception('no ip record found for target of srv record: %s' % srv_record))
+  raise(Exception('no ip record found for target of srv record: %s' % srv_record.record_name))
 
 DNS_RECORDS = _create_records_for_testing()

@@ -113,11 +113,11 @@ class CLanguage(object):
 
   def test_runner_cmd(self):
     specs = []
-    cmd = [_ROOT + '/bins/opt/resolve_srv_records']
-    for r in dns_record_config.DNS_RECORDS:
+    cmd = [_ROOT + '/bins/dbg/resolve_srv_records']
+    for r in dns_records_config.DNS_RECORDS:
       if r.record_type == 'SRV':
         for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
-          expected_ips = get_expected_ip_end_results_for_srv_record(srv_record)
+          expected_ips = dns_records_config.get_expected_ip_end_results_for_srv_record(r, dns_records_config.DNS_RECORDS)
           env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
                  'GRPC_VERBOSITY': 'DEBUG',
                  'GRPC_DNS_RESOLVER': resolver,
@@ -180,9 +180,9 @@ def _run():
   return num_failures
 
 if _build():
-  jobset.message('FAILED', 'Some of the tests failed to build')
+  jobset.message('FAILED', 'Some of the tests failed to build\n')
   sys.exit(1)
 
 if _run():
-  jobset.message('FAILED', 'Some tests failed (but the build succeeded)')
+  jobset.message('FAILED', 'Some tests failed (but the build succeeded)\n')
   sys.exit(2)
