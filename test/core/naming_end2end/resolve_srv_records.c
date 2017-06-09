@@ -33,24 +33,24 @@
 
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
+#include <grpc/support/host_port.h>
 #include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
-#include <grpc/support/host_port.h>
 #include <string.h>
 
+#include "src/core/ext/filters/client_channel/client_channel.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
-#include "src/core/lib/iomgr/resolve_address.h"
+#include "src/core/ext/filters/client_channel/resolver_registry.h"
+#include "src/core/lib/channel/channel_args.h"
+#include "src/core/lib/iomgr/combiner.h"
 #include "src/core/lib/iomgr/executor.h"
 #include "src/core/lib/iomgr/iomgr.h"
-#include "test/core/util/test_config.h"
-#include "src/core/lib/support/string.h"
-#include "src/core/lib/support/env.h"
+#include "src/core/lib/iomgr/resolve_address.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
-#include "src/core/lib/channel/channel_args.h"
-#include "src/core/ext/filters/client_channel/client_channel.h"
-#include "src/core/ext/filters/client_channel/resolver_registry.h"
-#include "src/core/lib/iomgr/combiner.h"
+#include "src/core/lib/support/env.h"
+#include "src/core/lib/support/string.h"
+#include "test/core/util/test_config.h"
 
 extern void grpc_resolver_dns_ares_init();
 extern void grpc_resolver_dns_ares_shutdown();
@@ -62,7 +62,7 @@ typedef struct string_list_node {
   struct string_list_node *next;
 } string_list_node;
 
-static string_list_node* parse_expected(char *expected_ips) {
+static string_list_node *parse_expected(char *expected_ips) {
   char *p = expected_ips;
   string_list_node *prev_head = NULL;
   string_list_node *new_node = NULL;
@@ -90,11 +90,13 @@ static string_list_node* parse_expected(char *expected_ips) {
 
 static int matches_any(char *found_ip, string_list_node *candidates_head) {
   while (candidates_head != NULL) {
-    if (!candidates_head->matched && gpr_stricmp(candidates_head->target, found_ip) == 0) {
+    if (!candidates_head->matched &&
+        gpr_stricmp(candidates_head->target, found_ip) == 0) {
       candidates_head->matched = 1;
       return 1;
     }
-    gpr_log(GPR_INFO, "%s didn't match ip: %s", candidates_head->target, found_ip);
+    gpr_log(GPR_INFO, "%s didn't match ip: %s", candidates_head->target,
+            found_ip);
     candidates_head = candidates_head->next;
   }
   gpr_log(GPR_INFO, "no match found for ip: %s", found_ip);
@@ -115,7 +117,7 @@ static char *dup_maybe_remove_zone_id(char *addr) {
   int i = 0;
   while (addr[i]) {
     if (addr[i] == '%') {
-      return out; 
+      return out;
     }
     out[i] = addr[i];
     i++;
@@ -205,10 +207,12 @@ static void poll_pollset_until_request_done(args_struct *args) {
   gpr_event_set(&args->ev, (void *)1);
 }
 
-static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx, void *argsp, grpc_error *err) {
+static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
+                                                void *argsp, grpc_error *err) {
   args_struct *args = argsp;
   grpc_channel_args *channel_args = args->channel_args;
-  const grpc_arg *channel_arg = grpc_channel_args_find(channel_args, GRPC_ARG_LB_ADDRESSES);
+  const grpc_arg *channel_arg =
+      grpc_channel_args_find(channel_args, GRPC_ARG_LB_ADDRESSES);
   GPR_ASSERT(channel_arg != NULL);
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
@@ -244,15 +248,17 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
 
   args->channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
 
-  grpc_resolver *resolver = grpc_resolver_create(exec_ctx, new_arg.value.string, args->channel_args,
-    args->pollset_set, args->lock);
+  grpc_resolver *resolver =
+      grpc_resolver_create(exec_ctx, new_arg.value.string, args->channel_args,
+                           args->pollset_set, args->lock);
 
   grpc_closure on_resolver_result_changed;
   grpc_closure_init(&on_resolver_result_changed,
-      check_channel_arg_srv_result_locked, (void*)args,
-      grpc_combiner_scheduler(args->lock));
+                    check_channel_arg_srv_result_locked, (void *)args,
+                    grpc_combiner_scheduler(args->lock));
 
-  grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args, &on_resolver_result_changed);
+  grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args,
+                            &on_resolver_result_changed);
 
   grpc_exec_ctx_flush(exec_ctx);
   poll_pollset_until_request_done(args);
@@ -263,7 +269,7 @@ static void test_resolves_backend(char *name, char *expected_ips) {
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 0;
-  args.target_name = name; // "mytestlb.test.apolcyntest";
+  args.target_name = name;  // "mytestlb.test.apolcyntest";
   args.expected_ips_head = parse_expected(expected_ips);
 
   test_resolves(&exec_ctx, &args);
@@ -276,7 +282,7 @@ static void test_resolves_balancer(char *name, char *expected_ips) {
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 1;
-  args.target_name = name; // "mylbtest.test.apolcyntest";
+  args.target_name = name;  // "mylbtest.test.apolcyntest";
   args.expected_ips_head = parse_expected(expected_ips);
 
   test_resolves(&exec_ctx, &args);
@@ -290,7 +296,8 @@ int main(int argc, char **argv) {
   char *srv_record_name = gpr_getenv("GRPC_DNS_TEST_SRV_RECORD_NAME");
   char *expected_ips = gpr_getenv("GRPC_DNS_TEST_EXPECTED_IPS");
 
-  gpr_log(GPR_INFO, "running dns end2end test on resolver %s", gpr_getenv("GRPC_DNS_RESOLVER"));
+  gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
+          gpr_getenv("GRPC_DNS_RESOLVER"));
 
   if (expected_ips == NULL || strlen(expected_ips) == 0) {
     gpr_log(GPR_INFO, "expected ips param not passed in");
