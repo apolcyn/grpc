@@ -152,7 +152,7 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_pollset_set_add_pollset(exec_ctx, args->pollset_set, args->pollset);
   args->addrs = NULL;
   args->lb_addrs = NULL;
-  args->lock = grpc_combiner_create(NULL);
+  args->lock = grpc_combiner_create();
   gpr_atm_rel_store(&args->done_atm, 0);
   args->channel_args = NULL;
 }
@@ -250,7 +250,7 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_closure on_resolver_result_changed;
   grpc_closure_init(&on_resolver_result_changed,
       check_channel_arg_srv_result_locked, (void*)args,
-      grpc_combiner_scheduler(args->lock, false));
+      grpc_combiner_scheduler(args->lock));
 
   grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args, &on_resolver_result_changed);
 
