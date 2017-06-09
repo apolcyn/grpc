@@ -106,16 +106,16 @@ def shortname(name, cmd):
 class CLanguage(object):
   def __init__(self):
     self.name = 'c-core'
+    self.build_config = config = os.environ.get('CONFIG', None) or 'dbg'
 
   def build_cmd(self):
     cmd = 'make resolve_srv_records CC=gcc CXX=g++ LD=gcc LDXX=g++'.split(' ')
-    config = os.environ.get('CONFIG', None);
-    env = { 'CONFIG': config or 'dbg' }
+    env = { 'CONFIG': self.build_config }
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd), environ=env)]
 
   def test_runner_cmd(self):
     specs = []
-    cmd = [_ROOT + '/bins/dbg/resolve_srv_records']
+    cmd = ['%s/bins/%s/resolve_srv_records' % (_ROOT, self.build_config)]
     for r in dns_records_config.DNS_RECORDS:
       if r.record_type == 'SRV':
         for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
@@ -136,7 +136,7 @@ class JavaLanguage(object):
 
   def build_cmd(self):
     cmd = 'echo TODO: add java build cmd'.split(' ')
-    return [jobset.JobSpec(cmd, shortname=l.name)]
+    return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd))]
 
   def test_runner_cmd(self):
     cmd = 'echo TODO: add java test runner cmd'.split(' ')
