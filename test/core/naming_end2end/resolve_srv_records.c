@@ -16,7 +16,6 @@
  *
  */
 
-
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/host_port.h>
