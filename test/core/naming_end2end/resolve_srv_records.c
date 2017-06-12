@@ -283,6 +283,14 @@ int main(int argc, char **argv) {
 
   gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
           gpr_getenv("GRPC_DNS_RESOLVER"));
+  gpr_log(GPR_INFO,
+          "testing arguments (as environment variables):\n"
+          "    GRPC_DNS_TEST_IP_RECORD_NAME=%s\n"
+          "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
+          "    GRPC_DNS_TEST_EXPECTED_IPS=%s\n",
+          ip_record_name ? ip_record_name : "",
+          srv_record_name ? srv_record_name : "",
+          expected_ips ? expected_ips : "");
 
   if (expected_ips == NULL || strlen(expected_ips) == 0) {
     gpr_log(GPR_INFO, "expected ips param not passed in");

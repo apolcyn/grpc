@@ -112,6 +112,7 @@ class CLanguage(object):
                  'GRPC_VERBOSITY': 'DEBUG',
                  'GRPC_DNS_RESOLVER': resolver,
                  'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name.replace('_grpclb._tcp.', ''),
+                 'GRPC_DNS_TEST_IP_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
                  'GRPC_DNS_TEST_EXPECTED_IPS': expected_ips}
           specs.append(jobset.JobSpec(cmd,
                                       shortname=shortname(l.name, cmd),
