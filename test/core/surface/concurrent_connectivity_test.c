@@ -76,6 +76,10 @@ void create_loop_destroy(void *addr) {
       GPR_ASSERT(grpc_channel_num_external_connectivity_watchers(chan) == 0);
     }
     grpc_channel_destroy(chan);
+    grpc_completion_queue_shutdown(cq);
+    GPR_ASSERT(
+        grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), NULL)
+            .type == GRPC_QUEUE_SHUTDOWN);
     grpc_completion_queue_destroy(cq);
   }
 }
@@ -207,6 +211,10 @@ int run_concurrent_connectivity_test() {
 
   gpr_thd_join(server);
   grpc_server_destroy(args.server);
+  grpc_completion_queue_shutdown(args.cq);
+  GPR_ASSERT(grpc_completion_queue_next(
+                 args.cq, gpr_inf_future(GPR_CLOCK_REALTIME), NULL)
+                 .type == GRPC_QUEUE_SHUTDOWN);
   grpc_completion_queue_destroy(args.cq);
   gpr_free(args.addr);
 
@@ -258,6 +266,10 @@ void watches_with_short_timeouts(void *addr) {
       GPR_ASSERT(grpc_channel_num_external_connectivity_watchers(chan) == 0);
     }
     grpc_channel_destroy(chan);
+    grpc_completion_queue_shutdown(cq);
+    GPR_ASSERT(
+        grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), NULL)
+            .type == GRPC_QUEUE_SHUTDOWN);
     grpc_completion_queue_destroy(cq);
   }
 }
