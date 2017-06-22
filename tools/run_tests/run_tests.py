@@ -847,18 +847,36 @@ class RubyLanguage(object):
         _check_compiler(self.args.compiler, ['default'])
 
     def test_specs(self):
-        tests = [
-            self.config.job_spec(
-                ['tools/run_tests/helper_scripts/run_ruby.sh'],
-                timeout_seconds=10 * 60,
-                environ=_FORCE_ENVIRON_FOR_WRAPPERS)
-        ]
-        tests.append(
-            self.config.job_spec(
-                ['tools/run_tests/helper_scripts/run_ruby_end2end_tests.sh'],
-                timeout_seconds=10 * 60,
-                environ=_FORCE_ENVIRON_FOR_WRAPPERS))
-        return tests
+        if self.args.config == 'asan-dynamic':
+          env = {}
+          for k in _FORCE_ENVIRON_FOR_WRAPPERS.keys():
+            env[k] = _FORCE_ENVIRON_FOR_WRAPPERS[k]
+
+          env['ASAN_SYMBOLIZER_PATH'] = '/usr/bin/llvm-symbolizer-3.5'
+          env['LD_PRELOAD'] = '/usr/lib/gcc/x86_64-linux-gnu/4.9/libasan.so'
+          env['ASAN_OPTIONS'] = 'detect_leaks=1,symbolize=1'
+          env['LSAN_OPTIONS'] = 'suppressions=/var/local/git/grpc/tools/ruby_lsan_suppressions.txt'
+
+          job_specs = []
+          with open('src/ruby/spec/tests.txt') as f:
+            files = f.readlines()
+            for relative_name in files:
+              assert relative_name.strip()
+              test_file = os.path.join('src/ruby/spec', relative_name.strip())
+              job_specs.append(self.config.job_spec(['rspec', test_file],
+                                                    timeout_seconds=4*60,
+                                                    environ=env,
+                                                    shortname='%s-ruby-asan-dynamic' % test_file))
+          return job_specs
+        else:
+  
+          tests = [self.config.job_spec(['tools/run_tests/helper_scripts/run_ruby.sh'],
+                                        timeout_seconds=10*60,
+                                        environ=_FORCE_ENVIRON_FOR_WRAPPERS)]
+          tests.append(self.config.job_spec(['tools/run_tests/helper_scripts/run_ruby_end2end_tests.sh'],
+                       timeout_seconds=10*60,
+                       environ=_FORCE_ENVIRON_FOR_WRAPPERS))
+          return tests
 
     def pre_build_steps(self):
         return [['tools/run_tests/helper_scripts/pre_build_ruby.sh']]
@@ -879,8 +897,10 @@ class RubyLanguage(object):
         return 'Makefile'
 
     def dockerfile_dir(self):
-        return 'tools/dockerfile/test/ruby_jessie_%s' % _docker_arch_suffix(
-            self.args.arch)
+        if self.args.config == 'asan-dynamic':
+          return 'tools/dockerfile/test/asan_ruby_jessie_x64'
+
+        return 'tools/dockerfile/test/ruby_jessie_%s' % _docker_arch_suffix(self.args.arch)
 
     def __str__(self):
         return 'ruby'

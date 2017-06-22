@@ -87,6 +87,13 @@ if grpc_config == 'dbg'
   $CFLAGS << ' -O0'
 end
 
+if grpc_config == 'asan-dynamic'
+  $CFLAGS << ' -O0'
+  $CFLAGS << ' -g '
+  $CFLAGS << ' -fno-omit-frame-pointer '
+  $CFLAGS << ' -fsanitize=address '
+end
+
 $LDFLAGS << ' -Wl,-wrap,memcpy' if RUBY_PLATFORM =~ /linux/
 $LDFLAGS << ' -static' if windows
 
