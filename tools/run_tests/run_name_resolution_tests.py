@@ -87,8 +87,11 @@ def sanity_check_dns_records(dns_records):
         expected_data=expected_data)
 
 
-def shortname(name, cmd):
-  return '%s - %s' % (name, ' '.join(cmd))
+def shortname(name, cmd, environ={}):
+  env_str = ''
+  for k in environ.keys():
+    env_str += '%s=%s,' % (k, environ[k])
+  return '%s - %s - %s' % (name, ' '.join(cmd), env_str)
 
 
 class CLanguage(object):
@@ -115,7 +118,7 @@ class CLanguage(object):
                  'GRPC_DNS_TEST_IP_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
                  'GRPC_DNS_TEST_EXPECTED_IPS': expected_ips}
           specs.append(jobset.JobSpec(cmd,
-                                      shortname=shortname(l.name, cmd),
+                                      shortname=shortname(l.name, cmd, environ=env),
                                       environ=env))
     return specs
 
