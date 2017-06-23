@@ -20,8 +20,6 @@ set -ex
 
 cd $(dirname $0)
 
-DNS_NAME=test.apolcyntest.
-ZONE_NAME=
+cd ../..
 
-# creates a DNS private zone in GCE
-gcloud alpha dns managed-zones create --dns-name="$DNS_NAME" --description="A zone" "$ZONE_NAME" --visibility=private --networks=default
+python tools/run_tests/name_resolution/create_private_dns_zone.py "$@"

@@ -18,8 +18,8 @@
 
 # Source of truth for DNS records used in testing on GCE
 
-ZONE_DNS = 'test.expgrpctesting.'
-ZONE_NAME = 'exp-grcp-testing'
+ZONE_DNS = 'test.grpctestingexp.'
+ZONE_NAME = 'exp-grpc-testing'
 TTL = '2100'
 
 SRV_PORT='1234'

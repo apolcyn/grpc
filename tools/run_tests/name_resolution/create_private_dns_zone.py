@@ -38,7 +38,7 @@ def main():
          '--description="GCE-DNS-private-zone-for-GRPC-testing" '
          '--visibility=private '
          '--networks=default') % (dns_records_config.ZONE_NAME,
-                                   dns_records_config.ZONE_DNS)
+                                  dns_records_config.ZONE_DNS)
 
   if args.dry_run:
     print(cmd)
