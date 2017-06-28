@@ -59,36 +59,38 @@ def _create_records_for_testing():
   return records
 
 def srv_record_target_name(srv_record):
+  # extract host from "priority weight port host" srv data
   return srv_record.record_data.split(' ')[3]
 
 def srv_record_target_port(srv_record):
+  # extract port from "priority weight port host" srv data
   return srv_record.record_data.split(' ')[2]
 
-def ip_record_address(ip_record_name, dns_records):
+def a_record_target_ip(ip_record_name, dns_records):
   for r in dns_records:
     if r.record_name == ip_record_name:
       return r.record_data
-  raise(Exception('no ip record found for target of srv record: %s' % srv_record.record_name))
+  raise(Exception('no A/AAAA record found for target of srv record: %s' % srv_record.record_name))
 
-def ip_record_type(ip_record_name, dns_records):
+def a_record_type(ip_record_name, dns_records):
   for r in dns_records:
     if r.record_name == ip_record_name:
       return r.record_type
-  raise(Exception('no ip record found matching: %s' % ip_record_name))
+  raise(Exception('no A/AAAA record found matching: %s' % ip_record_name))
 
 def expected_result_for_srv_record(srv_record, dns_records):
-  target_name = srv_record_target_name(srv_record)
-  ip_addrs = ip_record_address(target_name, dns_records)
-  with_ports = [] 
-  port = srv_record_target_port(srv_record)
-  target_record_type = ip_record_type(target_name, dns_records)
+  srv_target_name = srv_record_target_name(srv_record)
+  ip_addrs = a_record_target_ip(srv_target_name, dns_records)
+  with_ports = []
+  srv_target_port = srv_record_target_port(srv_record)
+  target_record_type = a_record_type(srv_target_name, dns_records)
   for ip in ip_addrs.split(','):
     if target_record_type == 'A':
-      with_ports.append('%s:%s' % (ip, port))
+      with_ports.append('%s:%s' % (ip, srv_target_port))
     else:
       assert target_record_type == 'AAAA'
-      with_ports.append('[%s]:%s' % (ip, port))
-      
+      with_ports.append('[%s]:%s' % (ip, srv_target_port))
+
   return ','.join(with_ports)
 
 

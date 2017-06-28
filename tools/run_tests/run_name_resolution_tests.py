@@ -62,7 +62,7 @@ def check_dns_record(command, expected_data):
   for l in lines:
     l = l.strip()
     if l == ';; ANSWER SECTION:':
-      found = i # re.split('\s+', lines[i + 1])
+      found = i
       break
     i += 1
 
@@ -110,12 +110,12 @@ class CLanguage(object):
     for r in dns_records_config.DNS_RECORDS:
       if r.record_type == 'SRV':
         for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
-          expected_addrs = dns_records_config.expected_result_for_srv_record(r, dns_records_config.DNS_RECORDS) 
+          expected_addrs = dns_records_config.expected_result_for_srv_record(r, dns_records_config.DNS_RECORDS)
           env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
                  'GRPC_VERBOSITY': 'DEBUG',
                  'GRPC_DNS_RESOLVER': resolver,
                  'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name.replace('_grpclb._tcp.', ''),
-                 'GRPC_DNS_TEST_IP_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
+                 'GRPC_DNS_TEST_A_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
                  'GRPC_DNS_TEST_EXPECTED_ADDRS': expected_addrs}
           specs.append(jobset.JobSpec(cmd,
                                       shortname=shortname(l.name, cmd, environ=env),

@@ -73,18 +73,19 @@ static string_list_node *parse_expected(char *expected_addrs) {
   return new_node;
 }
 
-static int matches_any(char *found_ip, string_list_node *candidates_head) {
+static int matches_any(char *result_address,
+                       string_list_node *candidates_head) {
   while (candidates_head != NULL) {
     if (!candidates_head->matched &&
-        gpr_stricmp(candidates_head->target, found_ip) == 0) {
+        gpr_stricmp(candidates_head->target, result_address) == 0) {
       candidates_head->matched = 1;
       return 1;
     }
     gpr_log(GPR_INFO, "%s didn't match address: %s", candidates_head->target,
-            found_ip);
+            result_address);
     candidates_head = candidates_head->next;
   }
-  gpr_log(GPR_INFO, "no match found for address: %s", found_ip);
+  gpr_log(GPR_INFO, "no match found for address: %s", result_address);
   return 0;
 }
 
@@ -250,7 +251,7 @@ static void test_resolves_balancer(char *name, char *expected_addrs) {
 
 int main(int argc, char **argv) {
   grpc_init();
-  char *ip_record_name = gpr_getenv("GRPC_DNS_TEST_IP_RECORD_NAME");
+  char *a_record_name = gpr_getenv("GRPC_DNS_TEST_A_RECORD_NAME");
   char *srv_record_name = gpr_getenv("GRPC_DNS_TEST_SRV_RECORD_NAME");
   char *expected_addrs = gpr_getenv("GRPC_DNS_TEST_EXPECTED_ADDRS");
 
@@ -258,10 +259,10 @@ int main(int argc, char **argv) {
           gpr_getenv("GRPC_DNS_RESOLVER"));
   gpr_log(GPR_INFO,
           "testing arguments (as environment variables):\n"
-          "    GRPC_DNS_TEST_IP_RECORD_NAME=%s\n"
+          "    GRPC_DNS_TEST_A_RECORD_NAME=%s\n"
           "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
           "    GRPC_DNS_TEST_EXPECTED_ADDRS=%s\n",
-          ip_record_name ? ip_record_name : "",
+          a_record_name ? a_record_name : "",
           srv_record_name ? srv_record_name : "",
           expected_addrs ? expected_addrs : "");
 
@@ -270,13 +271,13 @@ int main(int argc, char **argv) {
   }
   if (srv_record_name && strlen(srv_record_name) != 0) {
     gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
-    gpr_log(GPR_INFO, "    expect IPS: %s", expected_addrs);
+    gpr_log(GPR_INFO, "    expect balancer addresses: %s", expected_addrs);
     test_resolves_balancer(srv_record_name, expected_addrs);
   }
-  if (ip_record_name && strlen(ip_record_name) != 0) {
-    gpr_log(GPR_INFO, "    attempt to resolve: %s", ip_record_name);
-    gpr_log(GPR_INFO, "    expect IPS: %s", expected_addrs);
-    test_resolves_backend(ip_record_name, expected_addrs);
+  if (a_record_name && strlen(a_record_name) != 0) {
+    gpr_log(GPR_INFO, "    attempt to resolve: %s", a_record_name);
+    gpr_log(GPR_INFO, "    expect backend addresses: %s", expected_addrs);
+    test_resolves_backend(a_record_name, expected_addrs);
   }
   grpc_shutdown();
   return 0;
