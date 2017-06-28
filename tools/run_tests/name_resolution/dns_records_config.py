@@ -58,10 +58,38 @@ def _create_records_for_testing():
   ]
   return records
 
-def get_expected_ip_end_results_for_srv_record(srv_record, dns_records):
+def srv_record_target_name(srv_record):
+  return srv_record.record_data.split(' ')[3]
+
+def srv_record_target_port(srv_record):
+  return srv_record.record_data.split(' ')[2]
+
+def ip_record_address(ip_record_name, dns_records):
   for r in dns_records:
-    if r.record_name == srv_record.record_data.split(' ')[3]:
+    if r.record_name == ip_record_name:
       return r.record_data
   raise(Exception('no ip record found for target of srv record: %s' % srv_record.record_name))
+
+def ip_record_type(ip_record_name, dns_records):
+  for r in dns_records:
+    if r.record_name == ip_record_name:
+      return r.record_type
+  raise(Exception('no ip record found matching: %s' % ip_record_name))
+
+def expected_result_for_srv_record(srv_record, dns_records):
+  target_name = srv_record_target_name(srv_record)
+  ip_addrs = ip_record_address(target_name, dns_records)
+  with_ports = [] 
+  port = srv_record_target_port(srv_record)
+  target_record_type = ip_record_type(target_name, dns_records)
+  for ip in ip_addrs.split(','):
+    if target_record_type == 'A':
+      with_ports.append('%s:%s' % (ip, port))
+    else:
+      assert target_record_type == 'AAAA'
+      with_ports.append('[%s]:%s' % (ip, port))
+      
+  return ','.join(with_ports)
+
 
 DNS_RECORDS = _create_records_for_testing()

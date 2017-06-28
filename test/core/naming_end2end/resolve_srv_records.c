@@ -47,8 +47,8 @@ typedef struct string_list_node {
   struct string_list_node *next;
 } string_list_node;
 
-static string_list_node *parse_expected(char *expected_ips) {
-  char *p = expected_ips;
+static string_list_node *parse_expected(char *expected_addrs) {
+  char *p = expected_addrs;
   string_list_node *prev_head = NULL;
   string_list_node *new_node = NULL;
 
@@ -61,7 +61,7 @@ static string_list_node *parse_expected(char *expected_ips) {
     } else {
       if (new_node == NULL) {
         new_node = gpr_zalloc(sizeof(string_list_node));
-        new_node->target = gpr_zalloc(strlen(expected_ips) + 1);
+        new_node->target = gpr_zalloc(strlen(expected_addrs) + 1);
       }
       new_node->target[new_node->length++] = *p;
     }
@@ -97,19 +97,6 @@ static size_t list_size(string_list_node *head) {
   return count;
 }
 
-static char *dup_maybe_remove_zone_id(char *addr) {
-  char *out = gpr_zalloc(strlen(addr) + 1);
-  int i = 0;
-  while (addr[i]) {
-    if (addr[i] == '%') {
-      return out;
-    }
-    out[i] = addr[i];
-    i++;
-  }
-  return out;
-}
-
 static gpr_timespec test_deadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
 }
@@ -126,7 +113,7 @@ typedef struct args_struct {
   grpc_channel_args *channel_args;
   int expect_is_balancer;
   char *target_name;
-  string_list_node *expected_ips_head;
+  string_list_node *expected_addrs_head;
 } args_struct;
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
@@ -202,22 +189,22 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
   gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
-  gpr_log(GPR_INFO, "list size: %d", (int)list_size(args->expected_ips_head));
+  gpr_log(GPR_INFO, "list size: %d", (int)list_size(args->expected_addrs_head));
 
-  GPR_ASSERT(addresses->num_addresses == list_size(args->expected_ips_head));
+  GPR_ASSERT(addresses->num_addresses == list_size(args->expected_addrs_head));
   for (size_t i = 0; i < addresses->num_addresses; i++) {
     grpc_lb_address addr = addresses->addresses[i];
     char *str;
     grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
     gpr_log(GPR_INFO, "%s", str);
-    char *host;
-    char *port;
-    gpr_split_host_port(str, &host, &port);
-    char *cleaned = dup_maybe_remove_zone_id(host);
+    //char *host;
+    //char *port;
+    //gpr_split_host_port(str, &host, &port);
+    //gpr_log(GPR_INFO, "PORT -- %s", port);
+    //char *cleaned = dup_maybe_remove_zone_id(host);
     // TODO(apolcyn) figure out what to do with the port
     GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
-    GPR_ASSERT(matches_any(cleaned, args->expected_ips_head));
-    gpr_free(cleaned);
+    GPR_ASSERT(matches_any(str, args->expected_addrs_head));
   }
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
@@ -249,26 +236,26 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   poll_pollset_until_request_done(args);
 }
 
-static void test_resolves_backend(char *name, char *expected_ips) {
+static void test_resolves_backend(char *name, char *expected_addrs) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 0;
   args.target_name = name;  // "mytestlb.test.apolcyntest";
-  args.expected_ips_head = parse_expected(expected_ips);
+  args.expected_addrs_head = parse_expected(expected_addrs);
 
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-static void test_resolves_balancer(char *name, char *expected_ips) {
+static void test_resolves_balancer(char *name, char *expected_addrs) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 1;
   args.target_name = name;  // "mylbtest.test.apolcyntest";
-  args.expected_ips_head = parse_expected(expected_ips);
+  args.expected_addrs_head = parse_expected(expected_addrs);
 
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
@@ -279,7 +266,7 @@ int main(int argc, char **argv) {
   grpc_init();
   char *ip_record_name = gpr_getenv("GRPC_DNS_TEST_IP_RECORD_NAME");
   char *srv_record_name = gpr_getenv("GRPC_DNS_TEST_SRV_RECORD_NAME");
-  char *expected_ips = gpr_getenv("GRPC_DNS_TEST_EXPECTED_IPS");
+  char *expected_addrs = gpr_getenv("GRPC_DNS_TEST_EXPECTED_ADDRS");
 
   gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
           gpr_getenv("GRPC_DNS_RESOLVER"));
@@ -287,23 +274,23 @@ int main(int argc, char **argv) {
           "testing arguments (as environment variables):\n"
           "    GRPC_DNS_TEST_IP_RECORD_NAME=%s\n"
           "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
-          "    GRPC_DNS_TEST_EXPECTED_IPS=%s\n",
+          "    GRPC_DNS_TEST_EXPECTED_ADDRS=%s\n",
           ip_record_name ? ip_record_name : "",
           srv_record_name ? srv_record_name : "",
-          expected_ips ? expected_ips : "");
+          expected_addrs ? expected_addrs : "");
 
-  if (expected_ips == NULL || strlen(expected_ips) == 0) {
-    gpr_log(GPR_INFO, "expected ips param not passed in");
+  if (expected_addrs == NULL || strlen(expected_addrs) == 0) {
+    gpr_log(GPR_INFO, "expected addresses param not passed in");
   }
   if (srv_record_name && strlen(srv_record_name) != 0) {
     gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
-    gpr_log(GPR_INFO, "    expect IPS: %s", expected_ips);
-    test_resolves_balancer(srv_record_name, expected_ips);
+    gpr_log(GPR_INFO, "    expect IPS: %s", expected_addrs);
+    test_resolves_balancer(srv_record_name, expected_addrs);
   }
   if (ip_record_name && strlen(ip_record_name) != 0) {
     gpr_log(GPR_INFO, "    attempt to resolve: %s", ip_record_name);
-    gpr_log(GPR_INFO, "    expect IPS: %s", expected_ips);
-    test_resolves_backend(ip_record_name, expected_ips);
+    gpr_log(GPR_INFO, "    expect IPS: %s", expected_addrs);
+    test_resolves_backend(ip_record_name, expected_addrs);
   }
   grpc_shutdown();
   return 0;

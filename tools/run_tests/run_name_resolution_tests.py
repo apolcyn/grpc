@@ -110,13 +110,13 @@ class CLanguage(object):
     for r in dns_records_config.DNS_RECORDS:
       if r.record_type == 'SRV':
         for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
-          expected_ips = dns_records_config.get_expected_ip_end_results_for_srv_record(r, dns_records_config.DNS_RECORDS)
+          expected_addrs = dns_records_config.expected_result_for_srv_record(r, dns_records_config.DNS_RECORDS) 
           env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
                  'GRPC_VERBOSITY': 'DEBUG',
                  'GRPC_DNS_RESOLVER': resolver,
                  'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name.replace('_grpclb._tcp.', ''),
                  'GRPC_DNS_TEST_IP_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
-                 'GRPC_DNS_TEST_EXPECTED_IPS': expected_ips}
+                 'GRPC_DNS_TEST_EXPECTED_ADDRS': expected_addrs}
           specs.append(jobset.JobSpec(cmd,
                                       shortname=shortname(l.name, cmd, environ=env),
                                       environ=env))
