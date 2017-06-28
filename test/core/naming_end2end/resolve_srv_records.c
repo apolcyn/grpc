@@ -80,11 +80,11 @@ static int matches_any(char *found_ip, string_list_node *candidates_head) {
       candidates_head->matched = 1;
       return 1;
     }
-    gpr_log(GPR_INFO, "%s didn't match ip: %s", candidates_head->target,
+    gpr_log(GPR_INFO, "%s didn't match address: %s", candidates_head->target,
             found_ip);
     candidates_head = candidates_head->next;
   }
-  gpr_log(GPR_INFO, "no match found for ip: %s", found_ip);
+  gpr_log(GPR_INFO, "no match found for address: %s", found_ip);
   return 0;
 }
 
@@ -103,8 +103,6 @@ static gpr_timespec test_deadline(void) {
 
 typedef struct args_struct {
   gpr_event ev;
-  grpc_resolved_addresses *addrs;
-  grpc_lb_addresses *lb_addrs;
   gpr_atm done_atm;
   gpr_mu *mu;
   grpc_pollset *pollset;
@@ -124,8 +122,6 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_pollset_init(args->pollset, &args->mu);
   args->pollset_set = grpc_pollset_set_create();
   grpc_pollset_set_add_pollset(exec_ctx, args->pollset_set, args->pollset);
-  args->addrs = NULL;
-  args->lb_addrs = NULL;
   args->lock = grpc_combiner_create();
   gpr_atm_rel_store(&args->done_atm, 0);
   args->channel_args = NULL;
@@ -133,7 +129,6 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
 
 void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   GPR_ASSERT(gpr_event_wait(&args->ev, test_deadline()));
-  grpc_resolved_addresses_destroy(args->addrs);
   grpc_pollset_set_del_pollset(exec_ctx, args->pollset_set, args->pollset);
   grpc_pollset_set_destroy(exec_ctx, args->pollset_set);
   grpc_closure do_nothing_cb;
@@ -144,9 +139,6 @@ void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_exec_ctx_flush(exec_ctx);
   grpc_pollset_destroy(exec_ctx, args->pollset);
   gpr_free(args->pollset);
-  if (args->lb_addrs) {
-    grpc_lb_addresses_destroy(exec_ctx, args->lb_addrs);
-  }
 }
 
 static gpr_timespec n_sec_deadline(int seconds) {
@@ -188,8 +180,7 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   GPR_ASSERT(channel_arg != NULL);
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
-  gpr_log(GPR_INFO, "num addrs: %d", (int)addresses->num_addresses);
-  gpr_log(GPR_INFO, "list size: %d", (int)list_size(args->expected_addrs_head));
+  gpr_log(GPR_INFO, "num addrs found: %d. expected %" PRIdPTR, (int)addresses->num_addresses, list_size(args->expected_addrs_head));
 
   GPR_ASSERT(addresses->num_addresses == list_size(args->expected_addrs_head));
   for (size_t i = 0; i < addresses->num_addresses; i++) {
@@ -197,12 +188,6 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
     char *str;
     grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
     gpr_log(GPR_INFO, "%s", str);
-    //char *host;
-    //char *port;
-    //gpr_split_host_port(str, &host, &port);
-    //gpr_log(GPR_INFO, "PORT -- %s", port);
-    //char *cleaned = dup_maybe_remove_zone_id(host);
-    // TODO(apolcyn) figure out what to do with the port
     GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
     GPR_ASSERT(matches_any(str, args->expected_addrs_head));
   }
@@ -241,7 +226,7 @@ static void test_resolves_backend(char *name, char *expected_addrs) {
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 0;
-  args.target_name = name;  // "mytestlb.test.apolcyntest";
+  args.target_name = name;
   args.expected_addrs_head = parse_expected(expected_addrs);
 
   test_resolves(&exec_ctx, &args);
@@ -254,7 +239,7 @@ static void test_resolves_balancer(char *name, char *expected_addrs) {
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 1;
-  args.target_name = name;  // "mylbtest.test.apolcyntest";
+  args.target_name = name;
   args.expected_addrs_head = parse_expected(expected_addrs);
 
   test_resolves(&exec_ctx, &args);
