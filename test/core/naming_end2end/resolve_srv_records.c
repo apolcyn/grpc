@@ -180,7 +180,8 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   GPR_ASSERT(channel_arg != NULL);
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = channel_arg->value.pointer.p;
-  gpr_log(GPR_INFO, "num addrs found: %d. expected %" PRIdPTR, (int)addresses->num_addresses, list_size(args->expected_addrs_head));
+  gpr_log(GPR_INFO, "num addrs found: %d. expected %" PRIdPTR,
+          (int)addresses->num_addresses, list_size(args->expected_addrs_head));
 
   GPR_ASSERT(addresses->num_addresses == list_size(args->expected_addrs_head));
   for (size_t i = 0; i < addresses->num_addresses; i++) {
