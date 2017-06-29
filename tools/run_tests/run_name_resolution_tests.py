@@ -104,22 +104,50 @@ class CLanguage(object):
     env = { 'CONFIG': self.build_config }
     return [jobset.JobSpec(cmd, shortname=shortname(l.name, cmd), environ=env)]
 
+  def create_ares_srv_jobspec(self, srv_record, cmd):
+    expected_addrs = dns_records_config.expected_result_for_srv_record(
+      srv_record, dns_records_config.DNS_RECORDS)
+    grpc_ares_friendly_name = srv_record.record_name.replace(
+      '_grpclb._tcp.', '')
+    env = {
+      'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
+      'GRPC_VERBOSITY': 'DEBUG',
+      'GRPC_DNS_RESOLVER': 'ares',
+      'GRPC_DNS_TEST_SRV_RECORD_NAME': grpc_ares_friendly_name,
+      'GRPC_DNS_TEST_A_RECORD_NAME': '',
+      'GRPC_DNS_TEST_EXPECTED_ADDRS': expected_addrs
+    }
+    return jobset.JobSpec(cmd,
+                          shortname=shortname(self.name, cmd, environ=env),
+                          environ=env)
+
+  def create_a_record_jobspec(self, a_record, resolver, cmd):
+    assert a_record.record_type == 'A' or a_record.record_type == 'AAAA'
+    expected_addrs = dns_records_config.expected_result_for_a_record(
+      a_record)
+    env = {
+      'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
+      'GRPC_VERBOSITY': 'DEBUG',
+      'GRPC_DNS_RESOLVER': resolver,
+      'GRPC_DNS_TEST_SRV_RECORD_NAME': '',
+      'GRPC_DNS_TEST_A_RECORD_NAME': a_record.record_name,
+      'GRPC_DNS_TEST_EXPECTED_ADDRS': expected_addrs,
+    }
+    return jobset.JobSpec(cmd,
+                          shortname=shortname(self.name, cmd, environ=env),
+                          environ=env)
+
   def test_runner_cmd(self):
     specs = []
     cmd = ['%s/bins/%s/resolve_srv_records' % (_ROOT, self.build_config)]
     for r in dns_records_config.DNS_RECORDS:
       if r.record_type == 'SRV':
-        for resolver in ['ares']: #TDOO(apolcyn) also use native resolver
-          expected_addrs = dns_records_config.expected_result_for_srv_record(r, dns_records_config.DNS_RECORDS)
-          env = {'GRPC_POLL_STRATEGY': 'all', #TODO(apolcyn) change this?
-                 'GRPC_VERBOSITY': 'DEBUG',
-                 'GRPC_DNS_RESOLVER': resolver,
-                 'GRPC_DNS_TEST_SRV_RECORD_NAME': r.record_name.replace('_grpclb._tcp.', ''),
-                 'GRPC_DNS_TEST_A_RECORD_NAME': '', #TODO(apolcyn) add in plain A/AAAA resolution tests if needed
-                 'GRPC_DNS_TEST_EXPECTED_ADDRS': expected_addrs}
-          specs.append(jobset.JobSpec(cmd,
-                                      shortname=shortname(l.name, cmd, environ=env),
-                                      environ=env))
+        # SRV records are only currently resolveable by the ares resolver
+        specs.append(self.create_ares_srv_jobspec(r, cmd))
+      else:
+        assert r.record_type == 'A' or r.record_type == 'AAAA'
+        for resolver in ['native', 'ares']:
+          specs.append(self.create_a_record_jobspec(r, resolver, cmd))
     return specs
 
 class JavaLanguage(object):
