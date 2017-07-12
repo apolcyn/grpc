@@ -342,7 +342,7 @@ module GRPC
       # Create a new active call that knows that metadata hasn't been
       # sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true, started: false)
+                         metadata_received: true)
       c.send_status(GRPC::Core::StatusCodes::RESOURCE_EXHAUSTED, '')
       nil
     end
@@ -357,7 +357,7 @@ module GRPC
       # Create a new active call that knows that
       # metadata hasn't been sent yet
       c = ActiveCall.new(an_rpc.call, noop, noop, an_rpc.deadline,
-                         metadata_received: true, started: false)
+                         metadata_received: true)
       c.send_status(GRPC::Core::StatusCodes::UNIMPLEMENTED, '')
       nil
     end
@@ -416,7 +416,6 @@ module GRPC
                          rpc_desc.unmarshal_proc(:input),
                          an_rpc.deadline,
                          metadata_received: true,
-                         started: false,
                          metadata_to_send: connect_md)
       mth = an_rpc.method.to_sym
       [c, mth]

@@ -441,8 +441,7 @@ module GRPC
                              nil, # host use nil,
                              deadline)
       call.set_credentials! credentials unless credentials.nil?
-      ActiveCall.new(call, marshal, unmarshal, deadline,
-                     started: false)
+      ActiveCall.new(call, marshal, unmarshal, deadline)
     end
   end
 end

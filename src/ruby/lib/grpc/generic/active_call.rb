@@ -48,34 +48,14 @@ module GRPC
     def_delegators :@call, :cancel, :metadata, :write_flag, :write_flag=,
                    :peer, :peer_cert, :trailing_metadata
 
-    # client_invoke begins a client invocation.
-    #
-    # Flow Control note: this blocks until flow control accepts that client
-    # request can go ahead.
-    #
-    # deadline is the absolute deadline for the call.
-    #
-    # == Keyword Arguments ==
-    # any keyword arguments are treated as metadata to be sent to the server
-    # if a keyword value is a list, multiple metadata for it's key are sent
-    #
-    # @param call [Call] a call on which to start and invocation
-    # @param metadata [Hash] the metadata
-    def self.client_invoke(call, metadata = {})
-      fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
-      call.run_batch(SEND_INITIAL_METADATA => metadata)
-    end
-
     # Creates an ActiveCall.
     #
-    # ActiveCall should only be created after a call is accepted.  That
-    # means different things on a client and a server.  On the client, the
-    # call is accepted after calling call.invoke.  On the server, this is
-    # after call.accept.
-    #
-    # #initialize cannot determine if the call is accepted or not; so if a
-    # call that's not accepted is used here, the error won't be visible until
-    # the ActiveCall methods are called.
+    # ActiveCall should wrap a created call.
+    # That means different things on a client and a server
+    # On the client, the call is created from an earlier call to
+    # GRPC::Core::Channel#create_call.
+    # On the server, the call is created from an earlier call to
+    # GRPC::Core::Server#request_call.
     #
     # deadline is the absolute deadline for the call.
     #
@@ -83,22 +63,19 @@ module GRPC
     # @param marshal [Function] f(obj)->string that marshal requests
     # @param unmarshal [Function] f(string)->obj that unmarshals responses
     # @param deadline [Fixnum] the deadline for the call to complete
-    # @param started [true|false] indicates that metadata was sent
     # @param metadata_received [true|false] indicates if metadata has already
     #     been received. Should always be true for server calls
-    def initialize(call, marshal, unmarshal, deadline, started: true,
-                   metadata_received: false, metadata_to_send: nil)
+    def initialize(call, marshal, unmarshal, deadline,
+                   metadata_received: false, metadata_to_send: {})
       fail(TypeError, '!Core::Call') unless call.is_a? Core::Call
       @call = call
       @deadline = deadline
       @marshal = marshal
       @unmarshal = unmarshal
       @metadata_received = metadata_received
-      @metadata_sent = started
-      @op_notifier = nil
 
-      fail(ArgumentError, 'Already sent md') if started && metadata_to_send
-      @metadata_to_send = metadata_to_send || {} unless started
+      @metadata_sent = false
+      @metadata_to_send = metadata_to_send
       @send_initial_md_mutex = Mutex.new
     end
 
@@ -107,7 +84,7 @@ module GRPC
     def send_initial_metadata
       @send_initial_md_mutex.synchronize do
         return if @metadata_sent
-        @metadata_tag = ActiveCall.client_invoke(@call, @metadata_to_send)
+        @call.run_batch(SEND_INITIAL_METADATA => @metadata_to_send)
         @metadata_sent = true
       end
     end
@@ -312,13 +289,7 @@ module GRPC
         RECV_MESSAGE => nil,
         RECV_STATUS_ON_CLIENT => nil
       }
-      @send_initial_md_mutex.synchronize do
-        # Metadata might have already been sent if this is an operation view
-        unless @metadata_sent
-          ops[SEND_INITIAL_METADATA] = @metadata_to_send.merge!(metadata)
-        end
-        @metadata_sent = true
-      end
+      merge_metadata_into_run_batch_ops_if_not_already_sent(ops, metadata)
       batch_result = @call.run_batch(ops)
 
       @call.metadata = batch_result.metadata
@@ -377,13 +348,8 @@ module GRPC
         SEND_MESSAGE => @marshal.call(req),
         SEND_CLOSE_FROM_CLIENT => nil
       }
-      @send_initial_md_mutex.synchronize do
-        # Metadata might have already been sent if this is an operation view
-        unless @metadata_sent
-          ops[SEND_INITIAL_METADATA] = @metadata_to_send.merge!(metadata)
-        end
-        @metadata_sent = true
-      end
+      merge_metadata_into_run_batch_ops_if_not_already_sent(ops, metadata)
+
       @call.run_batch(ops)
       replies = enum_for(:each_remote_read_then_finish)
       return replies unless block_given?
@@ -484,7 +450,16 @@ module GRPC
       end
     end
 
-    private
+    def merge_metadata_into_run_batch_ops_if_not_already_sent(ops,
+                                                              metadata = {})
+      @send_initial_md_mutex.synchronize do
+        # Metadata might have already been sent if this is an operation view
+        unless @metadata_sent
+          ops[SEND_INITIAL_METADATA] = @metadata_to_send.merge!(metadata)
+        end
+        @metadata_sent = true
+      end
+    end
 
     # Starts the call if not already started
     # @param metadata [Hash] metadata to be sent to the server. If a value is

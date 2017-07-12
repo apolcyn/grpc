@@ -534,8 +534,9 @@ describe 'ClientStub' do
     recvd_rpc = @server.request_call
     recvd_call = recvd_rpc.call
     recvd_call.metadata = recvd_rpc.metadata
-    recvd_call.run_batch(SEND_INITIAL_METADATA => nil)
-    GRPC::ActiveCall.new(recvd_call, noop, noop, INFINITE_FUTURE,
-                         metadata_received: true)
+    server_call = GRPC::ActiveCall.new(recvd_call, noop, noop, INFINITE_FUTURE,
+                                       metadata_received: true)
+    server_call.send_initial_metadata
+    server_call
   end
 end
