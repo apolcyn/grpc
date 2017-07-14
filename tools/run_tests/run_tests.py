@@ -735,11 +735,14 @@ class RubyLanguage(object):
 
       job_specs = []
       with open('src/ruby/spec/tests.txt') as f:
-        test_file = os.path.join('src/ruby/spec', f.readline().strip())
-        job_specs.append(self.config.job_spec(['rspec', test_file],
-                                              timeout_seconds=4*60,
-                                              environ=env,
-                                              shortname='%s-ruby-asan-dynamic' % test_file))
+        files = f.readlines()
+        for relative_name in files:
+          assert relative_name.strip()
+          test_file = os.path.join('src/ruby/spec', relative_name.strip())
+          job_specs.append(self.config.job_spec(['rspec', test_file],
+                                                timeout_seconds=4*60,
+                                                environ=env,
+                                                shortname='%s-ruby-asan-dynamic' % test_file))
       return job_specs
 
     tests = [self.config.job_spec(['tools/run_tests/helper_scripts/run_ruby.sh'],
