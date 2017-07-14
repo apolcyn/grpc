@@ -122,14 +122,38 @@ describe 'ClientStub' do
         th.join
       end
 
-      it 'should send metadata to the server ok' do
+      def metadata_test(md)
         server_port = create_test_server
         host = "localhost:#{server_port}"
-        th = run_request_response(@sent_msg, @resp, @pass,
-                                  k1: 'v1', k2: 'v2')
+        th = run_request_response(@sent_msg, @resp, @pass, metadata: md)
         stub = GRPC::ClientStub.new(host, :this_channel_is_insecure)
-        expect(get_response(stub)).to eq(@resp)
+        expect(get_response(stub, metadata: md)).to eq(@resp)
         th.join
+      end
+
+      it 'should send metadata to the server ok' do
+        metadata_test(k1: 'v1', k2: 'v2')
+      end
+
+      # these tests mostly try to exercise when md might be allocated
+      # instead of inlined
+      it 'should send metadata with multiple large md to the server ok' do
+        val_array = %w(
+          '00000000000000000000000000000000000000000000000000000000000000',
+          '11111111111111111111111111111111111111111111111111111111111111',
+          '22222222222222222222222222222222222222222222222222222222222222',
+        )
+        md = {
+          k1: val_array,
+          k2: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          k3: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          k4: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          keeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeey5: 'v5',
+          'k66666666666666666666666666666666666666666666666666666' => 'v6',
+          'k77777777777777777777777777777777777777777777777777777' => 'v7',
+          'k88888888888888888888888888888888888888888888888888888' => 'v8'
+        }
+        metadata_test(md)
       end
 
       it 'should send a request when configured using an override channel' do
@@ -190,10 +214,10 @@ describe 'ClientStub' do
     end
 
     describe 'without a call operation' do
-      def get_response(stub, credentials: nil)
+      def get_response(stub, credentials: nil, metadata: { k1: 'v1', k2: 'v2' })
         puts credentials.inspect
         stub.request_response(@method, @sent_msg, noop, noop,
-                              metadata: { k1: 'v1', k2: 'v2' },
+                              metadata: metadata,
                               credentials: credentials)
       end
 
@@ -201,10 +225,11 @@ describe 'ClientStub' do
     end
 
     describe 'via a call operation' do
-      def get_response(stub, run_start_call_first: false, credentials: nil)
+      def get_response(stub, run_start_call_first: false, credentials: nil,
+                       metadata: { k1: 'v1', k2: 'v2' })
         op = stub.request_response(@method, @sent_msg, noop, noop,
                                    return_op: true,
-                                   metadata: { k1: 'v1', k2: 'v2' },
+                                   metadata: metadata,
                                    deadline: from_relative_time(2),
                                    credentials: credentials)
         expect(op).to be_a(GRPC::ActiveCall::Operation)
@@ -220,7 +245,7 @@ describe 'ClientStub' do
         server_port = create_test_server
         host = "localhost:#{server_port}"
         th = run_request_response(@sent_msg, @resp, @pass,
-                                  k1: 'v1', k2: 'v2')
+                                  metadata: { k1: 'v1', k2: 'v2' })
         stub = GRPC::ClientStub.new(host, :this_channel_is_insecure)
         expect(get_response(stub)).to eq(@resp)
         th.join
@@ -501,8 +526,8 @@ describe 'ClientStub' do
     end
   end
 
-  def run_request_response(expected_input, resp, status, **kw)
-    wanted_metadata = kw.clone
+  def run_request_response(expected_input, resp, status, metadata: {})
+    wanted_metadata = metadata.clone
     wakey_thread do |notifier|
       c = expect_server_to_be_invoked(notifier)
       expect(c.remote_read).to eq(expected_input)
