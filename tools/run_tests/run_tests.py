@@ -772,7 +772,7 @@ class RubyLanguage(object):
     return 'Makefile'
 
   def dockerfile_dir(self):
-    if self.args.config == 'asan':
+    if self.args.config == 'asan-dynamic':
       return 'tools/dockerfile/test/asan_ruby_jessie_x64'
 
     return 'tools/dockerfile/test/ruby_jessie_%s' % _docker_arch_suffix(self.args.arch)
