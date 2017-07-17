@@ -817,7 +817,10 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   ev = rb_completion_queue_pluck(call->queue, tag,
                                  gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
   if (!ev.success) {
+    grpc_run_batch_stack_cleanup(st);
+    gpr_free(st);
     rb_raise(grpc_rb_eCallError, "call#run_batch failed somehow");
+    return Qnil;
   }
   /* Build and return the BatchResult struct result,
      if there is an error, it's reflected in the status */
