@@ -180,7 +180,13 @@ describe 'ClientStub' do
 
       it 'should receive UNAUTHENTICATED if call credentials plugin fails' do
         server_port = create_secure_test_server
-        th = run_request_response(@sent_msg, @resp, @pass)
+        # start a thread to poll on the server, we don't expect
+        # request_call to really succeed
+        th = Thread.new do
+          @server.start
+          # expect request_call to end with a CallError, when server stopped
+          expect { @server.request_call }.to raise_error(GRPC::Core::CallError)
+        end
 
         certs = load_test_certs
         secure_channel_creds = GRPC::Core::ChannelCredentials.new(
@@ -208,8 +214,9 @@ describe 'ClientStub' do
         end
         expect(unauth_error_occured).to eq(true)
 
-        # Kill the server thread so tests can complete
-        th.kill
+        # Shutdown the server to cancel thread polling on it
+        @server.close
+        th.join
       end
     end
 

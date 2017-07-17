@@ -94,6 +94,7 @@ FailingStub = FailingService.rpc_stub_class
 class SlowService
   include GRPC::GenericService
   rpc :an_rpc, EchoMsg, EchoMsg
+  rpc :a_bidi_rpc, stream(EchoMsg), stream(EchoMsg)
   attr_reader :received_md, :delay
 
   def initialize(_default_var = 'ignored')
@@ -106,6 +107,14 @@ class SlowService
     sleep @delay
     @received_md << call.metadata unless call.metadata.nil?
     req  # send back the req as the response
+  end
+
+  def a_bidi_rpc(reqs, call)
+    GRPC.logger.info("starting a slow #{@delay} bidi rpc")
+    sleep @delay
+    reqs.each { |r| GRPC.logger.info("received #{r}") }
+    @received_md << call.metadata unless call.metadata.nil?
+    reqs # echo back the requests
   end
 end
 
@@ -342,7 +351,7 @@ describe GRPC::RpcServer do
         t.join
       end
 
-      it 'should handle cancellation correctly', server: true do
+      it 'should handle cancellation of unary calls correctly', server: true do
         service = SlowService.new
         @srv.handle(service)
         t = Thread.new { @srv.run }
@@ -355,6 +364,31 @@ describe GRPC::RpcServer do
           op.cancel
         end
         expect { op.execute }.to raise_error GRPC::Cancelled
+        @srv.stop
+        t.join
+      end
+
+      # meant specifically to exercise handling of a failed core batch
+      # on the client. (the core batch should fail when the call is cancelled
+      # while reading or writing out requests)
+      it 'should handle cancellation of bidi calls correctly', server: true do
+        service = SlowService.new
+        @srv.handle(service)
+        t = Thread.new { @srv.run }
+        @srv.wait_till_running
+        stub = SlowStub.new(@host, :this_channel_is_insecure, **client_opts)
+        reqs = [EchoMsg.new, EchoMsg.new] # dummy messages; placeholders
+        op = stub.a_bidi_rpc(reqs,
+                             metadata: { k1: 'v1', k2: 'v2' },
+                             return_op: true)
+        Thread.new do  # cancel the call
+          sleep 0.1
+          op.cancel
+        end
+        # enumerate through response stream to finish call and get the status
+        expect do
+          op.execute.each { |r| fail "unexpectedly received message #{r}" }
+        end.to raise_error GRPC::Cancelled
         @srv.stop
         t.join
       end

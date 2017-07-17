@@ -366,6 +366,16 @@ static VALUE grpc_rb_call_set_credentials(VALUE self, VALUE credentials) {
   return Qnil;
 }
 
+static void log_header_error_and_destroy_md_array(grpc_slice bad_field,
+                                                  const char *header_type,
+                                                  grpc_metadata_array *md_ary) {
+  char *tmp_str = grpc_slice_to_c_string(bad_field);
+  gpr_log(GPR_ERROR, "GRPC_RUBY: custom header %s: %s has invalid characters",
+          header_type, tmp_str);
+  gpr_free(tmp_str);
+  grpc_rb_metadata_array_destroy_including_entries(md_ary);
+}
+
 /* grpc_rb_md_ary_fill_hash_cb is the hash iteration callback used
    to fill grpc_metadata_array.
 
@@ -380,27 +390,28 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
   grpc_slice value_slice;
   char *tmp_str = NULL;
 
+  /* Construct a metadata object from key and value and add it */
+  TypedData_Get_Struct(md_ary_obj, grpc_metadata_array,
+                       &grpc_rb_md_ary_data_type, md_ary);
+
   if (TYPE(key) == T_SYMBOL) {
     key_slice = grpc_slice_from_static_string(rb_id2name(SYM2ID(key)));
   } else if (TYPE(key) == T_STRING) {
     key_slice =
         grpc_slice_from_copied_buffer(RSTRING_PTR(key), RSTRING_LEN(key));
   } else {
+    grpc_rb_metadata_array_destroy_including_entries(md_ary);
     rb_raise(rb_eTypeError,
              "grpc_rb_md_ary_fill_hash_cb: bad type for key parameter");
     return ST_STOP;
   }
 
   if (!grpc_header_key_is_legal(key_slice)) {
-    tmp_str = grpc_slice_to_c_string(key_slice);
-    rb_raise(rb_eArgError,
-             "'%s' is an invalid header key, must match [a-z0-9-_.]+", tmp_str);
+    log_header_error_and_destroy_md_array(key_slice, "key", md_ary);
+    rb_raise(rb_eArgError, "Invalid custom header key, must match [a-z0-9-_.]+",
+             tmp_str);
     return ST_STOP;
   }
-
-  /* Construct a metadata object from key and value and add it */
-  TypedData_Get_Struct(md_ary_obj, grpc_metadata_array,
-                       &grpc_rb_md_ary_data_type, md_ary);
 
   if (TYPE(val) == T_ARRAY) {
     array_length = RARRAY_LEN(val);
@@ -411,8 +422,8 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
       if (!grpc_is_binary_header(key_slice) &&
           !grpc_header_nonbin_value_is_legal(value_slice)) {
         // The value has invalid characters
-        tmp_str = grpc_slice_to_c_string(value_slice);
-        rb_raise(rb_eArgError, "Header value '%s' has invalid characters",
+        log_header_error_and_destroy_md_array(key_slice, "key", md_ary);
+        rb_raise(rb_eArgError, "A custom header value has invalid characters",
                  tmp_str);
         return ST_STOP;
       }
@@ -427,8 +438,8 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
     if (!grpc_is_binary_header(key_slice) &&
         !grpc_header_nonbin_value_is_legal(value_slice)) {
       // The value has invalid characters
-      tmp_str = grpc_slice_to_c_string(value_slice);
-      rb_raise(rb_eArgError, "Header value '%s' has invalid characters",
+      log_header_error_and_destroy_md_array(key_slice, "key", md_ary);
+      rb_raise(rb_eArgError, "A custom header value has invalid characters",
                tmp_str);
       return ST_STOP;
     }
@@ -437,6 +448,7 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
     md_ary->metadata[md_ary->count].value = value_slice;
     md_ary->count += 1;
   } else {
+    grpc_rb_metadata_array_destroy_including_entries(md_ary);
     rb_raise(rb_eArgError, "Header values must be of type string or array");
     return ST_STOP;
   }
@@ -830,7 +842,10 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   ev = rb_completion_queue_pluck(call->queue, tag,
                                  gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
   if (!ev.success) {
+    grpc_run_batch_stack_cleanup(st);
+    gpr_free(st);
     rb_raise(grpc_rb_eCallError, "call#run_batch failed somehow");
+    return Qnil;
   }
   /* Build and return the BatchResult struct result,
      if there is an error, it's reflected in the status */
