@@ -33,11 +33,17 @@ def main
                                     :this_channel_is_insecure)
   stub.echo(Echo::EchoRequest.new(request: 'hello'))
 
+  GRPC::grpc_prefork()
+
   p = fork do
+    GRPC::grpc_postfork_child()
+
     stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
                                       :this_channel_is_insecure)
     stub.echo(Echo::EchoRequest.new(request: 'hello'))
   end
+
+  GRPC::grpc_postfork_parent()
 
   begin
     Timeout.timeout(10) do

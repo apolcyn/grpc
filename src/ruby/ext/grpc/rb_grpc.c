@@ -283,6 +283,18 @@ static void grpc_ruby_once_init_internal() {
 static VALUE bg_thread_init_rb_mu = Qundef;
 static int bg_thread_init_done = 0;
 
+static void grpc_rb_prefork() {
+  return;
+}
+
+static void grpc_rb_postfork_parent() {
+  return;
+}
+
+static void grpc_rb_postfork_child() {
+  return;
+}
+
 void grpc_ruby_once_init() {
   /* ruby_vm_at_exit doesn't seem to be working. It would crash once every
    * blue moon, and some users are getting it repeatedly. See the discussions
@@ -327,6 +339,10 @@ void Init_grpc_c() {
   sym_code = ID2SYM(rb_intern("code"));
   sym_details = ID2SYM(rb_intern("details"));
   sym_metadata = ID2SYM(rb_intern("metadata"));
+
+  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_prefork", grpc_rb_prefork, 0);
+  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_postfork_parent", grpc_rb_postfork_parent, 0);
+  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_postfork_child", grpc_rb_postfork_child, 0);
 
   Init_grpc_channel();
   Init_grpc_call();
