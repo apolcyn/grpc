@@ -131,11 +131,21 @@ static VALUE grpc_rb_event_thread(VALUE arg) {
   return Qnil;
 }
 
+static VALUE event_thread = Qnil;
+
 void grpc_rb_event_queue_thread_start() {
   event_queue.head = event_queue.tail = NULL;
   event_queue.abort = false;
   gpr_mu_init(&event_queue.mu);
   gpr_cv_init(&event_queue.cv);
 
-  rb_thread_create(grpc_rb_event_thread, NULL);
+  event_thread = rb_thread_create(grpc_rb_event_thread, NULL);
+}
+
+void grpc_rb_shutdown_and_reset_event_thread() {
+  if (RTEST(event_thread)) {
+    rb_thread_call_without_gvl(grpc_rb_event_unblocking_func, NULL, NULL, NULL);
+    rb_funcall(event_thread, rb_intern("join"), 0);
+    event_thread = Qnil;
+  }
 }

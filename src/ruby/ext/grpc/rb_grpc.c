@@ -27,6 +27,8 @@
 
 #include <grpc/grpc.h>
 #include <grpc/support/time.h>
+#include <grpc/support/log.h>
+#include <grpc/fork.h>
 #include "rb_call.h"
 #include "rb_call_credentials.h"
 #include "rb_channel.h"
@@ -255,7 +257,9 @@ static void Init_grpc_time_consts() {
   id_tv_nsec = rb_intern("tv_nsec");
 }
 
-static void grpc_rb_shutdown(void) { grpc_shutdown(); }
+static void grpc_rb_shutdown(void) {
+  grpc_shutdown();
+}
 
 /* Initialize the GRPC module structs */
 
@@ -275,6 +279,8 @@ VALUE sym_metadata = Qundef;
 
 static gpr_once g_once_init = GPR_ONCE_INIT;
 
+static int prefork_count = 0;
+
 static void grpc_ruby_once_init_internal() {
   grpc_init();
   atexit(grpc_rb_shutdown);
@@ -283,16 +289,38 @@ static void grpc_ruby_once_init_internal() {
 static VALUE bg_thread_init_rb_mu = Qundef;
 static int bg_thread_init_done = 0;
 
-static void grpc_rb_prefork() {
-  return;
+static VALUE grpc_rb_prefork(VALUE self) {
+  (void)self;
+  prefork_count++;
+  rb_mutex_lock(bg_thread_init_rb_mu);
+  if (bg_thread_init_done) {
+    grpc_rb_shutdown_and_reset_channel_polling_thread();
+    grpc_rb_shutdown_and_reset_event_thread();
+    bg_thread_init_done = 0;
+  }
+  rb_mutex_unlock(bg_thread_init_rb_mu);
+  rb_funcall(rb_mGC, rb_intern("disable"), 0);
+  GPR_ASSERT(grpc_prefork() == 1);
+  return Qnil;
 }
 
-static void grpc_rb_postfork_parent() {
-  return;
+static VALUE grpc_rb_postfork_parent(VALUE self) {
+  (void)self;
+  rb_funcall(rb_mGC, rb_intern("enable"), 0);
+  grpc_postfork_parent();
+  return Qnil;
 }
 
-static void grpc_rb_postfork_child() {
-  return;
+static VALUE grpc_rb_postfork_child(VALUE self) {
+  (void)self;
+  rb_funcall(rb_mGC, rb_intern("enable"), 0);
+  grpc_postfork_child();
+  return Qnil;
+}
+
+static VALUE grpc_rb_prefork_count(VALUE self) {
+  (void)self;
+  return LONG2NUM(prefork_count);
 }
 
 void grpc_ruby_once_init() {
@@ -321,6 +349,8 @@ void grpc_ruby_once_init() {
   rb_mutex_unlock(bg_thread_init_rb_mu);
 }
 
+VALUE grpc_rb_cForkingContext = Qundef;
+
 void Init_grpc_c() {
   if (!grpc_rb_load_core()) {
     rb_raise(rb_eLoadError, "Couldn't find or load gRPC's dynamic C core");
@@ -340,9 +370,11 @@ void Init_grpc_c() {
   sym_details = ID2SYM(rb_intern("details"));
   sym_metadata = ID2SYM(rb_intern("metadata"));
 
-  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_prefork", grpc_rb_prefork, 0);
-  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_postfork_parent", grpc_rb_postfork_parent, 0);
-  rb_define_singleton_method(grpc_rb_mGRPC, "grpc_postfork_child", grpc_rb_postfork_child, 0);
+  grpc_rb_cForkingContext = rb_define_class_under(grpc_rb_mGrpcCore, "ForkingContext", rb_cObject);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork", grpc_rb_prefork, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_parent", grpc_rb_postfork_parent, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_child", grpc_rb_postfork_child, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork_count", grpc_rb_prefork_count, 0);
 
   Init_grpc_channel();
   Init_grpc_call();

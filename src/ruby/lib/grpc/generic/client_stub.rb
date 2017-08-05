@@ -94,12 +94,18 @@ module GRPC
                    timeout: nil,
                    propagate_mask: nil,
                    channel_args: {})
-      @ch = ClientStub.setup_channel(channel_override, host, creds,
-                                     channel_args)
-      alt_host = channel_args[Core::Channel::SSL_TARGET]
-      @host = alt_host.nil? ? host : alt_host
-      @propagate_mask = propagate_mask
-      @timeout = timeout.nil? ? DEFAULT_TIMEOUT : timeout
+      @last_seen_prefork_count = -1
+      @initialize_proc = proc do
+        if @last_seen_prefork_count != GRPC::Core::ForkingContext.prefork_count()
+          @ch = ClientStub.setup_channel(channel_override, host, creds,
+                                         channel_args)
+          alt_host = channel_args[Core::Channel::SSL_TARGET]
+          @host = alt_host.nil? ? host : alt_host
+          @propagate_mask = propagate_mask
+          @timeout = timeout.nil? ? DEFAULT_TIMEOUT : timeout
+          @last_seen_prefork_count = GRPC::Core::ForkingContext.prefork_count()
+        end
+      end
     end
 
     # request_response sends a request to a GRPC server, and returns the
@@ -145,6 +151,7 @@ module GRPC
                          parent: nil,
                          credentials: nil,
                          metadata: {})
+      @initialize_proc.call
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,
@@ -209,6 +216,7 @@ module GRPC
                         parent: nil,
                         credentials: nil,
                         metadata: {})
+      @initialize_proc.call
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,
@@ -288,6 +296,7 @@ module GRPC
                         credentials: nil,
                         metadata: {},
                         &blk)
+      @initialize_proc.call
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,
@@ -401,6 +410,7 @@ module GRPC
                       credentials: nil,
                       metadata: {},
                       &blk)
+      @initialize_proc.call
       c = new_active_call(method, marshal, unmarshal,
                           deadline: deadline,
                           parent: parent,

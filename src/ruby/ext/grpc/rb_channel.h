@@ -31,4 +31,6 @@ void grpc_rb_channel_polling_thread_start();
 /* Gets the wrapped channel from the ruby wrapper */
 grpc_channel* grpc_rb_get_wrapped_channel(VALUE v);
 
+void grpc_rb_shutdown_and_reset_channel_polling_thread();
+
 #endif /* GRPC_RB_CHANNEL_H_ */

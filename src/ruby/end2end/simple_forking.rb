@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright 2015 gRPC authors.
+# Copyright 2016 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Prompted by and minimal repro of https://github.com/grpc/grpc/issues/10658
 
 require_relative './end2end_common'
 
@@ -29,9 +27,9 @@ def main
     end
   end.parse!
 
-  stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
+  parent_stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
                                     :this_channel_is_insecure)
-  stub.echo(Echo::EchoRequest.new(request: 'hello'))
+  p "PARENT got: #{parent_stub.echo(Echo::EchoRequest.new(request: 'hello')).response}"
 
   GRPC::Core::ForkingContext.prefork()
 
@@ -40,25 +38,15 @@ def main
 
     stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
                                       :this_channel_is_insecure)
-    stub.echo(Echo::EchoRequest.new(request: 'hello'))
+    p "CHILD got: #{stub.echo(Echo::EchoRequest.new(request: 'hello'))}"
+
+    p "CHILD WITH PARENT STUB got: #{parent_stub.echo(Echo::EchoRequest.new(request: 'hello')).response}"
   end
 
   GRPC::Core::ForkingContext.postfork_parent()
 
-  begin
-    Timeout.timeout(10) do
-      Process.wait(p)
-    end
-  rescue Timeout::Error
-    STDERR.puts "timeout waiting for forked process #{p}"
-    Process.kill('SIGKILL', p)
-    Process.wait(p)
-    raise 'Timed out waiting for client process. ' \
-      'It likely hangs when using gRPC after loading it and then forking'
-  end
+  p "PARENT AFTER FORK got: #{parent_stub.echo(Echo::EchoRequest.new(request: 'hello')).response}"
 
-  client_exit_code = $CHILD_STATUS
-  fail "forked process failed #{client_exit_code}" if client_exit_code != 0
 end
 
 main

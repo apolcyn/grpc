@@ -650,7 +650,8 @@ static void run_poll_channels_loop_unblocking_func(void *arg) {
           "GRPC_RUBY: run_poll_channels_loop_unblocking_func - begin aborting "
           "connection polling");
   // early out after first time through
-  if (abort_channel_polling) {
+  if (!channel_polling_thread_started || abort_channel_polling) {
+    abort_channel_polling = 1;
     gpr_mu_unlock(&global_connection_polling_mu);
     return;
   }
@@ -672,6 +673,34 @@ static void run_poll_channels_loop_unblocking_func(void *arg) {
   gpr_log(GPR_DEBUG,
           "GRPC_RUBY: run_poll_channels_loop_unblocking_func - end aborting "
           "connection polling");
+}
+
+static void* grpc_rb_reset_background_thread_state_without_gil(void *arg) {
+  (void)arg;
+  gpr_mu_lock(&global_connection_polling_mu);
+  channel_polling_thread_started = 0;
+  abort_channel_polling = 0;
+  channel_polling_cq = NULL;
+  gpr_mu_unlock(&global_connection_polling_mu);
+  return NULL;
+}
+
+static VALUE background_thread = Qnil;
+
+static void *run_poll_channels_loop_unblocking_func_without_gil(void* arg) {
+  (void)arg;
+  run_poll_channels_loop_unblocking_func(NULL);
+  return NULL;
+}
+
+void grpc_rb_shutdown_and_reset_channel_polling_thread() {
+  if (RTEST(background_thread)) {
+    rb_thread_call_without_gvl(run_poll_channels_loop_unblocking_func_without_gil, NULL, NULL, NULL);
+    rb_funcall(background_thread, rb_intern("join"), 0);
+    background_thread = Qnil;
+    gpr_log(GPR_INFO, "JUST RESET BACKGROUND THREAD");
+  }
+  rb_thread_call_without_gvl(grpc_rb_reset_background_thread_state_without_gil, NULL, NULL, NULL);
 }
 
 // Poll channel connectivity states in background thread without the GIL.
@@ -731,14 +760,9 @@ static void *set_abort_channel_polling_without_gil(void *arg) {
  * TODO(apolcyn) remove this when core handles new RPCs on dead connections.
  */
 void grpc_rb_channel_polling_thread_start() {
-  VALUE background_thread = Qnil;
-
   GPR_ASSERT(!abort_channel_polling);
   GPR_ASSERT(!channel_polling_thread_started);
   GPR_ASSERT(channel_polling_cq == NULL);
-
-  gpr_mu_init(&global_connection_polling_mu);
-  gpr_cv_init(&global_connection_polling_cv);
 
   channel_polling_cq = grpc_completion_queue_create_for_next(NULL);
   background_thread = rb_thread_create(run_poll_channels_loop, NULL);
@@ -783,6 +807,9 @@ static void Init_grpc_connectivity_states() {
 }
 
 void Init_grpc_channel() {
+  gpr_mu_init(&global_connection_polling_mu);
+  gpr_cv_init(&global_connection_polling_cv);
+
   grpc_rb_cChannelArgs = rb_define_class("TmpChannelArgs", rb_cObject);
   grpc_rb_cChannel =
       rb_define_class_under(grpc_rb_mGrpcCore, "Channel", rb_cObject);
