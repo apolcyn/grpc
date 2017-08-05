@@ -21,7 +21,6 @@ def main
   server_runner = ServerRunner.new(EchoServerImpl)
   server_port = server_runner.run
   p "server running on #{server_port}"
-  sleep
 
   # TODO(apolcyn) Can we get rid of this sleep?
   # Without it, an immediate call to the just started EchoServer
@@ -29,7 +28,7 @@ def main
   sleep 1
 
   STDERR.puts 'start client'
-  _, client_pid = start_client('use_before_fork_client.rb',
+  _, client_pid = start_client('depth_forking_client.rb',
                                server_port)
 
   begin

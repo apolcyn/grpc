@@ -20,6 +20,7 @@ require_relative './end2end_common'
 
 def main
   server_port = ''
+
   OptionParser.new do |opts|
     opts.on('--client_control_port=P', String) do
       STDERR.puts 'client control port not used'
@@ -31,34 +32,40 @@ def main
 
   stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
                                     :this_channel_is_insecure)
+  p "attempt RPC from parent"
   stub.echo(Echo::EchoRequest.new(request: 'hello'))
+  p "finished RPC from parent"
 
-  GRPC::Core::ForkingContext.prefork()
+  child_pid = nil
 
-  p = fork do
+  10.times do
+    GRPC::Core::ForkingContext.prefork()
+    child_pid = fork
+    unless child_pid.nil?
+      GRPC::Core::ForkingContext.postfork_parent()
+      break
+    end
     GRPC::Core::ForkingContext.postfork_child()
 
-    stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
-                                      :this_channel_is_insecure)
+    p "attempt RPC from child"
     stub.echo(Echo::EchoRequest.new(request: 'hello'))
+    p "finished RPC from child"
   end
 
-  GRPC::Core::ForkingContext.postfork_parent()
+  exit(0) if child_pid.nil?
 
   begin
     Timeout.timeout(10) do
-      Process.wait(p)
+      Process.wait(child_pid)
     end
   rescue Timeout::Error
     STDERR.puts "timeout waiting for forked process #{p}"
     Process.kill('SIGKILL', p)
     Process.wait(p)
-    raise 'Timed out waiting for client process. ' \
-      'It likely hangs when using gRPC after loading it and then forking'
+    raise 'Timed out waiting for client process.'
   end
 
-  client_exit_code = $CHILD_STATUS
-  fail "forked process failed #{client_exit_code}" if client_exit_code != 0
+  fail "forked process failed: #{$?.to_i}" if $?.to_i != 0
 end
 
 main
