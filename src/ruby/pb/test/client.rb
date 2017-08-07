@@ -265,6 +265,11 @@ class NamedTests
 
   def large_unary
     perform_large_unary
+    STDERR.puts "JUST DID ONE LARGE UNARY - NOW SLEEP FOR A WHILE"
+    sleep 60 * 15
+    STDERR.puts "FINISHED SLEEPING - NOW DO THE SECOND LARGE UNARY"
+    perform_large_unary
+    STDERR.puts "JUST FINISHED THE SECOND LARGE UNARY - SUCCESS"
   end
 
   def client_compressed_unary
