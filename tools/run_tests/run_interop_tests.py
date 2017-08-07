@@ -57,7 +57,7 @@ _SKIP_ADVANCED = ['status_code_and_message',
                   'unimplemented_method',
                   'unimplemented_service']
 
-_TEST_TIMEOUT = 3*60
+_TEST_TIMEOUT = 20*60
 
 # disable this test on core-based languages,
 # see https://github.com/grpc/grpc/issues/9779
@@ -1072,9 +1072,9 @@ try:
   if args.cloud_to_prod:
     if args.insecure:
       print('TLS is always enabled for cloud_to_prod scenarios.')
-    for server_host_name in args.prod_servers:
-      for language in languages:
-        for test_case in _TEST_CASES:
+    for server_host_name in ['default']:
+      for language in ['ruby']:#languages:
+        for test_case in ['large_unary']:#_TEST_CASES:
           if not test_case in language.unimplemented_test_cases():
             if not test_case in _SKIP_ADVANCED + _SKIP_COMPRESSION:
               test_job = cloud_to_prod_jobspec(
@@ -1093,19 +1093,19 @@ try:
               manual_cmd_log=client_manual_cmd_log)
           jobs.append(test_job)
 
-  if args.cloud_to_prod_auth:
-    if args.insecure:
-      print('TLS is always enabled for cloud_to_prod scenarios.')
-    for server_host_name in args.prod_servers:
-      for language in languages:
-        for test_case in _AUTH_TEST_CASES:
-          if not test_case in language.unimplemented_test_cases():
-            test_job = cloud_to_prod_jobspec(
-                language, test_case, server_host_name,
-                prod_servers[server_host_name],
-                docker_image=docker_images.get(str(language)), auth=True,
-                manual_cmd_log=client_manual_cmd_log)
-            jobs.append(test_job)
+  #:if args.cloud_to_prod_auth:
+  #:  if args.insecure:
+  #:    print('TLS is always enabled for cloud_to_prod scenarios.')
+  #:  for server_host_name in args.prod_servers:
+  #:    for language in languages:
+  #:      for test_case in _AUTH_TEST_CASES:
+  #:        if not test_case in language.unimplemented_test_cases():
+  #:          test_job = cloud_to_prod_jobspec(
+  #:              language, test_case, server_host_name,
+  #:              prod_servers[server_host_name],
+  #:              docker_image=docker_images.get(str(language)), auth=True,
+  #:              manual_cmd_log=client_manual_cmd_log)
+  #:          jobs.append(test_job)
 
   for server in args.override_server:
     server_name = server[0]
