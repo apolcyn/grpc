@@ -30,6 +30,7 @@ module Echo
       self.service_name = 'echo.EchoServer'
 
       rpc :Echo, EchoRequest, EchoReply
+      rpc :EchoVerifyCallCreds, EchoRequest, EchoReply
     end
 
     Stub = Service.rpc_stub_class

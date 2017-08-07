@@ -30,8 +30,16 @@ def main
     end
   end.parse!
 
+  client_opts = {
+    channel_args: {
+      GRPC::Core::Channel::SSL_TARGET => 'foo.test.google.fr'
+    }
+  }
+
   stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
-                                    :this_channel_is_insecure)
+                                    create_channel_creds,
+                                    **client_opts)
+
   p "attempt RPC from parent"
   stub.echo(Echo::EchoRequest.new(request: 'hello'))
   p "finished RPC from parent"

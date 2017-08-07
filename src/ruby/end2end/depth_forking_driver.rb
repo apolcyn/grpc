@@ -19,7 +19,7 @@ require_relative './end2end_common'
 def main
   STDERR.puts 'start server'
   server_runner = ServerRunner.new(EchoServerImpl)
-  server_port = server_runner.run
+  server_port = server_runner.run(secure: true)
   p "server running on #{server_port}"
 
   # TODO(apolcyn) Can we get rid of this sleep?

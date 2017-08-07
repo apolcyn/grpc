@@ -36,6 +36,13 @@ class EchoServerImpl < Echo::EchoServer::Service
   def echo(echo_req, _)
     Echo::EchoReply.new(response: echo_req.request)
   end
+
+  def echo_verify_call_creds(echo_req, call)
+    unless call.metadata['call_creds_key'] == 'call_creds_val'
+      fail GRPC::Unauthenticated, "expected metadata from call creds is missing. got: #{call.metadata}"
+    end
+    Echo::EchoReply.new(response: echo_req.request)
+  end
 end
 
 # ServerRunner starts an "echo server" that test clients can make calls to
@@ -44,9 +51,22 @@ class ServerRunner
     @service_impl = service_impl
   end
 
-  def run
+  def create_server_creds
+    test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)), 'spec'), 'testdata')
+    p "test root: #{test_root}"
+    files = ['ca.pem', 'server1.key', 'server1.pem']
+    creds = files.map { |f| File.open(File.join(test_root, f)).read }
+    GRPC::Core::ServerCredentials.new(
+      creds[0],
+      [{ private_key: creds[1], cert_chain: creds[2] }],
+      true) # force client auth
+  end
+
+  def run(secure: false)
     @srv = GRPC::RpcServer.new
-    port = @srv.add_http2_port('0.0.0.0:0', :this_port_is_insecure)
+    creds = :this_port_is_insecure
+    creds = create_server_creds if secure
+    port = @srv.add_http2_port('0.0.0.0:0', creds)
     @srv.handle(@service_impl)
 
     @thd = Thread.new do
@@ -92,4 +112,17 @@ def cleanup(control_stub, client_pid, server_runner)
   end
 
   server_runner.stop
+end
+
+def create_channel_creds
+  test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)), 'spec'), 'testdata')
+  files = ['ca.pem', 'client.key', 'client.pem']
+  creds = files.map { |f| File.open(File.join(test_root, f)).read }
+  creds = GRPC::Core::ChannelCredentials.new(creds[0], creds[1], creds[2])
+
+  auth_md_updater = proc do |m|
+    m.merge(call_creds_key: 'call_creds_val')
+  end
+  call_creds = GRPC::Core::CallCredentials.new(auth_md_updater)
+  creds = creds.compose(call_creds)
 end

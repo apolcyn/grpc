@@ -18,6 +18,7 @@ package echo;
 
 service EchoServer {
   rpc Echo (EchoRequest) returns (EchoReply) {}
+  rpc EchoVerifyCallCreds (EchoRequest) returns (EchoReply) {}
 }
 
 // The request message containing the user's name.
