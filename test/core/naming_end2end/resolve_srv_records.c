@@ -249,35 +249,88 @@ static void test_resolves_balancer(char *name, char *expected_addrs) {
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
+typedef struct test_config {
+  char* a_record_name;
+  char* srv_record_name;
+  char* expected_addrs;
+} test_config;
+
+#define NUM_CONFIGS 8
+
 int main(int argc, char **argv) {
   grpc_init();
-  char *a_record_name = gpr_getenv("GRPC_DNS_TEST_A_RECORD_NAME");
-  char *srv_record_name = gpr_getenv("GRPC_DNS_TEST_SRV_RECORD_NAME");
-  char *expected_addrs = gpr_getenv("GRPC_DNS_TEST_EXPECTED_ADDRS");
-
-  gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
-          gpr_getenv("GRPC_DNS_RESOLVER"));
-  gpr_log(GPR_INFO,
-          "testing arguments (as environment variables):\n"
-          "    GRPC_DNS_TEST_A_RECORD_NAME=%s\n"
-          "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
-          "    GRPC_DNS_TEST_EXPECTED_ADDRS=%s\n",
-          a_record_name ? a_record_name : "",
-          srv_record_name ? srv_record_name : "",
-          expected_addrs ? expected_addrs : "");
-
-  if (expected_addrs == NULL || strlen(expected_addrs) == 0) {
-    gpr_log(GPR_INFO, "expected addresses param not passed in");
+  test_config configs[NUM_CONFIGS] = {
+  {
+    "ipv4-single-target.grpc.com.",
+    NULL,
+    "1.2.3.4",
+  },
+  {
+    "ipv6-single-target.grpc.com.",
+    NULL,
+    "2607:f8b0:400a:801::1001",
+  },
+  {
+    "ipv4-multi-target.grpc.com.",
+    NULL,
+    "1.2.3.5,1.2.3.6,1.2.3.7",
+  },
+  {
+    "ipv6-multi-target.grpc.com.",
+    NULL,
+    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
+  },
+  {
+    NULL,
+    "_grpclb._tcp.srv-ipv4-single-target.grpc.com.",
+    "1.2.3.4",
+  },
+  {
+    NULL,
+    "_grpclb._tcp.srv-ipv6-single-target.grpc.com.",
+    "2607:f8b0:400a:801::1001",
+  },
+  {
+    NULL,
+    "_grpclb._tcp.srv-ipv4-multi-target.grpc.com.",
+    "1.2.3.5,1.2.3.6,1.2.3.7",
+  },
+  {
+    NULL,
+    "_grpclb._tcp.srv-ipv6-multi-target.grpc.com.",
+    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
   }
-  if (srv_record_name && strlen(srv_record_name) != 0) {
-    gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
-    gpr_log(GPR_INFO, "    expect balancer addresses: %s", expected_addrs);
-    test_resolves_balancer(srv_record_name, expected_addrs);
-  }
-  if (a_record_name && strlen(a_record_name) != 0) {
-    gpr_log(GPR_INFO, "    attempt to resolve: %s", a_record_name);
-    gpr_log(GPR_INFO, "    expect backend addresses: %s", expected_addrs);
-    test_resolves_backend(a_record_name, expected_addrs);
+  };
+
+  for (int i = 0; i < NUM_CONFIGS; i++) {
+    char *a_record_name = configs[i].a_record_name;
+    char *srv_record_name = configs[i].srv_record_name;
+    char *expected_addrs = configs[i].expected_addrs;
+
+    gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
+            gpr_getenv("GRPC_DNS_RESOLVER"));
+    gpr_log(GPR_INFO,
+            "testing arguments (as environment variables):\n"
+            "    GRPC_DNS_TEST_A_RECORD_NAME=%s\n"
+            "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
+            "    GRPC_DNS_TEST_EXPECTED_ADDRS=%s\n",
+            a_record_name ? a_record_name : "",
+            srv_record_name ? srv_record_name : "",
+            expected_addrs ? expected_addrs : "");
+
+    if (expected_addrs == NULL || strlen(expected_addrs) == 0) {
+      gpr_log(GPR_INFO, "expected addresses param not passed in");
+    }
+    if (srv_record_name && strlen(srv_record_name) != 0) {
+      gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
+      gpr_log(GPR_INFO, "    expect balancer addresses: %s", expected_addrs);
+      test_resolves_balancer(srv_record_name, expected_addrs);
+    }
+    if (a_record_name && strlen(a_record_name) != 0) {
+      gpr_log(GPR_INFO, "    attempt to resolve: %s", a_record_name);
+      gpr_log(GPR_INFO, "    expect backend addresses: %s", expected_addrs);
+      test_resolves_backend(a_record_name, expected_addrs);
+    }
   }
   grpc_shutdown();
   return 0;
