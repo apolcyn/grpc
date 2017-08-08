@@ -111,16 +111,16 @@ all_records = {
     'ipv6-multi-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001'),
                                     AAAA('2607:f8b0:400a:801::1003'),
                                     AAAA('2607:f8b0:400a:801::1004')],
+    '_grpclb._tcp.srv-ipv4-single-target.grpc.com.': [SRV(target='ipv4-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+    '_grpclb._tcp.srv-ipv6-single-target.grpc.com.': [SRV(target='ipv6-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+    '_grpclb._tcp.srv-ipv4-multi-target.grpc.com.': [SRV(target='ipv4-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+    '_grpclb._tcp.srv-ipv6-multi-target.grpc.com.': [SRV(target='ipv6-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
 }
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
   AAAA: QTYPE.AAAA,
-  CNAME: QTYPE.CNAME,
-  MX: QTYPE.MX,
-  NS: QTYPE.NS,
-  SOA: QTYPE.SOA,
-  TXT: QTYPE.TXT,
+  SRV: QTYPE.SRV,
 }
 
 class Resolver:

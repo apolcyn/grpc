@@ -147,46 +147,46 @@ end
 
 class MultiConsumerEnumeratorQueue
   def initialize(items, interested)
-    @interested = interested
-    Thread.new do
+    @fiber_mu = Mutex.new
+    @fiber = Fiber.new do
       out = nil
       loop do
-        notify_proc = interested.pop
+        notify_proc = @interested.pop
         if notify_proc.nil?
           break
         end
-        if @items.size == 0
-          notify_proc.call(out)
+        if items.size == 0
+          yield out
         else
           begin
-            out = @items.next
+            out = items.next
           rescue => e
             out = e
           end
-          notify_proc.call(out)
+          yield out
         end
       end
     end
   end
   def read
-    mu = Mutex.new
-    cv = ConditionVariable.new
-    out_msg = nil
-    notify_done = proc do |msg|
-      mu.synchronize do
-        out_msg = msg
-        cv.signal
-      end
-    end
-    mu.synchronize do
-      while out_msg.nil?
-        cv.wait(mu)
-      end
+    msg = nil
+    @fiber_mu.synchronize do
+      msg = @fiber.resume
     end
     if msg.is_a?(Exception)
       raise e
     end
     e
+  end
+  def close_and_wait_until_done
+    @interested.push(nil)
+    @fiber_mu.synchronize do
+      loop do
+        @fiber.resume
+      rescue DeadFiberException
+        break
+      end
+    end
   end
 end
 
