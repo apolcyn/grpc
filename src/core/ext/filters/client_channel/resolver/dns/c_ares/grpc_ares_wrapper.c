@@ -374,6 +374,7 @@ static grpc_ares_request *grpc_dns_lookup_ares_impl(
   if (dns_server != NULL) {
     gpr_log(GPR_INFO, "Using DNS server %s", dns_server);
     grpc_resolved_address addr;
+    r->dns_server_addr.next = NULL;
     if (grpc_parse_ipv4_hostport(dns_server, &addr, false /* log_errors */)) {
       r->dns_server_addr.family = AF_INET;
       struct sockaddr_in *in = (struct sockaddr_in *)addr.addr;

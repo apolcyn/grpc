@@ -139,8 +139,13 @@ class Resolver:
     print "---- Reply:\n", reply
     return reply
 
-s = DNSServer(Resolver(), port=15353, address='localhost', tcp=False)
-s.start_thread()
+resolver = Resolver()
+servers = [
+  DNSServer(resolver, port=15353, address='127.0.0.1', tcp=False),
+  DNSServer(resolver, port=15353, address='127.0.0.1', tcp=True)
+]
+for s in servers:
+  s.start_thread()
 
 try:
   while True:
@@ -150,4 +155,5 @@ try:
 except KeyboardInterrupt:
   pass
 finally:
-  s.stop()
+  for s in servers:
+    s.stop()

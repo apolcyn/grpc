@@ -133,7 +133,7 @@ void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_pollset_set_del_pollset(exec_ctx, args->pollset_set, args->pollset);
   grpc_pollset_set_destroy(exec_ctx, args->pollset_set);
   grpc_closure do_nothing_cb;
-  grpc_closure_init(&do_nothing_cb, do_nothing, NULL,
+  GRPC_CLOSURE_INIT(&do_nothing_cb, do_nothing, NULL,
                     grpc_schedule_on_exec_ctx);
   grpc_pollset_shutdown(exec_ctx, args->pollset, &do_nothing_cb);
   // exec_ctx needs to be flushed before calling grpc_pollset_destroy()
@@ -200,19 +200,21 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
 }
 
 static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
+  char* whole_uri = NULL;
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
   new_arg.key = GRPC_ARG_SERVER_URI;
   new_arg.value.string = args->target_name;
+  GPR_ASSERT(asprintf(&whole_uri, "dns://127.0.0.1:15353/%s", new_arg.value.string));
 
   args->channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
 
   grpc_resolver *resolver =
-      grpc_resolver_create(exec_ctx, new_arg.value.string, args->channel_args,
+      grpc_resolver_create(exec_ctx, whole_uri, args->channel_args,
                            args->pollset_set, args->lock);
 
   grpc_closure on_resolver_result_changed;
-  grpc_closure_init(&on_resolver_result_changed,
+  GRPC_CLOSURE_INIT(&on_resolver_result_changed,
                     check_channel_arg_srv_result_locked, (void *)args,
                     grpc_combiner_scheduler(args->lock));
 
@@ -265,41 +267,41 @@ int main(int argc, char **argv) {
     NULL,
     "1.2.3.4",
   },
-  {
-    "ipv6-single-target.grpc.com.",
-    NULL,
-    "2607:f8b0:400a:801::1001",
-  },
-  {
-    "ipv4-multi-target.grpc.com.",
-    NULL,
-    "1.2.3.5,1.2.3.6,1.2.3.7",
-  },
-  {
-    "ipv6-multi-target.grpc.com.",
-    NULL,
-    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
-  },
-  {
-    NULL,
-    "_grpclb._tcp.srv-ipv4-single-target.grpc.com.",
-    "1.2.3.4",
-  },
-  {
-    NULL,
-    "_grpclb._tcp.srv-ipv6-single-target.grpc.com.",
-    "2607:f8b0:400a:801::1001",
-  },
-  {
-    NULL,
-    "_grpclb._tcp.srv-ipv4-multi-target.grpc.com.",
-    "1.2.3.5,1.2.3.6,1.2.3.7",
-  },
-  {
-    NULL,
-    "_grpclb._tcp.srv-ipv6-multi-target.grpc.com.",
-    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
-  }
+//  {
+//    "ipv6-single-target.grpc.com.",
+//    NULL,
+//    "2607:f8b0:400a:801::1001",
+//  },
+//  {
+//    "ipv4-multi-target.grpc.com.",
+//    NULL,
+//    "1.2.3.5,1.2.3.6,1.2.3.7",
+//  },
+//  {
+//    "ipv6-multi-target.grpc.com.",
+//    NULL,
+//    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
+//  },
+//  {
+//    NULL,
+//    "_grpclb._tcp.srv-ipv4-single-target.grpc.com.",
+//    "1.2.3.4",
+//  },
+//  {
+//    NULL,
+//    "_grpclb._tcp.srv-ipv6-single-target.grpc.com.",
+//    "2607:f8b0:400a:801::1001",
+//  },
+//  {
+//    NULL,
+//    "_grpclb._tcp.srv-ipv4-multi-target.grpc.com.",
+//    "1.2.3.5,1.2.3.6,1.2.3.7",
+//  },
+//  {
+//    NULL,
+//    "_grpclb._tcp.srv-ipv6-multi-target.grpc.com.",
+//    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
+//  }
   };
 
   for (int i = 0; i < NUM_CONFIGS; i++) {
