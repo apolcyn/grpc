@@ -145,6 +145,51 @@ class SleepingEnumerator
   end
 end
 
+class MultiConsumerEnumeratorQueue
+  def initialize(items, interested)
+    @interested = interested
+    Thread.new do
+      out = nil
+      loop do
+        notify_proc = interested.pop
+        if notify_proc.nil?
+          break
+        end
+        if @items.size == 0
+          notify_proc.call(out)
+        else
+          begin
+            out = @items.next
+          rescue => e
+            out = e
+          end
+          notify_proc.call(out)
+        end
+      end
+    end
+  end
+  def read
+    mu = Mutex.new
+    cv = ConditionVariable.new
+    out_msg = nil
+    notify_done = proc do |msg|
+      mu.synchronize do
+        out_msg = msg
+        cv.signal
+      end
+    end
+    mu.synchronize do
+      while out_msg.nil?
+        cv.wait(mu)
+      end
+    end
+    if msg.is_a?(Exception)
+      raise e
+    end
+    e
+  end
+end
+
 def main
   stub = RouteGuide::Stub.new('localhost:50051', :this_channel_is_insecure)
   run_get_feature(stub)
