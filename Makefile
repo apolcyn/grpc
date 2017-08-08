@@ -1262,6 +1262,14 @@ h2_sockpair+trace_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair+trace_nosec_test
 h2_sockpair_1byte_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test
 h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
+naming_end2end_test_srv_ipv4_single_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target
+naming_end2end_test_srv_ipv4_multi_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target
+naming_end2end_test_srv_ipv6_single_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target
+naming_end2end_test_srv_ipv6_multi_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target
+naming_end2end_test_srv_ipv4_simple_service_config: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config
+naming_end2end_test_ipv4_no_srv_simple_service_config: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config
+naming_end2end_test_ipv4_no_config_for_cpp: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp
+naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1644,6 +1652,14 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/boringssl_x509_test \
   $(BINDIR)/$(CONFIG)/boringssl_tab_test \
   $(BINDIR)/$(CONFIG)/boringssl_v3name_test \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage \
 
 else
 buildtests_cxx: privatelibs_cxx \
@@ -1721,6 +1737,14 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/thread_manager_test \
   $(BINDIR)/$(CONFIG)/thread_stress_test \
   $(BINDIR)/$(CONFIG)/writes_per_rpc_test \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage \
 
 endif
 
@@ -2124,6 +2148,22 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/thread_stress_test || ( echo test thread_stress_test failed ; exit 1 )
 	$(E) "[RUN]     Testing writes_per_rpc_test"
 	$(Q) $(BINDIR)/$(CONFIG)/writes_per_rpc_test || ( echo test writes_per_rpc_test failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_single_target"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target || ( echo test naming_end2end_test_srv_ipv4_single_target failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_multi_target"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target || ( echo test naming_end2end_test_srv_ipv4_multi_target failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv6_single_target"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target || ( echo test naming_end2end_test_srv_ipv6_single_target failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv6_multi_target"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target || ( echo test naming_end2end_test_srv_ipv6_multi_target failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_simple_service_config"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config || ( echo test naming_end2end_test_srv_ipv4_simple_service_config failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_ipv4_no_srv_simple_service_config"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config || ( echo test naming_end2end_test_ipv4_no_srv_simple_service_config failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_ipv4_no_config_for_cpp"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp || ( echo test naming_end2end_test_ipv4_no_config_for_cpp failed ; exit 1 )
+	$(E) "[RUN]     Testing naming_end2end_test_ipv4_cpp_config_has_zero_percentage"
+	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage || ( echo test naming_end2end_test_ipv4_cpp_config_has_zero_percentage failed ; exit 1 )
 
 
 flaky_test_cxx: buildtests_cxx
@@ -19253,6 +19293,350 @@ deps_inproc_nosec_test: $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
 
 ifneq ($(NO_DEPS),true)
 -include $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
+endif
+
+
+NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_srv_ipv4_single_target: $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_srv_ipv4_multi_target: $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_srv_ipv6_single_target: $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_srv_ipv6_multi_target: $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_srv_ipv4_simple_service_config: $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_ipv4_no_srv_simple_service_config: $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_ipv4_no_config_for_cpp: $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
+endif
+endif
+
+
+NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC = \
+    test/cpp/naming/naming_end2end_test.cc \
+
+NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
+endif
 endif
 
 
