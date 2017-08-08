@@ -4406,6 +4406,214 @@
   }, 
   {
     "args": [
+      "--target_name=srv-ipv4-single-target.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=True", 
+      "--expected_addrs=1.2.3.4:1234", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_srv_ipv4_single_target", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=srv-ipv4-multi-target.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=True", 
+      "--expected_addrs=1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_srv_ipv4_multi_target", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=srv-ipv6-single-target.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=True", 
+      "--expected_addrs=[2607:f8b0:400a:801::1001]:1234", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_srv_ipv6_single_target", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=srv-ipv6-multi-target.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=True", 
+      "--expected_addrs=[2607:f8b0:400a:801::1002]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_srv_ipv6_multi_target", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=srv-ipv4-simple-service-config.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=True", 
+      "--expected_addrs=1.2.3.4:1234", 
+      "--expected_chosen_service_config={\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"SimpleService\",\"waitForReady\":true}]}]}", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_srv_ipv4_simple_service_config", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=ipv4-no-srv-simple-service-config.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=False", 
+      "--expected_addrs=1.2.3.4:443", 
+      "--expected_chosen_service_config={\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"NoSrvSimpleService\",\"waitForReady\":true}]}]}", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_ipv4_no_srv_simple_service_config", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=ipv4-no-config-for-cpp.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=False", 
+      "--expected_addrs=1.2.3.4:443", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_ipv4_no_config_for_cpp", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--target_name=ipv4-cpp-config-has-zero-percentage.test-2.grpctestingexp.", 
+      "--expect_target_is_balancer=False", 
+      "--expected_addrs=1.2.3.4:443", 
+      "--expected_chosen_service_config=", 
+      "--local_dns_server_address=127.0.0.1:15353"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_ipv4_cpp_config_has_zero_percentage", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
       "third_party/boringssl/crypto/aes/aes_tests.txt"
     ], 
     "boringssl": true, 

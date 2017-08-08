@@ -133,6 +133,7 @@ static testing_pair testing_pairs[] = {
     {"1e12x", NULL},
     {".12x", NULL},
     {"000", NULL},
+    {"{\"serviceConfig\":{}}", "{\"serviceConfig\":{}}"},
 };
 
 static void test_pairs() {
