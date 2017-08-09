@@ -265,43 +265,43 @@ int main(int argc, char **argv) {
   {
     "ipv4-single-target.grpc.com.",
     NULL,
-    "1.2.3.4",
+    "1.2.3.4:443",
   },
-//  {
-//    "ipv6-single-target.grpc.com.",
-//    NULL,
-//    "2607:f8b0:400a:801::1001",
-//  },
-//  {
-//    "ipv4-multi-target.grpc.com.",
-//    NULL,
-//    "1.2.3.5,1.2.3.6,1.2.3.7",
-//  },
-//  {
-//    "ipv6-multi-target.grpc.com.",
-//    NULL,
-//    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
-//  },
-//  {
-//    NULL,
-//    "_grpclb._tcp.srv-ipv4-single-target.grpc.com.",
-//    "1.2.3.4",
-//  },
-//  {
-//    NULL,
-//    "_grpclb._tcp.srv-ipv6-single-target.grpc.com.",
-//    "2607:f8b0:400a:801::1001",
-//  },
-//  {
-//    NULL,
-//    "_grpclb._tcp.srv-ipv4-multi-target.grpc.com.",
-//    "1.2.3.5,1.2.3.6,1.2.3.7",
-//  },
-//  {
-//    NULL,
-//    "_grpclb._tcp.srv-ipv6-multi-target.grpc.com.",
-//    "2607:f8b0:400a:801::1001,2607:f8b0:400a:801::1003,2607:f8b0:400a:801::1004",
-//  }
+  {
+    "ipv6-single-target.grpc.com.",
+    NULL,
+    "[2607:f8b0:400a:801::1001]:443",
+  },
+  {
+    "ipv4-multi-target.grpc.com.",
+    NULL,
+    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
+  },
+  {
+    "ipv6-multi-target.grpc.com.",
+    NULL,
+    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
+  },
+  {
+    NULL,
+    "srv-ipv4-single-target.grpc.com.",
+    "1.2.3.4:1234",
+  },
+  {
+    NULL,
+    "srv-ipv6-single-target.grpc.com.",
+    "[2607:f8b0:400a:801::1001]:1234",
+  },
+  {
+    NULL,
+    "srv-ipv4-multi-target.grpc.com.",
+    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
+  },
+  {
+    NULL,
+    "srv-ipv6-multi-target.grpc.com.",
+    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
+  }
   };
 
   for (int i = 0; i < NUM_CONFIGS; i++) {
