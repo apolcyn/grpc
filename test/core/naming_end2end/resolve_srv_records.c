@@ -113,6 +113,7 @@ typedef struct args_struct {
   int expect_is_balancer;
   char *target_name;
   string_list_node *expected_addrs_head;
+  char *expected_service_config_string;
 } args_struct;
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
@@ -172,6 +173,23 @@ static void poll_pollset_until_request_done(args_struct *args) {
   gpr_event_set(&args->ev, (void *)1);
 }
 
+static void check_service_config_result_locked(grpc_channel_args *channel_args, args_struct *args) {
+  const grpc_arg *service_config_arg =
+      grpc_channel_args_find(channel_args, GRPC_ARG_SERVICE_CONFIG);
+  if (args->expected_service_config_string) {
+    GPR_ASSERT(service_config_arg != NULL);
+    GPR_ASSERT(service_config_arg->type == GRPC_ARG_STRING);
+    char* service_config_string = service_config_arg->value.string;
+    if (gpr_stricmp(service_config_string, args->expected_service_config_string) != 0) {
+      gpr_log(GPR_ERROR, "expected service config string: |%s|", args->expected_service_config_string);
+      gpr_log(GPR_ERROR, "got service config string: |%s|", service_config_string);
+      GPR_ASSERT(0);
+    }
+  } else {
+    GPR_ASSERT(service_config_arg == NULL);
+  }
+}
+
 static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
                                                 void *argsp, grpc_error *err) {
   args_struct *args = argsp;
@@ -193,6 +211,9 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
     GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
     GPR_ASSERT(matches_any(str, args->expected_addrs_head));
   }
+
+  check_service_config_result_locked(channel_args, args);
+
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
@@ -225,26 +246,28 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   poll_pollset_until_request_done(args);
 }
 
-static void test_resolves_backend(char *name, char *expected_addrs) {
+static void test_resolves_backend(char *name, char *expected_addrs, char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 0;
   args.target_name = name;
   args.expected_addrs_head = parse_expected(expected_addrs);
+  args.expected_service_config_string = expected_service_config;
 
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-static void test_resolves_balancer(char *name, char *expected_addrs) {
+static void test_resolves_balancer(char *name, char *expected_addrs, char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 1;
   args.target_name = name;
   args.expected_addrs_head = parse_expected(expected_addrs);
+  args.expected_service_config_string = expected_service_config;
 
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
@@ -255,59 +278,62 @@ typedef struct test_config {
   char* a_record_name;
   char* srv_record_name;
   char* expected_addrs;
+  char* expected_service_config;
 } test_config;
 
-#define NUM_CONFIGS 8
+#define NUM_CONFIGS 1
 
 int main(int argc, char **argv) {
   grpc_init();
   test_config configs[NUM_CONFIGS] = {
-  {
-    "ipv4-single-target.grpc.com.",
-    NULL,
-    "1.2.3.4:443",
-  },
-  {
-    "ipv6-single-target.grpc.com.",
-    NULL,
-    "[2607:f8b0:400a:801::1001]:443",
-  },
-  {
-    "ipv4-multi-target.grpc.com.",
-    NULL,
-    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
-  },
-  {
-    "ipv6-multi-target.grpc.com.",
-    NULL,
-    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
-  },
+//  {
+//    "ipv4-single-target.grpc.com.",
+//    NULL,
+//    "1.2.3.4:443",
+//  },
+//  {
+//    "ipv6-single-target.grpc.com.",
+//    NULL,
+//    "[2607:f8b0:400a:801::1001]:443",
+//  },
+//  {
+//    "ipv4-multi-target.grpc.com.",
+//    NULL,
+//    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
+//  },
+//  {
+//    "ipv6-multi-target.grpc.com.",
+//    NULL,
+//    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
+//  },
   {
     NULL,
     "srv-ipv4-single-target.grpc.com.",
     "1.2.3.4:1234",
+    "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}",
   },
-  {
-    NULL,
-    "srv-ipv6-single-target.grpc.com.",
-    "[2607:f8b0:400a:801::1001]:1234",
-  },
-  {
-    NULL,
-    "srv-ipv4-multi-target.grpc.com.",
-    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
-  },
-  {
-    NULL,
-    "srv-ipv6-multi-target.grpc.com.",
-    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
-  }
+//  {
+//    NULL,
+//    "srv-ipv6-single-target.grpc.com.",
+//    "[2607:f8b0:400a:801::1001]:1234",
+//  },
+//  {
+//    NULL,
+//    "srv-ipv4-multi-target.grpc.com.",
+//    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
+//  },
+//  {
+//    NULL,
+//    "srv-ipv6-multi-target.grpc.com.",
+//    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
+//  }
   };
 
   for (int i = 0; i < NUM_CONFIGS; i++) {
     char *a_record_name = configs[i].a_record_name;
     char *srv_record_name = configs[i].srv_record_name;
     char *expected_addrs = configs[i].expected_addrs;
+    char *expected_service_config = configs[i].expected_service_config;
 
     gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
             gpr_getenv("GRPC_DNS_RESOLVER"));
@@ -320,18 +346,20 @@ int main(int argc, char **argv) {
             srv_record_name ? srv_record_name : "",
             expected_addrs ? expected_addrs : "");
 
+    gpr_log(GPR_INFO, "expected service config: %s", expected_service_config ? expected_service_config : "");
+
     if (expected_addrs == NULL || strlen(expected_addrs) == 0) {
       gpr_log(GPR_INFO, "expected addresses param not passed in");
     }
     if (srv_record_name && strlen(srv_record_name) != 0) {
       gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
       gpr_log(GPR_INFO, "    expect balancer addresses: %s", expected_addrs);
-      test_resolves_balancer(srv_record_name, expected_addrs);
+      test_resolves_balancer(srv_record_name, expected_addrs, expected_service_config);
     }
     if (a_record_name && strlen(a_record_name) != 0) {
       gpr_log(GPR_INFO, "    attempt to resolve: %s", a_record_name);
       gpr_log(GPR_INFO, "    expect backend addresses: %s", expected_addrs);
-      test_resolves_backend(a_record_name, expected_addrs);
+      test_resolves_backend(a_record_name, expected_addrs, expected_service_config);
     }
   }
   grpc_shutdown();

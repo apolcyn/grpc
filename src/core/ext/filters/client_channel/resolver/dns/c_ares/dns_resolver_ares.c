@@ -166,6 +166,11 @@ static bool value_in_json_array(grpc_json *array, const char *value) {
 static char *choose_service_config(char *service_config_choice_json) {
   grpc_json *choices_json = grpc_json_parse_string(service_config_choice_json);
   if (choices_json == NULL || choices_json->type != GRPC_JSON_ARRAY) {
+    if (choices_json == NULL) {
+      gpr_log(GPR_ERROR, "choices json is NULL");
+    } else {
+      gpr_log(GPR_INFO, "CHOICES JSON TYPE IS:%d", choices_json->type);
+    }
     gpr_log(GPR_ERROR, "cannot parse service config JSON string");
     return NULL;
   }

@@ -112,15 +112,21 @@ all_records = {
                                     AAAA('2607:f8b0:400a:801::1003'),
                                     AAAA('2607:f8b0:400a:801::1004')],
     '_grpclb._tcp.srv-ipv4-single-target.grpc.com.': [SRV(target='ipv4-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+    #'srv-ipv4-single-target.grpc.com.': [TXT('grpc_config=[{\"serviceConfig\":{}}]')],
+    'srv-ipv4-single-target.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
     '_grpclb._tcp.srv-ipv6-single-target.grpc.com.': [SRV(target='ipv6-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+    'srv-ipv6-single-target.grpc.com.': [TXT('grpc_config={}')],
     '_grpclb._tcp.srv-ipv4-multi-target.grpc.com.': [SRV(target='ipv4-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+    'srv-ipv4-multi-target.grpc.com.': [TXT('grpc_config={}')],
     '_grpclb._tcp.srv-ipv6-multi-target.grpc.com.': [SRV(target='ipv6-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+    'srv-ipv6-multi-target.grpc.com.': [TXT('grpc_config={}')],
 }
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
   AAAA: QTYPE.AAAA,
   SRV: QTYPE.SRV,
+  TXT: QTYPE.TXT,
 }
 
 class Resolver:

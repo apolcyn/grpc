@@ -311,6 +311,7 @@ static void on_txt_done_cb(void *arg, int status, int timeouts,
   ares_free_data(reply);
   goto done;
 fail:
+  gpr_log(GPR_INFO, "attempt to fet service config failed");
   gpr_asprintf(&error_msg, "C-ares TXT lookup status is not ARES_SUCCESS: %s",
                ares_strerror(status));
   grpc_error *error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(error_msg);
@@ -428,6 +429,7 @@ static grpc_ares_request *grpc_dns_lookup_ares_impl(
   if (service_config_json != NULL) {
     grpc_ares_request_ref(r);
     ares_search(*channel, hr->host, ns_c_in, ns_t_txt, on_txt_done_cb, r);
+    gpr_log(GPR_INFO, "attempt to get service config for %s", hr->host);
   }
   /* TODO(zyc): Handle CNAME records here. */
   grpc_ares_ev_driver_start(exec_ctx, r->ev_driver);
