@@ -36,6 +36,7 @@
 #include "src/core/lib/support/env.h"
 #include "src/core/lib/support/string.h"
 #include "test/core/util/test_config.h"
+#include "test/core/naming_end2end/naming_end2end_test_util.h"
 
 extern void grpc_resolver_dns_ares_init();
 extern void grpc_resolver_dns_ares_shutdown();
@@ -246,7 +247,7 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   poll_pollset_until_request_done(args);
 }
 
-static void test_resolves_backend(char *name, char *expected_addrs, char *expected_service_config) {
+void naming_end2end_test_resolves_backend(char *name, char *expected_addrs, char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
@@ -260,7 +261,7 @@ static void test_resolves_backend(char *name, char *expected_addrs, char *expect
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-static void test_resolves_balancer(char *name, char *expected_addrs, char *expected_service_config) {
+void naming_end2end_test_resolves_balancer(char *name, char *expected_addrs, char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);

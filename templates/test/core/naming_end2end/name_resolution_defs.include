@@ -20,7 +20,7 @@
 <% tests = sorted(tests) %>\
 /* This file is auto-generated */
 
-#include "test/core/naming_end2end/name_resolution_tests.h"
+#include "test/core/naming_end2end/name_end2end_test_util.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -32,40 +32,18 @@
 static bool g_pre_init_called = false;
 
 % for test in tests:
-extern void ${test}(grpc_end2end_test_config config);
-extern void ${test}_pre_init(void);
+void ${test['name']}_test() {
+%   if test['record_type_to_resolve'] == 'SRV':
+  naming_end2end_test_resolves_balancer();
+%   else:
+  naming_end2end_test_resolves_backend();
+%   endif
+}
 % endfor
 
-void grpc_end2end_tests_pre_init(void) {
-  GPR_ASSERT(!g_pre_init_called);
-  g_pre_init_called = true;
-  grpc_summon_debugger_macros();
+int main(int argc, char **argv) {
 % for test in tests:
-  ${test}_pre_init();
+  ${test['name']}_test();
 % endfor
 }
-
-void grpc_end2end_tests(int argc, char **argv,
-                        grpc_end2end_test_config config) {
-  int i;
-
-  GPR_ASSERT(g_pre_init_called);
-
-  if (argc <= 1) {
-% for test in tests:
-    ${test}(config);
-% endfor
-    return;
-  }
-
-  for (i = 1; i < argc; i++) {
-% for test in tests:
-    if (0 == strcmp("${test}", argv[i])) {
-      ${test}(config);
-      continue;
-    }
-% endfor
-    gpr_log(GPR_DEBUG, "not a test: '%s'", argv[i]);
-    abort();
-  }
-}</%def>
+</%def>

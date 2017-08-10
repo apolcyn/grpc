@@ -1060,7 +1060,6 @@ percent_encoding_test: $(BINDIR)/$(CONFIG)/percent_encoding_test
 pollset_set_test: $(BINDIR)/$(CONFIG)/pollset_set_test
 resolve_address_posix_test: $(BINDIR)/$(CONFIG)/resolve_address_posix_test
 resolve_address_test: $(BINDIR)/$(CONFIG)/resolve_address_test
-resolve_srv_records: $(BINDIR)/$(CONFIG)/resolve_srv_records
 resource_quota_test: $(BINDIR)/$(CONFIG)/resource_quota_test
 secure_channel_create_test: $(BINDIR)/$(CONFIG)/secure_channel_create_test
 secure_endpoint_test: $(BINDIR)/$(CONFIG)/secure_endpoint_test
@@ -1263,6 +1262,7 @@ h2_sockpair+trace_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair+trace_nosec_test
 h2_sockpair_1byte_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test
 h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
+naming_end2end_test: $(BINDIR)/$(CONFIG)/naming_end2end_test
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1319,7 +1319,7 @@ plugins: $(PROTOC_PLUGINS)
 
 privatelibs: privatelibs_c privatelibs_cxx
 
-privatelibs_c:  $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libreconnect_server.a $(LIBDIR)/$(CONFIG)/libtest_tcp_server.a $(LIBDIR)/$(CONFIG)/libz.a $(LIBDIR)/$(CONFIG)/libares.a $(LIBDIR)/$(CONFIG)/libbad_client_test.a $(LIBDIR)/$(CONFIG)/libbad_ssl_test_server.a $(LIBDIR)/$(CONFIG)/libend2end_tests.a $(LIBDIR)/$(CONFIG)/libend2end_nosec_tests.a
+privatelibs_c:  $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libreconnect_server.a $(LIBDIR)/$(CONFIG)/libtest_tcp_server.a $(LIBDIR)/$(CONFIG)/libz.a $(LIBDIR)/$(CONFIG)/libares.a $(LIBDIR)/$(CONFIG)/libbad_client_test.a $(LIBDIR)/$(CONFIG)/libbad_ssl_test_server.a $(LIBDIR)/$(CONFIG)/libend2end_tests.a $(LIBDIR)/$(CONFIG)/libend2end_nosec_tests.a $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
 pc_c: $(LIBDIR)/$(CONFIG)/pkgconfig/grpc.pc
 
 pc_c_unsecure: $(LIBDIR)/$(CONFIG)/pkgconfig/grpc_unsecure.pc
@@ -1516,6 +1516,7 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test \
   $(BINDIR)/$(CONFIG)/h2_uds_nosec_test \
   $(BINDIR)/$(CONFIG)/inproc_nosec_test \
+  $(BINDIR)/$(CONFIG)/naming_end2end_test \
   $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry \
@@ -8542,6 +8543,31 @@ ifneq ($(NO_DEPS),true)
 endif
 
 
+LIBNAMING_END2END_TEST_UTIL_SRC = \
+    test/core/naming_end2end/naming_end2end_test_util.c \
+
+PUBLIC_HEADERS_C += \
+
+LIBNAMING_END2END_TEST_UTIL_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBNAMING_END2END_TEST_UTIL_SRC))))
+
+
+$(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a: $(ZLIB_DEP) $(CARES_DEP)  $(LIBNAMING_END2END_TEST_UTIL_OBJS) 
+	$(E) "[AR]      Creating $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) rm -f $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
+	$(Q) $(AR) $(AROPTS) $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a $(LIBNAMING_END2END_TEST_UTIL_OBJS) 
+ifeq ($(SYSTEM),Darwin)
+	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
+endif
+
+
+
+
+ifneq ($(NO_DEPS),true)
+-include $(LIBNAMING_END2END_TEST_UTIL_OBJS:.o=.dep)
+endif
+
+
 
 # All of the test targets, and protoc plugins
 
@@ -12254,38 +12280,6 @@ deps_resolve_address_test: $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(RESOLVE_ADDRESS_TEST_OBJS:.o=.dep)
-endif
-endif
-
-
-RESOLVE_SRV_RECORDS_SRC = \
-    test/core/naming_end2end/resolve_srv_records.c \
-
-RESOLVE_SRV_RECORDS_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVE_SRV_RECORDS_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/resolve_srv_records: openssl_dep_error
-
-else
-
-
-
-$(BINDIR)/$(CONFIG)/resolve_srv_records: $(RESOLVE_SRV_RECORDS_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LD) $(LDFLAGS) $(RESOLVE_SRV_RECORDS_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/resolve_srv_records
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/core/naming_end2end/resolve_srv_records.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-
-deps_resolve_srv_records: $(RESOLVE_SRV_RECORDS_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(RESOLVE_SRV_RECORDS_OBJS:.o=.dep)
 endif
 endif
 
@@ -19253,6 +19247,38 @@ deps_inproc_nosec_test: $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
 
 ifneq ($(NO_DEPS),true)
 -include $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
+endif
+
+
+NAMING_END2END_TEST_SRC = \
+    test/core/naming_end2end/naming_end2end_test.c \
+
+NAMING_END2END_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test: openssl_dep_error
+
+else
+
+
+
+$(BINDIR)/$(CONFIG)/naming_end2end_test: $(NAMING_END2END_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LD) $(LDFLAGS) $(NAMING_END2END_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/naming_end2end_test
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/core/naming_end2end/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
+
+deps_naming_end2end_test: $(NAMING_END2END_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(NAMING_END2END_TEST_OBJS:.o=.dep)
+endif
 endif
 
 

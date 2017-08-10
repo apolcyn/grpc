@@ -26,16 +26,16 @@ def main():
       '#': 'generated with test/core/naming_end2end/gen_build_json.py',
       'libs': [
           {
-              'name': 'naming_end2end_test',
+              'name': 'naming_end2end_test_util',
               'build': 'private',
               'language': 'c',
               'secure': False,
-              'src': ['test/core/naming_end2end/naming_end2end_test_util.c']
-              'headers': ['test/core/naming_end2end/naming_end2end_test_util.h']
+              'src': ['test/core/naming_end2end/naming_end2end_test_util.c'],
+              'headers': ['test/core/naming_end2end/naming_end2end_test_util.h'],
               'deps': [
                   'grpc_test_util',
-                  'grpc'
-                  'gpr_test_util'
+                  'grpc',
+                  'gpr_test_util',
                   'gpr',
               ],
               'vs_proj_dir': 'test/naming_end2end/tests',
@@ -49,15 +49,15 @@ def main():
               'run': False,
               'src': ['test/core/naming_end2end/naming_end2end_test.c'],
               'deps': [
-                  'naming_end2end_tests'
+                  'naming_end2end_test_util',
               ],
               'vs_proj_dir': 'test/naming_end2end/tests',
           }
       ],
-      'core_naming_end2end_tests': {
-          'test1': 'test1_val',
-          'test2': 'test2_val',
-      }
+      'core_naming_end2end_tests': [
+          { 'name': 'test1', 'record_type_to_resolve': 'SRV' },
+          { 'name': 'test2', 'record_type_to_resolve': 'SRV' },
+      ]
           #(t, END2END_TESTS[t].secure)
           #for t in END2END_TESTS.keys()
       #)
