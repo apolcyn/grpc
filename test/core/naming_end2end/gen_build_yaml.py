@@ -23,11 +23,44 @@ import hashlib
 
 def main():
   json = {
-      'core_naming_end2end_tests' : {
-          'some_test1': 'some_val',
-          'some_test2': 'some_val2',
-          'some_test3': 'some_val3',
+      '#': 'generated with test/core/naming_end2end/gen_build_json.py',
+      'libs': [
+          {
+              'name': 'naming_end2end_test',
+              'build': 'private',
+              'language': 'c',
+              'secure': False,
+              'src': ['test/core/naming_end2end/naming_end2end_test_util.c']
+              'headers': ['test/core/naming_end2end/naming_end2end_test_util.h']
+              'deps': [
+                  'grpc_test_util',
+                  'grpc'
+                  'gpr_test_util'
+                  'gpr',
+              ],
+              'vs_proj_dir': 'test/naming_end2end/tests',
+          }
+      ],
+      'targets': [
+          {
+              'name': 'naming_end2end_test',
+              'build': 'test',
+              'language': 'c',
+              'run': False,
+              'src': ['test/core/naming_end2end/naming_end2end_test.c'],
+              'deps': [
+                  'naming_end2end_tests'
+              ],
+              'vs_proj_dir': 'test/naming_end2end/tests',
+          }
+      ],
+      'core_naming_end2end_tests': {
+          'test1': 'test1_val',
+          'test2': 'test2_val',
       }
+          #(t, END2END_TESTS[t].secure)
+          #for t in END2END_TESTS.keys()
+      #)
   }
   print yaml.dump(json)
 
