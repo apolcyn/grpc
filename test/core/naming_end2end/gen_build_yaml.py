@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env python2.7
 # Copyright 2015 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
 
-gen_build_yaml_dirs="  \
-  src/boringssl        \
-  src/benchmark \
-  src/proto            \
-  src/zlib             \
-  src/c-ares           \
-  test/core/bad_client \
-  test/core/bad_ssl    \
-  test/core/end2end    \
-  test/core/naming_end2end    \
-  test/cpp/qps"
-gen_build_files=""
-for gen_build_yaml in $gen_build_yaml_dirs
-do
-  output_file=`mktemp /tmp/genXXXXXX`
-  $gen_build_yaml/gen_build_yaml.py > $output_file
-  gen_build_files="$gen_build_files $output_file"
-done
+"""Generates the appropriate build.json data for all the end2end tests."""
+
+
+import yaml
+import collections
+import hashlib
+
+def main():
+  json = {
+      'core_naming_end2end_tests' : {
+          'some_test1': 'some_val',
+          'some_test2': 'some_val2',
+          'some_test3': 'some_val3',
+      }
+  }
+  print yaml.dump(json)
+
+
+if __name__ == '__main__':
+  main()

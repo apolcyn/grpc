@@ -126,6 +126,11 @@ all_records = {
     'srv-for-simple-service-config.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
     'simple-service-config.grpc.com.': [A('1.2.3.4')],
 
+    # TODO: if there is an A record foo.com and no SRV record, then the TXT
+    # record should also be under foo.com. But if there is an SRV record named
+    # e.g. _grpclb._tcp.srv.com, then the TXT record instead needs to be under
+    # srv.com, rather than foo.com. Confirm this is expected and test for this.
+
     # A record with a service config having c++ as second client language
     'second-language-cpp.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{}},{\"clientLanguage\":[\"c++\"],\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}}]")],
 

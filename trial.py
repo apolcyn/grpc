@@ -1,3 +1,5 @@
+import json
+
 class DnsRecord(object):
   def __init__(self, record_type, record_name, record_data):
     self.record_type = record_type
@@ -9,33 +11,42 @@ class DnsRecord(object):
   def uploadable_data(self):
     return self.record_data.split(',')
 
-class A(object):
-  def __init__(self, name, ip):
-    self.name = '%s.%s' % (name, ZONE_DNS)
-    self.ip = ip
-
-class AAAA(object):
-  def __init__(self, name, ip):
-    self.name = name
-    self.ip = ip
-
-class SRV(object):
-  def __init__(self, name, target):
-    self.name = '%s.%s.%s' % (SRV_PREFIX, name, ZONE_DNS)
-    self.target = target
-
-class TXT(object):
-  def __init__(self, name, grpc_config):
-    self.name = name
-    self.grpc_config = grpc_config
-
-
 ZONE_DNS = 'grpc.com.'
 SRV_PORT = '1234'
-SRV_PREFIX = '_grpclb._tcp'
 
-def _test_group(records, expected_addrs, expected_config):
+def a_record(name, ips):
   return {
+      'record_type': 'A',
+      'name': '%s.%s' % (name, ZONE_DNS),
+      'data': '%s' % ','.join(ips),
+  }
+
+def aaaa_record(name, ips):
+  return {
+      'record_type': 'AAAA',
+      'name': '%s.%s' % (name, ZONE_DNS),
+      'data': '%s' % ','.join(ips),
+  }
+
+def srv_record(name, target):
+  return {
+      'record_type': 'SRV',
+      'name': '_grpclb._tcp.%s.%s' % (name, ZONE_DNS),
+      'data': '0 0 %s %s' % (SRV_PORT, target),
+  }
+
+def txt_record(name, grpc_config):
+  return {
+      'record_type': 'TXT',
+      'name': '%s.%s' % (name, ZONE_DNS),
+      'data': 'grpc_config=%s' % grpc_config,
+  }
+
+def _test_group(record_type_to_resolve, records, expected_addrs, expected_config):
+  if record_type_to_resolve not in ['A', 'AAAA', 'SRV']:
+    raise Exception('bad record type to resolve')
+  return {
+      'record_type_to_resolve': record_type_to_resolve,
       'records': records,
       'expected_addrs': expected_addrs,
       'expected_config': expected_config,
@@ -43,32 +54,32 @@ def _test_group(records, expected_addrs, expected_config):
 
 def _create_ipv4_and_srv_record_group(ip_name, ip_addrs):
   records = [
-      A(ip_name, ip_addrs),
-      SRV('srv-%s' % ip_name, ip_name),
+      a_record(ip_name, ip_addrs),
+      srv_record('srv-%s' % ip_name, ip_name),
   ]
-  return test_group(records, ip_addrs, None)
+  return _test_group('A', records, ip_addrs, None)
 
 def _create_ipv6_and_srv_record_group(ip_name, ip_addrs):
   records = [
-      AAAA(ip_name, ip_addrs),
-      SRV('srv-%s' % ip_name, ip_name),
+      aaaa_record(ip_name, ip_addrs),
+      srv_record('srv-%s' % ip_name, ip_name),
   ]
-  return test_group(records, ip_addrs, None)
+  return _test_group('AAAA', records, ip_addrs, None)
 
 def _create_ipv4_and_srv_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
   records = [
-      A(ip_name, ip_addrs),
-      SRV('srv-%s' % ip_name, ip_name),
-      TXT('srv-%s' % ip_name, grpc_config),
+      a_record(ip_name, ip_addrs),
+      srv_record('srv-%s' % ip_name, ip_name),
+      txt_record('srv-%s' % ip_name, grpc_config),
   ]
-  return test_group(records, ip_addrs, expected_config)
+  return _test_group('A', records, ip_addrs, expected_config)
 
 def _create_ipv4_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
   records = [
-      AAAA(ip_name, ip_addr),
-      TXT(ip_name, grpc_config),
+      aaaa_record(ip_name, ip_addrs),
+      txt_record(ip_name, grpc_config),
   ]
-  return test_group(records, ip_addrs, expected_config)
+  return _test_group('A', records, ip_addrs, expected_config)
 
 def _create_method_config(service_name):
   return [{
@@ -79,7 +90,7 @@ def _create_method_config(service_name):
     }],
   }]
 
-def _create_service_config(method_config=[], percentage=None, client_language=None)
+def _create_service_config(method_config=[], percentage=None, client_language=None):
   config = {
     'loadBalancingPolicy': 'round_robin',
     'methodConfig': method_config,
@@ -89,46 +100,67 @@ def _create_service_config(method_config=[], percentage=None, client_language=No
   if client_language is not None:
     config['clientLanguage'] = client_language
 
-def _create_grpc_config(
+  return config
 
 def _create_records_for_testing():
   records = []
-  records.extend(_create_ipv4_and_srv_record_group('ipv4-single-target', ['1.2.3.4']))
-  records.extend(_create_ipv4_and_srv_record_group('ipv4-multi-target', ['1.2.3.5', '1.2.3.6', '1.2.3.7']))
-  records.extend(_create_ipv6_and_srv_record_group('ipv6-single-target', ['2607:f8b0:400a:801::1001']))
-  records.extend(_create_ipv6_and_srv_record_group('ipv6-multi-target', ['2607:f8b0:400a:801::1002', '2607:f8b0:400a:801::1003', '2607:f8b0:400a:801::1004']))
+  records.append(_create_ipv4_and_srv_record_group('ipv4-single-target', ['1.2.3.4']))
+  records.append(_create_ipv4_and_srv_record_group('ipv4-multi-target', ['1.2.3.5',
+                                                                         '1.2.3.6',
+                                                                         '1.2.3.7']))
+  records.append(_create_ipv6_and_srv_record_group('ipv6-single-target', ['2607:f8b0:400a:801::1001']))
+  records.append(_create_ipv6_and_srv_record_group('ipv6-multi-target', ['2607:f8b0:400a:801::1002',
+                                                                         '2607:f8b0:400a:801::1003',
+                                                                         '2607:f8b0:400a:801::1004']))
 
-  configs = [_create_service_config(_create_method_config('SimpleService'))]
-  records.extend(_create_ipv4_and_srv_and_txt_record_group('ipv4-simple-service-config', ['1.2.3.4'], configs, configs[0])
+  records.append(_create_ipv4_and_srv_and_txt_record_group('ipv4-simple-service-config', ['1.2.3.4'],
+                                                           [_create_service_config(_create_method_config('SimpleService'))],
+                                                           0))
 
-  configs = [_create_service_config(_create_method_config('NoSrvSimpleService'))]
-  records.extend(_create_ipv4_and_txt_record_group('ipv4-no-srv-simple-service-config', ['1.2.3.4'], configs, configs[0])
+  records.append(_create_ipv4_and_txt_record_group('ipv4-no-srv-simple-service-config', ['1.2.3.4'],
+                                                   [_create_service_config(_create_method_config('NoSrvSimpleService'))],
+                                                   0))
 
-  configs = [_create_service_config(
-              _create_method_config('GoService'),
-              client_language=['go']),
-             _create_service_config(
-               _create_method_config('CppService'),
-               client_language=['c++'])])]
-  records.extend(_create_ipv4_and_txt_record_group('ipv4-second-language-is-cpp', ['1.2.3.4'], configs, configs[1])
+  records.append(_create_ipv4_and_txt_record_group('ipv4-second-language-is-cpp', ['1.2.3.4'],
+                                                   [_create_service_config(
+                                                     _create_method_config('GoService'),
+                                                     client_language=['go']),
+                                                    _create_service_config(
+                                                      _create_method_config('CppService'),
+                                                      client_language=['c++'])],
+                                                   None))
 
+  records.append(_create_ipv4_and_txt_record_group('ipv4-no-config-for-cpp', ['1.2.3.4'],
+                                                   [_create_service_config(
+                                                     _create_method_config('PythonService'),
+                                                     client_language=['python'])],
+                                                   None))
 
-  configs = [_create_service_config(
-              _create_method_config('PythonService'),
-              client_language=['python']))]
-  records.extend(_create_ipv4_and_txt_record_group('ipv4-no-config-for-cpp', ['1.2.3.4'], configs, None)
+  records.append(_create_ipv4_and_txt_record_group('ipv4-config-with-percentages', ['1.2.3.4'],
+                                                   [_create_service_config(
+                                                      _create_method_config('NeverPickedService'),
+                                                      percentage=0),
+                                                    _create_service_config(
+                                                      _create_method_config('AlwaysPickedService'),
+                                                      percentage=100)],
+                                                   1))
 
+  records.append(_create_ipv4_and_txt_record_group('ipv4-cpp-config-has-zero-percentage', ['1.2.3.4'],
+                                                   [_create_service_config(
+                                                      _create_method_config('CppService'),
+                                                      percentage=0)],
+                                                   None))
 
-  configs = [_create_service_config(
-               _create_method_config('NeverPickedService'),
-               percentage=0),
-             _create_service_config(
-               _create_method_config('AlwaysPickedService'),
-               percentage=100)]
-  records.extend(_create_ipv4_and_txt_record_group('ipv4-config-with-percentages', ['1.2.3.4'], configs, configs[1])
-
-  configs = [_create_service_config(
-              _create_method_config('CppService'),
-              percentage=0)]
-  records.extend(_create_ipv4_and_txt_record_group('ipv4-cpp-config-has-zero-percentage', ['1.2.3.4'], configs, None)
   return records
+
+test_groups = _create_records_for_testing()
+for group in test_groups:
+  print json.dumps(group)
+  if record_type_to_resolve in ['A', 'AAAA']:
+    # make test based on name of record to resolve, expected IP addr(s) with
+    # ports, and expected service config, if any
+  if record_type_to_resolve == 'SRV':
+    # make test based on name of record to resolve, expected IP addr(s) with
+    # ports, and expected service config, if any
+
+print json.dumps(test_groups)

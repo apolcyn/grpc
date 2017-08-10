@@ -1,0 +1,4 @@
+%YAML 1.2
+--- |
+  <%namespace file="name_resolution_defs.include" import="*"/>\
+  ${naming_end2end_selector(core_naming_end2end_tests.keys())}

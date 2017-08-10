@@ -36,7 +36,7 @@ argp.add_argument('--output_merged', default=None, type=str)
 argp.add_argument('--jobs', '-j', default=multiprocessing.cpu_count(), type=int)
 args = argp.parse_args()
 
-json = args.build_files
+yaml_build_files = args.build_files
 
 test = {} if 'TEST' in os.environ else None
 
@@ -54,9 +54,9 @@ cmd = base_cmd[:]
 for plugin in plugins:
   cmd.append('-p')
   cmd.append(plugin)
-for js in json:
+for yaml in yaml_build_files:
   cmd.append('-d')
-  cmd.append(js)
+  cmd.append(yaml)
 cmd.append('-w')
 preprocessed_build = '.preprocessed_build'
 cmd.append(preprocessed_build)
