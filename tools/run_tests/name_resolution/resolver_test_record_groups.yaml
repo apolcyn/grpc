@@ -1,0 +1,82 @@
+- expected_addrs: ['1.2.3.4:1234']
+  expected_config_index: null
+  record_to_resolve: ipv4-single-target.grpc.com.
+  records:
+    _grpclb._tcp.srv-ipv4-single-target.grpc.com.:
+    - {SRV: 0 0 1234 ipv4-single-target}
+    ipv4-single-target.grpc.com.:
+    - {A: 1.2.3.4}
+- expected_addrs: ['1.2.3.5:1234', '1.2.3.6:1234', '1.2.3.7:1234']
+  expected_config_index: null
+  record_to_resolve: ipv4-multi-target.grpc.com.
+  records:
+    _grpclb._tcp.srv-ipv4-multi-target.grpc.com.:
+    - {SRV: 0 0 1234 ipv4-multi-target}
+    ipv4-multi-target.grpc.com.:
+    - {A: 1.2.3.5}
+    - {A: 1.2.3.6}
+    - {A: 1.2.3.7}
+- expected_addrs: ['[2607:f8b0:400a:801::1001]:1234']
+  expected_config_index: null
+  record_to_resolve: ipv6-single-target.grpc.com.
+  records:
+    _grpclb._tcp.srv-ipv6-single-target.grpc.com.:
+    - {SRV: 0 0 1234 ipv6-single-target}
+    ipv6-single-target.grpc.com.:
+    - {AAAA: '2607:f8b0:400a:801::1001'}
+- expected_addrs: ['[2607:f8b0:400a:801::1002]:1234', '[2607:f8b0:400a:801::1003]:1234',
+    '[2607:f8b0:400a:801::1004]:1234']
+  expected_config_index: null
+  record_to_resolve: ipv6-multi-target.grpc.com.
+  records:
+    _grpclb._tcp.srv-ipv6-multi-target.grpc.com.:
+    - {SRV: 0 0 1234 ipv6-multi-target}
+    ipv6-multi-target.grpc.com.:
+    - {AAAA: '2607:f8b0:400a:801::1002'}
+    - {AAAA: '2607:f8b0:400a:801::1003'}
+    - {AAAA: '2607:f8b0:400a:801::1004'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: 0
+  record_to_resolve: srv-ipv4-simple-service-config.grpc.com.
+  records:
+    _grpclb._tcp.srv-ipv4-simple-service-config.grpc.com.:
+    - {SRV: '0 0 1234 [''1.2.3.4'']'}
+    ipv4-simple-service-config.grpc.com.:
+    - {A: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}]'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: 0
+  record_to_resolve: ipv4-no-srv-simple-service-config.grpc.com.
+  records:
+    ipv4-no-srv-simple-service-config.grpc.com.:
+    - {AAAA: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}]'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: null
+  record_to_resolve: ipv4-second-language-is-cpp.grpc.com.
+  records:
+    ipv4-second-language-is-cpp.grpc.com.:
+    - {AAAA: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"GoService","waitForReady":true}]}],"clientLanguage":["go"]},{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}],"clientLanguage":["c++"]}]'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: null
+  record_to_resolve: ipv4-no-config-for-cpp.grpc.com.
+  records:
+    ipv4-no-config-for-cpp.grpc.com.:
+    - {AAAA: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"PythonService","waitForReady":true}]}],"clientLanguage":["python"]}]'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: 1
+  record_to_resolve: ipv4-config-with-percentages.grpc.com.
+  records:
+    ipv4-config-with-percentages.grpc.com.:
+    - {AAAA: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"percentage":0,"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NeverPickedService","waitForReady":true}]}]},{"percentage":100,"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}]'}
+- expected_addrs: ['1.2.3.4:443']
+  expected_config_index: null
+  record_to_resolve: ipv4-cpp-config-has-zero-percentage.grpc.com.
+  records:
+    ipv4-cpp-config-has-zero-percentage.grpc.com.:
+    - {AAAA: 1.2.3.4}
+    - {TXT: 'grpc_config=[{"percentage":0,"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}]'}
+

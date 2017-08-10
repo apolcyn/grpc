@@ -1,4 +1,5 @@
 import json
+import yaml
 
 class DnsRecord(object):
   def __init__(self, record_type, record_name, record_data):
@@ -14,72 +15,93 @@ class DnsRecord(object):
 ZONE_DNS = 'grpc.com.'
 SRV_PORT = '1234'
 
-def a_record(name, ips):
+def a_record(ip):
   return {
-      'record_type': 'A',
-      'name': '%s.%s' % (name, ZONE_DNS),
-      'data': '%s' % ','.join(ips),
+      'A': ip,
   }
 
-def aaaa_record(name, ips):
+def aaaa_record(ip):
   return {
-      'record_type': 'AAAA',
-      'name': '%s.%s' % (name, ZONE_DNS),
-      'data': '%s' % ','.join(ips),
+      'AAAA': ip,
   }
 
-def srv_record(name, target):
+def srv_record(target):
   return {
-      'record_type': 'SRV',
-      'name': '_grpclb._tcp.%s.%s' % (name, ZONE_DNS),
-      'data': '0 0 %s %s' % (SRV_PORT, target),
+      'SRV': '0 0 %s %s' % (SRV_PORT, target),
   }
 
-def txt_record(name, grpc_config):
+def txt_record(grpc_config):
   return {
-      'record_type': 'TXT',
-      'name': '%s.%s' % (name, ZONE_DNS),
-      'data': 'grpc_config=%s' % grpc_config,
+      'TXT': 'grpc_config=%s' % json.dumps(grpc_config, separators=(',', ':')),
   }
 
-def _test_group(record_type_to_resolve, records, expected_addrs, expected_config):
-  if record_type_to_resolve not in ['A', 'AAAA', 'SRV']:
-    raise Exception('bad record type to resolve')
+def _test_group(record_to_resolve, records, expected_addrs, expected_config):
   return {
-      'record_type_to_resolve': record_type_to_resolve,
+      'record_to_resolve': record_to_resolve,
       'records': records,
       'expected_addrs': expected_addrs,
-      'expected_config': expected_config,
+      'expected_config_index': expected_config,
   }
 
+def _full_srv_record_name(name):
+  return '_grpclb._tcp.srv-%s.%s' % (name, ZONE_DNS)
+
+def _full_a_record_name(name):
+  return '%s.%s' % (name, ZONE_DNS)
+
+def _full_txt_record_name(name):
+  return '%s.%s' % (name, ZONE_DNS)
+
+def push(records, name, val):
+  if name in records.keys():
+    records[name].append(val)
+    return
+  records[name] = [val]
+
 def _create_ipv4_and_srv_record_group(ip_name, ip_addrs):
-  records = [
-      a_record(ip_name, ip_addrs),
-      srv_record('srv-%s' % ip_name, ip_name),
-  ]
-  return _test_group('A', records, ip_addrs, None)
+  records = {}
+  for ip in ip_addrs:
+    push(records, _full_a_record_name(ip_name), a_record(ip))
+  push(records, _full_srv_record_name(ip_name), srv_record(ip_name))
+
+  expected_addrs = []
+  for ip in ip_addrs:
+    expected_addrs.append('%s:%s' % (ip, SRV_PORT))
+  return _test_group('%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
 
 def _create_ipv6_and_srv_record_group(ip_name, ip_addrs):
-  records = [
-      aaaa_record(ip_name, ip_addrs),
-      srv_record('srv-%s' % ip_name, ip_name),
-  ]
-  return _test_group('AAAA', records, ip_addrs, None)
+  records = {}
+  for ip in ip_addrs:
+    push(records, _full_a_record_name(ip_name), aaaa_record(ip))
+  push(records, _full_srv_record_name(ip_name), srv_record(ip_name))
+
+  expected_addrs = []
+  for ip in ip_addrs:
+    expected_addrs.append('[%s]:%s' % (ip, SRV_PORT))
+  return _test_group('%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
 
 def _create_ipv4_and_srv_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
-  records = [
-      a_record(ip_name, ip_addrs),
-      srv_record('srv-%s' % ip_name, ip_name),
-      txt_record('srv-%s' % ip_name, grpc_config),
-  ]
-  return _test_group('A', records, ip_addrs, expected_config)
+  records = {}
+  for ip in ip_addrs:
+    push(records, _full_a_record_name(ip_name), a_record(ip))
+  push(records, _full_srv_record_name(ip_name), srv_record(ip_addrs))
+  push(records, _full_txt_record_name(ip_name), txt_record(grpc_config))
+
+  expected_addrs = []
+  for ip in ip_addrs:
+    expected_addrs.append('%s:443' % ip)
+  return _test_group('srv-%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, expected_config)
 
 def _create_ipv4_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
-  records = [
-      aaaa_record(ip_name, ip_addrs),
-      txt_record(ip_name, grpc_config),
-  ]
-  return _test_group('A', records, ip_addrs, expected_config)
+  records = {}
+  for ip in ip_addrs:
+    push(records, _full_a_record_name(ip_name), aaaa_record(ip))
+  push(records, _full_txt_record_name(ip_name), txt_record(grpc_config))
+
+  expected_addrs = []
+  for ip in ip_addrs:
+    expected_addrs.append('%s:443' % ip)
+  return _test_group('%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, expected_config)
 
 def _create_method_config(service_name):
   return [{
@@ -154,13 +176,15 @@ def _create_records_for_testing():
   return records
 
 test_groups = _create_records_for_testing()
-for group in test_groups:
-  print json.dumps(group)
-  if record_type_to_resolve in ['A', 'AAAA']:
+#for group in test_groups:
+#  print json.dumps(group)
+  #if record_to_resolve in ['A', 'AAAA']:
     # make test based on name of record to resolve, expected IP addr(s) with
     # ports, and expected service config, if any
-  if record_type_to_resolve == 'SRV':
+  #if record_to_resolve == 'SRV':
     # make test based on name of record to resolve, expected IP addr(s) with
     # ports, and expected service config, if any
 
-print json.dumps(test_groups)
+#print ========
+
+print(yaml.dump(test_groups))
