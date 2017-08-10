@@ -3624,6 +3624,47 @@
   }, 
   {
     "deps": [
+      "gpr", 
+      "gpr_test_util", 
+      "grpc", 
+      "grpc++", 
+      "grpc++_test_config", 
+      "grpc++_test_util", 
+      "grpc_test_util", 
+      "naming_end2end_test_util"
+    ], 
+    "headers": [], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test", 
+    "src": [
+      "test/cpp/naming/naming_end2end_test.cc"
+    ], 
+    "third_party": false, 
+    "type": "target"
+  }, 
+  {
+    "deps": [
+      "grpc", 
+      "grpc++", 
+      "grpc++_test_util", 
+      "grpc_test_util"
+    ], 
+    "headers": [
+      "test/cpp/naming/naming_end2end_test_util.h"
+    ], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "naming_end2end_test_util", 
+    "src": [
+      "test/cpp/naming/naming_end2end_test_util.c", 
+      "test/cpp/naming/naming_end2end_test_util.h"
+    ], 
+    "third_party": false, 
+    "type": "target"
+  }, 
+  {
+    "deps": [
       "benchmark"
     ], 
     "headers": [], 
@@ -5538,20 +5579,6 @@
     "name": "inproc_nosec_test", 
     "src": [
       "test/core/end2end/fixtures/inproc.c"
-    ], 
-    "third_party": false, 
-    "type": "target"
-  }, 
-  {
-    "deps": [
-      "naming_end2end_test_util"
-    ], 
-    "headers": [], 
-    "is_filegroup": false, 
-    "language": "c++", 
-    "name": "naming_end2end_test", 
-    "src": [
-      "test/cpp/naming/naming_end2end_test.cc"
     ], 
     "third_party": false, 
     "type": "target"
@@ -7507,29 +7534,6 @@
       "test/core/end2end/tests/workaround_cronet_compression.c", 
       "test/core/end2end/tests/write_buffering.c", 
       "test/core/end2end/tests/write_buffering_at_end.c"
-    ], 
-    "third_party": false, 
-    "type": "lib"
-  }, 
-  {
-    "deps": [
-      "gpr", 
-      "gpr_test_util", 
-      "grpc", 
-      "grpc++", 
-      "grpc++_test_config", 
-      "grpc++_test_util", 
-      "grpc_test_util"
-    ], 
-    "headers": [
-      "test/cpp/naming/naming_end2end_test_util.h"
-    ], 
-    "is_filegroup": false, 
-    "language": "c++", 
-    "name": "naming_end2end_test_util", 
-    "src": [
-      "test/cpp/naming/naming_end2end_test_util.cc", 
-      "test/cpp/naming/naming_end2end_test_util.h"
     ], 
     "third_party": false, 
     "type": "lib"

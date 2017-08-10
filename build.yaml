@@ -4226,6 +4226,37 @@ targets:
   - grpc
   - gpr_test_util
   - gpr
+- name: naming_end2end_test
+  build: test
+  run: true
+  language: c++
+  src:
+  - test/cpp/naming/naming_end2end_test.cc
+  deps:
+  - naming_end2end_test_util
+  - grpc++_test_util
+  - grpc_test_util
+  - grpc++
+  - grpc
+  - gpr_test_util
+  - gpr
+  - grpc++_test_config
+  platforms:
+  - mac
+  - linux
+  - posix
+- name: naming_end2end_test_util
+  build: private
+  language: c++
+  headers:
+  - test/cpp/naming/naming_end2end_test_util.h
+  src:
+  - test/cpp/naming/naming_end2end_test_util.c
+  deps:
+  - grpc_test_util
+  - grpc++_test_util
+  - grpc++
+  - grpc
 - name: noop-benchmark
   build: test
   language: c++

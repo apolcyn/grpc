@@ -24,39 +24,6 @@ import hashlib
 def main():
   json = {
       '#': 'generated with test/cpp/naming/gen_build_json.py',
-      'libs': [
-          {
-              'name': 'naming_end2end_test_util',
-              'build': 'private',
-              'language': 'c++',
-              'secure': False,
-              'src': ['test/cpp/naming/naming_end2end_test_util.cc'],
-              'headers': ['test/cpp/naming/naming_end2end_test_util.h'],
-              'deps': [
-                  'grpc++_test_util',
-                  'grpc_test_util',
-                  'grpc++',
-                  'grpc',
-                  'gpr_test_util',
-                  'gpr',
-                  'grpc++_test_config',
-              ],
-              'vs_proj_dir': 'test/naming_end2end/tests',
-          }
-      ],
-      'targets': [
-          {
-              'name': 'naming_end2end_test',
-              'build': 'test',
-              'language': 'c++',
-              'run': False,
-              'src': ['test/cpp/naming/naming_end2end_test.cc'],
-              'deps': [
-                  'naming_end2end_test_util',
-              ],
-              'vs_proj_dir': 'test/naming_end2end/tests',
-          }
-      ],
       'core_naming_end2end_tests': [
           { 'name': 'test1', 'record_type_to_resolve': 'SRV' },
           { 'name': 'test2', 'record_type_to_resolve': 'SRV' },
