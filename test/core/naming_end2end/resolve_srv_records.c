@@ -176,7 +176,7 @@ static void poll_pollset_until_request_done(args_struct *args) {
 static void check_service_config_result_locked(grpc_channel_args *channel_args, args_struct *args) {
   const grpc_arg *service_config_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_SERVICE_CONFIG);
-  if (args->expected_service_config_string) {
+  if (args->expected_service_config_string != NULL) {
     GPR_ASSERT(service_config_arg != NULL);
     GPR_ASSERT(service_config_arg->type == GRPC_ARG_STRING);
     char* service_config_string = service_config_arg->value.string;
@@ -281,52 +281,96 @@ typedef struct test_config {
   char* expected_service_config;
 } test_config;
 
-#define NUM_CONFIGS 1
+#define NUM_CONFIGS 13
 
 int main(int argc, char **argv) {
   grpc_init();
   test_config configs[NUM_CONFIGS] = {
-//  {
-//    "ipv4-single-target.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//  },
-//  {
-//    "ipv6-single-target.grpc.com.",
-//    NULL,
-//    "[2607:f8b0:400a:801::1001]:443",
-//  },
-//  {
-//    "ipv4-multi-target.grpc.com.",
-//    NULL,
-//    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
-//  },
-//  {
-//    "ipv6-multi-target.grpc.com.",
-//    NULL,
-//    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
-//  },
+  {
+    "ipv4-single-target.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    NULL,
+  },
+  {
+    "ipv6-single-target.grpc.com.",
+    NULL,
+    "[2607:f8b0:400a:801::1001]:443",
+    NULL,
+  },
+  {
+    "ipv4-multi-target.grpc.com.",
+    NULL,
+    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
+    NULL,
+  },
+  {
+    "ipv6-multi-target.grpc.com.",
+    NULL,
+    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
+    NULL,
+  },
   {
     NULL,
-    "srv-ipv4-single-target.grpc.com.",
+    "srv-ipv6-single-target.grpc.com.",
+    "[2607:f8b0:400a:801::1001]:1234",
+    NULL,
+  },
+  {
+    NULL,
+    "srv-ipv4-multi-target.grpc.com.",
+    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
+    NULL,
+  },
+  {
+    NULL,
+    "srv-ipv6-multi-target.grpc.com.",
+    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
+    NULL,
+  },
+  {
+    "no-srv-simple-service-config.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}",
+  },
+  {
+    NULL,
+    "srv-for-simple-service-config.grpc.com.",
     "1.2.3.4:1234",
     "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}",
   },
-//  {
-//    NULL,
-//    "srv-ipv6-single-target.grpc.com.",
-//    "[2607:f8b0:400a:801::1001]:1234",
-//  },
-//  {
-//    NULL,
-//    "srv-ipv4-multi-target.grpc.com.",
-//    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
-//  },
-//  {
-//    NULL,
-//    "srv-ipv6-multi-target.grpc.com.",
-//    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
-//  }
+  {
+    "second-language-cpp.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    "{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}",
+  },
+  {
+    "no-cpp-config.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    NULL,
+  },
+  {
+    "config-with-percentages.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    "{\"methodConfig\":[{\"name\":[{\"service\":\"AlwaysChosenService\"}],\"waitForReady\":false}]}",
+  },
+  //  TODO: should this test be enabled?
+  //  {
+  //    "empty-list-client-hostname.grpc.com.",
+  //    NULL,
+  //    "1.2.3.4:443",
+  //    "{\"loadBalancingPolicy\":\"round_robin\"}",
+  //  },
+  {
+    "cpp-language-zero-picks.grpc.com.",
+    NULL,
+    "1.2.3.4:443",
+    NULL,
+  },
   };
 
   for (int i = 0; i < NUM_CONFIGS; i++) {

@@ -111,15 +111,39 @@ all_records = {
     'ipv6-multi-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001'),
                                     AAAA('2607:f8b0:400a:801::1003'),
                                     AAAA('2607:f8b0:400a:801::1004')],
+
+    # SRV -> A/AAAA, without a service config
     '_grpclb._tcp.srv-ipv4-single-target.grpc.com.': [SRV(target='ipv4-single-target.grpc.com.', priority=0, weight=0, port=1234)],
-    #'srv-ipv4-single-target.grpc.com.': [TXT('grpc_config=[{\"serviceConfig\":{}}]')],
-    'srv-ipv4-single-target.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
     '_grpclb._tcp.srv-ipv6-single-target.grpc.com.': [SRV(target='ipv6-single-target.grpc.com.', priority=0, weight=0, port=1234)],
-    'srv-ipv6-single-target.grpc.com.': [TXT('grpc_config={}')],
     '_grpclb._tcp.srv-ipv4-multi-target.grpc.com.': [SRV(target='ipv4-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
-    'srv-ipv4-multi-target.grpc.com.': [TXT('grpc_config={}')],
     '_grpclb._tcp.srv-ipv6-multi-target.grpc.com.': [SRV(target='ipv6-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
-    'srv-ipv6-multi-target.grpc.com.': [TXT('grpc_config={}')],
+
+    # A record with a service config
+    'no-srv-simple-service-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
+
+    # SRV -> A record with a service config
+    '_grpclb._tcp.srv-for-simple-service-config.grpc.com.': [SRV(target='simple-service-config.grpc.com.', priority=0, weight=0, port=1234)],
+    'srv-for-simple-service-config.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
+    'simple-service-config.grpc.com.': [A('1.2.3.4')],
+
+    # A record with a service config having c++ as second client language
+    'second-language-cpp.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{}},{\"clientLanguage\":[\"c++\"],\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}}]")],
+
+    # A record with a service config having only java and go as client languages
+    'no-cpp-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}},{\"clientLanguage\":[\"java\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+
+    # A record with a service config having with extreme percentages chosen
+    'config-with-percentages.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":0,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"NeverChosenService\"}],\"waitForReady\":true}]}},{\"percentage\":100,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"AlwaysChosenService\"}],\"waitForReady\":false}]}}]")],
+
+    # A record with a service config having an empty-list clientHostname
+    # TODO: should this test pass? does an empty list count mean no client langs
+    # or all client langs pass?
+    # 'empty-list-client-hostname.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientHostname\":[],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+
+    # service config with matching client language but zero percentage
+    'cpp-language-zero-picks.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":\"0\",\"clientLanguage\":\"c++\",\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+
+    # TODO: test service configs in which clientHostname is specified
 }
 
 TYPE_LOOKUP = {

@@ -188,6 +188,7 @@ static char *choose_service_config(char *service_config_choice_json) {
         if (field->type != GRPC_JSON_ARRAY ||
             !value_in_json_array(field, "c++")) {
           service_config_json = NULL;
+          gpr_log(GPR_INFO, "SKIPPING ONE CONFIG since clientLanguage is mismatched");
           break;
         }
       }
@@ -204,6 +205,7 @@ static char *choose_service_config(char *service_config_choice_json) {
       if (strcmp(field->key, "percentage") == 0) {
         if (field->type != GRPC_JSON_NUMBER) {
           service_config_json = NULL;
+          gpr_log(GPR_ERROR, "percentage not a number -- SKIPPING CONFIG");
           break;
         }
         int random_pct = rand() % 100;
@@ -211,6 +213,7 @@ static char *choose_service_config(char *service_config_choice_json) {
         if (sscanf(field->value, "%d", &percentage) != 1 ||
             random_pct > percentage) {
           service_config_json = NULL;
+          gpr_log(GPR_ERROR, "percentage mismatch -- SKIPPING CONFIG");
           break;
         }
       }
@@ -225,6 +228,9 @@ static char *choose_service_config(char *service_config_choice_json) {
       service_config = grpc_json_dump_to_string(service_config_json, 0);
       break;
     }
+  }
+  if (service_config == NULL) {
+    gpr_log(GPR_ERROR, "COULD NOT FIND VALID SERVICE CONFIG FOR SOME REASON");
   }
   grpc_json_destroy(choices_json);
   return service_config;
