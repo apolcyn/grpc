@@ -5548,10 +5548,10 @@
     ], 
     "headers": [], 
     "is_filegroup": false, 
-    "language": "c", 
+    "language": "c++", 
     "name": "naming_end2end_test", 
     "src": [
-      "test/cpp/naming/naming_end2end_test.c"
+      "test/cpp/naming/naming_end2end_test.cc"
     ], 
     "third_party": false, 
     "type": "target"
@@ -7516,16 +7516,19 @@
       "gpr", 
       "gpr_test_util", 
       "grpc", 
+      "grpc++", 
+      "grpc++_test_config", 
+      "grpc++_test_util", 
       "grpc_test_util"
     ], 
     "headers": [
       "test/cpp/naming/naming_end2end_test_util.h"
     ], 
     "is_filegroup": false, 
-    "language": "c", 
+    "language": "c++", 
     "name": "naming_end2end_test_util", 
     "src": [
-      "test/cpp/naming/naming_end2end_test_util.c", 
+      "test/cpp/naming/naming_end2end_test_util.cc", 
       "test/cpp/naming/naming_end2end_test_util.h"
     ], 
     "third_party": false, 

@@ -16,8 +16,12 @@
  *
  */
 
-#include "test/core/naming_end2end/naming_end2end_test_util.h"
+
+#ifndef NAMING_END2END_TEST_H
+#define NAMING_END2END_TEST_H
 
 void naming_end2end_test_resolves_backend(char *name, char *expected_addrs, char *expected_service_config);
 
 void naming_end2end_test_resolves_balancer(char *name, char *expected_addrs, char *expected_service_config);
+
+#endif

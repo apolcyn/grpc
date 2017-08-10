@@ -145,60 +145,60 @@ class SleepingEnumerator
   end
 end
 
-class MultiConsumerEnumeratorQueue
-  def initialize(items, interested)
-    @fiber_mu = Mutex.new
-    @fiber = Fiber.new do
-      out = nil
-      loop do
-        notify_proc = @interested.pop
-        if notify_proc.nil?
-          break
-        end
-        if items.size == 0
-          yield out
-        else
-          begin
-            out = items.next
-          rescue => e
-            out = e
-          end
-          yield out
-        end
-      end
-    end
-  end
-  def read
-    msg = nil
-    @fiber_mu.synchronize do
-      msg = @fiber.resume
-    end
-    if msg.is_a?(Exception)
-      raise e
-    end
-    e
-  end
-  def close_and_wait_until_done
-    @interested.push(nil)
-    @fiber_mu.synchronize do
-      loop do
-        @fiber.resume
-      rescue DeadFiberException
-        break
-      end
-    end
-  end
-end
+#class MultiConsumerEnumeratorQueue
+#  def initialize(items, interested)
+#    @fiber_mu = Mutex.new
+#    @fiber = Fiber.new do
+#      out = nil
+#      loop do
+#        notify_proc = @interested.pop
+#        if notify_proc.nil?
+#          break
+#        end
+#        if items.size == 0
+#          yield out
+#        else
+#          begin
+#            out = items.next
+#          rescue => e
+#            out = e
+#          end
+#          yield out
+#        end
+#      end
+#    end
+#  end
+#  def read
+#    msg = nil
+#    @fiber_mu.synchronize do
+#      msg = @fiber.resume
+#    end
+#    if msg.is_a?(Exception)
+#      raise e
+#    end
+#    e
+#  end
+#  def close_and_wait_until_done
+#    @interested.push(nil)
+#    @fiber_mu.synchronize do
+#      loop do
+#        @fiber.resume
+#      rescue DeadFiberException
+#        break
+#      end
+#    end
+#  end
+#end
 
 def main
   stub = RouteGuide::Stub.new('localhost:50051', :this_channel_is_insecure)
-  run_get_feature(stub)
-  run_list_features(stub)
-  run_route_chat(stub)
-  if ARGV.length == 0
-    p 'no feature database; skipping record_route'
-    exit
-  end
+#  run_get_feature(stub)
+#  run_list_features(stub)
+#  run_route_chat(stub)
+#  if ARGV.length == 0
+#    p 'no feature database; skipping record_route'
+#    exit
+#  end
   raw_data = []
   File.open(ARGV[0]) do |f|
     raw_data = MultiJson.load(f.read)

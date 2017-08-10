@@ -28,15 +28,18 @@ def main():
           {
               'name': 'naming_end2end_test_util',
               'build': 'private',
-              'language': 'c',
+              'language': 'c++',
               'secure': False,
-              'src': ['test/cpp/naming/naming_end2end_test_util.c'],
+              'src': ['test/cpp/naming/naming_end2end_test_util.cc'],
               'headers': ['test/cpp/naming/naming_end2end_test_util.h'],
               'deps': [
+                  'grpc++_test_util',
                   'grpc_test_util',
+                  'grpc++',
                   'grpc',
                   'gpr_test_util',
                   'gpr',
+                  'grpc++_test_config',
               ],
               'vs_proj_dir': 'test/naming_end2end/tests',
           }
@@ -45,9 +48,9 @@ def main():
           {
               'name': 'naming_end2end_test',
               'build': 'test',
-              'language': 'c',
+              'language': 'c++',
               'run': False,
-              'src': ['test/cpp/naming/naming_end2end_test.c'],
+              'src': ['test/cpp/naming/naming_end2end_test.cc'],
               'deps': [
                   'naming_end2end_test_util',
               ],

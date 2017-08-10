@@ -19,7 +19,7 @@
 
 /* This file is auto-generated */
 
-#include "test/core/naming_end2end/name_end2end_test_util.h"
+#include "test/cpp/naming/naming_end2end_test_util.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -28,13 +28,11 @@
 
 #include "test/core/util/debugger_macros.h"
 
-static bool g_pre_init_called = false;
-
 void test1_test() {
-  naming_end2end_test_resolves_balancer();
+  naming_end2end_test_resolves_balancer(NULL, NULL, NULL);
 }
 void test2_test() {
-  naming_end2end_test_resolves_balancer();
+  naming_end2end_test_resolves_balancer(NULL, NULL, NULL);
 }
 
 int main(int argc, char **argv) {
