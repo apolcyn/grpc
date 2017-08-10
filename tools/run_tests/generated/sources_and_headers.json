@@ -5551,7 +5551,7 @@
     "language": "c", 
     "name": "naming_end2end_test", 
     "src": [
-      "test/core/naming_end2end/naming_end2end_test.c"
+      "test/cpp/naming/naming_end2end_test.c"
     ], 
     "third_party": false, 
     "type": "target"
@@ -7519,14 +7519,14 @@
       "grpc_test_util"
     ], 
     "headers": [
-      "test/core/naming_end2end/naming_end2end_test_util.h"
+      "test/cpp/naming/naming_end2end_test_util.h"
     ], 
     "is_filegroup": false, 
     "language": "c", 
     "name": "naming_end2end_test_util", 
     "src": [
-      "test/core/naming_end2end/naming_end2end_test_util.c", 
-      "test/core/naming_end2end/naming_end2end_test_util.h"
+      "test/cpp/naming/naming_end2end_test_util.c", 
+      "test/cpp/naming/naming_end2end_test_util.h"
     ], 
     "third_party": false, 
     "type": "lib"

@@ -158,7 +158,7 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test.c">
+    <ClCompile Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test.c">
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

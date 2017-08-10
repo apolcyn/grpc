@@ -147,10 +147,10 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test_util.h" />
+    <ClInclude Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test_util.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test_util.c">
+    <ClCompile Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test_util.c">
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

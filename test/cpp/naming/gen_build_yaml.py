@@ -23,15 +23,15 @@ import hashlib
 
 def main():
   json = {
-      '#': 'generated with test/core/naming_end2end/gen_build_json.py',
+      '#': 'generated with test/cpp/naming/gen_build_json.py',
       'libs': [
           {
               'name': 'naming_end2end_test_util',
               'build': 'private',
               'language': 'c',
               'secure': False,
-              'src': ['test/core/naming_end2end/naming_end2end_test_util.c'],
-              'headers': ['test/core/naming_end2end/naming_end2end_test_util.h'],
+              'src': ['test/cpp/naming/naming_end2end_test_util.c'],
+              'headers': ['test/cpp/naming/naming_end2end_test_util.h'],
               'deps': [
                   'grpc_test_util',
                   'grpc',
@@ -47,7 +47,7 @@ def main():
               'build': 'test',
               'language': 'c',
               'run': False,
-              'src': ['test/core/naming_end2end/naming_end2end_test.c'],
+              'src': ['test/cpp/naming/naming_end2end_test.c'],
               'deps': [
                   'naming_end2end_test_util',
               ],

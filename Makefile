@@ -8544,7 +8544,7 @@ endif
 
 
 LIBNAMING_END2END_TEST_UTIL_SRC = \
-    test/core/naming_end2end/naming_end2end_test_util.c \
+    test/cpp/naming/naming_end2end_test_util.c \
 
 PUBLIC_HEADERS_C += \
 
@@ -19251,7 +19251,7 @@ endif
 
 
 NAMING_END2END_TEST_SRC = \
-    test/core/naming_end2end/naming_end2end_test.c \
+    test/cpp/naming/naming_end2end_test.c \
 
 NAMING_END2END_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRC))))
 ifeq ($(NO_SECURE),true)
@@ -19271,7 +19271,7 @@ $(BINDIR)/$(CONFIG)/naming_end2end_test: $(NAMING_END2END_TEST_OBJS) $(LIBDIR)/$
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/core/naming_end2end/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libnaming_end2end_test_util.a
 
 deps_naming_end2end_test: $(NAMING_END2END_TEST_OBJS:.o=.dep)
 

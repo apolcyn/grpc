@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test_util.c">
-      <Filter>test\core\naming_end2end</Filter>
+    <ClCompile Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test_util.c">
+      <Filter>test\cpp\naming</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test_util.h">
-      <Filter>test\core\naming_end2end</Filter>
+    <ClInclude Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test_util.h">
+      <Filter>test\cpp\naming</Filter>
     </ClInclude>
   </ItemGroup>
 
@@ -15,11 +15,11 @@
     <Filter Include="test">
       <UniqueIdentifier>{6b6c0bf2-7235-79e4-4e9b-5b30f5a63b04}</UniqueIdentifier>
     </Filter>
-    <Filter Include="test\core">
-      <UniqueIdentifier>{657d2b5a-0190-bd2a-4c21-c19ae2221f3b}</UniqueIdentifier>
+    <Filter Include="test\cpp">
+      <UniqueIdentifier>{3bd7a9af-6c37-8887-d679-e5d33fd9c460}</UniqueIdentifier>
     </Filter>
-    <Filter Include="test\core\naming_end2end">
-      <UniqueIdentifier>{6e6c0f1d-4fb3-608d-4fbb-c784f342b681}</UniqueIdentifier>
+    <Filter Include="test\cpp\naming">
+      <UniqueIdentifier>{a5ccc753-80e0-b173-5ae4-4131dbbf0c41}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

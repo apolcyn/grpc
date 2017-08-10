@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\..\test\core\naming_end2end\naming_end2end_test.c">
-      <Filter>test\core\naming_end2end</Filter>
+    <ClCompile Include="$(SolutionDir)\..\test\cpp\naming\naming_end2end_test.c">
+      <Filter>test\cpp\naming</Filter>
     </ClCompile>
   </ItemGroup>
 
@@ -10,11 +10,11 @@
     <Filter Include="test">
       <UniqueIdentifier>{c985260a-fb10-e511-80cb-2ecd1c2fb446}</UniqueIdentifier>
     </Filter>
-    <Filter Include="test\core">
-      <UniqueIdentifier>{7a4604c0-7f2b-53d1-265a-5898c694cb0a}</UniqueIdentifier>
+    <Filter Include="test\cpp">
+      <UniqueIdentifier>{4bf8a006-9ad9-5d25-2397-ee357e0141e0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="test\core\naming_end2end">
-      <UniqueIdentifier>{46672581-f34a-4686-d0ab-b17a872f9e4d}</UniqueIdentifier>
+    <Filter Include="test\cpp\naming">
+      <UniqueIdentifier>{ea6506fa-1e3a-406f-c70d-8bcca474bd21}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

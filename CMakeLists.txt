@@ -4999,7 +4999,7 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 
 add_library(naming_end2end_test_util
-  test/core/naming_end2end/naming_end2end_test_util.c
+  test/cpp/naming/naming_end2end_test_util.c
 )
 
 if(WIN32 AND MSVC)
@@ -14540,7 +14540,7 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 
 add_executable(naming_end2end_test
-  test/core/naming_end2end/naming_end2end_test.c
+  test/cpp/naming/naming_end2end_test.c
 )
 
 
