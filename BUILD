@@ -315,7 +315,6 @@ grpc_cc_library(
         "src/compiler/csharp_generator.cc",
         "src/compiler/node_generator.cc",
         "src/compiler/objective_c_generator.cc",
-        "src/compiler/php_generator.cc",
         "src/compiler/python_generator.cc",
         "src/compiler/ruby_generator.cc",
     ],
@@ -330,8 +329,6 @@ grpc_cc_library(
         "src/compiler/node_generator_helpers.h",
         "src/compiler/objective_c_generator.h",
         "src/compiler/objective_c_generator_helpers.h",
-        "src/compiler/php_generator.h",
-        "src/compiler/php_generator_helpers.h",
         "src/compiler/protobuf_plugin.h",
         "src/compiler/python_generator.h",
         "src/compiler/python_generator_helpers.h",
@@ -375,11 +372,7 @@ grpc_proto_plugin(
     deps = [":grpc_plugin_support"],
 )
 
-grpc_proto_plugin(
-    name = "grpc_php_plugin",
-    srcs = ["src/compiler/php_plugin.cc"],
-    deps = [":grpc_plugin_support"],
-)
+# TODO: add a build rule for php proto plugin
 
 grpc_proto_plugin(
     name = "grpc_python_plugin",
