@@ -120,6 +120,7 @@ for group in test_groups:
       assert(len(record.keys()) == 1)
       r_type = record.keys()[0]
       r_data = record[r_type]
+      print('record Name is |%s|' % name)
       if r_type == 'A':
         _push_record(all_records, name, A(r_data))
       if r_type == 'AAAA':

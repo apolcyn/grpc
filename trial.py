@@ -27,7 +27,7 @@ def aaaa_record(ip):
 
 def srv_record(target):
   return {
-      'SRV': '0 0 %s %s' % (SRV_PORT, target),
+      'SRV': '0 0 %s %s' % (SRV_PORT, '%s.%s' % (target, ZONE_DNS)),
   }
 
 def txt_record(grpc_config):

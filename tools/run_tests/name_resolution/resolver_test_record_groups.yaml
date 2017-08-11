@@ -3,7 +3,7 @@
   record_to_resolve: srv-ipv4-single-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-single-target.grpc.com.:
-    - {SRV: 0 0 1234 ipv4-single-target}
+    - {SRV: 0 0 1234 ipv4-single-target.grpc.com.}
     ipv4-single-target.grpc.com.:
     - {A: 1.2.3.4}
 - expected_addrs: ['1.2.3.5:1234', '1.2.3.6:1234', '1.2.3.7:1234']
@@ -11,7 +11,7 @@
   record_to_resolve: srv-ipv4-multi-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-multi-target.grpc.com.:
-    - {SRV: 0 0 1234 ipv4-multi-target}
+    - {SRV: 0 0 1234 ipv4-multi-target.grpc.com.}
     ipv4-multi-target.grpc.com.:
     - {A: 1.2.3.5}
     - {A: 1.2.3.6}
@@ -21,7 +21,7 @@
   record_to_resolve: srv-ipv6-single-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv6-single-target.grpc.com.:
-    - {SRV: 0 0 1234 ipv6-single-target}
+    - {SRV: 0 0 1234 ipv6-single-target.grpc.com.}
     ipv6-single-target.grpc.com.:
     - {AAAA: '2607:f8b0:400a:801::1001'}
 - expected_addrs: ['[2607:f8b0:400a:801::1002]:1234', '[2607:f8b0:400a:801::1003]:1234',
@@ -30,7 +30,7 @@
   record_to_resolve: srv-ipv6-multi-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv6-multi-target.grpc.com.:
-    - {SRV: 0 0 1234 ipv6-multi-target}
+    - {SRV: 0 0 1234 ipv6-multi-target.grpc.com.}
     ipv6-multi-target.grpc.com.:
     - {AAAA: '2607:f8b0:400a:801::1002'}
     - {AAAA: '2607:f8b0:400a:801::1003'}
@@ -40,7 +40,7 @@
   record_to_resolve: srv-ipv4-simple-service-config.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-simple-service-config.grpc.com.:
-    - {SRV: 0 0 1234 ipv4-simple-service-config}
+    - {SRV: 0 0 1234 ipv4-simple-service-config.grpc.com.}
     ipv4-simple-service-config.grpc.com.:
     - {A: 1.2.3.4}
     srv-ipv4-simple-service-config.grpc.com.:

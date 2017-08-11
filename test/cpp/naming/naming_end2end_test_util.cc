@@ -256,6 +256,7 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
 }
 
 void naming_end2end_test_resolves_backend(const char *name, const char *expected_addrs, const char *expected_service_config) {
+  grpc_init();
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
@@ -267,9 +268,11 @@ void naming_end2end_test_resolves_backend(const char *name, const char *expected
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
+  grpc_shutdown();
 }
 
 void naming_end2end_test_resolves_balancer(const char *name, const char *expected_addrs, const char *expected_service_config) {
+  grpc_init();
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
@@ -281,6 +284,7 @@ void naming_end2end_test_resolves_balancer(const char *name, const char *expecte
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
+  grpc_shutdown();
 }
 
 }  // namespace
