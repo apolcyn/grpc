@@ -16,15 +16,17 @@
  *
  */
 
-extern "C" {
-  #include <grpc/grpc.h>
-  #include <grpc/support/alloc.h>
-  #include <grpc/support/host_port.h>
-  #include <grpc/support/log.h>
-  #include <grpc/support/sync.h>
-  #include <grpc/support/time.h>
-  #include <string.h>
+#include <grpc/grpc.h>
+#include <grpc/support/alloc.h>
+#include <grpc/support/host_port.h>
+#include <grpc/support/log.h>
+#include <grpc/support/sync.h>
+#include <grpc/support/time.h>
+#include <string.h>
 
+#include <vector>
+
+extern "C" {
   #include "src/core/ext/filters/client_channel/client_channel.h"
   #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
   #include "src/core/ext/filters/client_channel/resolver_registry.h"
@@ -39,73 +41,12 @@ extern "C" {
   #include "test/core/util/test_config.h"
 }
 
+using std::vector;
+
 #include "test/cpp/naming/naming_end2end_test_util.h"
 
 namespace grpc {
 namespace testing {
-
-extern "C" {
-  void grpc_resolver_dns_ares_init();
-  void grpc_resolver_dns_ares_shutdown();
-}
-
-typedef struct string_list_node {
-  const char *target;
-  int length;
-  int matched;
-  struct string_list_node *next;
-} string_list_node;
-
-static string_list_node *parse_expected(const char *expected_addrs) {
-  char *p = (char*)expected_addrs;
-  string_list_node *prev_head = NULL;
-  string_list_node *new_node = NULL;
-
-  while (*p) {
-    if (*p == ',') {
-      ((char*)new_node->target)[new_node->length] = 0;
-      new_node->next = prev_head;
-      prev_head = new_node;
-      new_node = NULL;
-    } else {
-      if (new_node == NULL) {
-        new_node = (string_list_node*)gpr_zalloc(sizeof(string_list_node));
-        new_node->target = (const char*)gpr_zalloc(strlen(expected_addrs) + 1);
-      }
-      ((char*)new_node->target)[new_node->length++] = *p;
-    }
-    p++;
-  }
-  if (new_node) {
-    new_node->next = prev_head;
-  }
-  return new_node;
-}
-
-static int matches_any(char *result_address,
-                       string_list_node *candidates_head) {
-  while (candidates_head != NULL) {
-    if (!candidates_head->matched &&
-        gpr_stricmp(candidates_head->target, result_address) == 0) {
-      candidates_head->matched = 1;
-      return 1;
-    }
-    gpr_log(GPR_INFO, "%s didn't match address: %s", candidates_head->target,
-            result_address);
-    candidates_head = candidates_head->next;
-  }
-  gpr_log(GPR_INFO, "no match found for address: %s", result_address);
-  return 0;
-}
-
-static size_t list_size(string_list_node *head) {
-  size_t count = 0;
-  while (head != NULL) {
-    count++;
-    head = head->next;
-  }
-  return count;
-}
 
 static gpr_timespec test_deadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
@@ -121,9 +62,22 @@ typedef struct args_struct {
   grpc_channel_args *channel_args;
   int expect_is_balancer;
   const char *target_name;
-  string_list_node *expected_addrs_head;
+  vector<std::string> expected_addrs;
   const char *expected_service_config_string;
 } args_struct;
+
+int matches_any(vector<std::string> expected_addrs, const char* addr) {
+  for (auto it = expected_addrs.begin(); it != expected_addrs.end(); it++) {
+    if (it->compare(addr) == 0) {
+      gpr_log(GPR_INFO, "found a match for expected addresss: %s", addr);
+      return 1;
+    } else {
+      gpr_log(GPR_INFO, "expected addresss: %s didn't match found address: %s", it->c_str(), addr);
+    }
+  }
+  gpr_log(GPR_ERROR, "no match found for found address: %s", addr);
+  return 0;
+}
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
 
@@ -209,16 +163,16 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses = (grpc_lb_addresses*)channel_arg->value.pointer.p;
   gpr_log(GPR_INFO, "num addrs found: %d. expected %" PRIdPTR,
-          (int)addresses->num_addresses, list_size(args->expected_addrs_head));
+          (int)addresses->num_addresses, args->expected_addrs.size());
 
-  GPR_ASSERT(addresses->num_addresses == list_size(args->expected_addrs_head));
+  GPR_ASSERT(addresses->num_addresses == args->expected_addrs.size());
   for (size_t i = 0; i < addresses->num_addresses; i++) {
     grpc_lb_address addr = addresses->addresses[i];
     char *str;
     grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
     gpr_log(GPR_INFO, "%s", str);
     GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
-    GPR_ASSERT(matches_any(str, args->expected_addrs_head));
+    GPR_ASSERT(matches_any(args->expected_addrs, str));
   }
 
   check_service_config_result_locked(channel_args, args);
@@ -255,14 +209,15 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   poll_pollset_until_request_done(args);
 }
 
-void naming_end2end_test_resolves_backend(const char *name, const char *expected_addrs, const char *expected_service_config) {
+void naming_end2end_test_resolves_backend(const char *name, std::vector<std::string> expected_addrs, const char *expected_service_config) {
   grpc_init();
+  gpr_log(GPR_INFO, "e a size: %d", (int)expected_addrs.size());
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 0;
   args.target_name = name;
-  args.expected_addrs_head = parse_expected(expected_addrs);
+  args.expected_addrs = expected_addrs;
   args.expected_service_config_string = expected_service_config;
 
   test_resolves(&exec_ctx, &args);
@@ -271,14 +226,15 @@ void naming_end2end_test_resolves_backend(const char *name, const char *expected
   grpc_shutdown();
 }
 
-void naming_end2end_test_resolves_balancer(const char *name, const char *expected_addrs, const char *expected_service_config) {
+void naming_end2end_test_resolves_balancer(const char *name, std::vector<std::string> expected_addrs, const char *expected_service_config) {
   grpc_init();
+  gpr_log(GPR_INFO, "e a size: %d", (int)expected_addrs.size());
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expect_is_balancer = 1;
   args.target_name = name;
-  args.expected_addrs_head = parse_expected(expected_addrs);
+  args.expected_addrs = expected_addrs;
   args.expected_service_config_string = expected_service_config;
 
   test_resolves(&exec_ctx, &args);

@@ -89,10 +89,14 @@ namespace testing {
 
 % for test in tests:
 TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
+  std::vector<std::string> expected_addrs;
+%   for addr in test['expected_addrs']:
+  expected_addrs.emplace_back("${addr}");
+%   endfor
 %   if _record_to_resolve_is_balancer(test):
-  naming_end2end_test_resolves_balancer("${test['record_to_resolve']}", "${_expected_ip_addrs_from_list(test['expected_addrs'])}", ${_expected_service_config(test)});
+  naming_end2end_test_resolves_balancer("srv-ipv4-single-target.grpc.com.", expected_addrs, NULL);
 %   else:
-  naming_end2end_test_resolves_backend("${test['record_to_resolve']}", "${_expected_ip_addrs_from_list(test['expected_addrs'])}", ${_expected_service_config(test)});
+  naming_end2end_test_resolves_backend("${test['record_to_resolve']}", expected_addrs, ${_expected_service_config(test)});
 %   endif
 }
 % endfor
