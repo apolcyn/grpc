@@ -24,24 +24,72 @@
 
 #include <stdbool.h>
 #include <string.h>
+#include "test/core/util/test_config.h"
 
 #include <grpc/support/log.h>
 
+#include <gtest/gtest.h>
+
 #include "test/core/util/debugger_macros.h"
 
+//  Example yaml test config:
+//
+//  - expected_addrs: ['1.2.3.4:1234']
+//    expected_config_index: null
+//    record_to_resolve: ipv4-single-target.grpc.com.
+//    records:
+//      _grpclb._tcp.srv-ipv4-single-target.grpc.com.:
+//      - {SRV: 0 0 1234 ipv4-single-target}
+//      ipv4-single-target.grpc.com.:
+//      - {A: 1.2.3.4}
+
+<%
+def _record_to_resolve_is_balancer(test):
+  records = test['records']
+  srv_attempted = '_grpclb._tcp.%s' % test['record_to_resolve']
+  if records.get(srv_attempted) is None:
+    return False
+  for r in records[srv_attempted]:
+    if 'SRV' in r.keys():
+      return True
+  return False
+
+def _to_test_name(record_name):
+  return record_name.replace('-', '_').replace('.', '_')
+
+def _expected_ip_addrs_from_list(ip_addr_list):
+  return ','.join(ip_addr_list)
+
+def _expected_service_config(test):
+  txt_count = 0
+  for name in test['records'].keys():
+    for record in test['records'].get(name):
+      if 'TXT' in record.keys():
+        txt_count += 1
+        txt_data = record['TXT']
+  if txt_count == 0:
+    return 'NULL'
+  assert(txt_count == 1)
+  split_index = txt_data.find('=')
+  assert(split_index)
+  return "\"%s\"" % txt_data[split_index+1:].replace('\"', '\\"')
+
+%>\
+
 % for test in tests:
-void ${test['name']}_test() {
-%   if test['record_type_to_resolve'] == 'SRV':
-  naming_end2end_test_resolves_balancer(NULL, NULL, NULL);
+TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
+%   if _record_to_resolve_is_balancer(test):
+  naming_end2end_test_resolves_balancer(${test['record_to_resolve']}, ${_expected_ip_addrs_from_list(test['expected_addrs'])}, ${_expected_service_config(test)});
 %   else:
-  naming_end2end_test_resolves_backend(NULL, NULL, NULL);
+  naming_end2end_test_resolves_backend(${test['record_to_resolve']}, ${_expected_ip_addrs_from_list(test['expected_addrs'])}, ${_expected_service_config(test)});
 %   endif
 }
-% endfor
 
-int main(int argc, char **argv) {
-% for test in tests:
-  ${test['name']}_test();
 % endfor
+int main(int argc, char **argv) {
+  grpc_test_init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  int ret = RUN_ALL_TESTS();
+  return ret;
 }
 </%def>

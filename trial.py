@@ -67,7 +67,7 @@ def _create_ipv4_and_srv_record_group(ip_name, ip_addrs):
   expected_addrs = []
   for ip in ip_addrs:
     expected_addrs.append('%s:%s' % (ip, SRV_PORT))
-  return _test_group('%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
+  return _test_group('srv-%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
 
 def _create_ipv6_and_srv_record_group(ip_name, ip_addrs):
   records = {}
@@ -78,18 +78,18 @@ def _create_ipv6_and_srv_record_group(ip_name, ip_addrs):
   expected_addrs = []
   for ip in ip_addrs:
     expected_addrs.append('[%s]:%s' % (ip, SRV_PORT))
-  return _test_group('%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
+  return _test_group('srv-%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, None)
 
 def _create_ipv4_and_srv_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
   records = {}
   for ip in ip_addrs:
     push(records, _full_a_record_name(ip_name), a_record(ip))
-  push(records, _full_srv_record_name(ip_name), srv_record(ip_addrs))
-  push(records, _full_txt_record_name(ip_name), txt_record(grpc_config))
+  push(records, _full_srv_record_name(ip_name), srv_record(ip_name))
+  push(records, _full_txt_record_name('srv-%s' % ip_name), txt_record(grpc_config))
 
   expected_addrs = []
   for ip in ip_addrs:
-    expected_addrs.append('%s:443' % ip)
+    expected_addrs.append('%s:%s' % (ip, SRV_PORT))
   return _test_group('srv-%s.%s' % (ip_name, ZONE_DNS), records, expected_addrs, expected_config)
 
 def _create_ipv4_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):

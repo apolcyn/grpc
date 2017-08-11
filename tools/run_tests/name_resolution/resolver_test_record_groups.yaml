@@ -1,6 +1,6 @@
 - expected_addrs: ['1.2.3.4:1234']
   expected_config_index: null
-  record_to_resolve: ipv4-single-target.grpc.com.
+  record_to_resolve: srv-ipv4-single-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-single-target.grpc.com.:
     - {SRV: 0 0 1234 ipv4-single-target}
@@ -8,7 +8,7 @@
     - {A: 1.2.3.4}
 - expected_addrs: ['1.2.3.5:1234', '1.2.3.6:1234', '1.2.3.7:1234']
   expected_config_index: null
-  record_to_resolve: ipv4-multi-target.grpc.com.
+  record_to_resolve: srv-ipv4-multi-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-multi-target.grpc.com.:
     - {SRV: 0 0 1234 ipv4-multi-target}
@@ -18,7 +18,7 @@
     - {A: 1.2.3.7}
 - expected_addrs: ['[2607:f8b0:400a:801::1001]:1234']
   expected_config_index: null
-  record_to_resolve: ipv6-single-target.grpc.com.
+  record_to_resolve: srv-ipv6-single-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv6-single-target.grpc.com.:
     - {SRV: 0 0 1234 ipv6-single-target}
@@ -27,7 +27,7 @@
 - expected_addrs: ['[2607:f8b0:400a:801::1002]:1234', '[2607:f8b0:400a:801::1003]:1234',
     '[2607:f8b0:400a:801::1004]:1234']
   expected_config_index: null
-  record_to_resolve: ipv6-multi-target.grpc.com.
+  record_to_resolve: srv-ipv6-multi-target.grpc.com.
   records:
     _grpclb._tcp.srv-ipv6-multi-target.grpc.com.:
     - {SRV: 0 0 1234 ipv6-multi-target}
@@ -35,14 +35,15 @@
     - {AAAA: '2607:f8b0:400a:801::1002'}
     - {AAAA: '2607:f8b0:400a:801::1003'}
     - {AAAA: '2607:f8b0:400a:801::1004'}
-- expected_addrs: ['1.2.3.4:443']
+- expected_addrs: ['1.2.3.4:1234']
   expected_config_index: 0
   record_to_resolve: srv-ipv4-simple-service-config.grpc.com.
   records:
     _grpclb._tcp.srv-ipv4-simple-service-config.grpc.com.:
-    - {SRV: '0 0 1234 [''1.2.3.4'']'}
+    - {SRV: 0 0 1234 ipv4-simple-service-config}
     ipv4-simple-service-config.grpc.com.:
     - {A: 1.2.3.4}
+    srv-ipv4-simple-service-config.grpc.com.:
     - {TXT: 'grpc_config=[{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}]'}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: 0
