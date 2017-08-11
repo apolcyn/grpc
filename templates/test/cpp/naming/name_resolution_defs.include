@@ -84,6 +84,9 @@ def _expected_service_config(test):
 
 %>\
 
+namespace grpc {
+namespace testing {
+
 % for test in tests:
 TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
 %   if _record_to_resolve_is_balancer(test):
@@ -92,8 +95,11 @@ TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
   naming_end2end_test_resolves_backend("${test['record_to_resolve']}", "${_expected_ip_addrs_from_list(test['expected_addrs'])}", ${_expected_service_config(test)});
 %   endif
 }
-
 % endfor
+
+}  // namespace
+}  // namespace grpc
+
 int main(int argc, char **argv) {
   grpc_test_init(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);

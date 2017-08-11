@@ -43,45 +43,42 @@
 //      - {A: 1.2.3.4}
 
 
+namespace grpc {
+namespace testing {
+
 TEST(NamingEnd2EndTest, srv_ipv4_single_target_grpc_com__test) {
   naming_end2end_test_resolves_balancer("srv-ipv4-single-target.grpc.com.", "1.2.3.4:1234", NULL);
 }
-
 TEST(NamingEnd2EndTest, srv_ipv4_simple_service_config_grpc_com__test) {
   naming_end2end_test_resolves_balancer("srv-ipv4-simple-service-config.grpc.com.", "1.2.3.4:1234", "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"SimpleService\",\"waitForReady\":true}]}]}");
 }
-
 TEST(NamingEnd2EndTest, ipv4_cpp_config_has_zero_percentage_grpc_com__test) {
   naming_end2end_test_resolves_backend("ipv4-cpp-config-has-zero-percentage.grpc.com.", "1.2.3.4:443", (char*)NULL);
 }
-
 TEST(NamingEnd2EndTest, ipv4_no_config_for_cpp_grpc_com__test) {
   naming_end2end_test_resolves_backend("ipv4-no-config-for-cpp.grpc.com.", "1.2.3.4:443", (char*)NULL);
 }
-
 TEST(NamingEnd2EndTest, ipv4_second_language_is_cpp_grpc_com__test) {
   naming_end2end_test_resolves_backend("ipv4-second-language-is-cpp.grpc.com.", "1.2.3.4:443", (char*)NULL);
 }
-
 TEST(NamingEnd2EndTest, ipv4_no_srv_simple_service_config_grpc_com__test) {
   naming_end2end_test_resolves_backend("ipv4-no-srv-simple-service-config.grpc.com.", "1.2.3.4:443", "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"NoSrvSimpleService\",\"waitForReady\":true}]}]}");
 }
-
 TEST(NamingEnd2EndTest, ipv4_config_with_percentages_grpc_com__test) {
   naming_end2end_test_resolves_backend("ipv4-config-with-percentages.grpc.com.", "1.2.3.4:443", "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"AlwaysPickedService\",\"waitForReady\":true}]}]}");
 }
-
 TEST(NamingEnd2EndTest, srv_ipv4_multi_target_grpc_com__test) {
   naming_end2end_test_resolves_balancer("srv-ipv4-multi-target.grpc.com.", "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234", NULL);
 }
-
 TEST(NamingEnd2EndTest, srv_ipv6_single_target_grpc_com__test) {
   naming_end2end_test_resolves_balancer("srv-ipv6-single-target.grpc.com.", "[2607:f8b0:400a:801::1001]:1234", NULL);
 }
-
 TEST(NamingEnd2EndTest, srv_ipv6_multi_target_grpc_com__test) {
   naming_end2end_test_resolves_balancer("srv-ipv6-multi-target.grpc.com.", "[2607:f8b0:400a:801::1002]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234", NULL);
 }
+
+}  // namespace
+}  // namespace grpc
 
 int main(int argc, char **argv) {
   grpc_test_init(argc, argv);

@@ -16,15 +16,15 @@
  *
  */
 
-#include <grpc/grpc.h>
-#include <grpc/support/alloc.h>
-#include <grpc/support/host_port.h>
-#include <grpc/support/log.h>
-#include <grpc/support/sync.h>
-#include <grpc/support/time.h>
-#include <string.h>
-
 extern "C" {
+  #include <grpc/grpc.h>
+  #include <grpc/support/alloc.h>
+  #include <grpc/support/host_port.h>
+  #include <grpc/support/log.h>
+  #include <grpc/support/sync.h>
+  #include <grpc/support/time.h>
+  #include <string.h>
+
   #include "src/core/ext/filters/client_channel/client_channel.h"
   #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
   #include "src/core/ext/filters/client_channel/resolver_registry.h"
@@ -41,8 +41,13 @@ extern "C" {
 
 #include "test/cpp/naming/naming_end2end_test_util.h"
 
-extern void grpc_resolver_dns_ares_init();
-extern void grpc_resolver_dns_ares_shutdown();
+namespace grpc {
+namespace testing {
+
+extern "C" {
+  void grpc_resolver_dns_ares_init();
+  void grpc_resolver_dns_ares_shutdown();
+}
 
 typedef struct string_list_node {
   const char *target;
@@ -278,138 +283,5 @@ void naming_end2end_test_resolves_balancer(const char *name, const char *expecte
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-//typedef struct test_config {
-//  char* a_record_name;
-//  char* srv_record_name;
-//  char* expected_addrs;
-//  char* expected_service_config;
-//} test_config;
-//
-//#define NUM_CONFIGS 13
-//
-//int main(int argc, char **argv) {
-//  grpc_init();
-//  test_config configs[NUM_CONFIGS] = {
-//  {
-//    "ipv4-single-target.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    NULL,
-//  },
-//  {
-//    "ipv6-single-target.grpc.com.",
-//    NULL,
-//    "[2607:f8b0:400a:801::1001]:443",
-//    NULL,
-//  },
-//  {
-//    "ipv4-multi-target.grpc.com.",
-//    NULL,
-//    "1.2.3.5:443,1.2.3.6:443,1.2.3.7:443",
-//    NULL,
-//  },
-//  {
-//    "ipv6-multi-target.grpc.com.",
-//    NULL,
-//    "[2607:f8b0:400a:801::1001]:443,[2607:f8b0:400a:801::1003]:443,[2607:f8b0:400a:801::1004]:443",
-//    NULL,
-//  },
-//  {
-//    NULL,
-//    "srv-ipv6-single-target.grpc.com.",
-//    "[2607:f8b0:400a:801::1001]:1234",
-//    NULL,
-//  },
-//  {
-//    NULL,
-//    "srv-ipv4-multi-target.grpc.com.",
-//    "1.2.3.5:1234,1.2.3.6:1234,1.2.3.7:1234",
-//    NULL,
-//  },
-//  {
-//    NULL,
-//    "srv-ipv6-multi-target.grpc.com.",
-//    "[2607:f8b0:400a:801::1001]:1234,[2607:f8b0:400a:801::1003]:1234,[2607:f8b0:400a:801::1004]:1234",
-//    NULL,
-//  },
-//  {
-//    "no-srv-simple-service-config.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}",
-//  },
-//  {
-//    NULL,
-//    "srv-for-simple-service-config.grpc.com.",
-//    "1.2.3.4:1234",
-//    "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}",
-//  },
-//  {
-//    "second-language-cpp.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    "{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}",
-//  },
-//  {
-//    "no-cpp-config.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    NULL,
-//  },
-//  {
-//    "config-with-percentages.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    "{\"methodConfig\":[{\"name\":[{\"service\":\"AlwaysChosenService\"}],\"waitForReady\":false}]}",
-//  },
-//  //  TODO: should this test be enabled?
-//  //  {
-//  //    "empty-list-client-hostname.grpc.com.",
-//  //    NULL,
-//  //    "1.2.3.4:443",
-//  //    "{\"loadBalancingPolicy\":\"round_robin\"}",
-//  //  },
-//  {
-//    "cpp-language-zero-picks.grpc.com.",
-//    NULL,
-//    "1.2.3.4:443",
-//    NULL,
-//  },
-//  };
-//
-//  for (int i = 0; i < NUM_CONFIGS; i++) {
-//    char *a_record_name = configs[i].a_record_name;
-//    char *srv_record_name = configs[i].srv_record_name;
-//    char *expected_addrs = configs[i].expected_addrs;
-//    char *expected_service_config = configs[i].expected_service_config;
-//
-//    gpr_log(GPR_INFO, "running dns end2end test on resolver %s",
-//            gpr_getenv("GRPC_DNS_RESOLVER"));
-//    gpr_log(GPR_INFO,
-//            "testing arguments (as environment variables):\n"
-//            "    GRPC_DNS_TEST_A_RECORD_NAME=%s\n"
-//            "    GRPC_DNS_TEST_SRV_RECORD_NAME=%s\n"
-//            "    GRPC_DNS_TEST_EXPECTED_ADDRS=%s\n",
-//            a_record_name ? a_record_name : "",
-//            srv_record_name ? srv_record_name : "",
-//            expected_addrs ? expected_addrs : "");
-//
-//    gpr_log(GPR_INFO, "expected service config: %s", expected_service_config ? expected_service_config : "");
-//
-//    if (expected_addrs == NULL || strlen(expected_addrs) == 0) {
-//      gpr_log(GPR_INFO, "expected addresses param not passed in");
-//    }
-//    if (srv_record_name && strlen(srv_record_name) != 0) {
-//      gpr_log(GPR_INFO, "    attempt to resolve: %s", srv_record_name);
-//      gpr_log(GPR_INFO, "    expect balancer addresses: %s", expected_addrs);
-//      test_resolves_balancer(srv_record_name, expected_addrs, expected_service_config);
-//    }
-//    if (a_record_name && strlen(a_record_name) != 0) {
-//      gpr_log(GPR_INFO, "    attempt to resolve: %s", a_record_name);
-//      gpr_log(GPR_INFO, "    expect backend addresses: %s", expected_addrs);
-//      test_resolves_backend(a_record_name, expected_addrs, expected_service_config);
-//    }
-//  }
-//  grpc_shutdown();
-//  return 0;
-//}
+}  // namespace
+}  // namespace grpc

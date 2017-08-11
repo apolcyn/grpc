@@ -20,8 +20,14 @@
 #ifndef NAMING_END2END_TEST_H
 #define NAMING_END2END_TEST_H
 
+namespace grpc {
+namespace testing {
+
 void naming_end2end_test_resolves_backend(const char *name, const char *expected_addrs, const char *expected_service_config);
 
 void naming_end2end_test_resolves_balancer(const char *name, const char *expected_addrs, const char *expected_service_config);
+
+}  // namespace
+}  // namespace grpc
 
 #endif
