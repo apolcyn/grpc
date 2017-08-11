@@ -45,29 +45,29 @@ extern void grpc_resolver_dns_ares_init();
 extern void grpc_resolver_dns_ares_shutdown();
 
 typedef struct string_list_node {
-  char *target;
+  const char *target;
   int length;
   int matched;
   struct string_list_node *next;
 } string_list_node;
 
-static string_list_node *parse_expected(char *expected_addrs) {
-  char *p = expected_addrs;
+static string_list_node *parse_expected(const char *expected_addrs) {
+  char *p = (char*)expected_addrs;
   string_list_node *prev_head = NULL;
   string_list_node *new_node = NULL;
 
   while (*p) {
     if (*p == ',') {
-      new_node->target[new_node->length] = 0;
+      ((char*)new_node->target)[new_node->length] = 0;
       new_node->next = prev_head;
       prev_head = new_node;
       new_node = NULL;
     } else {
       if (new_node == NULL) {
         new_node = (string_list_node*)gpr_zalloc(sizeof(string_list_node));
-        new_node->target = (char*)gpr_zalloc(strlen(expected_addrs) + 1);
+        new_node->target = (const char*)gpr_zalloc(strlen(expected_addrs) + 1);
       }
-      new_node->target[new_node->length++] = *p;
+      ((char*)new_node->target)[new_node->length++] = *p;
     }
     p++;
   }
@@ -115,9 +115,9 @@ typedef struct args_struct {
   grpc_combiner *lock;
   grpc_channel_args *channel_args;
   int expect_is_balancer;
-  char *target_name;
+  const char *target_name;
   string_list_node *expected_addrs_head;
-  char *expected_service_config_string;
+  const char *expected_service_config_string;
 } args_struct;
 
 static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
@@ -229,7 +229,7 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
   new_arg.key = (char*)GRPC_ARG_SERVER_URI;
-  new_arg.value.string = args->target_name;
+  new_arg.value.string = (char*)args->target_name;
   GPR_ASSERT(asprintf(&whole_uri, "dns://127.0.0.1:15353/%s", new_arg.value.string));
 
   args->channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
@@ -250,7 +250,7 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   poll_pollset_until_request_done(args);
 }
 
-void naming_end2end_test_resolves_backend(char *name, char *expected_addrs, char *expected_service_config) {
+void naming_end2end_test_resolves_backend(const char *name, const char *expected_addrs, const char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
@@ -264,7 +264,7 @@ void naming_end2end_test_resolves_backend(char *name, char *expected_addrs, char
   grpc_exec_ctx_finish(&exec_ctx);
 }
 
-void naming_end2end_test_resolves_balancer(char *name, char *expected_addrs, char *expected_service_config) {
+void naming_end2end_test_resolves_balancer(const char *name, const char *expected_addrs, const char *expected_service_config) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);

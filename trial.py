@@ -95,7 +95,7 @@ def _create_ipv4_and_srv_and_txt_record_group(ip_name, ip_addrs, grpc_config, ex
 def _create_ipv4_and_txt_record_group(ip_name, ip_addrs, grpc_config, expected_config):
   records = {}
   for ip in ip_addrs:
-    push(records, _full_a_record_name(ip_name), aaaa_record(ip))
+    push(records, _full_a_record_name(ip_name), a_record(ip))
   push(records, _full_txt_record_name(ip_name), txt_record(grpc_config))
 
   expected_addrs = []
@@ -124,6 +124,19 @@ def _create_service_config(method_config=[], percentage=None, client_language=No
 
   return config
 
+def _config_wrapper(langs=None, percent=None, host_name=None, service_config=None):
+  config = {}
+  if langs is not None:
+    config['clientLanguage'] = langs
+  if percent is not None:
+    config['percentage'] = percent
+  if host_name is not None:
+    config['clientHostname'] = host_name
+  if service_config is None:
+    raise Exception
+  config['serviceConfig'] = service_config
+  return config
+
 def _create_records_for_testing():
   records = []
   records.append(_create_ipv4_and_srv_record_group('ipv4-single-target', ['1.2.3.4']))
@@ -136,41 +149,41 @@ def _create_records_for_testing():
                                                                          '2607:f8b0:400a:801::1004']))
 
   records.append(_create_ipv4_and_srv_and_txt_record_group('ipv4-simple-service-config', ['1.2.3.4'],
-                                                           [_create_service_config(_create_method_config('SimpleService'))],
+                                                           [_config_wrapper(service_config=_create_service_config(_create_method_config('SimpleService')))],
                                                            0))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-no-srv-simple-service-config', ['1.2.3.4'],
-                                                   [_create_service_config(_create_method_config('NoSrvSimpleService'))],
+                                                   [_config_wrapper(service_config=_create_service_config(_create_method_config('NoSrvSimpleService')))],
                                                    0))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-second-language-is-cpp', ['1.2.3.4'],
-                                                   [_create_service_config(
-                                                     _create_method_config('GoService'),
-                                                     client_language=['go']),
-                                                    _create_service_config(
-                                                      _create_method_config('CppService'),
-                                                      client_language=['c++'])],
+                                                   [_config_wrapper(langs=['go'],
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('GoService'))),
+                                                    _config_wrapper(langs=['c++'],
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('CppService')))],
                                                    None))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-no-config-for-cpp', ['1.2.3.4'],
-                                                   [_create_service_config(
-                                                     _create_method_config('PythonService'),
-                                                     client_language=['python'])],
+                                                   [_config_wrapper(langs=['python'],
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('PythonService')))],
                                                    None))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-config-with-percentages', ['1.2.3.4'],
-                                                   [_create_service_config(
-                                                      _create_method_config('NeverPickedService'),
-                                                      percentage=0),
-                                                    _create_service_config(
-                                                      _create_method_config('AlwaysPickedService'),
-                                                      percentage=100)],
+                                                   [_config_wrapper(percent=0,
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('NeverPickedService'))),
+                                                    _config_wrapper(percent=100,
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('AlwaysPickedService')))],
                                                    1))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-cpp-config-has-zero-percentage', ['1.2.3.4'],
-                                                   [_create_service_config(
-                                                      _create_method_config('CppService'),
-                                                      percentage=0)],
+                                                   [_config_wrapper(percent=0,
+                                                                    service_config=_create_service_config(
+                                                                        _create_method_config('CppService')))],
                                                    None))
 
   return records

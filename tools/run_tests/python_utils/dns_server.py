@@ -32,6 +32,7 @@ from dnslib import *
 from dnslib.server import DNSServer
 import datetime
 import traceback
+import yaml
 
 
 # increment this number whenever making a change to ensure that
@@ -102,54 +103,92 @@ a_records = [dnslib.A('1.2.3.4')]
 aaaa_records = [dnslib.A('1.2.3.4')]
 srv_records = []
 
-all_records = {
-    'ipv4-single-target.grpc.com.': [A('1.2.3.4')],
-    'ipv6-single-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001')],
-    'ipv4-multi-target.grpc.com.': [A('1.2.3.5'),
-                                           A('1.2.3.6'),
-                                           A('1.2.3.7')],
-    'ipv6-multi-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001'),
-                                    AAAA('2607:f8b0:400a:801::1003'),
-                                    AAAA('2607:f8b0:400a:801::1004')],
+with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
+  test_groups = yaml.load(config)
 
-    # SRV -> A/AAAA, without a service config
-    '_grpclb._tcp.srv-ipv4-single-target.grpc.com.': [SRV(target='ipv4-single-target.grpc.com.', priority=0, weight=0, port=1234)],
-    '_grpclb._tcp.srv-ipv6-single-target.grpc.com.': [SRV(target='ipv6-single-target.grpc.com.', priority=0, weight=0, port=1234)],
-    '_grpclb._tcp.srv-ipv4-multi-target.grpc.com.': [SRV(target='ipv4-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
-    '_grpclb._tcp.srv-ipv6-multi-target.grpc.com.': [SRV(target='ipv6-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+all_records = {}
 
-    # A record with a service config
-    'no-srv-simple-service-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
+def _push_record(records, name, r):
+  if records.get(name) is not None:
+    records[name].append(r)
+    return
+  records[name] = [r]
 
-    # SRV -> A record with a service config
-    '_grpclb._tcp.srv-for-simple-service-config.grpc.com.': [SRV(target='simple-service-config.grpc.com.', priority=0, weight=0, port=1234)],
-    'srv-for-simple-service-config.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
-    'simple-service-config.grpc.com.': [A('1.2.3.4')],
+for group in test_groups:
+  for name in group['records'].keys():
+    for record in group['records'][name]:
+      assert(len(record.keys()) == 1)
+      r_type = record.keys()[0]
+      r_data = record[r_type]
+      if r_type == 'A':
+        _push_record(all_records, name, A(r_data))
+      if r_type == 'AAAA':
+        print('AAAA data is |%s|' % r_data)
+        _push_record(all_records, name, AAAA(r_data))
+      if r_type == 'SRV':
+        print('R_data is |%s|' % r_data)
+        p, w, port, target = r_data.split(' ')
+        p = int(p)
+        w = int(w)
+        port = int(port)
+        _push_record(all_records, name, SRV(target=target, priority=p, weight=w, port=port))
+      if r_type == 'TXT':
+        print('TXT Record length is %s' % len(r_data))
+        if len(r_data) > 255:
+          print('skipping TXT record %s' % name)
+          continue
+        _push_record(all_records, name, TXT(r_data))
 
-    # TODO: if there is an A record foo.com and no SRV record, then the TXT
-    # record should also be under foo.com. But if there is an SRV record named
-    # e.g. _grpclb._tcp.srv.com, then the TXT record instead needs to be under
-    # srv.com, rather than foo.com. Confirm this is expected and test for this.
-
-    # A record with a service config having c++ as second client language
-    'second-language-cpp.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{}},{\"clientLanguage\":[\"c++\"],\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}}]")],
-
-    # A record with a service config having only java and go as client languages
-    'no-cpp-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}},{\"clientLanguage\":[\"java\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
-
-    # A record with a service config having with extreme percentages chosen
-    'config-with-percentages.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":0,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"NeverChosenService\"}],\"waitForReady\":true}]}},{\"percentage\":100,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"AlwaysChosenService\"}],\"waitForReady\":false}]}}]")],
-
-    # A record with a service config having an empty-list clientHostname
-    # TODO: should this test pass? does an empty list count mean no client langs
-    # or all client langs pass?
-    # 'empty-list-client-hostname.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientHostname\":[],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
-
-    # service config with matching client language but zero percentage
-    'cpp-language-zero-picks.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":\"0\",\"clientLanguage\":\"c++\",\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
-
-    # TODO: test service configs in which clientHostname is specified
-}
+#all_records =
+#
+#all_records = {
+#    'ipv4-single-target.grpc.com.': [A('1.2.3.4')],
+#    'ipv6-single-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001')],
+#    'ipv4-multi-target.grpc.com.': [A('1.2.3.5'),
+#                                           A('1.2.3.6'),
+#                                           A('1.2.3.7')],
+#    'ipv6-multi-target.grpc.com.': [AAAA('2607:f8b0:400a:801::1001'),
+#                                    AAAA('2607:f8b0:400a:801::1003'),
+#                                    AAAA('2607:f8b0:400a:801::1004')],
+#
+#    # SRV -> A/AAAA, without a service config
+#    '_grpclb._tcp.srv-ipv4-single-target.grpc.com.': [SRV(target='ipv4-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+#    '_grpclb._tcp.srv-ipv6-single-target.grpc.com.': [SRV(target='ipv6-single-target.grpc.com.', priority=0, weight=0, port=1234)],
+#    '_grpclb._tcp.srv-ipv4-multi-target.grpc.com.': [SRV(target='ipv4-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+#    '_grpclb._tcp.srv-ipv6-multi-target.grpc.com.': [SRV(target='ipv6-multi-target.grpc.com.', priority=0, weight=0, port=1234)],
+#
+#    # A record with a service config
+#    'no-srv-simple-service-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
+#
+#    # SRV -> A record with a service config
+#    '_grpclb._tcp.srv-for-simple-service-config.grpc.com.': [SRV(target='simple-service-config.grpc.com.', priority=0, weight=0, port=1234)],
+#    'srv-for-simple-service-config.grpc.com.': [TXT("grpc_config=[{\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"service\":\"MyService\",\"method\":\"Foo\"}],\"waitForReady\":true}]}}]")],
+#    'simple-service-config.grpc.com.': [A('1.2.3.4')],
+#
+#    # TODO: if there is an A record foo.com and no SRV record, then the TXT
+#    # record should also be under foo.com. But if there is an SRV record named
+#    # e.g. _grpclb._tcp.srv.com, then the TXT record instead needs to be under
+#    # srv.com, rather than foo.com. Confirm this is expected and test for this.
+#
+#    # A record with a service config having c++ as second client language
+#    'second-language-cpp.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{}},{\"clientLanguage\":[\"c++\"],\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"SecondLanguageCppService\"}],\"waitForReady\":true}]}}]")],
+#
+#    # A record with a service config having only java and go as client languages
+#    'no-cpp-config.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientLanguage\":[\"go\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}},{\"clientLanguage\":[\"java\"],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+#
+#    # A record with a service config having with extreme percentages chosen
+#    'config-with-percentages.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":0,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"NeverChosenService\"}],\"waitForReady\":true}]}},{\"percentage\":100,\"serviceConfig\":{\"methodConfig\":[{\"name\":[{\"service\":\"AlwaysChosenService\"}],\"waitForReady\":false}]}}]")],
+#
+#    # A record with a service config having an empty-list clientHostname
+#    # TODO: should this test pass? does an empty list count mean no client langs
+#    # or all client langs pass?
+#    # 'empty-list-client-hostname.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"clientHostname\":[],\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+#
+#    # service config with matching client language but zero percentage
+#    'cpp-language-zero-picks.grpc.com.': [A('1.2.3.4'), TXT("grpc_config=[{\"percentage\":\"0\",\"clientLanguage\":\"c++\",\"serviceConfig\":{\"loadBalancingPolicy\":\"round_robin\"}}]")],
+#
+#    # TODO: test service configs in which clientHostname is specified
+#}
 
 TYPE_LOOKUP = {
   A: QTYPE.A,

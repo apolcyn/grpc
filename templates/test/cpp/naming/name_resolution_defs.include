@@ -44,6 +44,8 @@
 //      - {A: 1.2.3.4}
 
 <%
+import json
+
 def _record_to_resolve_is_balancer(test):
   records = test['records']
   srv_attempted = '_grpclb._tcp.%s' % test['record_to_resolve']
@@ -72,16 +74,22 @@ def _expected_service_config(test):
   assert(txt_count == 1)
   split_index = txt_data.find('=')
   assert(split_index)
-  return "\"%s\"" % txt_data[split_index+1:].replace('\"', '\\"')
+  json_data = json.loads(txt_data[split_index+1:])
+  if test['expected_config_index'] != None:
+    expected_json_data = json_data[test['expected_config_index']]
+    with open('tmpd', 'w') as debug:
+      debug.write(json.dumps(expected_json_data))
+    return "\"%s\"" % json.dumps(expected_json_data['serviceConfig'], separators=(',', ':')).replace('\"', '\\"')
+  return '(char*)NULL'
 
 %>\
 
 % for test in tests:
 TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
 %   if _record_to_resolve_is_balancer(test):
-  naming_end2end_test_resolves_balancer(${test['record_to_resolve']}, ${_expected_ip_addrs_from_list(test['expected_addrs'])}, ${_expected_service_config(test)});
+  naming_end2end_test_resolves_balancer("${test['record_to_resolve']}", "${_expected_ip_addrs_from_list(test['expected_addrs'])}", ${_expected_service_config(test)});
 %   else:
-  naming_end2end_test_resolves_backend(${test['record_to_resolve']}, ${_expected_ip_addrs_from_list(test['expected_addrs'])}, ${_expected_service_config(test)});
+  naming_end2end_test_resolves_backend("${test['record_to_resolve']}", "${_expected_ip_addrs_from_list(test['expected_addrs'])}", ${_expected_service_config(test)});
 %   endif
 }
 

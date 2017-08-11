@@ -11851,9 +11851,6 @@ target_link_libraries(naming_end2end_test
   grpc_test_util
   grpc++
   grpc
-  gpr_test_util
-  gpr
-  grpc++_test_config
   ${_gRPC_GFLAGS_LIBRARIES}
 )
 
@@ -11862,7 +11859,7 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 
 add_executable(naming_end2end_test_util
-  test/cpp/naming/naming_end2end_test_util.c
+  test/cpp/naming/naming_end2end_test_util.cc
 )
 
 
@@ -11893,6 +11890,8 @@ target_link_libraries(naming_end2end_test_util
   grpc++_test_util
   grpc++
   grpc
+  gpr_test_util
+  gpr
 )
 
 endif (gRPC_BUILD_TESTS)

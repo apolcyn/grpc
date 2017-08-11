@@ -4238,9 +4238,6 @@ targets:
   - grpc_test_util
   - grpc++
   - grpc
-  - gpr_test_util
-  - gpr
-  - grpc++_test_config
   platforms:
   - mac
   - linux
@@ -4251,12 +4248,14 @@ targets:
   headers:
   - test/cpp/naming/naming_end2end_test_util.h
   src:
-  - test/cpp/naming/naming_end2end_test_util.c
+  - test/cpp/naming/naming_end2end_test_util.cc
   deps:
   - grpc_test_util
   - grpc++_test_util
   - grpc++
   - grpc
+  - gpr_test_util
+  - gpr
 - name: noop-benchmark
   build: test
   language: c++
