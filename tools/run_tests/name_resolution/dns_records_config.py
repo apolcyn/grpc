@@ -20,11 +20,7 @@
 
 import yaml
 
-ZONE_DNS = 'test.grpctestingexp.'
 ZONE_NAME = 'exp-grpc-testing'
-
-SRV_PORT='1234'
-
 
 class DnsRecord(object):
   def __init__(self, record_type, record_name, record_data, ttl):
@@ -33,9 +29,6 @@ class DnsRecord(object):
     self.record_data = record_data
     self.record_class = 'IN'
     self.ttl = ttl
-
-  def uploadable_data(self):
-    return self.record_data.split(',')
 
 def _records_for_testing():
   with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:

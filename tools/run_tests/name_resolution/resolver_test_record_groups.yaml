@@ -1,88 +1,89 @@
 - expected_addrs: ['1.2.3.4:1234']
   expected_config_index: null
-  record_to_resolve: srv-ipv4-single-target.grpc.com.
+  record_to_resolve: srv-ipv4-single-target.grpc-testing-exp-1.com.
   records:
-    _grpclb._tcp.srv-ipv4-single-target.grpc.com.:
-    - {TTL: '2100', data: 0 0 1234 ipv4-single-target.grpc.com., type: SRV}
-    ipv4-single-target.grpc.com.:
+    _grpclb._tcp.srv-ipv4-single-target.grpc-testing-exp-1.com.:
+    - {TTL: '2100', data: 0 0 1234 ipv4-single-target.grpc-testing-exp-1.com., type: SRV}
+    ipv4-single-target.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
 - expected_addrs: ['1.2.3.5:1234', '1.2.3.6:1234', '1.2.3.7:1234']
   expected_config_index: null
-  record_to_resolve: srv-ipv4-multi-target.grpc.com.
+  record_to_resolve: srv-ipv4-multi-target.grpc-testing-exp-1.com.
   records:
-    _grpclb._tcp.srv-ipv4-multi-target.grpc.com.:
-    - {TTL: '2100', data: 0 0 1234 ipv4-multi-target.grpc.com., type: SRV}
-    ipv4-multi-target.grpc.com.:
+    _grpclb._tcp.srv-ipv4-multi-target.grpc-testing-exp-1.com.:
+    - {TTL: '2100', data: 0 0 1234 ipv4-multi-target.grpc-testing-exp-1.com., type: SRV}
+    ipv4-multi-target.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.5, type: A}
     - {TTL: '2100', data: 1.2.3.6, type: A}
     - {TTL: '2100', data: 1.2.3.7, type: A}
 - expected_addrs: ['[2607:f8b0:400a:801::1001]:1234']
   expected_config_index: null
-  record_to_resolve: srv-ipv6-single-target.grpc.com.
+  record_to_resolve: srv-ipv6-single-target.grpc-testing-exp-1.com.
   records:
-    _grpclb._tcp.srv-ipv6-single-target.grpc.com.:
-    - {TTL: '2100', data: 0 0 1234 ipv6-single-target.grpc.com., type: SRV}
-    ipv6-single-target.grpc.com.:
+    _grpclb._tcp.srv-ipv6-single-target.grpc-testing-exp-1.com.:
+    - {TTL: '2100', data: 0 0 1234 ipv6-single-target.grpc-testing-exp-1.com., type: SRV}
+    ipv6-single-target.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: '2607:f8b0:400a:801::1001', type: AAAA}
 - expected_addrs: ['[2607:f8b0:400a:801::1002]:1234', '[2607:f8b0:400a:801::1003]:1234',
     '[2607:f8b0:400a:801::1004]:1234']
   expected_config_index: null
-  record_to_resolve: srv-ipv6-multi-target.grpc.com.
+  record_to_resolve: srv-ipv6-multi-target.grpc-testing-exp-1.com.
   records:
-    _grpclb._tcp.srv-ipv6-multi-target.grpc.com.:
-    - {TTL: '2100', data: 0 0 1234 ipv6-multi-target.grpc.com., type: SRV}
-    ipv6-multi-target.grpc.com.:
+    _grpclb._tcp.srv-ipv6-multi-target.grpc-testing-exp-1.com.:
+    - {TTL: '2100', data: 0 0 1234 ipv6-multi-target.grpc-testing-exp-1.com., type: SRV}
+    ipv6-multi-target.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: '2607:f8b0:400a:801::1002', type: AAAA}
     - {TTL: '2100', data: '2607:f8b0:400a:801::1003', type: AAAA}
     - {TTL: '2100', data: '2607:f8b0:400a:801::1004', type: AAAA}
 - expected_addrs: ['1.2.3.4:1234']
   expected_config_index: 0
-  record_to_resolve: srv-ipv4-simple-service-config.grpc.com.
+  record_to_resolve: srv-ipv4-simple-service-config.grpc-testing-exp-1.com.
   records:
-    _grpclb._tcp.srv-ipv4-simple-service-config.grpc.com.:
-    - {TTL: '2100', data: 0 0 1234 ipv4-simple-service-config.grpc.com., type: SRV}
-    ipv4-simple-service-config.grpc.com.:
+    _grpclb._tcp.srv-ipv4-simple-service-config.grpc-testing-exp-1.com.:
+    - {TTL: '2100', data: 0 0 1234 ipv4-simple-service-config.grpc-testing-exp-1.com.,
+      type: SRV}
+    ipv4-simple-service-config.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
-    srv-ipv4-simple-service-config.grpc.com.:
+    srv-ipv4-simple-service-config.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 'grpc_config=[{"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: 0
-  record_to_resolve: ipv4-no-srv-simple-service-config.grpc.com.
+  record_to_resolve: ipv4-no-srv-simple-service-config.grpc-testing-exp-1.com.
   records:
-    ipv4-no-srv-simple-service-config.grpc.com.:
+    ipv4-no-srv-simple-service-config.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
     - {TTL: '2100', data: 'grpc_config=[{"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: null
-  record_to_resolve: ipv4-second-language-is-cpp.grpc.com.
+  record_to_resolve: ipv4-second-language-is-cpp.grpc-testing-exp-1.com.
   records:
-    ipv4-second-language-is-cpp.grpc.com.:
+    ipv4-second-language-is-cpp.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
     - {TTL: '2100', data: 'grpc_config=[{"clientLanguage":["go"],"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"GoService","waitForReady":true}]}]}},{"clientLanguage":["c++"],"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: null
-  record_to_resolve: ipv4-no-config-for-cpp.grpc.com.
+  record_to_resolve: ipv4-no-config-for-cpp.grpc-testing-exp-1.com.
   records:
-    ipv4-no-config-for-cpp.grpc.com.:
+    ipv4-no-config-for-cpp.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
     - {TTL: '2100', data: 'grpc_config=[{"clientLanguage":["python"],"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"PythonService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: 1
-  record_to_resolve: ipv4-config-with-percentages.grpc.com.
+  record_to_resolve: ipv4-config-with-percentages.grpc-testing-exp-1.com.
   records:
-    ipv4-config-with-percentages.grpc.com.:
+    ipv4-config-with-percentages.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
     - {TTL: '2100', data: 'grpc_config=[{"percentage":0,"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NeverPickedService","waitForReady":true}]}]}},{"percentage":100,"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
   expected_config_index: null
-  record_to_resolve: ipv4-cpp-config-has-zero-percentage.grpc.com.
+  record_to_resolve: ipv4-cpp-config-has-zero-percentage.grpc-testing-exp-1.com.
   records:
-    ipv4-cpp-config-has-zero-percentage.grpc.com.:
+    ipv4-cpp-config-has-zero-percentage.grpc-testing-exp-1.com.:
     - {TTL: '2100', data: 1.2.3.4, type: A}
     - {TTL: '2100', data: 'grpc_config=[{"percentage":0,"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}}]',
       type: TXT}

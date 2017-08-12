@@ -31,22 +31,17 @@ argp.add_argument('--list_records', default=False, action='store_const', const=T
                   help='Don\'t modify records and use gcloud API to print existing records')
 args = argp.parse_args()
 
-
 def main():
   cmds = []
   cmds.append(('gcloud dns record-sets transaction start -z=%s' % dns_records_config.ZONE_NAME).split(' '))
 
   for r in dns_records_config.DNS_RECORDS:
-    add_cmd = []
     prefix = ('gcloud dns record-sets transaction add '
               '-z=%s --name=%s --type=%s --ttl=%s') % (dns_records_config.ZONE_NAME,
                                                        r.record_name,
                                                        r.record_type,
                                                        r.ttl)
-
-    add_cmd.extend(prefix.split(' '))
-    add_cmd.extend(r.uploadable_data())
-    cmds.append(add_cmd)
+    cmds.append(prefix.split(' ') + [r.record_data])
 
   cmds.append(('gcloud dns record-sets transaction describe -z=%s' % dns_records_config.ZONE_NAME).split(' '))
   cmds.append(('gcloud dns record-sets transaction execute -z=%s' % dns_records_config.ZONE_NAME).split(' '))

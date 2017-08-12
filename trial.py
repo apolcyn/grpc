@@ -12,7 +12,7 @@ class DnsRecord(object):
   def uploadable_data(self):
     return self.record_data.split(',')
 
-ZONE_DNS = 'grpc.com.'
+ZONE_DNS = 'grpc-testing-exp-1.com.'
 SRV_PORT = '1234'
 TTL = '2100'
 
