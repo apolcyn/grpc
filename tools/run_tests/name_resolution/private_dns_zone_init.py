@@ -42,7 +42,7 @@ def main():
               '-z=%s --name=%s --type=%s --ttl=%s') % (dns_records_config.ZONE_NAME,
                                                        r.record_name,
                                                        r.record_type,
-                                                       dns_records_config.TTL)
+                                                       r.ttl)
 
     add_cmd.extend(prefix.split(' '))
     add_cmd.extend(r.uploadable_data())

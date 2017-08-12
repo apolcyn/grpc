@@ -18,39 +18,50 @@
 
 # Source of truth for DNS records used in testing on GCE
 
+import yaml
+
 ZONE_DNS = 'test.grpctestingexp.'
 ZONE_NAME = 'exp-grpc-testing'
-TTL = '2100'
 
 SRV_PORT='1234'
 
 
 class DnsRecord(object):
-  def __init__(self, record_type, record_name, record_data):
+  def __init__(self, record_type, record_name, record_data, ttl):
     self.record_type = record_type
     self.record_name = record_name
     self.record_data = record_data
     self.record_class = 'IN'
-    self.ttl = TTL
+    self.ttl = ttl
 
   def uploadable_data(self):
     return self.record_data.split(',')
 
-def _create_records_for_testing():
+def _records_for_testing():
   with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
     test_groups = yaml.load(config)
   all_records = []
   for group in test_groups:
     for name in group['records'].keys():
       for record in group['records'][name]:
-        assert(len(record.keys()) == 1)
-        r_type = record.keys()[0]
-        r_data = record[r_type]
+        r_type = record['type']
+        r_data = record['data']
+        r_ttl = record['TTL']
         print('record Name is |%s|' % name)
         print('R_type is |%s|' % r_type)
         print('R_data is |%s|' % r_data)
-        all_records.append(DnsRecord(r_type, name, r_data))
-  return records
+        print('TTL is |%s|' % r_ttl)
+        all_records.append(DnsRecord(r_type, name, r_data, r_ttl))
+  return all_records
+
+def _records_by_name(all_records):
+  records_by_name = {}
+  for r in all_records:
+    if records_by_name.get(r.record_name) is not None:
+      records_by_name[r.record_name].append(r)
+      return
+    records_by_name[r.record_name] = [r]
+  return records_by_name
 
 def srv_record_target_name(srv_record):
   # extract host from "priority weight port host" srv data
@@ -94,4 +105,5 @@ def expected_result_for_srv_record(srv_record, dns_records):
   raise Exception('target %s for srv record %s not found' %
     (srv_record_target_name, srv_record.record_name))
 
-DNS_RECORDS = _create_records_for_testing()
+DNS_RECORDS = _records_for_testing()
+RECORDS_BY_NAME = _records_by_name(DNS_RECORDS)
