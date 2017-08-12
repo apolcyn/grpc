@@ -102,9 +102,9 @@ def _push_record(records, name, r):
 for group in test_groups:
   for name in group['records'].keys():
     for record in group['records'][name]:
-      assert(len(record.keys()) == 1)
-      r_type = record.keys()[0]
-      r_data = record[r_type]
+      r_type = record['type']
+      r_data = record['data']
+      # ignore TTL
       print('record Name is |%s|' % name)
       if r_type == 'A':
         _push_record(all_records, name, A(r_data))

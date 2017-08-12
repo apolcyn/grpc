@@ -37,50 +37,20 @@ class DnsRecord(object):
     return self.record_data.split(',')
 
 def _create_records_for_testing():
-
-  
-  ipv4_single_target_dns = 'ipv4-single-target.%s' % ZONE_DNS
-  ipv6_single_target_dns = 'ipv6-single-target.%s' % ZONE_DNS
-  ipv4_multi_target_dns = 'ipv4-multi-target.%s' % ZONE_DNS
-  ipv6_multi_target_dns = 'ipv6-multi-target.%s' % ZONE_DNS
-
-  records = [
-      DnsRecord('A', ipv4_single_target_dns, '1.2.3.4'),
-      DnsRecord('A', ipv4_multi_target_dns, ','.join(['1.2.3.5',
-                                                      '1.2.3.6',
-                                                      '1.2.3.7'])),
-      DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1001'),
-      DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1002',
-                                                         '2607:f8b0:400a:801::1003',
-                                                         '2607:f8b0:400a:801::1004'])),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_single_target_dns)),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_multi_target_dns)),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv6_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_single_target_dns)),
-      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv6_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_multi_target_dns)),
-  ]
+  with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
+    test_groups = yaml.load(config)
+  all_records = []
+  for group in test_groups:
+    for name in group['records'].keys():
+      for record in group['records'][name]:
+        assert(len(record.keys()) == 1)
+        r_type = record.keys()[0]
+        r_data = record[r_type]
+        print('record Name is |%s|' % name)
+        print('R_type is |%s|' % r_type)
+        print('R_data is |%s|' % r_data)
+        all_records.append(DnsRecord(r_type, name, r_data))
   return records
-
-with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
-  test_groups = yaml.load(config)
-
-all_records = []
-
-def _push_record(records, name, r):
-  if records.get(name) is not None:
-    records[name].append(r)
-    return
-  records[name] = [r]
-
-for group in test_groups:
-  for name in group['records'].keys():
-    for record in group['records'][name]:
-      assert(len(record.keys()) == 1)
-      r_type = record.keys()[0]
-      r_data = record[r_type]
-      print('record Name is |%s|' % name)
-      print('R_type is |%s|' % r_type)
-      print('R_data is |%s|' % r_data)
-      all_records.append(DnsRecord(r_type, name, r_data))
 
 def srv_record_target_name(srv_record):
   # extract host from "priority weight port host" srv data

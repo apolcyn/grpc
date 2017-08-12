@@ -52,7 +52,7 @@ def _record_to_resolve_is_balancer(test):
   if records.get(srv_attempted) is None:
     return False
   for r in records[srv_attempted]:
-    if 'SRV' in r.keys():
+    if r['type'] == 'SRV':
       return True
   return False
 
@@ -66,9 +66,9 @@ def _expected_service_config(test):
   txt_count = 0
   for name in test['records'].keys():
     for record in test['records'].get(name):
-      if 'TXT' in record.keys():
+      if record['type'] == 'TXT':
         txt_count += 1
-        txt_data = record['TXT']
+        txt_data = record['data']
   if txt_count == 0:
     return 'NULL'
   assert(txt_count == 1)
@@ -77,10 +77,8 @@ def _expected_service_config(test):
   json_data = json.loads(txt_data[split_index+1:])
   if test['expected_config_index'] != None:
     expected_json_data = json_data[test['expected_config_index']]
-    with open('tmpd', 'w') as debug:
-      debug.write(json.dumps(expected_json_data))
     return "\"%s\"" % json.dumps(expected_json_data['serviceConfig'], separators=(',', ':')).replace('\"', '\\"')
-  return '(char*)NULL'
+  return 'NULL'
 
 %>\
 
@@ -94,10 +92,13 @@ TEST(NamingEnd2EndTest, ${_to_test_name(test['record_to_resolve'])}_test) {
   expected_addrs.emplace_back("${addr}");
 %   endfor
 %   if _record_to_resolve_is_balancer(test):
-  naming_end2end_test_resolves_balancer("srv-ipv4-single-target.grpc.com.", expected_addrs, NULL);
+  naming_end2end_test_resolves_balancer(
 %   else:
-  naming_end2end_test_resolves_backend("${test['record_to_resolve']}", expected_addrs, ${_expected_service_config(test)});
+  naming_end2end_test_resolves_backend(
 %   endif
+      "${test['record_to_resolve']}",
+      expected_addrs,
+      ${_expected_service_config(test)});
 }
 % endfor
 

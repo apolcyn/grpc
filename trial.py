@@ -14,25 +14,34 @@ class DnsRecord(object):
 
 ZONE_DNS = 'grpc.com.'
 SRV_PORT = '1234'
+TTL = '2100'
 
 def a_record(ip):
   return {
-      'A': ip,
+      'type': 'A',
+      'data': ip,
+      'TTL': TTL,
   }
 
 def aaaa_record(ip):
   return {
-      'AAAA': ip,
+      'type': 'AAAA',
+      'data': ip,
+      'TTL': TTL,
   }
 
 def srv_record(target):
   return {
-      'SRV': '0 0 %s %s' % (SRV_PORT, '%s.%s' % (target, ZONE_DNS)),
+      'type': 'SRV',
+      'data': '0 0 %s %s' % (SRV_PORT, '%s.%s' % (target, ZONE_DNS)),
+      'TTL': TTL,
   }
 
 def txt_record(grpc_config):
   return {
-      'TXT': 'grpc_config=%s' % json.dumps(grpc_config, separators=(',', ':')),
+      'type': 'TXT',
+      'data': 'grpc_config=%s' % json.dumps(grpc_config, separators=(',', ':')),
+      'TTL': TTL,
   }
 
 def _test_group(record_to_resolve, records, expected_addrs, expected_config):
