@@ -68,7 +68,7 @@ def _expected_service_config(test):
     for record in test['records'].get(name):
       if record['type'] == 'TXT':
         txt_count += 1
-        txt_data = record['data']
+        txt_data = record['data'].replace(' ', '')
   if txt_count == 0:
     return 'NULL'
   assert(txt_count == 1)

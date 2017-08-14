@@ -119,11 +119,9 @@ for group in test_groups:
         port = int(port)
         _push_record(all_records, name, SRV(target=target, priority=p, weight=w, port=port))
       if r_type == 'TXT':
-        print('TXT Record length is %s' % len(r_data))
-        if len(r_data) > 255:
-          print('skipping TXT record %s' % name)
-          continue
-        _push_record(all_records, name, TXT(r_data))
+        for chunk in r_data.split(' '):
+          print('TXT Record length for new chunk is %s' % len(chunk))
+          _push_record(all_records, name, TXT(chunk))
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
