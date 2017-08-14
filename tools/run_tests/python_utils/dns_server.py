@@ -89,7 +89,7 @@ for group in test_groups:
         port = int(port)
         _push_record(all_records, name, SRV(target=target, priority=p, weight=w, port=port))
       if r_type == 'TXT':
-        _maybe_split_up_txt_data(all_records, name, r_data.replace('"', '\\"'))
+        _maybe_split_up_txt_data(all_records, name, r_data)
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
