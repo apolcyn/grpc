@@ -38,19 +38,11 @@ def srv_record(target):
   }
 
 def txt_record(grpc_config):
-  chunks = []
   total_str = 'grpc_config=%s' % json.dumps(grpc_config, separators=(',', ':'))
-  start = 0
-  while len(total_str[start:]) > 0:
-    next_read = len(total_str[start:])
-    if next_read > 255:
-      next_read = 255
-    chunks.append(total_str[start:start+next_read])
-    start += next_read
 
   return {
       'type': 'TXT',
-      'data': ' '.join(chunks),
+      'data': total_str,
       'TTL': TTL,
   }
 

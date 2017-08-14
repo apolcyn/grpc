@@ -31,6 +31,20 @@ argp.add_argument('--list_records', default=False, action='store_const', const=T
                   help='Don\'t modify records and use gcloud API to print existing records')
 args = argp.parse_args()
 
+def _maybe_massage_txt_data(record_type, record_data):
+  if record_type != 'TXT':
+    return [record_data]
+  chunks = []
+  start = 0
+  record_data = record_data.replace('"', '\\"')
+  while len(record_data[start:]) > 0:
+    next_read = len(record_data[start:])
+    if next_read > 255:
+      next_read = 255
+    chunks.append(record_data[start:start+next_read])
+    start += next_read
+  return chunks
+
 def main():
   cmds = []
   cmds.append(('gcloud dns record-sets transaction start -z=%s' % dns_records_config.ZONE_NAME).split(' '))
@@ -40,9 +54,9 @@ def main():
     type_to_ttl = {}
     for r in dns_records_config.RECORDS_BY_NAME[name]:
       if type_to_data.get(r.record_type) is not None:
-        type_to_data[r.record_type].append(r.record_data)
+        type_to_data[r.record_type] += _maybe_massage_txt_data(r.record_type, r.record_data)
       else:
-        type_to_data[r.record_type] = [r.record_data]
+        type_to_data[r.record_type] = _maybe_massage_txt_data(r.record_type, r.record_data)
 
       if type_to_ttl.get(r.record_type) is not None:
         assert type_to_ttl[r.record_type] == r.ttl
