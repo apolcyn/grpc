@@ -78,14 +78,6 @@ TEST(NamingEnd2EndTest, ipv4_no_config_for_cpp_test_2_grpctestingexp__test) {
       expected_addrs,
       NULL);
 }
-TEST(NamingEnd2EndTest, ipv4_second_language_is_cpp_test_2_grpctestingexp__test) {
-  std::vector<std::string> expected_addrs;
-  expected_addrs.emplace_back("1.2.3.4:443");
-  naming_end2end_test_resolves_backend(
-      "ipv4-second-language-is-cpp.test-2.grpctestingexp.",
-      expected_addrs,
-      NULL);
-}
 TEST(NamingEnd2EndTest, ipv4_no_srv_simple_service_config_test_2_grpctestingexp__test) {
   std::vector<std::string> expected_addrs;
   expected_addrs.emplace_back("1.2.3.4:443");
@@ -101,6 +93,14 @@ TEST(NamingEnd2EndTest, ipv4_config_with_percentages_test_2_grpctestingexp__test
       "ipv4-config-with-percentages.test-2.grpctestingexp.",
       expected_addrs,
       "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"AlwaysPickedService\",\"waitForReady\":true}]}]}");
+}
+TEST(NamingEnd2EndTest, ipv4_second_language_is_cpp_test_2_grpctestingexp__test) {
+  std::vector<std::string> expected_addrs;
+  expected_addrs.emplace_back("1.2.3.4:443");
+  naming_end2end_test_resolves_backend(
+      "ipv4-second-language-is-cpp.test-2.grpctestingexp.",
+      expected_addrs,
+      "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"CppService\",\"waitForReady\":true}]}]}");
 }
 TEST(NamingEnd2EndTest, srv_ipv4_multi_target_test_2_grpctestingexp__test) {
   std::vector<std::string> expected_addrs;

@@ -56,7 +56,7 @@
     - {TTL: '2100', data: 'grpc_config=[{"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}}]',
       type: TXT}
 - expected_addrs: ['1.2.3.4:443']
-  expected_config_index: null
+  expected_config_index: 1
   record_to_resolve: ipv4-second-language-is-cpp.test-2.grpctestingexp.
   records:
     ipv4-second-language-is-cpp.test-2.grpctestingexp.:

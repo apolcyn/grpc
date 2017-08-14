@@ -40,46 +40,6 @@ import yaml
 # note that all changes must be backwards compatible
 _MY_VERSION = 20
 
-#ZONE_DNS = 'test.grpctestingexp.'
-#ZONE_NAME = 'exp-grpc-testing'
-#TTL = '2100'
-#
-#SRV_PORT='1234'
-#
-#
-#class DnsRecord(object):
-#  def __init__(self, record_type, record_name, record_data):
-#    self.record_type = record_type
-#    self.record_name = record_name
-#    self.record_data = record_data
-#    self.record_class = 'IN'
-#    self.ttl = TTL
-#
-#  def uploadable_data(self):
-#    return self.record_data.split(',')
-#
-#def _create_records_for_testing():
-#  ipv4_single_target_dns = 'ipv4-single-target.%s' % ZONE_DNS
-#  ipv6_single_target_dns = 'ipv6-single-target.%s' % ZONE_DNS
-#  ipv4_multi_target_dns = 'ipv4-multi-target.%s' % ZONE_DNS
-#  ipv6_multi_target_dns = 'ipv6-multi-target.%s' % ZONE_DNS
-#
-#  records = [
-#      DnsRecord('A', ipv4_single_target_dns, '1.2.3.4'),
-#      DnsRecord('A', ipv4_multi_target_dns, ','.join(['1.2.3.5',
-#                                                      '1.2.3.6',
-#                                                      '1.2.3.7'])),
-#      DnsRecord('AAAA', ipv6_single_target_dns, '2607:f8b0:400a:801::1001'),
-#      DnsRecord('AAAA', ipv6_multi_target_dns, ','.join(['2607:f8b0:400a:801::1002',
-#                                                         '2607:f8b0:400a:801::1003',
-#                                                         '2607:f8b0:400a:801::1004'])),
-#      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_single_target_dns)),
-#      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv4_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv4_multi_target_dns)),
-#      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv6_single_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_single_target_dns)),
-#      DnsRecord('SRV', '_grpclb._tcp.srv-%s' % ipv6_multi_target_dns, '0 0 %s %s' % (SRV_PORT, ipv6_multi_target_dns)),
-#  ]
-#  return records
-
 ZONE_DNS = 'test.grpctestingexp.'
 TTL = 2100
 SRV_PORT='1234'
@@ -98,6 +58,16 @@ def _push_record(records, name, r):
     records[name].append(r)
     return
   records[name] = [r]
+
+def _maybe_split_up_txt_data(all_records, name, txt_data):
+  start = 0
+  while len(txt_data[start:]) > 0:
+    next_read = len(txt_data[start:])
+    if next_read > 255:
+      print('%s needs chunking' % name)
+      next_read = 255
+    _push_record(all_records, name, TXT(txt_data[start:start+next_read]))
+    start += next_read
 
 for group in test_groups:
   for name in group['records'].keys():
@@ -119,9 +89,7 @@ for group in test_groups:
         port = int(port)
         _push_record(all_records, name, SRV(target=target, priority=p, weight=w, port=port))
       if r_type == 'TXT':
-        for chunk in r_data.split(' '):
-          print('TXT Record length for new chunk is %s' % len(chunk))
-          _push_record(all_records, name, TXT(chunk))
+        _maybe_split_up_txt_data(all_records, name, r_data.replace('"', '\\"'))
 
 TYPE_LOOKUP = {
   A: QTYPE.A,

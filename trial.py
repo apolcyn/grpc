@@ -174,7 +174,7 @@ def _create_records_for_testing():
                                                     _config_wrapper(langs=['c++'],
                                                                     service_config=_create_service_config(
                                                                         _create_method_config('CppService')))],
-                                                   None))
+                                                   1))
 
   records.append(_create_ipv4_and_txt_record_group('ipv4-no-config-for-cpp', ['1.2.3.4'],
                                                    [_config_wrapper(langs=['python'],
