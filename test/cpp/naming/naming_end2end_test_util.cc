@@ -185,9 +185,11 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
 
 static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   char* whole_uri = NULL;
-  char* authority = gpr_getenv("GRPC_DNS_AUTHORITY");
-  if (authority && strlen(authority) > 0) {
+  const char* authority = gpr_getenv("GRPC_DNS_AUTHORITY_TESTING_OVERRIDE");
+  if (authority != NULL && strlen(authority) > 0) {
     gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority);
+  } else{
+    authority = "";
   }
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
