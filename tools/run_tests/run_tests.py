@@ -275,7 +275,8 @@ class CLanguage(object):
         env={'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH':
                  _ROOT + '/src/core/tsi/test_creds/ca.pem',
              'GRPC_POLL_STRATEGY': polling_strategy,
-             'GRPC_VERBOSITY': 'DEBUG'}
+             'GRPC_VERBOSITY': 'DEBUG',
+             'GRPC_DNS_AUTHORIY': '127.0.0.1:15353'}
         resolver = os.environ.get('GRPC_DNS_RESOLVER', None);
         if resolver:
           env['GRPC_DNS_RESOLVER'] = resolver

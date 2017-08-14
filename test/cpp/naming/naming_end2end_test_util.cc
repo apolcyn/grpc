@@ -185,11 +185,15 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
 
 static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   char* whole_uri = NULL;
+  char* authority = gpr_getenv("GRPC_DNS_AUTHORITY");
+  if (authority && strlen(authority) > 0) {
+    gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority);
+  }
   grpc_arg new_arg;
   new_arg.type = GRPC_ARG_STRING;
   new_arg.key = (char*)GRPC_ARG_SERVER_URI;
   new_arg.value.string = (char*)args->target_name;
-  GPR_ASSERT(asprintf(&whole_uri, "dns://127.0.0.1:15353/%s", new_arg.value.string));
+  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s", authority, new_arg.value.string));
 
   args->channel_args = grpc_channel_args_copy_and_add(NULL, &new_arg, 0);
 

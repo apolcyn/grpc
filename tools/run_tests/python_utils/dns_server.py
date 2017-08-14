@@ -64,7 +64,7 @@ def _maybe_split_up_txt_data(all_records, name, txt_data):
   while len(txt_data[start:]) > 0:
     next_read = len(txt_data[start:])
     if next_read > 255:
-      print('%s needs chunking' % name)
+      print('%s NEEDS CHUNKING' % name)
       next_read = 255
     _push_record(all_records, name, TXT(txt_data[start:start+next_read]))
     start += next_read
