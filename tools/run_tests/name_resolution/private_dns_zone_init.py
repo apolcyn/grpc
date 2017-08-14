@@ -31,17 +31,33 @@ argp.add_argument('--list_records', default=False, action='store_const', const=T
                   help='Don\'t modify records and use gcloud API to print existing records')
 args = argp.parse_args()
 
+def _massage_quotations(d):
+  return d.replace('"', '\\"')
+
 def main():
   cmds = []
   cmds.append(('gcloud dns record-sets transaction start -z=%s' % dns_records_config.ZONE_NAME).split(' '))
 
-  for r in dns_records_config.DNS_RECORDS:
-    prefix = ('gcloud dns record-sets transaction add '
-              '-z=%s --name=%s --type=%s --ttl=%s') % (dns_records_config.ZONE_NAME,
-                                                       r.record_name,
-                                                       r.record_type,
-                                                       r.ttl)
-    cmds.append(prefix.split(' ') + [r.record_data])
+  for name in dns_records_config.RECORDS_BY_NAME.keys():
+    type_to_data = {}
+    type_to_ttl = {}
+    for r in dns_records_config.RECORDS_BY_NAME[name]:
+      if type_to_data.get(r.record_type) is not None:
+        type_to_data[r.record_type].append(_massage_quotations(r.record_data))
+      else:
+        type_to_data[r.record_type] = [_massage_quotations(r.record_data)]
+
+      if type_to_ttl.get(r.record_type) is not None:
+        assert type_to_ttl[r.record_type] == r.ttl
+      type_to_ttl[r.record_type] = r.ttl
+
+    for rt in type_to_data.keys():
+      prefix = ('gcloud dns record-sets transaction add '
+                '-z=%s --name=%s --type=%s --ttl=%s') % (dns_records_config.ZONE_NAME,
+                                                         name,
+                                                         rt,
+                                                         type_to_ttl[rt])
+      cmds.append(prefix.split(' ') + type_to_data[rt])
 
   cmds.append(('gcloud dns record-sets transaction describe -z=%s' % dns_records_config.ZONE_NAME).split(' '))
   cmds.append(('gcloud dns record-sets transaction execute -z=%s' % dns_records_config.ZONE_NAME).split(' '))

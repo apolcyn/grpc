@@ -20,7 +20,8 @@
 
 import yaml
 
-ZONE_NAME = 'exp-grpc-testing'
+ZONE_NAME = 'exp-grpc-testing-2'
+ZONE_DNS = 'test-2.grpctestingexp.'
 
 class DnsRecord(object):
   def __init__(self, record_type, record_name, record_data, ttl):
@@ -40,10 +41,6 @@ def _records_for_testing():
         r_type = record['type']
         r_data = record['data']
         r_ttl = record['TTL']
-        print('record Name is |%s|' % name)
-        print('R_type is |%s|' % r_type)
-        print('R_data is |%s|' % r_data)
-        print('TTL is |%s|' % r_ttl)
         all_records.append(DnsRecord(r_type, name, r_data, r_ttl))
   return all_records
 
@@ -52,8 +49,8 @@ def _records_by_name(all_records):
   for r in all_records:
     if records_by_name.get(r.record_name) is not None:
       records_by_name[r.record_name].append(r)
-      return
-    records_by_name[r.record_name] = [r]
+    else:
+      records_by_name[r.record_name] = [r]
   return records_by_name
 
 def srv_record_target_name(srv_record):
