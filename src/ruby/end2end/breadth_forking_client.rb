@@ -44,7 +44,7 @@ def main
 
   child_processes = []
 
-  10.times do
+  5.times do
     GRPC::Core::ForkingContext.prefork()
 
     child_processes << fork do

@@ -46,7 +46,7 @@ def main
 
   child_pid = nil
 
-  10.times do
+  5.times do
     GRPC::Core::ForkingContext.prefork()
     child_pid = fork
     unless child_pid.nil?
