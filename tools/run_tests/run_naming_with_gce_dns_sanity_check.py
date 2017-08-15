@@ -86,11 +86,11 @@ def _maybe_massage_and_split_up_expected_data(record_type, record_data):
   global args
 
   if args.dns_server_host is None:
-    # There is a subtle and small feature with GCE DNS resolver uploader:
+    # There is a small feature with GCE DNS resolver uploader:
     # double quotes surrounding the txt record string and the backslashes
-    # used to escape inner double quotes are counted towards the 255 character
-    # single-string limit. The local DNS server doesn't have the issue though.
-    record_data = '\"%s\"' % record_data.replace('"', '\\"')
+    # used to escape inner double quotes appear to be counted towards the 255 character
+    # single-string limit. The local DNS server doesn't though.
+    record_data = record_data.replace('"', '\\"')
 
   chunks = []
   start = 0
@@ -101,8 +101,8 @@ def _maybe_massage_and_split_up_expected_data(record_type, record_data):
 
     data_chunk = record_data[start:start+next_read]
     if args.dns_server_host is not None:
-      data_chunk = '\"%s\"' % data_chunk.replace('"', '\\"')
-    chunks.append(data_chunk)
+      data_chunk = data_chunk.replace('"', '\\"')
+    chunks.append('\"%s\"' % data_chunk)
 
     start += next_read
   return chunks
