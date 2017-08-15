@@ -45,7 +45,6 @@ import python_utils.jobset as jobset
 import python_utils.report_utils as report_utils
 import python_utils.watch_dirs as watch_dirs
 import python_utils.start_port_server as start_port_server
-import python_utils.dns_server as dns_server
 try:
   from python_utils.upload_test_results import upload_results_to_bq
 except (ImportError):
@@ -276,8 +275,8 @@ class CLanguage(object):
         env={'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH':
                  _ROOT + '/src/core/tsi/test_creds/ca.pem',
              'GRPC_POLL_STRATEGY': polling_strategy,
-             'GRPC_VERBOSITY': 'DEBUG',
-             'GRPC_DNS_AUTHORIY': '127.0.0.1:15353'}
+             'GRPC_VERBOSITY': 'DEBUG'}
+        self._maybe_adjust_environment_if_testing_resolver(target, env)
         resolver = os.environ.get('GRPC_DNS_RESOLVER', None);
         if resolver:
           env['GRPC_DNS_RESOLVER'] = resolver
@@ -437,6 +436,13 @@ class CLanguage(object):
   def dockerfile_dir(self):
     return 'tools/dockerfile/test/cxx_%s_%s' % (self._docker_distro,
                                                 _docker_arch_suffix(self.args.arch))
+
+  def _maybe_adjust_environment_if_testing_resolver(self, test_name, env):
+    if test_name != 'naming_end2end_test':
+      return
+    env['GRPC_DNS_RESOLVER'] = os.environ.get('GRPC_DNS_RESOLVER', 'ares');
+    env['GRPC_DNS_AUTHORITY_TESTING_OVERRIDE'] = \
+      os.environ.get('GRPC_DNS_AUTHORITY_TESTING_OVERRIDE', '127.0.0.1:15353')
 
   def __str__(self):
     return self.make_target
@@ -1503,7 +1509,6 @@ def _build_and_run(
   antagonists = [subprocess.Popen(['tools/run_tests/python_utils/antagonist.py'])
                  for _ in range(0, args.antagonists)]
   start_port_server.start_port_server()
-  dns_server.start_local_dns_server()
   resultset = None
   num_test_failures = 0
   try:

@@ -32,7 +32,7 @@ import dns_server
 # increment this number whenever making a change to ensure that
 # the changes are picked up by running CI servers
 # note that all changes must be backwards compatible
-_MY_VERSION = 20
+_MY_VERSION = 21
 _DNS_SERVER_PORT = 15353
 _RESERVED_PORTS = [_DNS_SERVER_PORT]
 

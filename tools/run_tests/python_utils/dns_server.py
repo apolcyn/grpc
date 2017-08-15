@@ -40,9 +40,8 @@ import yaml
 # note that all changes must be backwards compatible
 _MY_VERSION = 20
 
-_TTL = 60 * 60 * 24
-
 _all_records = {}
+_record_name_type_to_ttl = {}
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
@@ -62,25 +61,27 @@ class Resolver:
           resource_query_type = resource_data.__class__.__name__
           if QTYPE[request_record.q.qtype] == resource_query_type:
             rtype = TYPE_LOOKUP[resource_data.__class__]
-            reply.add_answer(RR(rname=str(request_record.q.qname), rtype=rtype, rclass=1, ttl=_TTL, rdata=resource_data))
+            ttl = _record_name_type_to_ttl['%s:%s' % (name, resource_query_type)]
+            reply.add_answer(RR(rname=str(request_record.q.qname), rtype=rtype, rclass=1, ttl=ttl, rdata=resource_data))
 
     print "---- Reply:\n", reply
     return reply
 
-def _push_record(name, r):
+def _push_record(name, r, ttl):
+  _record_name_type_to_ttl['%s:%s' % (name, r.__class__.__name__)] = ttl
   if _all_records.get(name) is not None:
     _all_records[name].append(r)
     return
   _all_records[name] = [r]
 
 
-def _maybe_split_up_txt_data(name, txt_data):
+def _maybe_split_up_txt_data(name, txt_data, ttl):
   start = 0
   while len(txt_data[start:]) > 0:
     next_read = len(txt_data[start:])
     if next_read > 255:
       next_read = 255
-    _push_record(name, TXT(txt_data[start:start+next_read]))
+    _push_record(name, TXT(txt_data[start:start+next_read]), ttl)
     start += next_read
 
 def start_local_dns_server(dns_server_port):
@@ -92,19 +93,19 @@ def start_local_dns_server(dns_server_port):
       for record in group['records'][name]:
         r_type = record['type']
         r_data = record['data']
-        # ignore TTL in this DNS server, tests shouln't care about it
+        r_ttl = int(record['TTL'])
         if r_type == 'A':
-          _push_record(name, A(r_data))
+          _push_record(name, A(r_data), r_ttl)
         if r_type == 'AAAA':
-          _push_record(name, AAAA(r_data))
+          _push_record(name, AAAA(r_data), r_ttl)
         if r_type == 'SRV':
           p, w, port, target = r_data.split(' ')
           p = int(p)
           w = int(w)
           port = int(port)
-          _push_record(name, SRV(target=target, priority=p, weight=w, port=port))
+          _push_record(name, SRV(target=target, priority=p, weight=w, port=port), r_ttl)
         if r_type == 'TXT':
-          _maybe_split_up_txt_data(name, r_data)
+          _maybe_split_up_txt_data(name, r_data, r_ttl)
 
   resolver = Resolver()
   print('starting local dns server on 127.0.0.1:%s' % dns_server_port)
