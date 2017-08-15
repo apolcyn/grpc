@@ -40,56 +40,9 @@ import yaml
 # note that all changes must be backwards compatible
 _MY_VERSION = 20
 
-ZONE_DNS = 'test.grpctestingexp.'
-TTL = 2100
-SRV_PORT='1234'
+_TTL = 60 * 60 * 24
 
-a_records = [dnslib.A('1.2.3.4')]
-aaaa_records = [dnslib.A('1.2.3.4')]
-srv_records = []
-
-with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
-  test_groups = yaml.load(config)
-
-all_records = {}
-
-def _push_record(records, name, r):
-  if records.get(name) is not None:
-    records[name].append(r)
-    return
-  records[name] = [r]
-
-def _maybe_split_up_txt_data(all_records, name, txt_data):
-  start = 0
-  while len(txt_data[start:]) > 0:
-    next_read = len(txt_data[start:])
-    if next_read > 255:
-      print('%s NEEDS CHUNKING' % name)
-      next_read = 255
-    _push_record(all_records, name, TXT(txt_data[start:start+next_read]))
-    start += next_read
-
-for group in test_groups:
-  for name in group['records'].keys():
-    for record in group['records'][name]:
-      r_type = record['type']
-      r_data = record['data']
-      # ignore TTL
-      print('record Name is |%s|' % name)
-      if r_type == 'A':
-        _push_record(all_records, name, A(r_data))
-      if r_type == 'AAAA':
-        print('AAAA data is |%s|' % r_data)
-        _push_record(all_records, name, AAAA(r_data))
-      if r_type == 'SRV':
-        print('R_data is |%s|' % r_data)
-        p, w, port, target = r_data.split(' ')
-        p = int(p)
-        w = int(w)
-        port = int(port)
-        _push_record(all_records, name, SRV(target=target, priority=p, weight=w, port=port))
-      if r_type == 'TXT':
-        _maybe_split_up_txt_data(all_records, name, r_data)
+_all_records = {}
 
 TYPE_LOOKUP = {
   A: QTYPE.A,
@@ -100,35 +53,67 @@ TYPE_LOOKUP = {
 
 class Resolver:
   def resolve(self, request_record, _handler):
-    global all_records
+    global _all_records
     reply = DNSRecord(DNSHeader(id=request_record.header.id, qr=1, aa=1, ra=1), q=request_record.q)
     qt = QTYPE[request_record.q.qtype]
-    for name, resource_record_set in all_records.iteritems():
+    for name, resource_record_set in _all_records.iteritems():
       if name == str(request_record.q.qname):
         for resource_data in resource_record_set:
           resource_query_type = resource_data.__class__.__name__
           if QTYPE[request_record.q.qtype] == resource_query_type:
             rtype = TYPE_LOOKUP[resource_data.__class__]
-            reply.add_answer(RR(rname=str(request_record.q.qname), rtype=rtype, rclass=1, ttl=TTL, rdata=resource_data))
+            reply.add_answer(RR(rname=str(request_record.q.qname), rtype=rtype, rclass=1, ttl=_TTL, rdata=resource_data))
 
     print "---- Reply:\n", reply
     return reply
 
-resolver = Resolver()
-servers = [
-  DNSServer(resolver, port=15353, address='127.0.0.1', tcp=False),
-  DNSServer(resolver, port=15353, address='127.0.0.1', tcp=True)
-]
-for s in servers:
-  s.start_thread()
+def _push_record(name, r):
+  if _all_records.get(name) is not None:
+    _all_records[name].append(r)
+    return
+  _all_records[name] = [r]
 
-try:
+
+def _maybe_split_up_txt_data(name, txt_data):
+  start = 0
+  while len(txt_data[start:]) > 0:
+    next_read = len(txt_data[start:])
+    if next_read > 255:
+      next_read = 255
+    _push_record(name, TXT(txt_data[start:start+next_read]))
+    start += next_read
+
+def start_local_dns_server(dns_server_port):
+  with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
+    test_groups = yaml.load(config)
+
+  for group in test_groups:
+    for name in group['records'].keys():
+      for record in group['records'][name]:
+        r_type = record['type']
+        r_data = record['data']
+        # ignore TTL in this DNS server, tests shouln't care about it
+        if r_type == 'A':
+          _push_record(name, A(r_data))
+        if r_type == 'AAAA':
+          _push_record(name, AAAA(r_data))
+        if r_type == 'SRV':
+          p, w, port, target = r_data.split(' ')
+          p = int(p)
+          w = int(w)
+          port = int(port)
+          _push_record(name, SRV(target=target, priority=p, weight=w, port=port))
+        if r_type == 'TXT':
+          _maybe_split_up_txt_data(name, r_data)
+
+  resolver = Resolver()
+  print('starting local dns server on 127.0.0.1:%s' % dns_server_port)
+  DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=False).start_thread()
+  DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=True).start_thread()
+
+if __name__ == '__main__':
+  start_local_dns_server(15353)
   while True:
     time.sleep(1)
     sys.stderr.flush()
     sys.stdout.flush()
-except KeyboardInterrupt:
-  pass
-finally:
-  for s in servers:
-    s.stop()

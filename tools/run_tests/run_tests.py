@@ -45,6 +45,7 @@ import python_utils.jobset as jobset
 import python_utils.report_utils as report_utils
 import python_utils.watch_dirs as watch_dirs
 import python_utils.start_port_server as start_port_server
+import python_utils.dns_server as dns_server
 try:
   from python_utils.upload_test_results import upload_results_to_bq
 except (ImportError):
@@ -1502,6 +1503,7 @@ def _build_and_run(
   antagonists = [subprocess.Popen(['tools/run_tests/python_utils/antagonist.py'])
                  for _ in range(0, args.antagonists)]
   start_port_server.start_port_server()
+  dns_server.start_local_dns_server()
   resultset = None
   num_test_failures = 0
   try:
