@@ -30,7 +30,7 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
 argp = argparse.ArgumentParser(description='Sanity check existence of testing DNS records in a DNS service')
-argp.add_argument('-p', '--dns_server_port', default=15353, type=int)
+argp.add_argument('-p', '--dns_server_port', default=0, type=int)
 argp.add_argument('-s', '--dns_server_host', default=None, type=str)
 args = argp.parse_args()
 
@@ -47,37 +47,40 @@ def _fail_error(cmd, found, expected):
   sys.exit(1)
 
 
-def _matches_any(parsed_record, candidates):
-  for e in candidates:
-    if len(e) == len(parsed_record):
-      matches = True
-      for i in range(len(e)):
-        if e[i] != parsed_record[i]:
-          matches = False
-      if matches:
-        return True
-  return False
+def _dig_output_line_matches(found_line, expected_line):
+  if len(found_line) != len(expected_line):
+    return False
+  matches = True
+  for i in range(len(expected_line)):
+    if found_line[i] != expected_line[i]:
+      matches = False
+  if matches:
+    return True
 
 
-def _check_dns_record(command, expected_data):
-  output = subprocess.check_output(command.split(' '))
-  lines = output.splitlines()
+def _check_dns_record(command, expected_lines_in_answer_section):
+  dig_output = subprocess.check_output(command.split(' ')).splitlines()
 
-  found = None
+  begin_answer_section = -1
   i = 0
-  for l in lines:
-    l = l.strip()
-    if l == ';; ANSWER SECTION:':
-      found = i
+  for line in dig_output:
+    line = line.strip()
+    if line == ';; ANSWER SECTION:':
+      begin_answer_section = i + 1
       break
     i += 1
 
-  if found is None or len(expected_data) > len(lines) - found:
-    _fail_error(command, found, expected_data)
-  for l in lines[found:found+len(expected_data)]:
-    parsed = re.split('\s+', lines[i + 1])
-    if not _matches_any(parsed, expected_data):
-      _fail_error(command, parsed, expected_data)
+  if begin_answer_section == -1:
+    _fail_error(command, found, expected_lines_in_answer_section)
+  if len(expected_lines_in_answer_section) > len(dig_output) - begin_answer_section:
+    _fail_error(command, found, expected_lines_in_answer_section)
+
+  i = 0
+  for line in dig_output[begin_answer_section:begin_answer_section+len(expected_lines_in_answer_section)]:
+    parsed = re.split('\s+', line)
+    if not _dig_output_line_matches(parsed, expected_lines_in_answer_section[i]):
+      _fail_error(command, parsed, expected_lines_in_answer_section)
+    i += 1
 
 
 def _maybe_massage_and_split_up_expected_data(record_type, record_data):
@@ -86,10 +89,10 @@ def _maybe_massage_and_split_up_expected_data(record_type, record_data):
   global args
 
   if args.dns_server_host is None:
-    # There is a small feature with GCE DNS resolver uploader:
-    # double quotes surrounding the txt record string and the backslashes
-    # used to escape inner double quotes appear to be counted towards the 255 character
-    # single-string limit. The local DNS server doesn't though.
+    # With GCE DNS record uploads, backslashes used to escape inner-string
+    # double-quotes appear to be counted towards the 255 character limit
+    # for single strings. The local DNS server doesn't do this though.
+    # So we need to add backslashes before chunking rather than after.
     record_data = record_data.replace('"', '\\"')
 
   chunks = []
@@ -122,15 +125,22 @@ def sanity_check_dns_records(dns_records_by_name):
       for record in type_to_data[record_type]:
         assert record.record_type == record_type
         assert record.record_name == name
-        for data_chunk in _maybe_massage_and_split_up_expected_data(record_type, record.record_data):
-          line = '%s %s %s %s %s' % (record.record_name, record.ttl, record.record_class, record.record_type, data_chunk)
+        for data_chunk in _maybe_massage_and_split_up_expected_data(record_type,
+                                                                    record.record_data):
+          line = '%s %s %s %s %s' % (record.record_name,
+                                     record.ttl,
+                                     record.record_class,
+                                     record.record_type,
+                                     data_chunk)
           expected_lines.append(line.split(' '))
       cmd = 'dig %s %s' % (record_type, name)
       if args.dns_server_host:
+        assert args.dns_server_port > 0
         cmd += ' -p %s @%s' % (args.dns_server_port, args.dns_server_host)
+
       _check_dns_record(
         command=cmd,
-        expected_data=expected_lines)
+        expected_lines_in_answer_section=expected_lines)
 
 
 if __name__ == '__main__':
