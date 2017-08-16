@@ -106,6 +106,7 @@ module GRPC
           @last_seen_prefork_count = GRPC::Core::ForkingContext.prefork_count
         end
       end
+      @initialize_proc.call
     end
 
     # request_response sends a request to a GRPC server, and returns the
