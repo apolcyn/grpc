@@ -50,6 +50,9 @@ printf "{\n\t\"storage-driver\": \"overlay\"\n}" | sudo tee /etc/docker/daemon.j
 sudo apt-get install -y python-pip
 sudo pip install google-api-python-client
 
+# Resolver testing scripts use python yaml
+sudo apt-get install -y python-yaml
+
 # Install RVM
 # TODO(jtattermusch): why is RVM needed?
 gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
