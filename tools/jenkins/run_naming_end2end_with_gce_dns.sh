@@ -24,5 +24,7 @@ CPP_BUILD_CONFIG=${CPP_BUILD_CONFIG:-dbg}
 cd $(dirname $0)/../..
 
 tools/run_tests/run_naming_with_gce_dns_sanity_check.py
+
+# use an empty authority in test uri's
 export GRPC_DNS_AUTHORITY_TESTING_OVERRIDE=''
 tools/run_tests/run_tests.py -l c++ -c $CPP_BUILD_CONFIG -r naming_end2end --use_docker || true
