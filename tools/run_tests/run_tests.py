@@ -276,7 +276,7 @@ class CLanguage(object):
                  _ROOT + '/src/core/tsi/test_creds/ca.pem',
              'GRPC_POLL_STRATEGY': polling_strategy,
              'GRPC_VERBOSITY': 'DEBUG'}
-        self._maybe_adjust_environment_if_testing_resolver(target, env)
+        self._maybe_adjust_environment_if_testing_resolver(target['name'], env)
         resolver = os.environ.get('GRPC_DNS_RESOLVER', None);
         if resolver:
           env['GRPC_DNS_RESOLVER'] = resolver
