@@ -18,6 +18,43 @@
 
 require_relative './end2end_common'
 
+def fork_and_wait_for_all_child_processes(stub)
+  child_processes = []
+
+  5.times do
+    GRPC::Core::ForkingContext.prefork
+
+    child_processes << fork do
+      GRPC::Core::ForkingContext.postfork_child
+
+      STDERR.puts 'attempt RPC from child'
+      stub.echo_verify_call_creds(Echo::EchoRequest.new(request: 'hello'))
+      STDERR.puts 'finished RPC from child'
+    end
+
+    GRPC::Core::ForkingContext.postfork_parent
+  end
+
+  exit_code = 0
+
+  child_processes.each do |child_proc|
+    begin
+      Timeout.timeout(10) do
+        Process.wait(child_proc)
+      end
+    rescue Timeout::Error
+      STDERR.puts "timeout waiting for forked process #{p}"
+      Process.kill('SIGKILL', p)
+      Process.wait(p)
+      raise 'Timed out waiting for client process. ' \
+        'It likely hangs when using gRPC after loading it and then forking'
+    end
+    exit_code |= $CHILD_STATUS.to_i
+  end
+
+  fail "forked process failed: #{exit_code}" if exit_code != 0
+end
+
 def main
   server_port = ''
   OptionParser.new do |opts|
@@ -38,44 +75,11 @@ def main
   stub = Echo::EchoServer::Stub.new("localhost:#{server_port}",
                                     create_channel_creds,
                                     **client_opts)
-  p "attempt RPC from parent"
+  STDERR.puts 'attempt RPC from parent'
   stub.echo_verify_call_creds(Echo::EchoRequest.new(request: 'hello'))
-  p "finished RPC from parent"
+  STDERR.puts 'finished RPC from parent'
 
-  child_processes = []
-
-  5.times do
-    GRPC::Core::ForkingContext.prefork()
-
-    child_processes << fork do
-      GRPC::Core::ForkingContext.postfork_child()
-
-      p "attempt RPC from child"
-      stub.echo_verify_call_creds(Echo::EchoRequest.new(request: 'hello'))
-      p "finished RPC from child"
-    end
-
-    GRPC::Core::ForkingContext.postfork_parent()
-  end
-
-  exit_code = 0
-
-  child_processes.each do |child_proc|
-    begin
-      Timeout.timeout(10) do
-        Process.wait(child_proc)
-      end
-    rescue Timeout::Error
-      STDERR.puts "timeout waiting for forked process #{p}"
-      Process.kill('SIGKILL', p)
-      Process.wait(p)
-      raise 'Timed out waiting for client process. ' \
-        'It likely hangs when using gRPC after loading it and then forking'
-    end
-    exit_code |= $?.to_i
-  end
-
-  fail "forked process failed: #{exit_code}" if exit_code != 0
+  fork_and_wait_for_all_child_processes(stub)
 end
 
 main

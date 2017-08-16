@@ -39,7 +39,8 @@ class EchoServerImpl < Echo::EchoServer::Service
 
   def echo_verify_call_creds(echo_req, call)
     unless call.metadata['call_creds_key'] == 'call_creds_val'
-      fail GRPC::Unauthenticated, "expected metadata from call creds is missing. got: #{call.metadata}"
+      fail GRPC::Unauthenticated, 'expected md from call creds is missing. ' \
+        "Got: #{call.metadata}"
     end
     Echo::EchoReply.new(response: echo_req.request)
   end
@@ -52,7 +53,9 @@ class ServerRunner
   end
 
   def create_server_creds
-    test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)), 'spec'), 'testdata')
+    test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)),
+                                    'spec'),
+                          'testdata')
     p "test root: #{test_root}"
     files = ['ca.pem', 'server1.key', 'server1.pem']
     creds = files.map { |f| File.open(File.join(test_root, f)).read }
@@ -115,7 +118,9 @@ def cleanup(control_stub, client_pid, server_runner)
 end
 
 def create_channel_creds
-  test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)), 'spec'), 'testdata')
+  test_root = File.join(File.join(File.dirname(File.dirname(__FILE__)),
+                                  'spec'),
+                        'testdata')
   files = ['ca.pem', 'client.key', 'client.pem']
   creds = files.map { |f| File.open(File.join(test_root, f)).read }
   creds = GRPC::Core::ChannelCredentials.new(creds[0], creds[1], creds[2])
@@ -124,5 +129,5 @@ def create_channel_creds
     m.merge(call_creds_key: 'call_creds_val')
   end
   call_creds = GRPC::Core::CallCredentials.new(auth_md_updater)
-  creds = creds.compose(call_creds)
+  creds.compose(call_creds)
 end

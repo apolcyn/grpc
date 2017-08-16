@@ -96,14 +96,14 @@ module GRPC
                    channel_args: {})
       @last_seen_prefork_count = -1
       @initialize_proc = proc do
-        if @last_seen_prefork_count != GRPC::Core::ForkingContext.prefork_count()
+        if @last_seen_prefork_count != GRPC::Core::ForkingContext.prefork_count
           @ch = ClientStub.setup_channel(channel_override, host, creds,
                                          channel_args)
           alt_host = channel_args[Core::Channel::SSL_TARGET]
           @host = alt_host.nil? ? host : alt_host
           @propagate_mask = propagate_mask
           @timeout = timeout.nil? ? DEFAULT_TIMEOUT : timeout
-          @last_seen_prefork_count = GRPC::Core::ForkingContext.prefork_count()
+          @last_seen_prefork_count = GRPC::Core::ForkingContext.prefork_count
         end
       end
     end

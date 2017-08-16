@@ -279,7 +279,7 @@ VALUE sym_metadata = Qundef;
 
 static gpr_once g_once_init = GPR_ONCE_INIT;
 
-static int prefork_count = 0;
+static unsigned long prefork_count = 0;
 
 static void grpc_ruby_once_init_internal() {
   grpc_init();

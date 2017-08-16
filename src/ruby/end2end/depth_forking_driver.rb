@@ -20,7 +20,7 @@ def main
   STDERR.puts 'start server'
   server_runner = ServerRunner.new(EchoServerImpl)
   server_port = server_runner.run(secure: true)
-  p "server running on #{server_port}"
+  STDERR.puts "server running on #{server_port}"
 
   # TODO(apolcyn) Can we get rid of this sleep?
   # Without it, an immediate call to the just started EchoServer

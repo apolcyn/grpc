@@ -18,6 +18,39 @@
 
 require_relative './end2end_common'
 
+GRPC_FORKING_TEST_MAX_FORK_COUNT = 5
+
+def fork_one_child_and_wait(stub, current_fork_depth)
+  current_fork_depth == GRPC_FORKING_TEST_MAX_FORK_COUNT && exit(0)
+
+  GRPC::Core::ForkingContext.prefork
+
+  child_pid = fork do
+    GRPC::Core::ForkingContext.postfork_child
+
+    STDERR.puts 'attempt RPC from child'
+    stub.echo(Echo::EchoRequest.new(request: 'hello'))
+    STDERR.puts 'finished RPC from child'
+
+    fork_one_child_and_wait(stub, current_fork_depth + 1)
+  end
+
+  GRPC::Core::ForkingContext.postfork_parent
+
+  begin
+    Timeout.timeout(10) do
+      Process.wait(child_pid)
+    end
+  rescue Timeout::Error
+    STDERR.puts "timeout waiting for forked process #{p}"
+    Process.kill('SIGKILL', p)
+    Process.wait(p)
+    raise 'Timed out waiting for client process.'
+  end
+
+  fail "forked process failed: #{$CHILD_STATUS.to_i}" if $CHILD_STATUS.to_i != 0
+end
+
 def main
   server_port = ''
 
@@ -40,40 +73,11 @@ def main
                                     create_channel_creds,
                                     **client_opts)
 
-  p "attempt RPC from parent"
+  STDERR.puts 'attempt RPC from parent'
   stub.echo(Echo::EchoRequest.new(request: 'hello'))
-  p "finished RPC from parent"
+  STDERR.puts 'finished RPC from parent'
 
-  child_pid = nil
-
-  5.times do
-    GRPC::Core::ForkingContext.prefork()
-    child_pid = fork
-    unless child_pid.nil?
-      GRPC::Core::ForkingContext.postfork_parent()
-      break
-    end
-    GRPC::Core::ForkingContext.postfork_child()
-
-    p "attempt RPC from child"
-    stub.echo(Echo::EchoRequest.new(request: 'hello'))
-    p "finished RPC from child"
-  end
-
-  exit(0) if child_pid.nil?
-
-  begin
-    Timeout.timeout(10) do
-      Process.wait(child_pid)
-    end
-  rescue Timeout::Error
-    STDERR.puts "timeout waiting for forked process #{p}"
-    Process.kill('SIGKILL', p)
-    Process.wait(p)
-    raise 'Timed out waiting for client process.'
-  end
-
-  fail "forked process failed: #{$?.to_i}" if $?.to_i != 0
+  fork_one_child_and_wait(stub, 0)
 end
 
 main
