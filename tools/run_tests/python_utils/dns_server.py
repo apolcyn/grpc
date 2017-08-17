@@ -59,7 +59,7 @@ def _maybe_split_up_txt_data(name, txt_data, ttl):
     _push_record(name, TXT(txt_data[start:start+next_read]), ttl)
     start += next_read
 
-def start_local_dns_server(dns_server_port):
+def start_local_dns_server_in_background(dns_server_port):
   with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
     test_records_config = yaml.load(config)
   common_zone_name = test_records_config['naming_end2end_tests_common_zone_name']
@@ -91,7 +91,7 @@ def start_local_dns_server(dns_server_port):
   DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=True).start_thread()
 
 if __name__ == '__main__':
-  start_local_dns_server(15353)
+  start_local_dns_server_in_background(15353)
   while True:
     time.sleep(1)
     sys.stderr.flush()
