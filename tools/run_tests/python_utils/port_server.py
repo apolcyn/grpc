@@ -32,7 +32,7 @@ import dns_server
 # increment this number whenever making a change to ensure that
 # the changes are picked up by running CI servers
 # note that all changes must be backwards compatible
-_MY_VERSION = 21
+_MY_VERSION = 19 #TODO: apolcyn, update this before merging
 
 _DNS_SERVER_PORT = 15353
 _RESERVED_PORTS = [_DNS_SERVER_PORT]
@@ -186,14 +186,16 @@ class Handler(BaseHTTPRequestHandler):
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
   """Handle requests in a separate thread"""
 
-port_server = ThreadedHTTPServer(('', args.port), Handler)
-port_server_thread = threading.Thread(target=port_server.serve_forever)
-port_server_thread.daemon = True
-port_server_thread.start()
+def _flush_output_forever():
+  while True:
+    time.sleep(1)
+    sys.stderr.flush()
+    sys.stdout.flush()
 
-dns_server.start_local_dns_server(_DNS_SERVER_PORT)
+output_flushing_thread = threading.Thread(target=_flush_output_forever)
+output_flushing_thread.daemon = True
+output_flushing_thread.start()
 
-while True:
-  time.sleep(1)
-  sys.stderr.flush()
-  sys.stdout.flush()
+dns_server.start_local_dns_server_in_background(_DNS_SERVER_PORT)
+
+ThreadedHTTPServer(('', args.port), Handler).serve_forever()
