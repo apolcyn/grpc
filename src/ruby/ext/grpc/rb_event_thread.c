@@ -142,9 +142,15 @@ void grpc_rb_event_queue_thread_start() {
   event_thread = rb_thread_create(grpc_rb_event_thread, NULL);
 }
 
+void *grpc_rb_event_unblocking_func_no_gil(void *arg) {
+  (void)arg;
+  grpc_rb_event_unblocking_func(NULL);
+  return NULL;
+}
+
 void grpc_rb_shutdown_and_reset_event_thread() {
   if (RTEST(event_thread)) {
-    rb_thread_call_without_gvl(grpc_rb_event_unblocking_func, NULL, NULL, NULL);
+    rb_thread_call_without_gvl(grpc_rb_event_unblocking_func_no_gil, NULL, NULL, NULL);
     rb_funcall(event_thread, rb_intern("join"), 0);
     event_thread = Qnil;
   }
