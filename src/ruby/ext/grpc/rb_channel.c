@@ -675,7 +675,7 @@ static void run_poll_channels_loop_unblocking_func(void *arg) {
           "connection polling");
 }
 
-static void* grpc_rb_reset_background_thread_state_without_gil(void *arg) {
+static void *grpc_rb_reset_background_thread_state_without_gil(void *arg) {
   (void)arg;
   gpr_mu_lock(&global_connection_polling_mu);
   channel_polling_thread_started = 0;
@@ -687,7 +687,7 @@ static void* grpc_rb_reset_background_thread_state_without_gil(void *arg) {
 
 static VALUE background_thread = Qnil;
 
-static void *run_poll_channels_loop_unblocking_func_without_gil(void* arg) {
+static void *run_poll_channels_loop_unblocking_func_without_gil(void *arg) {
   (void)arg;
   run_poll_channels_loop_unblocking_func(NULL);
   return NULL;
@@ -695,12 +695,14 @@ static void *run_poll_channels_loop_unblocking_func_without_gil(void* arg) {
 
 void grpc_rb_shutdown_and_reset_channel_polling_thread() {
   if (RTEST(background_thread)) {
-    rb_thread_call_without_gvl(run_poll_channels_loop_unblocking_func_without_gil, NULL, NULL, NULL);
+    rb_thread_call_without_gvl(
+        run_poll_channels_loop_unblocking_func_without_gil, NULL, NULL, NULL);
     rb_funcall(background_thread, rb_intern("join"), 0);
     background_thread = Qnil;
     gpr_log(GPR_INFO, "JUST RESET BACKGROUND THREAD");
   }
-  rb_thread_call_without_gvl(grpc_rb_reset_background_thread_state_without_gil, NULL, NULL, NULL);
+  rb_thread_call_without_gvl(grpc_rb_reset_background_thread_state_without_gil,
+                             NULL, NULL, NULL);
 }
 
 // Poll channel connectivity states in background thread without the GIL.

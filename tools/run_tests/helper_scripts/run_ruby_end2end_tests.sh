@@ -30,5 +30,5 @@ ruby src/ruby/end2end/multiple_killed_watching_threads_driver.rb || EXIT_CODE=1
 
 GRPC_ENABLE_FORKING=1 ruby src/ruby/end2end/breadth_forking_driver.rb || EXIT_CODE=1
 GRPC_ENABLE_FORKING=1 ruby src/ruby/end2end/depth_forking_driver.rb || EXIT_CODE=1
-GRPC_ENABLE_FORKING=1 ruby forking_without_grpc_objects_driver.rb || EXIT_CODE=1
+GRPC_ENABLE_FORKING=1 ruby src/ruby/end2end/forking_without_grpc_objects_driver.rb || EXIT_CODE=1
 exit $EXIT_CODE

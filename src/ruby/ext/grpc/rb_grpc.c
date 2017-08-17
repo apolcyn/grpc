@@ -25,10 +25,10 @@
 #include <ruby/vm.h>
 #include <sys/time.h>
 
-#include <grpc/grpc.h>
-#include <grpc/support/time.h>
-#include <grpc/support/log.h>
 #include <grpc/fork.h>
+#include <grpc/grpc.h>
+#include <grpc/support/log.h>
+#include <grpc/support/time.h>
 #include "rb_call.h"
 #include "rb_call_credentials.h"
 #include "rb_channel.h"
@@ -257,9 +257,7 @@ static void Init_grpc_time_consts() {
   id_tv_nsec = rb_intern("tv_nsec");
 }
 
-static void grpc_rb_shutdown(void) {
-  grpc_shutdown();
-}
+static void grpc_rb_shutdown(void) { grpc_shutdown(); }
 
 /* Initialize the GRPC module structs */
 
@@ -286,19 +284,25 @@ static void grpc_ruby_once_init_internal() {
   atexit(grpc_rb_shutdown);
 }
 
-static VALUE bg_thread_init_rb_mu = Qundef;
+static VALUE grpc_init_done_ruby_mu = Qundef;
 static int bg_thread_init_done = 0;
+static int init_has_ever_been_done = 0;
 
 static VALUE grpc_rb_prefork(VALUE self) {
   (void)self;
   prefork_count++;
-  rb_mutex_lock(bg_thread_init_rb_mu);
+  rb_mutex_lock(grpc_init_done_ruby_mu);
+  if (!init_has_ever_been_done) {
+    rb_mutex_unlock(grpc_init_done_ruby_mu);
+    return Qnil;
+  }
   if (bg_thread_init_done) {
     grpc_rb_shutdown_and_reset_channel_polling_thread();
     grpc_rb_shutdown_and_reset_event_thread();
     bg_thread_init_done = 0;
   }
-  rb_mutex_unlock(bg_thread_init_rb_mu);
+  rb_mutex_unlock(grpc_init_done_ruby_mu);
+
   rb_funcall(rb_mGC, rb_intern("disable"), 0);
   GPR_ASSERT(grpc_prefork() == 1);
   return Qnil;
@@ -306,6 +310,13 @@ static VALUE grpc_rb_prefork(VALUE self) {
 
 static VALUE grpc_rb_postfork_parent(VALUE self) {
   (void)self;
+  rb_mutex_lock(grpc_init_done_ruby_mu);
+  if (!init_has_ever_been_done) {
+    rb_mutex_unlock(grpc_init_done_ruby_mu);
+    return Qnil;
+  }
+  rb_mutex_unlock(grpc_init_done_ruby_mu);
+
   rb_funcall(rb_mGC, rb_intern("enable"), 0);
   grpc_postfork_parent();
   return Qnil;
@@ -313,6 +324,13 @@ static VALUE grpc_rb_postfork_parent(VALUE self) {
 
 static VALUE grpc_rb_postfork_child(VALUE self) {
   (void)self;
+  rb_mutex_lock(grpc_init_done_ruby_mu);
+  if (!init_has_ever_been_done) {
+    rb_mutex_unlock(grpc_init_done_ruby_mu);
+    return Qnil;
+  }
+  rb_mutex_unlock(grpc_init_done_ruby_mu);
+
   rb_funcall(rb_mGC, rb_intern("enable"), 0);
   grpc_postfork_child();
   return Qnil;
@@ -340,13 +358,14 @@ void grpc_ruby_once_init() {
   // in gpr_once_init. In general, it appears to be unsafe to call
   // into the ruby library while holding a non-ruby mutex, because a gil yield
   // could end up trying to lock onto that same mutex and deadlocking.
-  rb_mutex_lock(bg_thread_init_rb_mu);
+  rb_mutex_lock(grpc_init_done_ruby_mu);
   if (!bg_thread_init_done) {
     grpc_rb_event_queue_thread_start();
     grpc_rb_channel_polling_thread_start();
     bg_thread_init_done = 1;
   }
-  rb_mutex_unlock(bg_thread_init_rb_mu);
+  init_has_ever_been_done = 1;
+  rb_mutex_unlock(grpc_init_done_ruby_mu);
 }
 
 VALUE grpc_rb_cForkingContext = Qundef;
@@ -357,8 +376,8 @@ void Init_grpc_c() {
     return;
   }
 
-  bg_thread_init_rb_mu = rb_mutex_new();
-  rb_global_variable(&bg_thread_init_rb_mu);
+  grpc_init_done_ruby_mu = rb_mutex_new();
+  rb_global_variable(&grpc_init_done_ruby_mu);
 
   grpc_rb_mGRPC = rb_define_module("GRPC");
   grpc_rb_mGrpcCore = rb_define_module_under(grpc_rb_mGRPC, "Core");
@@ -370,11 +389,16 @@ void Init_grpc_c() {
   sym_details = ID2SYM(rb_intern("details"));
   sym_metadata = ID2SYM(rb_intern("metadata"));
 
-  grpc_rb_cForkingContext = rb_define_class_under(grpc_rb_mGrpcCore, "ForkingContext", rb_cObject);
-  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork", grpc_rb_prefork, 0);
-  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_parent", grpc_rb_postfork_parent, 0);
-  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_child", grpc_rb_postfork_child, 0);
-  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork_count", grpc_rb_prefork_count, 0);
+  grpc_rb_cForkingContext =
+      rb_define_class_under(grpc_rb_mGrpcCore, "ForkingContext", rb_cObject);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork",
+                             grpc_rb_prefork, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_parent",
+                             grpc_rb_postfork_parent, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "postfork_child",
+                             grpc_rb_postfork_child, 0);
+  rb_define_singleton_method(grpc_rb_cForkingContext, "prefork_count",
+                             grpc_rb_prefork_count, 0);
 
   Init_grpc_channel();
   Init_grpc_call();
