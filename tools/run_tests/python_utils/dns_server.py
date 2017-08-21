@@ -52,19 +52,22 @@ def _push_record(name, r, ttl):
 
 def _maybe_split_up_txt_data(name, txt_data, ttl):
   start = 0
+  txt_data_list = []
   while len(txt_data[start:]) > 0:
     next_read = len(txt_data[start:])
     if next_read > 255:
       next_read = 255
-    _push_record(name, TXT(txt_data[start:start+next_read]), ttl)
+    txt_data_list.append(txt_data[start:start+next_read])
     start += next_read
+
+  _push_record(name, TXT(txt_data_list), ttl)
 
 def start_local_dns_server_in_background(dns_server_port):
   with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
     test_records_config = yaml.load(config)
-  common_zone_name = test_records_config['naming_end2end_tests_common_zone_name']
+  common_zone_name = test_records_config['resolver_component_tests_common_zone_name']
 
-  for group in test_records_config['naming_end2end_tests']:
+  for group in test_records_config['resolver_component_tests']:
     for name in group['records'].keys():
       for record in group['records'][name]:
         r_type = record['type']

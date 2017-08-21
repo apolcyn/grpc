@@ -775,28 +775,40 @@ if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx writes_per_rpc_test)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_srv_ipv4_single_target)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv4_single_target)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_srv_ipv4_multi_target)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv4_multi_target)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_srv_ipv6_single_target)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv6_single_target)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_srv_ipv6_multi_target)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv6_multi_target)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_srv_ipv4_simple_service_config)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv4_simple_service_config)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_ipv4_no_srv_simple_service_config)
+add_dependencies(buildtests_cxx resolver_component_test_ipv4_no_srv_simple_service_config)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_ipv4_no_config_for_cpp)
+add_dependencies(buildtests_cxx resolver_component_test_ipv4_no_config_for_cpp)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx naming_end2end_test_ipv4_cpp_config_has_zero_percentage)
+add_dependencies(buildtests_cxx resolver_component_test_ipv4_cpp_config_has_zero_percentage)
+endif()
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+add_dependencies(buildtests_cxx resolver_component_test_ipv4_second_language_is_cpp)
+endif()
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+add_dependencies(buildtests_cxx resolver_component_test_ipv4_config_with_percentages)
+endif()
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv4_target_has_backend_and_balancer)
+endif()
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+add_dependencies(buildtests_cxx resolver_component_test_srv_ipv6_target_has_backend_and_balancer)
 endif()
 
 add_custom_target(buildtests
@@ -14765,14 +14777,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_srv_ipv4_single_target
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_srv_ipv4_single_target
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_srv_ipv4_single_target
+target_include_directories(resolver_component_test_srv_ipv4_single_target
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14792,7 +14804,7 @@ target_include_directories(naming_end2end_test_srv_ipv4_single_target
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_srv_ipv4_single_target
+target_link_libraries(resolver_component_test_srv_ipv4_single_target
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -14810,14 +14822,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_srv_ipv4_multi_target
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_srv_ipv4_multi_target
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_srv_ipv4_multi_target
+target_include_directories(resolver_component_test_srv_ipv4_multi_target
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14837,7 +14849,7 @@ target_include_directories(naming_end2end_test_srv_ipv4_multi_target
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_srv_ipv4_multi_target
+target_link_libraries(resolver_component_test_srv_ipv4_multi_target
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -14855,14 +14867,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_srv_ipv6_single_target
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_srv_ipv6_single_target
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_srv_ipv6_single_target
+target_include_directories(resolver_component_test_srv_ipv6_single_target
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14882,7 +14894,7 @@ target_include_directories(naming_end2end_test_srv_ipv6_single_target
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_srv_ipv6_single_target
+target_link_libraries(resolver_component_test_srv_ipv6_single_target
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -14900,14 +14912,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_srv_ipv6_multi_target
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_srv_ipv6_multi_target
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_srv_ipv6_multi_target
+target_include_directories(resolver_component_test_srv_ipv6_multi_target
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14927,7 +14939,7 @@ target_include_directories(naming_end2end_test_srv_ipv6_multi_target
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_srv_ipv6_multi_target
+target_link_libraries(resolver_component_test_srv_ipv6_multi_target
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -14945,14 +14957,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_srv_ipv4_simple_service_config
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_srv_ipv4_simple_service_config
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_srv_ipv4_simple_service_config
+target_include_directories(resolver_component_test_srv_ipv4_simple_service_config
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14972,7 +14984,7 @@ target_include_directories(naming_end2end_test_srv_ipv4_simple_service_config
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_srv_ipv4_simple_service_config
+target_link_libraries(resolver_component_test_srv_ipv4_simple_service_config
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -14990,14 +15002,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_ipv4_no_srv_simple_service_config
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_ipv4_no_srv_simple_service_config
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_ipv4_no_srv_simple_service_config
+target_include_directories(resolver_component_test_ipv4_no_srv_simple_service_config
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -15017,7 +15029,7 @@ target_include_directories(naming_end2end_test_ipv4_no_srv_simple_service_config
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_ipv4_no_srv_simple_service_config
+target_link_libraries(resolver_component_test_ipv4_no_srv_simple_service_config
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -15035,14 +15047,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_ipv4_no_config_for_cpp
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_ipv4_no_config_for_cpp
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_ipv4_no_config_for_cpp
+target_include_directories(resolver_component_test_ipv4_no_config_for_cpp
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -15062,7 +15074,7 @@ target_include_directories(naming_end2end_test_ipv4_no_config_for_cpp
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_ipv4_no_config_for_cpp
+target_link_libraries(resolver_component_test_ipv4_no_config_for_cpp
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
@@ -15080,14 +15092,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(naming_end2end_test_ipv4_cpp_config_has_zero_percentage
-  test/cpp/naming/naming_end2end_test.cc
+add_executable(resolver_component_test_ipv4_cpp_config_has_zero_percentage
+  test/cpp/naming/resolver_component_test.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(naming_end2end_test_ipv4_cpp_config_has_zero_percentage
+target_include_directories(resolver_component_test_ipv4_cpp_config_has_zero_percentage
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -15107,7 +15119,187 @@ target_include_directories(naming_end2end_test_ipv4_cpp_config_has_zero_percenta
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(naming_end2end_test_ipv4_cpp_config_has_zero_percentage
+target_link_libraries(resolver_component_test_ipv4_cpp_config_has_zero_percentage
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc++_test_util
+  grpc_test_util
+  gpr_test_util
+  grpc++
+  grpc
+  gpr
+  grpc++_test_config
+  ${_gRPC_GFLAGS_LIBRARIES}
+)
+
+endif()
+endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_TESTS)
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+
+add_executable(resolver_component_test_ipv4_second_language_is_cpp
+  test/cpp/naming/resolver_component_test.cc
+  third_party/googletest/googletest/src/gtest-all.cc
+  third_party/googletest/googlemock/src/gmock-all.cc
+)
+
+
+target_include_directories(resolver_component_test_ipv4_second_language_is_cpp
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${BORINGSSL_ROOT_DIR}/include
+  PRIVATE ${PROTOBUF_ROOT_DIR}/src
+  PRIVATE ${BENCHMARK_ROOT_DIR}/include
+  PRIVATE ${ZLIB_ROOT_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
+  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
+  PRIVATE ${CARES_INCLUDE_DIR}
+  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
+  PRIVATE third_party/googletest/googletest/include
+  PRIVATE third_party/googletest/googletest
+  PRIVATE third_party/googletest/googlemock/include
+  PRIVATE third_party/googletest/googlemock
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(resolver_component_test_ipv4_second_language_is_cpp
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc++_test_util
+  grpc_test_util
+  gpr_test_util
+  grpc++
+  grpc
+  gpr
+  grpc++_test_config
+  ${_gRPC_GFLAGS_LIBRARIES}
+)
+
+endif()
+endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_TESTS)
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+
+add_executable(resolver_component_test_ipv4_config_with_percentages
+  test/cpp/naming/resolver_component_test.cc
+  third_party/googletest/googletest/src/gtest-all.cc
+  third_party/googletest/googlemock/src/gmock-all.cc
+)
+
+
+target_include_directories(resolver_component_test_ipv4_config_with_percentages
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${BORINGSSL_ROOT_DIR}/include
+  PRIVATE ${PROTOBUF_ROOT_DIR}/src
+  PRIVATE ${BENCHMARK_ROOT_DIR}/include
+  PRIVATE ${ZLIB_ROOT_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
+  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
+  PRIVATE ${CARES_INCLUDE_DIR}
+  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
+  PRIVATE third_party/googletest/googletest/include
+  PRIVATE third_party/googletest/googletest
+  PRIVATE third_party/googletest/googlemock/include
+  PRIVATE third_party/googletest/googlemock
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(resolver_component_test_ipv4_config_with_percentages
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc++_test_util
+  grpc_test_util
+  gpr_test_util
+  grpc++
+  grpc
+  gpr
+  grpc++_test_config
+  ${_gRPC_GFLAGS_LIBRARIES}
+)
+
+endif()
+endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_TESTS)
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+
+add_executable(resolver_component_test_srv_ipv4_target_has_backend_and_balancer
+  test/cpp/naming/resolver_component_test.cc
+  third_party/googletest/googletest/src/gtest-all.cc
+  third_party/googletest/googlemock/src/gmock-all.cc
+)
+
+
+target_include_directories(resolver_component_test_srv_ipv4_target_has_backend_and_balancer
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${BORINGSSL_ROOT_DIR}/include
+  PRIVATE ${PROTOBUF_ROOT_DIR}/src
+  PRIVATE ${BENCHMARK_ROOT_DIR}/include
+  PRIVATE ${ZLIB_ROOT_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
+  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
+  PRIVATE ${CARES_INCLUDE_DIR}
+  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
+  PRIVATE third_party/googletest/googletest/include
+  PRIVATE third_party/googletest/googletest
+  PRIVATE third_party/googletest/googlemock/include
+  PRIVATE third_party/googletest/googlemock
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(resolver_component_test_srv_ipv4_target_has_backend_and_balancer
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc++_test_util
+  grpc_test_util
+  gpr_test_util
+  grpc++
+  grpc
+  gpr
+  grpc++_test_config
+  ${_gRPC_GFLAGS_LIBRARIES}
+)
+
+endif()
+endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_TESTS)
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+
+add_executable(resolver_component_test_srv_ipv6_target_has_backend_and_balancer
+  test/cpp/naming/resolver_component_test.cc
+  third_party/googletest/googletest/src/gtest-all.cc
+  third_party/googletest/googlemock/src/gmock-all.cc
+)
+
+
+target_include_directories(resolver_component_test_srv_ipv6_target_has_backend_and_balancer
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${BORINGSSL_ROOT_DIR}/include
+  PRIVATE ${PROTOBUF_ROOT_DIR}/src
+  PRIVATE ${BENCHMARK_ROOT_DIR}/include
+  PRIVATE ${ZLIB_ROOT_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
+  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
+  PRIVATE ${CARES_INCLUDE_DIR}
+  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
+  PRIVATE third_party/googletest/googletest/include
+  PRIVATE third_party/googletest/googletest
+  PRIVATE third_party/googletest/googlemock/include
+  PRIVATE third_party/googletest/googlemock
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(resolver_component_test_srv_ipv6_target_has_backend_and_balancer
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
