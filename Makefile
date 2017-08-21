@@ -1262,14 +1262,18 @@ h2_sockpair+trace_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair+trace_nosec_test
 h2_sockpair_1byte_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test
 h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
-naming_end2end_test_srv_ipv4_single_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target
-naming_end2end_test_srv_ipv4_multi_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target
-naming_end2end_test_srv_ipv6_single_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target
-naming_end2end_test_srv_ipv6_multi_target: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target
-naming_end2end_test_srv_ipv4_simple_service_config: $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config
-naming_end2end_test_ipv4_no_srv_simple_service_config: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config
-naming_end2end_test_ipv4_no_config_for_cpp: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp
-naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage
+resolver_component_test_srv_ipv4_single_target: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target
+resolver_component_test_srv_ipv4_multi_target: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target
+resolver_component_test_srv_ipv6_single_target: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target
+resolver_component_test_srv_ipv6_multi_target: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target
+resolver_component_test_srv_ipv4_simple_service_config: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config
+resolver_component_test_ipv4_no_srv_simple_service_config: $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config
+resolver_component_test_ipv4_no_config_for_cpp: $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp
+resolver_component_test_ipv4_cpp_config_has_zero_percentage: $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage
+resolver_component_test_ipv4_second_language_is_cpp: $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp
+resolver_component_test_ipv4_config_with_percentages: $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages
+resolver_component_test_srv_ipv4_target_has_backend_and_balancer: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer
+resolver_component_test_srv_ipv6_target_has_backend_and_balancer: $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1652,14 +1656,18 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/boringssl_x509_test \
   $(BINDIR)/$(CONFIG)/boringssl_tab_test \
   $(BINDIR)/$(CONFIG)/boringssl_v3name_test \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer \
 
 else
 buildtests_cxx: privatelibs_cxx \
@@ -1737,14 +1745,18 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/thread_manager_test \
   $(BINDIR)/$(CONFIG)/thread_stress_test \
   $(BINDIR)/$(CONFIG)/writes_per_rpc_test \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp \
-  $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer \
+  $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer \
 
 endif
 
@@ -2148,22 +2160,30 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/thread_stress_test || ( echo test thread_stress_test failed ; exit 1 )
 	$(E) "[RUN]     Testing writes_per_rpc_test"
 	$(Q) $(BINDIR)/$(CONFIG)/writes_per_rpc_test || ( echo test writes_per_rpc_test failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_single_target"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target || ( echo test naming_end2end_test_srv_ipv4_single_target failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_multi_target"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target || ( echo test naming_end2end_test_srv_ipv4_multi_target failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv6_single_target"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target || ( echo test naming_end2end_test_srv_ipv6_single_target failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv6_multi_target"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target || ( echo test naming_end2end_test_srv_ipv6_multi_target failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_srv_ipv4_simple_service_config"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config || ( echo test naming_end2end_test_srv_ipv4_simple_service_config failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_ipv4_no_srv_simple_service_config"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config || ( echo test naming_end2end_test_ipv4_no_srv_simple_service_config failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_ipv4_no_config_for_cpp"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp || ( echo test naming_end2end_test_ipv4_no_config_for_cpp failed ; exit 1 )
-	$(E) "[RUN]     Testing naming_end2end_test_ipv4_cpp_config_has_zero_percentage"
-	$(Q) $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage || ( echo test naming_end2end_test_ipv4_cpp_config_has_zero_percentage failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv4_single_target"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target || ( echo test resolver_component_test_srv_ipv4_single_target failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv4_multi_target"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target || ( echo test resolver_component_test_srv_ipv4_multi_target failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv6_single_target"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target || ( echo test resolver_component_test_srv_ipv6_single_target failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv6_multi_target"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target || ( echo test resolver_component_test_srv_ipv6_multi_target failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv4_simple_service_config"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config || ( echo test resolver_component_test_srv_ipv4_simple_service_config failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_ipv4_no_srv_simple_service_config"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config || ( echo test resolver_component_test_ipv4_no_srv_simple_service_config failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_ipv4_no_config_for_cpp"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp || ( echo test resolver_component_test_ipv4_no_config_for_cpp failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_ipv4_cpp_config_has_zero_percentage"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage || ( echo test resolver_component_test_ipv4_cpp_config_has_zero_percentage failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_ipv4_second_language_is_cpp"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp || ( echo test resolver_component_test_ipv4_second_language_is_cpp failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_ipv4_config_with_percentages"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages || ( echo test resolver_component_test_ipv4_config_with_percentages failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv4_target_has_backend_and_balancer"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer || ( echo test resolver_component_test_srv_ipv4_target_has_backend_and_balancer failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_test_srv_ipv6_target_has_backend_and_balancer"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer || ( echo test resolver_component_test_srv_ipv6_target_has_backend_and_balancer failed ; exit 1 )
 
 
 flaky_test_cxx: buildtests_cxx
@@ -19296,15 +19316,15 @@ ifneq ($(NO_DEPS),true)
 endif
 
 
-NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_SRC))))
+RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target: openssl_dep_error
 
 else
 
@@ -19315,39 +19335,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_single_target
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_single_target
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_srv_ipv4_single_target: $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
+deps_resolver_component_test_srv_ipv4_single_target: $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SINGLE_TARGET_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_SRC))))
+RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target: openssl_dep_error
 
 else
 
@@ -19358,39 +19378,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_multi_target
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_multi_target
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_srv_ipv4_multi_target: $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
+deps_resolver_component_test_srv_ipv4_multi_target: $(RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV4_MULTI_TARGET_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_SRC))))
+RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target: openssl_dep_error
 
 else
 
@@ -19401,39 +19421,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_single_target
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_single_target
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_srv_ipv6_single_target: $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
+deps_resolver_component_test_srv_ipv6_single_target: $(RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV6_SINGLE_TARGET_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_SRC))))
+RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target: openssl_dep_error
 
 else
 
@@ -19444,39 +19464,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv6_multi_target
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_multi_target
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_srv_ipv6_multi_target: $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
+deps_resolver_component_test_srv_ipv6_multi_target: $(RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV6_MULTI_TARGET_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC))))
+RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config: openssl_dep_error
 
 else
 
@@ -19487,39 +19507,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_srv_ipv4_simple_service_config
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_simple_service_config
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_srv_ipv4_simple_service_config: $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+deps_resolver_component_test_srv_ipv4_simple_service_config: $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV4_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC))))
+RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config: openssl_dep_error
 
 else
 
@@ -19530,39 +19550,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_srv_simple_service_config
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_srv_simple_service_config
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_ipv4_no_srv_simple_service_config: $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+deps_resolver_component_test_ipv4_no_srv_simple_service_config: $(RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_IPV4_NO_SRV_SIMPLE_SERVICE_CONFIG_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC))))
+RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp: openssl_dep_error
 
 else
 
@@ -19573,39 +19593,39 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_no_config_for_cpp
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_no_config_for_cpp
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_ipv4_no_config_for_cpp: $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
+deps_resolver_component_test_ipv4_no_config_for_cpp: $(RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_IPV4_NO_CONFIG_FOR_CPP_OBJS:.o=.dep)
 endif
 endif
 
 
-NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC = \
-    test/cpp/naming/naming_end2end_test.cc \
+RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
 
-NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC))))
+RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage: openssl_dep_error
 
 else
 
@@ -19616,26 +19636,198 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(PROTOBUF_DEP) $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/naming_end2end_test_ipv4_cpp_config_has_zero_percentage
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_cpp_config_has_zero_percentage
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/naming_end2end_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_naming_end2end_test_ipv4_cpp_config_has_zero_percentage: $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
+deps_resolver_component_test_ipv4_cpp_config_has_zero_percentage: $(RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(NAMING_END2END_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TEST_IPV4_CPP_CONFIG_HAS_ZERO_PERCENTAGE_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
+
+RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_second_language_is_cpp
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_test_ipv4_second_language_is_cpp: $(RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TEST_IPV4_SECOND_LANGUAGE_IS_CPP_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
+
+RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_ipv4_config_with_percentages
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_test_ipv4_config_with_percentages: $(RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TEST_IPV4_CONFIG_WITH_PERCENTAGES_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
+
+RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv4_target_has_backend_and_balancer
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_test_srv_ipv4_target_has_backend_and_balancer: $(RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV4_TARGET_HAS_BACKEND_AND_BALANCER_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_SRC = \
+    test/cpp/naming/resolver_component_test.cc \
+
+RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_srv_ipv6_target_has_backend_and_balancer
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_test_srv_ipv6_target_has_backend_and_balancer: $(RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TEST_SRV_IPV6_TARGET_HAS_BACKEND_AND_BALANCER_OBJS:.o=.dep)
 endif
 endif
 

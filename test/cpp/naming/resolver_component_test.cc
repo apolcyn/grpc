@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include <gflags/gflags.h>
+#include <gmock/gmock.h>
 #include <vector>
 
 #include "test/cpp/util/test_config.h"
@@ -46,41 +47,83 @@ extern "C" {
 }
 
 using std::vector;
+using testing::UnorderedElementsAreArray;
 
 DEFINE_string(target_name, "", "");
-DEFINE_bool(expect_target_is_balancer, true, "");
 DEFINE_string(expected_addrs, "", "");
 DEFINE_string(expected_chosen_service_config, "", "");
 DEFINE_string(local_dns_server_address, "", "");
+DEFINE_string(expected_lb_policy, "", "");
 
-namespace grpc {
-namespace testing {
+namespace {
 
-static vector<std::string> parse_expected_addrs(const char *expected_addrs) {
-  std::vector<std::string> out;
+class GrpcLBAddress final {
+ public:
+  GrpcLBAddress(std::string address, bool is_balancer)
+      : is_balancer(is_balancer), address(address) {}
 
-  char *p = (char *)expected_addrs;
-
-  if (strlen(p) != 0) {
-    for (;;) {
-      char *comma = strchr(p, ',');
-      if (comma) {
-        out.emplace_back(p, comma);
-        p = comma + 1;
-      } else {
-        out.emplace_back(p);
-        break;
-      }
+  bool operator<(const GrpcLBAddress &other) const {
+    int comparison = this->address.compare(other.address);
+    if (comparison != 0) {
+      return comparison < 0 ? true : false;
     }
+    return this->is_balancer == false && other.is_balancer == true;
+  }
+
+  bool is_balancer;
+  std::string address;
+};
+
+bool convert_string_to_bool(std::string bool_str) {
+  if (gpr_stricmp(bool_str.c_str(), "true") == 0) {
+    return true;
+  } else if (gpr_stricmp(bool_str.c_str(), "false") == 0) {
+    return false;
+  } else {
+    gpr_log(GPR_ERROR,
+            "invalid expected_addrs_list entry: expected false or true, got %s",
+            bool_str.c_str());
+    abort();
+  }
+}
+
+vector<GrpcLBAddress> parse_expected_addrs(std::string expected_addrs) {
+  std::vector<GrpcLBAddress> out;
+
+  while (expected_addrs.size() != 0) {
+    size_t next_comma = expected_addrs.find(",");
+    std::string next_addr;
+    bool next_bool;
+
+    if (next_comma == std::string::npos) {
+      gpr_log(GPR_ERROR,
+              "expected_addrs arg should be a comma-separated list of "
+              "<ip-port>,<bool> pairs");
+      abort();
+    }
+    next_addr = expected_addrs.substr(0, next_comma);
+    expected_addrs = expected_addrs.substr(next_comma + 1, std::string::npos);
+
+    next_comma = expected_addrs.find(",");
+    if (next_comma == std::string::npos) {
+      next_bool = convert_string_to_bool(expected_addrs);
+      out.emplace_back(GrpcLBAddress(next_addr, next_bool));
+      break;
+    }
+    next_bool = convert_string_to_bool(expected_addrs.substr(0, next_comma));
+    out.emplace_back(GrpcLBAddress(next_addr, next_bool));
+    expected_addrs = expected_addrs.substr(next_comma + 1, std::string::npos);
   }
   if (out.size() == 0) {
     gpr_log(GPR_ERROR,
-            "expected_addrs arg should be a comma-separated list of ip-ports");
+            "expected_addrs arg should be a comma-separated list of "
+            "<ip-port>,<bool> pairs");
+    abort();
   }
   return out;
 }
 
-static gpr_timespec test_deadline(void) {
+gpr_timespec test_deadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
 }
 
@@ -92,27 +135,13 @@ typedef struct args_struct {
   grpc_pollset_set *pollset_set;
   grpc_combiner *lock;
   grpc_channel_args *channel_args;
-  bool expect_is_balancer;
-  const char *target_name;
-  vector<std::string> expected_addrs;
+  std::string target_name;
+  vector<GrpcLBAddress> expected_addrs;
   const char *expected_service_config_string;
+  const char *expected_lb_policy;
 } args_struct;
 
-int matches_any(vector<std::string> expected_addrs, const char *addr) {
-  for (auto it = expected_addrs.begin(); it != expected_addrs.end(); it++) {
-    if (it->compare(addr) == 0) {
-      gpr_log(GPR_INFO, "found a match for expected addresss: %s", addr);
-      return 1;
-    } else {
-      gpr_log(GPR_INFO, "expected addresss: %s didn't match found address: %s",
-              it->c_str(), addr);
-    }
-  }
-  gpr_log(GPR_ERROR, "no match found for found address: %s", addr);
-  return 0;
-}
-
-static void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
+void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
 
 void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   gpr_event_init(&args->ev);
@@ -141,12 +170,12 @@ void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   GRPC_COMBINER_UNREF(exec_ctx, args->lock, NULL);
 }
 
-static gpr_timespec n_sec_deadline(int seconds) {
+gpr_timespec n_sec_deadline(int seconds) {
   return gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
                       gpr_time_from_seconds(seconds, GPR_TIMESPAN));
 }
 
-static void poll_pollset_until_request_done(args_struct *args) {
+void poll_pollset_until_request_done(args_struct *args) {
   gpr_timespec deadline = n_sec_deadline(10);
   while (true) {
     bool done = gpr_atm_acq_load(&args->done_atm) != 0;
@@ -171,8 +200,8 @@ static void poll_pollset_until_request_done(args_struct *args) {
   gpr_event_set(&args->ev, (void *)1);
 }
 
-static void check_service_config_result_locked(grpc_channel_args *channel_args,
-                                               args_struct *args) {
+void check_service_config_result_locked(grpc_channel_args *channel_args,
+                                        args_struct *args) {
   const grpc_arg *service_config_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_SERVICE_CONFIG);
   if (args->expected_service_config_string != NULL &&
@@ -180,8 +209,8 @@ static void check_service_config_result_locked(grpc_channel_args *channel_args,
     GPR_ASSERT(service_config_arg != NULL);
     GPR_ASSERT(service_config_arg->type == GRPC_ARG_STRING);
     char *service_config_string = service_config_arg->value.string;
-    if (gpr_stricmp(service_config_string,
-                    args->expected_service_config_string) != 0) {
+    if (strcmp(service_config_string, args->expected_service_config_string) !=
+        0) {
       gpr_log(GPR_ERROR, "expected service config string: |%s|",
               args->expected_service_config_string);
       gpr_log(GPR_ERROR, "got service config string: |%s|",
@@ -193,8 +222,26 @@ static void check_service_config_result_locked(grpc_channel_args *channel_args,
   }
 }
 
-static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
-                                                void *argsp, grpc_error *err) {
+void check_lb_policy_result_locked(grpc_channel_args *channel_args,
+                                   args_struct *args) {
+  const grpc_arg *lb_policy_arg =
+      grpc_channel_args_find(channel_args, GRPC_ARG_LB_POLICY_NAME);
+  if (args->expected_lb_policy != NULL &&
+      strlen(args->expected_lb_policy) > 0) {
+    GPR_ASSERT(lb_policy_arg != NULL);
+    GPR_ASSERT(lb_policy_arg->type == GRPC_ARG_STRING);
+    if (strcmp(lb_policy_arg->value.string, args->expected_lb_policy) != 0) {
+      gpr_log(GPR_ERROR, "expected lb policy: |%s|", args->expected_lb_policy);
+      gpr_log(GPR_ERROR, "got lb policy: |%s|", lb_policy_arg->value.string);
+      GPR_ASSERT(0);
+    }
+  } else {
+    GPR_ASSERT(lb_policy_arg == NULL);
+  }
+}
+
+void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
+                                  grpc_error *err) {
   args_struct *args = (args_struct *)argsp;
   grpc_channel_args *channel_args = args->channel_args;
   const grpc_arg *channel_arg =
@@ -203,21 +250,54 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   GPR_ASSERT(channel_arg->type == GRPC_ARG_POINTER);
   grpc_lb_addresses *addresses =
       (grpc_lb_addresses *)channel_arg->value.pointer.p;
-  gpr_log(GPR_INFO, "num addrs found: %d. expected %" PRIdPTR,
-          (int)addresses->num_addresses, args->expected_addrs.size());
+  gpr_log(GPR_INFO, "num addrs found: %" PRIdPTR ". expected %" PRIdPTR,
+          addresses->num_addresses, args->expected_addrs.size());
 
   GPR_ASSERT(addresses->num_addresses == args->expected_addrs.size());
+  std::vector<GrpcLBAddress> found_lb_addrs;
   for (size_t i = 0; i < addresses->num_addresses; i++) {
     grpc_lb_address addr = addresses->addresses[i];
     char *str;
     grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
     gpr_log(GPR_INFO, "%s", str);
-    GPR_ASSERT(addr.is_balancer == args->expect_is_balancer);
-    GPR_ASSERT(matches_any(args->expected_addrs, str));
+
+    found_lb_addrs.emplace_back(
+        GrpcLBAddress(std::string(str), addr.is_balancer));
     gpr_free(str);
   }
 
+  if (args->expected_addrs.size() != found_lb_addrs.size()) {
+    gpr_log(GPR_DEBUG, "found lb addrs size is: %" PRIdPTR
+                       ". expected addrs size is %" PRIdPTR,
+            found_lb_addrs.size(), args->expected_addrs.size());
+    abort();
+  }
+
+  std::sort(args->expected_addrs.begin(), args->expected_addrs.end());
+  std::sort(found_lb_addrs.begin(), found_lb_addrs.end());
+
+  for (size_t i = 0; i < args->expected_addrs.size(); i++) {
+    if (args->expected_addrs[i].address != found_lb_addrs[i].address) {
+      gpr_log(GPR_DEBUG,
+              "expected lb address != found lb address. got address: %s, "
+              "expected %s",
+              args->expected_addrs[i].address.c_str(),
+              found_lb_addrs[i].address.c_str());
+      abort();
+    }
+    if (args->expected_addrs[i].is_balancer != found_lb_addrs[i].is_balancer) {
+      gpr_log(GPR_DEBUG,
+              "expected lb address %s is_balancer mismatch. expected "
+              "is_balancer: %d, got %d",
+              args->expected_addrs[i].address.c_str(),
+              args->expected_addrs[i].is_balancer,
+              found_lb_addrs[i].is_balancer);
+      abort();
+    }
+  }
+
   check_service_config_result_locked(channel_args, args);
+  check_lb_policy_result_locked(channel_args, args);
 
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
@@ -225,8 +305,7 @@ static void check_channel_arg_srv_result_locked(grpc_exec_ctx *exec_ctx,
   gpr_mu_unlock(args->mu);
 }
 
-static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
-  char *whole_uri = NULL;
+void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   const char *authority = FLAGS_local_dns_server_address.c_str();
   if (authority != NULL && strlen(authority) > 0) {
     gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority);
@@ -234,18 +313,17 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
     authority = "";
   }
 
+  char *whole_uri = NULL;
   GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s", authority,
-                      (char *)args->target_name));
-  args->channel_args = NULL;
+                      args->target_name.c_str()));
 
   grpc_resolver *resolver = grpc_resolver_create(exec_ctx, whole_uri, NULL,
                                                  args->pollset_set, args->lock);
   gpr_free(whole_uri);
 
   grpc_closure on_resolver_result_changed;
-  GRPC_CLOSURE_INIT(&on_resolver_result_changed,
-                    check_channel_arg_srv_result_locked, (void *)args,
-                    grpc_combiner_scheduler(args->lock));
+  GRPC_CLOSURE_INIT(&on_resolver_result_changed, check_resolver_result_locked,
+                    (void *)args, grpc_combiner_scheduler(args->lock));
 
   grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args,
                             &on_resolver_result_changed);
@@ -255,19 +333,18 @@ static void test_resolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
   GRPC_RESOLVER_UNREF(exec_ctx, resolver, NULL);
 }
 
-void naming_end2end_test_resolution(const char *name,
-                                    std::vector<std::string> expected_addrs,
-                                    const char *expected_service_config,
-                                    bool expected_target_is_balancer) {
+void resolver_component_test_resolution(
+    std::string target_name, std::vector<GrpcLBAddress> expected_addrs,
+    const char *expected_service_config, const char *expected_lb_policy) {
   grpc_init();
-  gpr_log(GPR_INFO, "e a size: %d", (int)expected_addrs.size());
+  gpr_log(GPR_INFO, "expected addresses size: %d", (int)expected_addrs.size());
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
-  args.expect_is_balancer = expected_target_is_balancer;
-  args.target_name = name;
+  args.target_name = target_name;
   args.expected_addrs = expected_addrs;
   args.expected_service_config_string = expected_service_config;
+  args.expected_lb_policy = expected_lb_policy;
 
   test_resolves(&exec_ctx, &args);
   args_finish(&exec_ctx, &args);
@@ -276,7 +353,6 @@ void naming_end2end_test_resolution(const char *name,
 }
 
 }  // namespace
-}  // namespace grpc
 
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
@@ -286,12 +362,11 @@ int main(int argc, char **argv) {
             FLAGS_target_name.c_str(), FLAGS_expected_addrs.c_str());
     abort();
   }
-  auto expected_addrs_list =
-      grpc::testing::parse_expected_addrs(FLAGS_expected_addrs.c_str());
+  auto expected_addrs_list = parse_expected_addrs(FLAGS_expected_addrs.c_str());
 
-  grpc::testing::naming_end2end_test_resolution(
-      FLAGS_target_name.c_str(), expected_addrs_list,
+  resolver_component_test_resolution(
+      FLAGS_target_name, expected_addrs_list,
       FLAGS_expected_chosen_service_config.c_str(),
-      FLAGS_expect_target_is_balancer);
+      FLAGS_expected_lb_policy.c_str());
   return 0;
 }
