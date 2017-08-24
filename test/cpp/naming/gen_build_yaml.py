@@ -24,24 +24,6 @@ import json
 
 _LOCAL_DNS_SERVER_ADDRESS = '127.0.0.1:15353'
 
-def _expected_chosen_service_config(test_case):
-  txt_count = 0
-  for name in test_case['records'].keys():
-    for record in test_case['records'].get(name):
-      if record['type'] == 'TXT':
-        txt_count += 1
-        txt_data = record['data']
-  if txt_count == 0:
-    return ''
-  assert(txt_count == 1)
-  split_index = txt_data.find('=')
-  assert(split_index)
-  json_data = json.loads(txt_data[split_index+1:])
-  if test_case['expected_config_index'] != None:
-    expected_json_data = json_data[test_case['expected_config_index']]
-    return json.dumps(expected_json_data['serviceConfig'], separators=(',', ':'))
-  return ''
-
 def _append_zone_name(name, zone_name):
   return '%s.%s' % (name, zone_name)
 
@@ -51,15 +33,9 @@ def _use_underscores(record_name):
 def _build_expected_addrs_cmd_arg(expected_addrs):
   out = []
   for addr in expected_addrs:
-    out.append(addr['address'])
-    out.append(str(addr['is_balancer']))
+    out.append('(%s' % addr['address'])
+    out.append('%s)' % str(addr['is_balancer']))
   return ','.join(out)
-
-def _expected_lb_policy(test_case):
-  out = test_case['expected_lb_policy']
-  if not out:
-    return ''
-  return out
 
 def main():
   resolver_component_data = ''
@@ -89,9 +65,9 @@ def main():
                   '--target_name=%s' % _append_zone_name(test_case['record_to_resolve'],
                                                          resolver_component_data['resolver_component_tests_common_zone_name']),
                   '--expected_addrs=%s' % _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
-                  '--expected_chosen_service_config=%s' % _expected_chosen_service_config(test_case),
+                  '--expected_chosen_service_config=%s' % (test_case['expected_chosen_service_config'] or ''),
                   '--local_dns_server_address=%s' % _LOCAL_DNS_SERVER_ADDRESS,
-                  '--expected_lb_policy=%s' % _expected_lb_policy(test_case),
+                  '--expected_lb_policy=%s' % (test_case['expected_lb_policy'] or ''),
               ]
           } for test_case in resolver_component_data['resolver_component_tests']
       ],
