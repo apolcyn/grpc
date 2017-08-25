@@ -33,9 +33,8 @@ def _use_underscores(record_name):
 def _build_expected_addrs_cmd_arg(expected_addrs):
   out = []
   for addr in expected_addrs:
-    out.append('(%s' % addr['address'])
-    out.append('%s)' % str(addr['is_balancer']))
-  return ','.join(out)
+    out.append('%s,%s' % (addr['address'], str(addr['is_balancer'])))
+  return ';'.join(out)
 
 def main():
   resolver_component_data = ''
@@ -66,8 +65,8 @@ def main():
                                                          resolver_component_data['resolver_component_tests_common_zone_name']),
                   '--expected_addrs=%s' % _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
                   '--expected_chosen_service_config=%s' % (test_case['expected_chosen_service_config'] or ''),
-                  '--local_dns_server_address=%s' % _LOCAL_DNS_SERVER_ADDRESS,
                   '--expected_lb_policy=%s' % (test_case['expected_lb_policy'] or ''),
+                  '--start_local_dns_server=true',
               ]
           } for test_case in resolver_component_data['resolver_component_tests']
       ],

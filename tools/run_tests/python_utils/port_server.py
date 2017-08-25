@@ -26,16 +26,12 @@ import random
 from SocketServer import ThreadingMixIn
 import threading
 import platform
-import dns_server
 
 
 # increment this number whenever making a change to ensure that
 # the changes are picked up by running CI servers
 # note that all changes must be backwards compatible
-_MY_VERSION = 19 #TODO: apolcyn, update this before merging
-
-_DNS_SERVER_PORT = 15353
-_RESERVED_PORTS = [_DNS_SERVER_PORT]
+_MY_VERSION = 20
 
 
 if len(sys.argv) == 2 and sys.argv[1] == 'dump_version':
@@ -88,7 +84,7 @@ def can_bind(port, proto):
 
 def refill_pool(max_timeout, req):
   """Scan for ports not marked for being in use"""
-  chk = list(set(range(1025, 32766)) - set(_RESERVED_PORTS))
+  chk = list(range(1025, 32766))
   random.shuffle(chk)
   for i in chk:
     if len(pool) > 100: break
@@ -185,17 +181,5 @@ class Handler(BaseHTTPRequestHandler):
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
   """Handle requests in a separate thread"""
-
-def _flush_output_forever():
-  while True:
-    time.sleep(1)
-    sys.stderr.flush()
-    sys.stdout.flush()
-
-output_flushing_thread = threading.Thread(target=_flush_output_forever)
-output_flushing_thread.daemon = True
-output_flushing_thread.start()
-
-dns_server.start_local_dns_server_in_background(_DNS_SERVER_PORT)
 
 ThreadedHTTPServer(('', args.port), Handler).serve_forever()

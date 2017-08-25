@@ -20,6 +20,7 @@
 #include <grpc/support/alloc.h>
 #include <grpc/support/host_port.h>
 #include <grpc/support/log.h>
+#include <grpc/support/string_util.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
 #include <string.h>
@@ -28,6 +29,7 @@
 #include <gmock/gmock.h>
 #include <vector>
 
+#include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
 
 extern "C" {
@@ -43,28 +45,36 @@ extern "C" {
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/support/env.h"
 #include "src/core/lib/support/string.h"
+#include "test/core/util/port.h"
 #include "test/core/util/test_config.h"
 }
 
 using std::vector;
+using grpc::SubProcess;
 using testing::UnorderedElementsAreArray;
 
 DEFINE_string(target_name, "", "Target name to resolve.");
-DEFINE_string(
-    expected_addrs, "",
-    "Comma-separated list of expected '(<ip>:<port>),...' addresses of "
-    "backend and/or balancers.");
+DEFINE_string(expected_addrs, "",
+              "Comma-separated list of expected "
+              "'<ip0:port0>,<is_balancer0>;<ip1:port1>,<is_balancer1>;...' "
+              "addresses of "
+              "backend and/or balancers. 'is_balancer' should be bool, i.e. "
+              "true of false.");
 DEFINE_string(expected_chosen_service_config, "",
               "Expected service config json string that gets chosen (no "
               "whitespace). Empty for none.");
 DEFINE_string(
     local_dns_server_address, "",
     "Optional. This address is placed as the uri authority if present.");
+DEFINE_bool(start_local_dns_server, false,
+            "Start and use a local DNS server as a subprocess.");
 DEFINE_string(expected_lb_policy, "",
               "Expected lb policy name that appears in resolver result channel "
               "arg. Empty for none.");
 
 namespace {
+
+int local_dns_server_port = 0;
 
 class GrpcLBAddress final {
  public:
@@ -97,7 +107,7 @@ bool ConvertStringToBool(std::string bool_str) {
   }
 }
 
-void ExpectTokenAndMoveForward(const char *token, std::string &expected_addrs) {
+void ExpectToken(const char *token, std::string expected_addrs) {
   size_t next_occurrence = expected_addrs.find(token);
 
   if (next_occurrence != 0) {
@@ -108,39 +118,32 @@ void ExpectTokenAndMoveForward(const char *token, std::string &expected_addrs) {
         token);
     abort();
   }
-
-  expected_addrs = expected_addrs.substr(1, std::string::npos);
 }
 
 vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
   std::vector<GrpcLBAddress> out;
 
   while (expected_addrs.size() != 0) {
-    ExpectTokenAndMoveForward("(", expected_addrs);
-
+    // get the next <ip>:<port> (v4 or v6)
     size_t next_comma = expected_addrs.find(",");
-
     if (next_comma == std::string::npos) {
       gpr_log(GPR_ERROR,
               "expected_addrs arg should be a comma-separated list of "
               "<ip-port>,<bool> pairs");
       abort();
     }
-
     std::string next_addr = expected_addrs.substr(0, next_comma);
     expected_addrs = expected_addrs.substr(next_comma + 1, std::string::npos);
-
-    size_t next_parens = expected_addrs.find(")");
+    // get the next is_balancer 'bool' associated with this address
+    size_t next_semicolon = expected_addrs.find(";");
     bool is_balancer =
-        ConvertStringToBool(expected_addrs.substr(0, next_parens));
-
+        ConvertStringToBool(expected_addrs.substr(0, next_semicolon));
     out.emplace_back(GrpcLBAddress(next_addr, is_balancer));
-
-    expected_addrs = expected_addrs.substr(next_parens + 1, std::string::npos);
-
-    if (expected_addrs.size() > 0) {
-      ExpectTokenAndMoveForward(",", expected_addrs);
+    if (next_semicolon == std::string::npos) {
+      break;
     }
+    expected_addrs =
+        expected_addrs.substr(next_semicolon + 1, std::string::npos);
   }
   if (out.size() == 0) {
     gpr_log(GPR_ERROR,
@@ -164,11 +167,9 @@ typedef struct args_struct {
   grpc_combiner *lock;
   grpc_channel_args *channel_args;
   vector<GrpcLBAddress> expected_addrs;
-  const char *expected_service_config_string;
-  const char *expected_lb_policy;
+  std::string expected_service_config_string;
+  std::string expected_lb_policy;
 } args_struct;
-
-void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
 
 void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   gpr_event_init(&args->ev);
@@ -180,6 +181,8 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   gpr_atm_rel_store(&args->done_atm, 0);
   args->channel_args = NULL;
 }
+
+void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
 
 void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   GPR_ASSERT(gpr_event_wait(&args->ev, test_deadline()));
@@ -231,19 +234,11 @@ void check_service_config_result_locked(grpc_channel_args *channel_args,
                                         args_struct *args) {
   const grpc_arg *service_config_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_SERVICE_CONFIG);
-  if (args->expected_service_config_string != NULL &&
-      strlen(args->expected_service_config_string) > 0) {
+  if (args->expected_service_config_string != "") {
     GPR_ASSERT(service_config_arg != NULL);
     GPR_ASSERT(service_config_arg->type == GRPC_ARG_STRING);
-    char *service_config_string = service_config_arg->value.string;
-    if (strcmp(service_config_string, args->expected_service_config_string) !=
-        0) {
-      gpr_log(GPR_ERROR, "expected service config string: |%s|",
+    EXPECT_EQ(service_config_arg->value.string,
               args->expected_service_config_string);
-      gpr_log(GPR_ERROR, "got service config string: |%s|",
-              service_config_string);
-      GPR_ASSERT(0);
-    }
   } else {
     GPR_ASSERT(service_config_arg == NULL);
   }
@@ -253,15 +248,10 @@ void check_lb_policy_result_locked(grpc_channel_args *channel_args,
                                    args_struct *args) {
   const grpc_arg *lb_policy_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_LB_POLICY_NAME);
-  if (args->expected_lb_policy != NULL &&
-      strlen(args->expected_lb_policy) > 0) {
+  if (args->expected_lb_policy != "") {
     GPR_ASSERT(lb_policy_arg != NULL);
     GPR_ASSERT(lb_policy_arg->type == GRPC_ARG_STRING);
-    if (strcmp(lb_policy_arg->value.string, args->expected_lb_policy) != 0) {
-      gpr_log(GPR_ERROR, "expected lb policy: |%s|", args->expected_lb_policy);
-      gpr_log(GPR_ERROR, "got lb policy: |%s|", lb_policy_arg->value.string);
-      GPR_ASSERT(0);
-    }
+    EXPECT_EQ(lb_policy_arg->value.string, args->expected_lb_policy);
   } else {
     GPR_ASSERT(lb_policy_arg == NULL);
   }
@@ -312,26 +302,33 @@ void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
 }
 
 void TestResolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
-  const char *authority = FLAGS_local_dns_server_address.c_str();
-  if (authority != NULL && strlen(authority) > 0) {
-    gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority);
-  } else {
-    authority = "";
+  // sanity check flags
+  if (FLAGS_local_dns_server_address != "" && FLAGS_start_local_dns_server) {
+    gpr_log(GPR_ERROR,
+            "Cant set local DNS server address and start a new DNS server");
+    abort();
   }
-
   if (FLAGS_target_name == "") {
     gpr_log(GPR_ERROR, "Missing target_name param.");
     abort();
   }
 
+  // maybe build the address with an authority
+  std::string authority = FLAGS_local_dns_server_address;
+  if (FLAGS_start_local_dns_server) {
+    GPR_ASSERT(local_dns_server_port != 0);
+    authority = "127.0.0.1:" + std::to_string(local_dns_server_port);
+  }
+  if (authority.size() > 0) {
+    gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority.c_str());
+  }
   char *whole_uri = NULL;
-  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s", authority,
+  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s", authority.c_str(),
                       FLAGS_target_name.c_str()));
-
+  // create resolver and resolve
   grpc_resolver *resolver = grpc_resolver_create(exec_ctx, whole_uri, NULL,
                                                  args->pollset_set, args->lock);
   gpr_free(whole_uri);
-
   grpc_closure on_resolver_result_changed;
   GRPC_CLOSURE_INIT(&on_resolver_result_changed, check_resolver_result_locked,
                     (void *)args, grpc_combiner_scheduler(args->lock));
@@ -345,20 +342,16 @@ void TestResolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
 }
 
 TEST(ResolverTest, ResolvesRelevantRecords) {
-  grpc_init();
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   args_struct args;
   args_init(&exec_ctx, &args);
   args.expected_addrs = ParseExpectedAddrs(FLAGS_expected_addrs);
-  args.expected_service_config_string =
-      FLAGS_expected_chosen_service_config.c_str();
-  args.expected_lb_policy = FLAGS_expected_lb_policy.c_str();
+  args.expected_service_config_string = FLAGS_expected_chosen_service_config;
+  args.expected_lb_policy = FLAGS_expected_lb_policy;
 
   TestResolves(&exec_ctx, &args);
-
   args_finish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
-  grpc_shutdown();
 }
 
 }  // namespace
@@ -367,5 +360,50 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   grpc::testing::InitTest(&argc, &argv, true);
 
-  return RUN_ALL_TESTS();
+  grpc_init();
+
+  SubProcess *dns_server_subprocess = NULL;
+
+  if (FLAGS_start_local_dns_server == true) {
+    /* spawn a DNS server subprocess*/
+    local_dns_server_port = grpc_pick_unused_port_or_die();
+    std::string my_bin = argv[0];
+    std::string bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+    std::vector<std::string> args = {
+        "tools/run_tests/python_utils/dns_server.py",
+        "--dns_port=" + std::to_string(local_dns_server_port)};
+    dns_server_subprocess = new SubProcess(args);
+
+    // Wait for the DNS server to stand up.
+    // TODO: can we get rid of the need to sleep here?
+    // Without this sleep, some polling engines timeout and others
+    // fail fast.
+    gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+                                 gpr_time_from_seconds(1, GPR_TIMESPAN)));
+    gpr_log(GPR_INFO, "started local DNS server subprocess: |%s %s|",
+            args[0].c_str(), args[1].c_str());
+  }
+
+  int test_return_val = RUN_ALL_TESTS();
+  if (test_return_val) {
+    gpr_log(GPR_ERROR, "DNS RESOLVER TEST FAILED.");
+  }
+
+  if (FLAGS_start_local_dns_server == true) {
+    /* wait for DNS server subprocess*/
+    gpr_log(GPR_INFO, "Interrupt DNS server subprocess and wait for join.");
+    dns_server_subprocess->Interrupt();
+    const int dns_server_return_val = dns_server_subprocess->Join();
+    delete dns_server_subprocess;
+    if (dns_server_return_val != 0) {
+      test_return_val |= dns_server_return_val;
+      gpr_log(GPR_ERROR,
+              "DNS server subprocess exited with non-zero status: %d",
+              dns_server_return_val);
+    }
+    grpc_recycle_unused_port(local_dns_server_port);
+  }
+
+  grpc_shutdown();
+  return test_return_val;
 }

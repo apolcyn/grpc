@@ -23,9 +23,15 @@ import dnslib
 from dnslib import *
 from dnslib.server import DNSServer
 import yaml
+import signal
 
 _all_records = {}
 _record_name_type_to_ttl = {}
+
+argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
+argp.add_argument('-p', '--dns_port', default=None, type=int)
+args = argp.parse_args()
+
 
 class Resolver:
   def resolve(self, request_record, _handler):
@@ -93,9 +99,22 @@ def start_local_dns_server_in_background(dns_server_port):
   DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=False).start_thread()
   DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=True).start_thread()
 
-if __name__ == '__main__':
-  start_local_dns_server_in_background(15353)
-  while True:
-    time.sleep(1)
-    sys.stderr.flush()
-    sys.stdout.flush()
+
+start_local_dns_server_in_background(args.dns_port)
+
+# Provide an way for tests using this process to kill it quickly.
+def _signal_handler(_signal, _frame):
+  raise Exception('Received SIGINT. Quitting.')
+
+signal.signal(signal.SIGINT, _signal_handler)
+
+# This can help to prevent zombie processes from accumulating on shared machines
+# with test failures. Tests that use this server are short-lived.
+seconds = 0
+while seconds < 60 * 2:
+  time.sleep(1)
+  seconds += 1
+  sys.stderr.flush()
+  sys.stdout.flush()
+
+print('Process time limit reached. Quitting')
