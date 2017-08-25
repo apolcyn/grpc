@@ -59,7 +59,7 @@ DEFINE_string(expected_addrs, "",
               "'<ip0:port0>,<is_balancer0>;<ip1:port1>,<is_balancer1>;...' "
               "addresses of "
               "backend and/or balancers. 'is_balancer' should be bool, i.e. "
-              "true of false.");
+              "true or false.");
 DEFINE_string(expected_chosen_service_config, "",
               "Expected service config json string that gets chosen (no "
               "whitespace). Empty for none.");
@@ -74,7 +74,7 @@ DEFINE_string(expected_lb_policy, "",
 
 namespace {
 
-int local_dns_server_port = 0;
+int g_local_dns_server_port = 0;
 
 class GrpcLBAddress final {
  public:
@@ -124,7 +124,7 @@ vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
   std::vector<GrpcLBAddress> out;
 
   while (expected_addrs.size() != 0) {
-    // get the next <ip>:<port> (v4 or v6)
+    // get the next <ip>,<port> (v4 or v6)
     size_t next_comma = expected_addrs.find(",");
     if (next_comma == std::string::npos) {
       gpr_log(GPR_ERROR,
@@ -302,22 +302,11 @@ void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
 }
 
 void TestResolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
-  // sanity check flags
-  if (FLAGS_local_dns_server_address != "" && FLAGS_start_local_dns_server) {
-    gpr_log(GPR_ERROR,
-            "Cant set local DNS server address and start a new DNS server");
-    abort();
-  }
-  if (FLAGS_target_name == "") {
-    gpr_log(GPR_ERROR, "Missing target_name param.");
-    abort();
-  }
-
   // maybe build the address with an authority
   std::string authority = FLAGS_local_dns_server_address;
   if (FLAGS_start_local_dns_server) {
-    GPR_ASSERT(local_dns_server_port != 0);
-    authority = "127.0.0.1:" + std::to_string(local_dns_server_port);
+    GPR_ASSERT(g_local_dns_server_port != 0);
+    authority = "127.0.0.1:" + std::to_string(g_local_dns_server_port);
   }
   if (authority.size() > 0) {
     gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority.c_str());
@@ -360,18 +349,28 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   grpc::testing::InitTest(&argc, &argv, true);
 
+  // sanity check flags
+  if (FLAGS_local_dns_server_address != "" && FLAGS_start_local_dns_server) {
+    gpr_log(GPR_ERROR,
+            "Can't set local DNS server address and start a new DNS server");
+    abort();
+  }
+  if (FLAGS_target_name == "") {
+    gpr_log(GPR_ERROR, "Missing target_name param.");
+    abort();
+  }
+
   grpc_init();
 
-  SubProcess *dns_server_subprocess = NULL;
+  SubProcess *dns_server_subprocess = nullptr;
 
-  if (FLAGS_start_local_dns_server == true) {
+  if (FLAGS_start_local_dns_server) {
     /* spawn a DNS server subprocess*/
-    local_dns_server_port = grpc_pick_unused_port_or_die();
-    std::string my_bin = argv[0];
-    std::string bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+    g_local_dns_server_port = grpc_pick_unused_port_or_die();
+    // expect to be running in repo root
     std::vector<std::string> args = {
         "tools/run_tests/python_utils/dns_server.py",
-        "--dns_port=" + std::to_string(local_dns_server_port)};
+        "--dns_port=" + std::to_string(g_local_dns_server_port)};
     dns_server_subprocess = new SubProcess(args);
 
     // Wait for the DNS server to stand up.
@@ -401,7 +400,7 @@ int main(int argc, char **argv) {
               "DNS server subprocess exited with non-zero status: %d",
               dns_server_return_val);
     }
-    grpc_recycle_unused_port(local_dns_server_port);
+    grpc_recycle_unused_port(g_local_dns_server_port);
   }
 
   grpc_shutdown();
