@@ -27,9 +27,6 @@ _LOCAL_DNS_SERVER_ADDRESS = '127.0.0.1:15353'
 def _append_zone_name(name, zone_name):
   return '%s.%s' % (name, zone_name)
 
-def _use_underscores(record_name):
-  return record_name.replace('.', '_').replace('-', '_'),
-
 def _build_expected_addrs_cmd_arg(expected_addrs):
   out = []
   for addr in expected_addrs:
@@ -42,13 +39,22 @@ def main():
     resolver_component_data = yaml.load(f)
 
   json = {
+      'resolver_component_test_cases': [
+          {
+              'target_name': _append_zone_name(test_case['record_to_resolve'],
+                                                 resolver_component_data['resolver_component_tests_common_zone_name']),
+              'expected_addrs': _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
+              'expected_chosen_service_config': (test_case['expected_chosen_service_config'] or ''),
+              'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
+          } for test_case in resolver_component_data['resolver_component_tests']
+      ],
       'targets': [
           {
-              'name': 'resolver_component_test_%s' % _use_underscores(test_case['record_to_resolve']),
+              'name': 'resolver_component_test',
               'build': 'test',
               'language': 'c++',
               'gtest': False,
-              'run': True,
+              'run': False,
               'src': ['test/cpp/naming/resolver_component_test.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
@@ -60,15 +66,25 @@ def main():
                   'gpr',
                   'grpc++_test_config',
               ],
-              'args': [
-                  '--target_name=%s' % _append_zone_name(test_case['record_to_resolve'],
-                                                         resolver_component_data['resolver_component_tests_common_zone_name']),
-                  '--expected_addrs=%s' % _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
-                  '--expected_chosen_service_config=%s' % (test_case['expected_chosen_service_config'] or ''),
-                  '--expected_lb_policy=%s' % (test_case['expected_lb_policy'] or ''),
-                  '--start_local_dns_server=true',
-              ]
-          } for test_case in resolver_component_data['resolver_component_tests']
+          },
+          {
+              'name': 'resolver_component_test_shell_script_wrapper',
+              'build': 'test',
+              'language': 'c++',
+              'gtest': False,
+              'run': True,
+              'src': ['test/cpp/naming/resolver_component_test_shell_script_wrapper.cc'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          },
       ],
   }
 

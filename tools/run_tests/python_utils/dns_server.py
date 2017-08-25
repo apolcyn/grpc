@@ -29,6 +29,9 @@ _all_records = {}
 _record_name_type_to_ttl = {}
 
 
+_SERVER_HEALTH_CHECK_RECORD_NAME = 'local-dns-server-is-alive.test-local-dns-server.grpctestingexp.'
+_SERVER_HEALTH_CHECK_RECORD_DATA = '123.123.123.123'
+
 class Resolver:
   def resolve(self, request_record, _handler):
     global _all_records
@@ -90,6 +93,9 @@ def start_local_dns_server_in_background(dns_server_port):
         if r_type == 'TXT':
           _maybe_split_up_txt_data(record_full_name, r_data, r_ttl)
 
+  # Server health check record
+  _push_record(_SERVER_HEALTH_CHECK_RECORD_NAME, A(_SERVER_HEALTH_CHECK_RECORD_DATA), 0)
+
   resolver = Resolver()
   print('starting local dns server on 127.0.0.1:%s' % dns_server_port)
   DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=False).start_thread()
@@ -97,13 +103,15 @@ def start_local_dns_server_in_background(dns_server_port):
 
 # Provide an way for tests using this process to kill it quickly.
 def _signal_handler(_signal, _frame):
-  raise Exception('Received SIGINT. Quitting.')
+  print('Received SIGTERM. Quitting with exit code 0')
+  sys.stdout.flush()
+  sys.exit(0)
 
 def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
   argp.add_argument('-p', '--dns_port', default=None, type=int)
   args = argp.parse_args()
-  signal.signal(signal.SIGINT, _signal_handler)
+  signal.signal(signal.SIGTERM, _signal_handler)
   start_local_dns_server_in_background(args.dns_port)
   # Prevent zombie processes from accumulating on shared machines
   # with test failures. Tests that use this server are short-lived.

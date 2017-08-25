@@ -66,15 +66,11 @@ DEFINE_string(expected_chosen_service_config, "",
 DEFINE_string(
     local_dns_server_address, "",
     "Optional. This address is placed as the uri authority if present.");
-DEFINE_bool(start_local_dns_server, false,
-            "Start and use a local DNS server as a subprocess.");
 DEFINE_string(expected_lb_policy, "",
               "Expected lb policy name that appears in resolver result channel "
               "arg. Empty for none.");
 
 namespace {
-
-int g_local_dns_server_port = 0;
 
 class GrpcLBAddress final {
  public:
@@ -107,19 +103,6 @@ bool ConvertStringToBool(std::string bool_str) {
   }
 }
 
-void ExpectToken(const char *token, std::string expected_addrs) {
-  size_t next_occurrence = expected_addrs.find(token);
-
-  if (next_occurrence != 0) {
-    gpr_log(
-        GPR_ERROR,
-        "Missing %s. Expected_addrs arg should be a comma-separated list of "
-        "(<ip-port>,<bool>) pairs",
-        token);
-    abort();
-  }
-}
-
 vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
   std::vector<GrpcLBAddress> out;
 
@@ -127,9 +110,12 @@ vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
     // get the next <ip>,<port> (v4 or v6)
     size_t next_comma = expected_addrs.find(",");
     if (next_comma == std::string::npos) {
-      gpr_log(GPR_ERROR,
-              "expected_addrs arg should be a comma-separated list of "
-              "<ip-port>,<bool> pairs");
+      gpr_log(
+          GPR_ERROR,
+          "Missing ','. Expected_addrs arg should be a semi-colon-separated "
+          "list of "
+          "<ip-port>,<bool> pairs. Left-to-be-parsed arg is |%s|",
+          expected_addrs.c_str());
       abort();
     }
     std::string next_addr = expected_addrs.substr(0, next_comma);
@@ -154,11 +140,11 @@ vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
   return out;
 }
 
-gpr_timespec test_deadline(void) {
+gpr_timespec TestDeadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
 }
 
-typedef struct args_struct {
+typedef struct ArgsStruct {
   gpr_event ev;
   gpr_atm done_atm;
   gpr_mu *mu;
@@ -169,9 +155,9 @@ typedef struct args_struct {
   vector<GrpcLBAddress> expected_addrs;
   std::string expected_service_config_string;
   std::string expected_lb_policy;
-} args_struct;
+} ArgsStruct;
 
-void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
+void ArgsInit(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
   gpr_event_init(&args->ev);
   args->pollset = (grpc_pollset *)gpr_zalloc(grpc_pollset_size());
   grpc_pollset_init(args->pollset, &args->mu);
@@ -182,16 +168,15 @@ void args_init(grpc_exec_ctx *exec_ctx, args_struct *args) {
   args->channel_args = NULL;
 }
 
-void do_nothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
+void DoNothing(grpc_exec_ctx *exec_ctx, void *arg, grpc_error *error) {}
 
-void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
-  GPR_ASSERT(gpr_event_wait(&args->ev, test_deadline()));
+void ArgsFinish(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
+  GPR_ASSERT(gpr_event_wait(&args->ev, TestDeadline()));
   grpc_pollset_set_del_pollset(exec_ctx, args->pollset_set, args->pollset);
   grpc_pollset_set_destroy(exec_ctx, args->pollset_set);
-  grpc_closure do_nothing_cb;
-  GRPC_CLOSURE_INIT(&do_nothing_cb, do_nothing, NULL,
-                    grpc_schedule_on_exec_ctx);
-  grpc_pollset_shutdown(exec_ctx, args->pollset, &do_nothing_cb);
+  grpc_closure DoNothing_cb;
+  GRPC_CLOSURE_INIT(&DoNothing_cb, DoNothing, NULL, grpc_schedule_on_exec_ctx);
+  grpc_pollset_shutdown(exec_ctx, args->pollset, &DoNothing_cb);
   // exec_ctx needs to be flushed before calling grpc_pollset_destroy()
   grpc_channel_args_destroy(exec_ctx, args->channel_args);
   grpc_exec_ctx_flush(exec_ctx);
@@ -200,13 +185,13 @@ void args_finish(grpc_exec_ctx *exec_ctx, args_struct *args) {
   GRPC_COMBINER_UNREF(exec_ctx, args->lock, NULL);
 }
 
-gpr_timespec n_sec_deadline(int seconds) {
+gpr_timespec NSecondDeadline(int seconds) {
   return gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
                       gpr_time_from_seconds(seconds, GPR_TIMESPAN));
 }
 
-void PollPollsetUntilRequestDone(args_struct *args) {
-  gpr_timespec deadline = n_sec_deadline(10);
+void PollPollsetUntilRequestDone(ArgsStruct *args) {
+  gpr_timespec deadline = NSecondDeadline(10);
   while (true) {
     bool done = gpr_atm_acq_load(&args->done_atm) != 0;
     if (done) {
@@ -223,15 +208,15 @@ void PollPollsetUntilRequestDone(args_struct *args) {
     GRPC_LOG_IF_ERROR(
         "pollset_work",
         grpc_pollset_work(&exec_ctx, args->pollset, &worker,
-                          gpr_now(GPR_CLOCK_REALTIME), n_sec_deadline(1)));
+                          gpr_now(GPR_CLOCK_REALTIME), NSecondDeadline(1)));
     gpr_mu_unlock(args->mu);
     grpc_exec_ctx_finish(&exec_ctx);
   }
   gpr_event_set(&args->ev, (void *)1);
 }
 
-void check_service_config_result_locked(grpc_channel_args *channel_args,
-                                        args_struct *args) {
+void CheckServiceConfigResultLocked(grpc_channel_args *channel_args,
+                                    ArgsStruct *args) {
   const grpc_arg *service_config_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_SERVICE_CONFIG);
   if (args->expected_service_config_string != "") {
@@ -244,8 +229,8 @@ void check_service_config_result_locked(grpc_channel_args *channel_args,
   }
 }
 
-void check_lb_policy_result_locked(grpc_channel_args *channel_args,
-                                   args_struct *args) {
+void CheckLBPolicyResultLocked(grpc_channel_args *channel_args,
+                               ArgsStruct *args) {
   const grpc_arg *lb_policy_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_LB_POLICY_NAME);
   if (args->expected_lb_policy != "") {
@@ -257,9 +242,9 @@ void check_lb_policy_result_locked(grpc_channel_args *channel_args,
   }
 }
 
-void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
-                                  grpc_error *err) {
-  args_struct *args = (args_struct *)argsp;
+void CheckResolverResultLocked(grpc_exec_ctx *exec_ctx, void *argsp,
+                               grpc_error *err) {
+  ArgsStruct *args = (ArgsStruct *)argsp;
   grpc_channel_args *channel_args = args->channel_args;
   const grpc_arg *channel_arg =
       grpc_channel_args_find(channel_args, GRPC_ARG_LB_ADDRESSES);
@@ -269,7 +254,6 @@ void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
       (grpc_lb_addresses *)channel_arg->value.pointer.p;
   gpr_log(GPR_INFO, "num addrs found: %" PRIdPTR ". expected %" PRIdPTR,
           addresses->num_addresses, args->expected_addrs.size());
-
   GPR_ASSERT(addresses->num_addresses == args->expected_addrs.size());
   std::vector<GrpcLBAddress> found_lb_addrs;
   for (size_t i = 0; i < addresses->num_addresses; i++) {
@@ -282,65 +266,58 @@ void check_resolver_result_locked(grpc_exec_ctx *exec_ctx, void *argsp,
         GrpcLBAddress(std::string(str), addr.is_balancer));
     gpr_free(str);
   }
-
   if (args->expected_addrs.size() != found_lb_addrs.size()) {
     gpr_log(GPR_DEBUG, "found lb addrs size is: %" PRIdPTR
                        ". expected addrs size is %" PRIdPTR,
             found_lb_addrs.size(), args->expected_addrs.size());
     abort();
   }
-
   EXPECT_THAT(args->expected_addrs, UnorderedElementsAreArray(found_lb_addrs));
-
-  check_service_config_result_locked(channel_args, args);
-  check_lb_policy_result_locked(channel_args, args);
-
+  CheckServiceConfigResultLocked(channel_args, args);
+  CheckLBPolicyResultLocked(channel_args, args);
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, NULL));
   gpr_mu_unlock(args->mu);
 }
 
-void TestResolves(grpc_exec_ctx *exec_ctx, args_struct *args) {
+void TestResolves(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
   // maybe build the address with an authority
-  std::string authority = FLAGS_local_dns_server_address;
-  if (FLAGS_start_local_dns_server) {
-    GPR_ASSERT(g_local_dns_server_port != 0);
-    authority = "127.0.0.1:" + std::to_string(g_local_dns_server_port);
-  }
-  if (authority.size() > 0) {
-    gpr_log(GPR_INFO, "Specifying authority in uris to: %s", authority.c_str());
+  if (FLAGS_local_dns_server_address != "") {
+    gpr_log(GPR_INFO, "Specifying authority in uris to: %s",
+            FLAGS_local_dns_server_address.c_str());
   }
   char *whole_uri = NULL;
-  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s", authority.c_str(),
+  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s",
+                      FLAGS_local_dns_server_address.c_str(),
                       FLAGS_target_name.c_str()));
   // create resolver and resolve
   grpc_resolver *resolver = grpc_resolver_create(exec_ctx, whole_uri, NULL,
                                                  args->pollset_set, args->lock);
   gpr_free(whole_uri);
   grpc_closure on_resolver_result_changed;
-  GRPC_CLOSURE_INIT(&on_resolver_result_changed, check_resolver_result_locked,
+  GRPC_CLOSURE_INIT(&on_resolver_result_changed, CheckResolverResultLocked,
                     (void *)args, grpc_combiner_scheduler(args->lock));
-
   grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args,
                             &on_resolver_result_changed);
-
   grpc_exec_ctx_flush(exec_ctx);
   PollPollsetUntilRequestDone(args);
   GRPC_RESOLVER_UNREF(exec_ctx, resolver, NULL);
 }
 
 TEST(ResolverTest, ResolvesRelevantRecords) {
+  grpc_init();
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
-  args_struct args;
-  args_init(&exec_ctx, &args);
+  ArgsStruct args;
+  ArgsInit(&exec_ctx, &args);
   args.expected_addrs = ParseExpectedAddrs(FLAGS_expected_addrs);
   args.expected_service_config_string = FLAGS_expected_chosen_service_config;
   args.expected_lb_policy = FLAGS_expected_lb_policy;
 
   TestResolves(&exec_ctx, &args);
-  args_finish(&exec_ctx, &args);
+  ArgsFinish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
+  grpc_shutdown();
 }
 
 }  // namespace
@@ -348,61 +325,9 @@ TEST(ResolverTest, ResolvesRelevantRecords) {
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   grpc::testing::InitTest(&argc, &argv, true);
-
-  // sanity check flags
-  if (FLAGS_local_dns_server_address != "" && FLAGS_start_local_dns_server) {
-    gpr_log(GPR_ERROR,
-            "Can't set local DNS server address and start a new DNS server");
-    abort();
-  }
   if (FLAGS_target_name == "") {
     gpr_log(GPR_ERROR, "Missing target_name param.");
     abort();
   }
-
-  grpc_init();
-
-  SubProcess *dns_server_subprocess = nullptr;
-
-  if (FLAGS_start_local_dns_server) {
-    /* spawn a DNS server subprocess*/
-    g_local_dns_server_port = grpc_pick_unused_port_or_die();
-    // expect to be running in repo root
-    std::vector<std::string> args = {
-        "tools/run_tests/python_utils/dns_server.py",
-        "--dns_port=" + std::to_string(g_local_dns_server_port)};
-    dns_server_subprocess = new SubProcess(args);
-
-    // Wait for the DNS server to stand up.
-    // TODO: can we get rid of the need to sleep here?
-    // Without this sleep, some polling engines timeout and others
-    // fail fast.
-    gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
-                                 gpr_time_from_seconds(1, GPR_TIMESPAN)));
-    gpr_log(GPR_INFO, "started local DNS server subprocess: |%s %s|",
-            args[0].c_str(), args[1].c_str());
-  }
-
-  int test_return_val = RUN_ALL_TESTS();
-  if (test_return_val) {
-    gpr_log(GPR_ERROR, "DNS RESOLVER TEST FAILED.");
-  }
-
-  if (FLAGS_start_local_dns_server == true) {
-    /* wait for DNS server subprocess*/
-    gpr_log(GPR_INFO, "Interrupt DNS server subprocess and wait for join.");
-    dns_server_subprocess->Interrupt();
-    const int dns_server_return_val = dns_server_subprocess->Join();
-    delete dns_server_subprocess;
-    if (dns_server_return_val != 0) {
-      test_return_val |= dns_server_return_val;
-      gpr_log(GPR_ERROR,
-              "DNS server subprocess exited with non-zero status: %d",
-              dns_server_return_val);
-    }
-    grpc_recycle_unused_port(g_local_dns_server_port);
-  }
-
-  grpc_shutdown();
-  return test_return_val;
+  return RUN_ALL_TESTS();
 }
