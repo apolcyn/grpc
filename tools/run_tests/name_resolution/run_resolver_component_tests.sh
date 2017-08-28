@@ -50,109 +50,109 @@ if [[ $RETRY == 1 ]]; then
 fi
 
 function terminate_all {
-    kill -SIGTERM $!
-    kill -SIGTERM $DNS_SERVER_PID
-    wait
-    exit 1
+  kill -SIGTERM $!
+  kill -SIGTERM $DNS_SERVER_PID
+  wait
+  exit 1
 }
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:1234,True' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:1234,True' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv4-multi-target.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.5:1234,True;1.2.3.6:1234,True;1.2.3.7:1234,True' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv4-multi-target.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.5:1234,True;1.2.3.6:1234,True;1.2.3.7:1234,True' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv6-single-target.resolver-tests.grpctestingexp.' \
-    --expected_addrs='[2607:f8b0:400a:801::1001]:1234,True' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv6-single-target.resolver-tests.grpctestingexp.' \
+  --expected_addrs='[2607:f8b0:400a:801::1001]:1234,True' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv6-multi-target.resolver-tests.grpctestingexp.' \
-    --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1003]:1234,True;[2607:f8b0:400a:801::1004]:1234,True' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv6-multi-target.resolver-tests.grpctestingexp.' \
+  --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1003]:1234,True;[2607:f8b0:400a:801::1004]:1234,True' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv4-simple-service-config.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:1234,True' \
-    --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}' \
-    --expected_lb_policy='round_robin' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv4-simple-service-config.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:1234,True' \
+  --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}' \
+  --expected_lb_policy='round_robin' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='ipv4-no-srv-simple-service-config.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:443,False' \
-    --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}' \
-    --expected_lb_policy='round_robin' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='ipv4-no-srv-simple-service-config.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}' \
+  --expected_lb_policy='round_robin' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='ipv4-no-config-for-cpp.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:443,False' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='ipv4-no-config-for-cpp.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='ipv4-cpp-config-has-zero-percentage.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:443,False' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='ipv4-cpp-config-has-zero-percentage.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='ipv4-second-language-is-cpp.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:443,False' \
-    --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}' \
-    --expected_lb_policy='round_robin' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='ipv4-second-language-is-cpp.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}' \
+  --expected_lb_policy='round_robin' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='ipv4-config-with-percentages.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:443,False' \
-    --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}' \
-    --expected_lb_policy='round_robin' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='ipv4-config-with-percentages.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}' \
+  --expected_lb_policy='round_robin' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv4-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
-    --expected_addrs='1.2.3.4:1234,True;1.2.3.4:443,False' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv4-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:1234,True;1.2.3.4:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 $TEST_BIN_DIR/resolver_component_test \
-    --target_name='srv-ipv6-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
-    --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1002]:443,False' \
-    --expected_chosen_service_config='' \
-    --expected_lb_policy='' \
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --target_name='srv-ipv6-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
+  --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1002]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 kill -SIGTERM $DNS_SERVER_PID
