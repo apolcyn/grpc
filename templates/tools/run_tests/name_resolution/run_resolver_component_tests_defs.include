@@ -50,10 +50,10 @@ if [[ $RETRY == 1 ]]; then
 fi
 
 function terminate_all {
-    kill -SIGTERM $!
-    kill -SIGTERM $DNS_SERVER_PID
-    wait
-    exit 1
+  kill -SIGTERM $!
+  kill -SIGTERM $DNS_SERVER_PID
+  wait
+  exit 1
 }
 
 trap terminate_all SIGTERM
@@ -62,18 +62,18 @@ EXIT_CODE=0
 % for test in tests:
 $TEST_BIN_DIR/resolver_component_test \\
 
-    --target_name='${test['target_name']}' \\
+  --target_name='${test['target_name']}' \\
 
-    --expected_addrs='${test['expected_addrs']}' \\
+  --expected_addrs='${test['expected_addrs']}' \\
 
-    --expected_chosen_service_config='${test['expected_chosen_service_config']}' \\
+  --expected_chosen_service_config='${test['expected_chosen_service_config']}' \\
 
-    --expected_lb_policy='${test['expected_lb_policy']}' \\
+  --expected_lb_policy='${test['expected_lb_policy']}' \\
 
-    --local_dns_server_address=127.0.0.1:$DNS_PORT &
+  --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
 % endfor
 kill -SIGTERM $DNS_SERVER_PID
-wait $DNS_SERVER_PID
+wait
 exit $EXIT_CODE</%def>

@@ -37,17 +37,19 @@ int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
   grpc_init();
   char *exec_args[NUM_ARGS];
-  exec_args[0] = gpr_strdup(
-      "tools/run_tests/name_resolution/run_resolver_component_tests.sh");
+  exec_args[0] =
+      (char *)"tools/run_tests/name_resolution/run_resolver_component_tests.sh";
   // pass the port to use for the DNS server
   int local_dns_server_port = grpc_pick_unused_port_or_die();
-  exec_args[1] = gpr_strdup(std::to_string(local_dns_server_port).c_str());
+  std::string const local_dns_server_port_str =
+      std::to_string(local_dns_server_port);
+  exec_args[1] = (char *)local_dns_server_port_str.c_str();
   // pass the current binary's directory relative to repo root
   std::string my_bin = argv[0];
-  std::string bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+  std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
   gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
           my_bin.c_str());
-  exec_args[2] = gpr_strdup(bin_dir.c_str());
+  exec_args[2] = (char *)bin_dir.c_str();
   exec_args[NUM_ARGS - 1] = NULL;
   execv(exec_args[0], exec_args);
   gpr_log(GPR_ERROR, "exec %s failed.", exec_args[0]);
