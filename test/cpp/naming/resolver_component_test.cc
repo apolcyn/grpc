@@ -53,6 +53,14 @@ using std::vector;
 using grpc::SubProcess;
 using testing::UnorderedElementsAreArray;
 
+// Hack copied from "test/cpp/end2end/server_crash_test_client.cc"!
+// In some distros, gflags is in the namespace google, and in some others,
+// in gflags. This hack is enabling us to find both.
+namespace google {}
+namespace gflags {}
+using namespace google;
+using namespace gflags;
+
 DEFINE_string(target_name, "", "Target name to resolve.");
 DEFINE_string(expected_addrs, "",
               "Comma-separated list of expected "
@@ -281,53 +289,50 @@ void CheckResolverResultLocked(grpc_exec_ctx *exec_ctx, void *argsp,
   gpr_mu_unlock(args->mu);
 }
 
-void TestResolves(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
-  // maybe build the address with an authority
-  if (FLAGS_local_dns_server_address != "") {
-    gpr_log(GPR_INFO, "Specifying authority in uris to: %s",
-            FLAGS_local_dns_server_address.c_str());
-  }
-  char *whole_uri = NULL;
-  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s",
-                      FLAGS_local_dns_server_address.c_str(),
-                      FLAGS_target_name.c_str()));
-  // create resolver and resolve
-  grpc_resolver *resolver = grpc_resolver_create(exec_ctx, whole_uri, NULL,
-                                                 args->pollset_set, args->lock);
-  gpr_free(whole_uri);
-  grpc_closure on_resolver_result_changed;
-  GRPC_CLOSURE_INIT(&on_resolver_result_changed, CheckResolverResultLocked,
-                    (void *)args, grpc_combiner_scheduler(args->lock));
-  grpc_resolver_next_locked(exec_ctx, resolver, &args->channel_args,
-                            &on_resolver_result_changed);
-  grpc_exec_ctx_flush(exec_ctx);
-  PollPollsetUntilRequestDone(args);
-  GRPC_RESOLVER_UNREF(exec_ctx, resolver, NULL);
-}
-
-TEST(ResolverTest, ResolvesRelevantRecords) {
-  grpc_init();
+TEST(ResolverComponentTest, TestResolvesRelevantRecords) {
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   ArgsStruct args;
   ArgsInit(&exec_ctx, &args);
   args.expected_addrs = ParseExpectedAddrs(FLAGS_expected_addrs);
   args.expected_service_config_string = FLAGS_expected_chosen_service_config;
   args.expected_lb_policy = FLAGS_expected_lb_policy;
-
-  TestResolves(&exec_ctx, &args);
+  // maybe build the address with an authority
+  char *whole_uri = NULL;
+  GPR_ASSERT(asprintf(&whole_uri, "dns://%s/%s",
+                      FLAGS_local_dns_server_address.c_str(),
+                      FLAGS_target_name.c_str()));
+  // create resolver and resolve
+  grpc_resolver *resolver = grpc_resolver_create(&exec_ctx, whole_uri, NULL,
+                                                 args.pollset_set, args.lock);
+  gpr_free(whole_uri);
+  grpc_closure on_resolver_result_changed;
+  GRPC_CLOSURE_INIT(&on_resolver_result_changed, CheckResolverResultLocked,
+                    (void *)&args, grpc_combiner_scheduler(args.lock));
+  grpc_resolver_next_locked(&exec_ctx, resolver, &args.channel_args,
+                            &on_resolver_result_changed);
+  grpc_exec_ctx_flush(&exec_ctx);
+  PollPollsetUntilRequestDone(&args);
+  GRPC_RESOLVER_UNREF(&exec_ctx, resolver, NULL);
   ArgsFinish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
-  grpc_shutdown();
 }
 
 }  // namespace
 
 int main(int argc, char **argv) {
+  grpc_init();
+  grpc_test_init(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
-  grpc::testing::InitTest(&argc, &argv, true);
+  ParseCommandLineFlags(&argc, &argv, true);
   if (FLAGS_target_name == "") {
     gpr_log(GPR_ERROR, "Missing target_name param.");
     abort();
   }
-  return RUN_ALL_TESTS();
+  if (FLAGS_local_dns_server_address != "") {
+    gpr_log(GPR_INFO, "Specifying authority in uris to: %s",
+            FLAGS_local_dns_server_address.c_str());
+  }
+  auto result = RUN_ALL_TESTS();
+  grpc_shutdown();
+  return result;
 }

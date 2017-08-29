@@ -66,7 +66,7 @@ RUN apt-get update && apt-get install -y \
 # Install Python packages from PyPI
 RUN pip install pip --upgrade
 RUN pip install virtualenv
-RUN pip install futures==2.2.0 enum34==1.0.4 protobuf==3.2.0 six==1.10.0 dnslib==0.9.7
+RUN pip install futures==2.2.0 enum34==1.0.4 protobuf==3.2.0 six==1.10.0 twisted==17.5.0
 
 #================
 # C# dependencies

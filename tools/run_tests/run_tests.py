@@ -292,9 +292,6 @@ class CLanguage(object):
         resolver = os.environ.get('GRPC_DNS_RESOLVER', None);
         if resolver:
           env['GRPC_DNS_RESOLVER'] = resolver
-        if target['name'].startswith('resolver_component_test'):
-          # these tests only work with c-ares
-          env['GRPC_DNS_RESOLVER'] = 'ares'
         shortname_ext = '' if polling_strategy=='all' else ' GRPC_POLL_STRATEGY=%s' % polling_strategy
         timeout_scaling = 1
         if polling_strategy == 'poll-cv':

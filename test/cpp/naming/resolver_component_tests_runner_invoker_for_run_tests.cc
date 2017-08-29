@@ -16,42 +16,42 @@
  *
  */
 
+/* Intended for running the resolver component test under run_tests.py */
+
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
 #include <grpc/support/string_util.h>
 #include <unistd.h>
 
+#include <gflags/gflags.h>
 #include <string>
 #include <vector>
 
+#include "test/cpp/naming/resolver_component_tests_runner_invoker_common.h"
+#include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
 
 extern "C" {
 #include "test/core/util/port.h"
 }
 
-#define NUM_ARGS 4
+using grpc::SubProcess;
+
+DEFINE_string(test_bin_name, "",
+              "Name, without the preceding path, of the test binary");
 
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
-  grpc_init();
-  char *exec_args[NUM_ARGS];
-  exec_args[0] =
-      (char *)"tools/run_tests/name_resolution/run_resolver_component_tests.sh";
-  // pass the port to use for the DNS server
-  int local_dns_server_port = grpc_pick_unused_port_or_die();
-  std::string const local_dns_server_port_str =
-      std::to_string(local_dns_server_port);
-  exec_args[1] = (char *)local_dns_server_port_str.c_str();
-  // pass the current binary's directory relative to repo root
+  // get the current binary's directory relative to repo root to invoke the
+  // correct build config (asan/tsan/dbg, etc.)
+  GPR_ASSERT(FLAGS_test_bin_name != "");
   std::string my_bin = argv[0];
   std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
   gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
           my_bin.c_str());
-  exec_args[2] = (char *)bin_dir.c_str();
-  exec_args[NUM_ARGS - 1] = NULL;
-  execv(exec_args[0], exec_args);
-  gpr_log(GPR_ERROR, "exec %s failed.", exec_args[0]);
-  abort();
+  grpc::testing::InvokeResolverComponentTestsRunner(
+      "test/cpp/naming/resolver_component_tests_runner.sh",
+      bin_dir + "/" + FLAGS_test_bin_name, "test/cpp/naming/test_dns_server.py",
+      "test/cpp/naming/resolver_test_record_groups.yaml");
 }

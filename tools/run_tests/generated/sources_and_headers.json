@@ -5631,6 +5631,26 @@
     "deps": [
       "gpr", 
       "gpr_test_util", 
+      "grpc++_test_config", 
+      "grpc++_test_util_unsecure", 
+      "grpc++_unsecure", 
+      "grpc_test_util_unsecure", 
+      "grpc_unsecure"
+    ], 
+    "headers": [], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "resolver_component_test_unsecure", 
+    "src": [
+      "test/cpp/naming/resolver_component_test.cc"
+    ], 
+    "third_party": false, 
+    "type": "target"
+  }, 
+  {
+    "deps": [
+      "gpr", 
+      "gpr_test_util", 
       "grpc", 
       "grpc++", 
       "grpc++_test_config", 
@@ -5655,14 +5675,36 @@
       "grpc++", 
       "grpc++_test_config", 
       "grpc++_test_util", 
-      "grpc_test_util"
+      "grpc_test_util", 
+      "resolver_component_tests_runner_invoker_common"
     ], 
     "headers": [], 
     "is_filegroup": false, 
     "language": "c++", 
-    "name": "resolver_component_test_shell_script_wrapper", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests_unsecure", 
     "src": [
-      "test/cpp/naming/resolver_component_test_shell_script_wrapper.cc"
+      "test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc"
+    ], 
+    "third_party": false, 
+    "type": "target"
+  }, 
+  {
+    "deps": [
+      "gpr", 
+      "gpr_test_util", 
+      "grpc", 
+      "grpc++", 
+      "grpc++_test_config", 
+      "grpc++_test_util", 
+      "grpc_test_util", 
+      "resolver_component_tests_runner_invoker_common"
+    ], 
+    "headers": [], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests", 
+    "src": [
+      "test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc"
     ], 
     "third_party": false, 
     "type": "target"
@@ -7645,6 +7687,29 @@
       "test/core/end2end/tests/workaround_cronet_compression.c", 
       "test/core/end2end/tests/write_buffering.c", 
       "test/core/end2end/tests/write_buffering_at_end.c"
+    ], 
+    "third_party": false, 
+    "type": "lib"
+  }, 
+  {
+    "deps": [
+      "gpr", 
+      "gpr_test_util", 
+      "grpc", 
+      "grpc++", 
+      "grpc++_test_config", 
+      "grpc++_test_util", 
+      "grpc_test_util"
+    ], 
+    "headers": [
+      "test/cpp/naming/resolver_component_tests_runner_invoker_common.h"
+    ], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "resolver_component_tests_runner_invoker_common", 
+    "src": [
+      "test/cpp/naming/resolver_component_tests_runner_invoker_common.cc", 
+      "test/cpp/naming/resolver_component_tests_runner_invoker_common.h"
     ], 
     "third_party": false, 
     "type": "lib"

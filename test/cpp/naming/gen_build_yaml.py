@@ -35,7 +35,7 @@ def _build_expected_addrs_cmd_arg(expected_addrs):
 
 def main():
   resolver_component_data = ''
-  with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml') as f:
+  with open('test/cpp/naming/resolver_test_record_groups.yaml') as f:
     resolver_component_data = yaml.load(f)
 
   json = {
@@ -48,32 +48,13 @@ def main():
               'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
           } for test_case in resolver_component_data['resolver_component_tests']
       ],
-      'targets': [
+      'libs': [
           {
-              'name': 'resolver_component_test',
-              'build': 'test',
+              'name': 'resolver_component_tests_runner_invoker_common',
+              'build': 'private',
               'language': 'c++',
-              'gtest': False,
-              'run': False,
-              'src': ['test/cpp/naming/resolver_component_test.cc'],
-              'platforms': ['linux', 'posix', 'mac'],
-              'deps': [
-                  'grpc++_test_util',
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'grpc++',
-                  'grpc',
-                  'gpr',
-                  'grpc++_test_config',
-              ],
-          },
-          {
-              'name': 'resolver_component_test_shell_script_wrapper',
-              'build': 'test',
-              'language': 'c++',
-              'gtest': False,
-              'run': True,
-              'src': ['test/cpp/naming/resolver_component_test_shell_script_wrapper.cc'],
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.cc'],
+              'headers': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.h'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
                   'grpc++_test_util',
@@ -86,6 +67,49 @@ def main():
               ],
           },
       ],
+      'targets': [
+          {
+              'name': 'resolver_component_test' + unsecure_build_config_suffix,
+              'build': 'test',
+              'language': 'c++',
+              'gtest': False,
+              'run': False,
+              'src': ['test/cpp/naming/resolver_component_test.cc'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'grpc++_test_util' + unsecure_build_config_suffix,
+                  'grpc_test_util' + unsecure_build_config_suffix,
+                  'gpr_test_util',
+                  'grpc++' + unsecure_build_config_suffix,
+                  'grpc' + unsecure_build_config_suffix,
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          } for unsecure_build_config_suffix in ['_unsecure', '']
+      ] + [
+          {
+              'name': 'resolver_component_tests_runner_invoker_for_run_tests' + unsecure_build_config_suffix,
+              'build': 'test',
+              'language': 'c++',
+              'gtest': False,
+              'run': True,
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'resolver_component_tests_runner_invoker_common',
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+              'args': [
+                  '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
+              ],
+          } for unsecure_build_config_suffix in ['_unsecure', '']
+      ]
   }
 
   print(yaml.dump(json))
