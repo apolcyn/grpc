@@ -34,8 +34,8 @@ for ((i=0;i<30;i++));
 do
   echo "Retry health-check DNS query to local DNS server over tcp and udp"
   RETRY=0
-  dig A local-dns-server-is-alive.test-local-dns-server.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 | grep '123.123.123.123' || RETRY=1
-  dig A local-dns-server-is-alive.test-local-dns-server.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 +tcp | grep '123.123.123.123' || RETRY=1
+  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 | grep '123.123.123.123' || RETRY=1
+  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 +tcp | grep '123.123.123.123' || RETRY=1
   if [[ $RETRY == 0 ]]; then
     break
   fi;

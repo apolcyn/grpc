@@ -13,65 +13,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Manage TCP ports for unit tests; started by run_tests.py"""
+"""Starts a local DNS server for use in tests"""
 
 import argparse
 import sys
-import time
-import threading
-import dnslib
-from dnslib import *
-from dnslib.server import DNSServer
 import yaml
 import signal
 
-_all_records = {}
-_record_name_type_to_ttl = {}
+import twisted
+import twisted.internet
+import twisted.internet.reactor
+import twisted.internet.threads
+import twisted.internet.defer
+import twisted.internet.protocol
+import twisted.names
+import twisted.names.client
+import twisted.names.dns
+import twisted.names.server
+from twisted.names import client, server, common, authority, dns
+import argparse
 
-
-_SERVER_HEALTH_CHECK_RECORD_NAME = 'local-dns-server-is-alive.test-local-dns-server.grpctestingexp.'
+_SERVER_HEALTH_CHECK_RECORD_NAME = 'health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp' # missing end '.' for twisted syntax
 _SERVER_HEALTH_CHECK_RECORD_DATA = '123.123.123.123'
 
-class Resolver:
-  def resolve(self, request_record, _handler):
-    global _all_records
-    reply = DNSRecord(DNSHeader(id=request_record.header.id, qr=1, aa=1, ra=1), q=request_record.q)
-    requested_name = str(request_record.q.qname)
-    qtype = request_record.q.qtype
-    rr_list = _all_records.get(requested_name)
-    if rr_list is not None:
-      for rr_data in rr_list:
-        if QTYPE[qtype] == rr_data.__class__.__name__:
-          ttl = _record_name_type_to_ttl['%s:%s' % (requested_name, QTYPE[qtype])]
-          reply.add_answer(RR(rname=requested_name, rtype=qtype, rclass=1, ttl=ttl, rdata=rr_data))
+class NoFileAuthority(authority.FileAuthority):
+  def __init__(self, soa, records):
+    # skip FileAuthority
+    common.ResolverBase.__init__(self)
+    self.soa = soa
+    self.records = records
 
-    print "---- Reply:\n", reply
-    return reply
+def start_local_dns_server(dns_server_port):
+  all_records = {}
+  def _push_record(name, r):
+    print('pushing record: |%s|' % name)
+    if all_records.get(name) is not None:
+      all_records[name].append(r)
+      return
+    all_records[name] = [r]
 
-def _push_record(name, r, ttl):
-  _record_name_type_to_ttl['%s:%s' % (name, r.__class__.__name__)] = ttl
-  if _all_records.get(name) is not None:
-    _all_records[name].append(r)
-    return
-  _all_records[name] = [r]
+  def _maybe_split_up_txt_data(name, txt_data, r_ttl):
+    start = 0
+    txt_data_list = []
+    while len(txt_data[start:]) > 0:
+      next_read = len(txt_data[start:])
+      if next_read > 255:
+        next_read = 255
+      txt_data_list.append(txt_data[start:start+next_read])
+      start += next_read
+    _push_record(name, dns.Record_TXT(*txt_data_list, ttl=r_ttl))
 
-def _maybe_split_up_txt_data(name, txt_data, ttl):
-  start = 0
-  txt_data_list = []
-  while len(txt_data[start:]) > 0:
-    next_read = len(txt_data[start:])
-    if next_read > 255:
-      next_read = 255
-    txt_data_list.append(txt_data[start:start+next_read])
-    start += next_read
-
-  _push_record(name, TXT(txt_data_list), ttl)
-
-def start_local_dns_server_in_background(dns_server_port):
   with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
     test_records_config = yaml.load(config)
   common_zone_name = test_records_config['resolver_component_tests_common_zone_name']
-
   for group in test_records_config['resolver_component_tests']:
     for name in group['records'].keys():
       for record in group['records'][name]:
@@ -79,31 +73,45 @@ def start_local_dns_server_in_background(dns_server_port):
         r_data = record['data']
         r_ttl = int(record['TTL'])
         record_full_name = '%s.%s' % (name, common_zone_name)
+        assert record_full_name[-1] == '.'
+        record_full_name = record_full_name[:-1]
         if r_type == 'A':
-          _push_record(record_full_name, A(r_data), r_ttl)
+          _push_record(record_full_name, dns.Record_A(r_data, ttl=r_ttl))
         if r_type == 'AAAA':
-          _push_record(record_full_name, AAAA(r_data), r_ttl)
+          _push_record(record_full_name, dns.Record_AAAA(r_data, ttl=r_ttl))
         if r_type == 'SRV':
           p, w, port, target = r_data.split(' ')
           p = int(p)
           w = int(w)
           port = int(port)
           target_full_name = '%s.%s' % (target, common_zone_name)
-          _push_record(record_full_name, SRV(target=target_full_name, priority=p, weight=w, port=port), r_ttl)
+          r_data = '%s %s %s %s' % (p, w, port, target_full_name)
+          _push_record(record_full_name, dns.Record_SRV(p, w, port, target_full_name, ttl=r_ttl))
         if r_type == 'TXT':
           _maybe_split_up_txt_data(record_full_name, r_data, r_ttl)
-
   # Server health check record
-  _push_record(_SERVER_HEALTH_CHECK_RECORD_NAME, A(_SERVER_HEALTH_CHECK_RECORD_DATA), 0)
-
-  resolver = Resolver()
+  _push_record(_SERVER_HEALTH_CHECK_RECORD_NAME, dns.Record_A(_SERVER_HEALTH_CHECK_RECORD_DATA, ttl=0))
   print('starting local dns server on 127.0.0.1:%s' % dns_server_port)
-  DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=False).start_thread()
-  DNSServer(resolver, port=dns_server_port, address='127.0.0.1', tcp=True).start_thread()
+  soa_record = dns.Record_SOA(mname = common_zone_name)
+  test_domain_com = NoFileAuthority(
+    soa = (common_zone_name, soa_record),
+    records = all_records,
+  )
+  server = twisted.names.server.DNSServerFactory(
+      authorities=[test_domain_com], verbose=2)
+  server.noisy = 2
+  twisted.internet.reactor.listenTCP(dns_server_port, server)
+  dns_proto = twisted.names.dns.DNSDatagramProtocol(server)
+  dns_proto.noisy = 2
+  twisted.internet.reactor.listenUDP(dns_server_port, dns_proto)
 
-# Provide an way for tests using this process to kill it quickly.
-def _signal_handler(_signal, _frame):
-  print('Received SIGTERM. Quitting with exit code 0')
+  print('starting twisted.internet.reactor')
+  twisted.internet.reactor.suggestThreadPoolSize(1)
+  twisted.internet.reactor.run()
+
+def _quit_on_signal(signum, _frame):
+  print('Received SIGNAL %d. Quitting with exit code 0' % signum)
+  twisted.internet.reactor.stop()
   sys.stdout.flush()
   sys.exit(0)
 
@@ -111,17 +119,11 @@ def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
   argp.add_argument('-p', '--dns_port', default=None, type=int)
   args = argp.parse_args()
-  signal.signal(signal.SIGTERM, _signal_handler)
-  start_local_dns_server_in_background(args.dns_port)
-  # Prevent zombie processes from accumulating on shared machines
-  # with test failures. Tests that use this server are short-lived.
-  seconds = 0
-  while seconds < 60 * 2:
-    time.sleep(1)
-    seconds += 1
-    sys.stderr.flush()
-    sys.stdout.flush()
-  print('Process time limit reached. Quitting')
+  signal.signal(signal.SIGALRM, _quit_on_signal)
+  signal.signal(signal.SIGTERM, _quit_on_signal)
+  # Prevent zombies. Tests that use this server are short-lived.
+  signal.alarm(2 * 60)
+  start_local_dns_server(args.dns_port)
 
 if __name__ == '__main__':
   main()
