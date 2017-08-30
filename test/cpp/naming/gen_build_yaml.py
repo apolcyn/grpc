@@ -35,7 +35,7 @@ def _build_expected_addrs_cmd_arg(expected_addrs):
 
 def main():
   resolver_component_data = ''
-  with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml') as f:
+  with open('test/cpp/naming/resolver_test_record_groups.yaml') as f:
     resolver_component_data = yaml.load(f)
 
   json = {
@@ -68,12 +68,12 @@ def main():
               ],
           },
           {
-              'name': 'resolver_component_test_shell_script_wrapper',
+              'name': 'resolver_component_tests_with_run_tests_invoker',
               'build': 'test',
               'language': 'c++',
               'gtest': False,
               'run': True,
-              'src': ['test/cpp/naming/resolver_component_test_shell_script_wrapper.cc'],
+              'src': ['test/cpp/naming/resolver_component_tests_with_run_tests_invoker.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
                   'grpc++_test_util',

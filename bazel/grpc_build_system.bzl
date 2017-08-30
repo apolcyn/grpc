@@ -121,3 +121,10 @@ def grpc_package(name, visibility = "private", features = []):
       default_visibility = visibility,
       features = features
     )
+
+def grpc_py_binary(name, srcs, args = [], data = [], deps):
+  native.sh_test(
+    name = name,
+    srcs = srcs,
+    data = data,
+    deps = deps)

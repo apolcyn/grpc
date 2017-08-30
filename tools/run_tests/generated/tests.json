@@ -4333,7 +4333,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "resolver_component_test_shell_script_wrapper", 
+    "name": "resolver_component_tests_with_run_tests_invoker", 
     "platforms": [
       "linux", 
       "mac", 

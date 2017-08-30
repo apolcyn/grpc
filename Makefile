@@ -1263,7 +1263,7 @@ h2_sockpair_1byte_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test
 h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
 resolver_component_test: $(BINDIR)/$(CONFIG)/resolver_component_test
-resolver_component_test_shell_script_wrapper: $(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper
+resolver_component_tests_with_run_tests_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1647,7 +1647,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/boringssl_tab_test \
   $(BINDIR)/$(CONFIG)/boringssl_v3name_test \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
-  $(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker \
 
 else
 buildtests_cxx: privatelibs_cxx \
@@ -1726,7 +1726,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/thread_stress_test \
   $(BINDIR)/$(CONFIG)/writes_per_rpc_test \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
-  $(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker \
 
 endif
 
@@ -2130,8 +2130,8 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/thread_stress_test || ( echo test thread_stress_test failed ; exit 1 )
 	$(E) "[RUN]     Testing writes_per_rpc_test"
 	$(Q) $(BINDIR)/$(CONFIG)/writes_per_rpc_test || ( echo test writes_per_rpc_test failed ; exit 1 )
-	$(E) "[RUN]     Testing resolver_component_test_shell_script_wrapper"
-	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper || ( echo test resolver_component_test_shell_script_wrapper failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_tests_with_run_tests_invoker"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker || ( echo test resolver_component_tests_with_run_tests_invoker failed ; exit 1 )
 
 
 flaky_test_cxx: buildtests_cxx
@@ -19307,15 +19307,15 @@ endif
 endif
 
 
-RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_SRC = \
-    test/cpp/naming/resolver_component_test_shell_script_wrapper.cc \
+RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_SRC = \
+    test/cpp/naming/resolver_component_tests_with_run_tests_invoker.cc \
 
-RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_SRC))))
+RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker: openssl_dep_error
 
 else
 
@@ -19326,26 +19326,26 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
 
-$(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_test_shell_script_wrapper
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker
 
 endif
 
 endif
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_test_shell_script_wrapper.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_with_run_tests_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_resolver_component_test_shell_script_wrapper: $(RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_OBJS:.o=.dep)
+deps_resolver_component_tests_with_run_tests_invoker: $(RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(RESOLVER_COMPONENT_TEST_SHELL_SCRIPT_WRAPPER_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TESTS_WITH_RUN_TESTS_INVOKER_OBJS:.o=.dep)
 endif
 endif
 

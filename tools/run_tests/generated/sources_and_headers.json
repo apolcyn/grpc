@@ -5576,9 +5576,9 @@
     "headers": [], 
     "is_filegroup": false, 
     "language": "c++", 
-    "name": "resolver_component_test_shell_script_wrapper", 
+    "name": "resolver_component_tests_with_run_tests_invoker", 
     "src": [
-      "test/cpp/naming/resolver_component_test_shell_script_wrapper.cc"
+      "test/cpp/naming/resolver_component_tests_with_run_tests_invoker.cc"
     ], 
     "third_party": false, 
     "type": "target"

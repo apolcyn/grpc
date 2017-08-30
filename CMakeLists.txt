@@ -770,7 +770,7 @@ if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx resolver_component_test)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx resolver_component_test_shell_script_wrapper)
+add_dependencies(buildtests_cxx resolver_component_tests_with_run_tests_invoker)
 endif()
 
 add_custom_target(buildtests
@@ -14583,14 +14583,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(resolver_component_test_shell_script_wrapper
-  test/cpp/naming/resolver_component_test_shell_script_wrapper.cc
+add_executable(resolver_component_tests_with_run_tests_invoker
+  test/cpp/naming/resolver_component_tests_with_run_tests_invoker.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(resolver_component_test_shell_script_wrapper
+target_include_directories(resolver_component_tests_with_run_tests_invoker
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14610,7 +14610,7 @@ target_include_directories(resolver_component_test_shell_script_wrapper
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(resolver_component_test_shell_script_wrapper
+target_link_libraries(resolver_component_tests_with_run_tests_invoker
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util

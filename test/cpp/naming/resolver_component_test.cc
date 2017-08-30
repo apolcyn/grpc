@@ -305,7 +305,15 @@ void TestResolves(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
   GRPC_RESOLVER_UNREF(exec_ctx, resolver, NULL);
 }
 
-TEST(ResolverTest, ResolvesRelevantRecords) {
+}  // namespace
+
+int main(int argc, char **argv) {
+  grpc::testing::InitTest(&argc, &argv, true);
+  if (FLAGS_target_name == "") {
+    gpr_log(GPR_ERROR, "Missing target_name param.");
+    abort();
+  }
+
   grpc_init();
   grpc_exec_ctx exec_ctx = GRPC_EXEC_CTX_INIT;
   ArgsStruct args;
@@ -318,16 +326,4 @@ TEST(ResolverTest, ResolvesRelevantRecords) {
   ArgsFinish(&exec_ctx, &args);
   grpc_exec_ctx_finish(&exec_ctx);
   grpc_shutdown();
-}
-
-}  // namespace
-
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  grpc::testing::InitTest(&argc, &argv, true);
-  if (FLAGS_target_name == "") {
-    gpr_log(GPR_ERROR, "Missing target_name param.");
-    abort();
-  }
-  return RUN_ALL_TESTS();
 }

@@ -1,31 +1,16 @@
-<%def name="run_resolver_component_tests(tests)">#!/bin/bash
-# Copyright 2015 gRPC authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+<%def name="resolver_component_tests(tests)">
+DNS_PORT=`$PICK_PORT_BINDIR/pick_port_main | grep "Got port" | awk '{print $3}'`
+echo "dns port is $DNS_PORT"
+if [[ $DNS_PORT == 0 ]]; then echo "failed to get port" && exit 1; fi
 
-# This file is auto-generated
+if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
+  echo "This test only works under GRPC_DNS_RESOLVER=ares. Have GRPC_DNS_RESOLVER=$GRPC_DNS_RESOLVER" && exit 1
+fi
+export GRPC_DNS_RESOLVER=ares
 
-set -ex
-
-# change to grpc repo root
-cd $(dirname $0)/../../..
-
-DNS_PORT="$1"
-TEST_BIN_DIR="$2"
-
-echo "Directory of test binary relative to repo root is: |$TEST_BIN_DIR|"
+echo "Directory of test binary relative to repo root is: |$RESOLVER_TEST_BINDIR|"
 echo "Start a local DNS server in the background on port $DNS_PORT"
-tools/run_tests/python_utils/dns_server.py --dns_port="$DNS_PORT" 2>&1 > /dev/null &
+$INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS --dns_port="$DNS_PORT" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
 echo "Local DNS server started. PID: $DNS_SERVER_PID"
 
@@ -60,7 +45,7 @@ trap terminate_all SIGTERM
 EXIT_CODE=0
 
 % for test in tests:
-$TEST_BIN_DIR/resolver_component_test \\
+$RESOLVER_TEST_BINDIR/resolver_component_test \\
 
   --target_name='${test['target_name']}' \\
 
@@ -76,4 +61,5 @@ wait $! || EXIT_CODE=1
 % endfor
 kill -SIGTERM $DNS_SERVER_PID
 wait
+# TODO: eagerly recycle $DNS_PORT. As is, if using the port server, this relies on the allocated port to get automatically recycled due to max age.
 exit $EXIT_CODE</%def>

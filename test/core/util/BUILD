@@ -18,6 +18,8 @@ licenses(["notice"])  # Apache v2
 
 grpc_package(name = "test/core/util", visibility = "public")
 
+licenses(["notice"])  # Apache v2
+
 grpc_cc_library(
     name = "gpr_test_util",
     srcs = [
@@ -100,4 +102,13 @@ grpc_cc_library(
 sh_library(
     name = "fuzzer_one_entry_runner",
     srcs = ["fuzzer_one_entry_runner.sh"],
+)
+
+grpc_cc_binary(
+    name = "pick_port_main",
+    srcs = ["pick_port_main.c"],
+    deps = [
+        ":grpc_test_util",
+        "//:grpc",
+    ],
 )

@@ -63,7 +63,7 @@ def start_local_dns_server(dns_server_port):
       start += next_read
     _push_record(name, dns.Record_TXT(*txt_data_list, ttl=r_ttl))
 
-  with open('tools/run_tests/name_resolution/resolver_test_record_groups.yaml', 'r') as config:
+  with open('test/cpp/naming/resolver_test_record_groups.yaml', 'r') as config:
     test_records_config = yaml.load(config)
   common_zone_name = test_records_config['resolver_component_tests_common_zone_name']
   for group in test_records_config['resolver_component_tests']:
