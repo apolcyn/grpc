@@ -308,6 +308,7 @@ void TestResolves(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
 }  // namespace
 
 int main(int argc, char **argv) {
+  // TODO: make this a gtest-style c++ test if possible
   grpc::testing::InitTest(&argc, &argv, true);
   if (FLAGS_target_name == "") {
     gpr_log(GPR_ERROR, "Missing target_name param.");

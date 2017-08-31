@@ -22,11 +22,11 @@ cd $(dirname $0)/../../..
 
 # if we're using run_tests.py, then rely on the invoker of this
 # shell script to tell where the other binaries are
-PICK_PORT_BINDIR="$1"
-RESOLVER_TEST_BINDIR="$PICK_PORT_BINDIR"
+RESOLVER_TEST_BINPATH="$1"
+PICK_PORT_BINPATH="$2"
 INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="python test/cpp/naming/dns_server.py"
 
-DNS_PORT=`$PICK_PORT_BINDIR/pick_port_main | grep "Got port" | awk '{print $3}'`
+DNS_PORT=`$PICK_PORT_BINPATH | grep "Got port" | awk '{print $3}'`
 echo "dns port is $DNS_PORT"
 if [[ $DNS_PORT == 0 ]]; then echo "failed to get port" && exit 1; fi
 
@@ -35,7 +35,6 @@ if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
 fi
 export GRPC_DNS_RESOLVER=ares
 
-echo "Directory of test binary relative to repo root is: |$RESOLVER_TEST_BINDIR|"
 echo "Start a local DNS server in the background on port $DNS_PORT"
 $INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS --dns_port="$DNS_PORT" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
@@ -71,7 +70,7 @@ function terminate_all {
 trap terminate_all SIGTERM
 EXIT_CODE=0
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True' \
   --expected_chosen_service_config='' \
@@ -79,7 +78,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-multi-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.5:1234,True;1.2.3.6:1234,True;1.2.3.7:1234,True' \
   --expected_chosen_service_config='' \
@@ -87,7 +86,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv6-single-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1001]:1234,True' \
   --expected_chosen_service_config='' \
@@ -95,7 +94,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv6-multi-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1003]:1234,True;[2607:f8b0:400a:801::1004]:1234,True' \
   --expected_chosen_service_config='' \
@@ -103,7 +102,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-simple-service-config.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}' \
@@ -111,7 +110,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='ipv4-no-srv-simple-service-config.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}' \
@@ -119,7 +118,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='ipv4-no-config-for-cpp.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -127,7 +126,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='ipv4-cpp-config-has-zero-percentage.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -135,7 +134,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='ipv4-second-language-is-cpp.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}' \
@@ -143,7 +142,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='ipv4-config-with-percentages.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}' \
@@ -151,7 +150,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True;1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -159,7 +158,7 @@ $RESOLVER_TEST_BINDIR/resolver_component_test \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINDIR/resolver_component_test \
+$RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv6-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1002]:443,False' \
   --expected_chosen_service_config='' \

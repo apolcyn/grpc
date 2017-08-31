@@ -17,10 +17,10 @@
  */
 
 #include <grpc/grpc.h>
+#include <stdio.h>
+#include "test/core/util/port.h"
 #include "test/core/util/port.h"
 #include "test/core/util/test_config.h"
-#include "test/core/util/port.h"
-#include <stdio.h>
 
 int main(int argc, char** argv) {
   grpc_init();

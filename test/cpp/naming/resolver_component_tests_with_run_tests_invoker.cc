@@ -16,6 +16,7 @@
  *
  */
 
+#include <gflags/gflags.h>
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
@@ -27,19 +28,31 @@
 
 #include "test/cpp/util/test_config.h"
 
+DEFINE_bool(unsecure, false, "use the unsecure grpc build");
+
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
+  std::string test_binary_name = "resolver_component_test";
+  if (FLAGS_unsecure) {
+    test_binary_name.append("_unsecure");
+  }
   grpc_init();
-  char *exec_args[3];
+  char *exec_args[4];
   exec_args[0] =
       (char *)"test/cpp/naming/resolver_component_tests_with_run_tests.sh";
   // pass the current binary's directory relative to repo root
   std::string my_bin = argv[0];
-  std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
-  gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
+  std::string bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+  std::string const test_binary_path = bin_dir + "/" + test_binary_name;
+  std::string const pick_port_binary_path = bin_dir + "/pick_port_main";
+  gpr_log(GPR_INFO,
+          "passing %s as test binary path, and %s as pick port binary path. my "
+          "bin is %s",
+          test_binary_path.c_str(), pick_port_binary_path.c_str(),
           my_bin.c_str());
-  exec_args[1] = (char *)bin_dir.c_str();
-  exec_args[2] = NULL;
+  exec_args[1] = (char *)test_binary_path.c_str();
+  exec_args[2] = (char *)pick_port_binary_path.c_str();
+  exec_args[3] = NULL;
   execv(exec_args[0], exec_args);
   gpr_log(GPR_ERROR, "exec %s failed.", exec_args[0]);
   abort();

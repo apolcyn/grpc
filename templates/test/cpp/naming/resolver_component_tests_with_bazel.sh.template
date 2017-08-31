@@ -20,9 +20,17 @@
 
   set -ex
 
+  UNSECURE=`echo "$1" | grep --unsecure= | cut -d "=" -f 2`
+  if [[ "$UNSECURE == "true" ]]; then
+    RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test_unsecure
+  elif [[ "$UNSECURE == "false" ]]; then
+    RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test
+  else
+    echo "--unsecure arg should be true or false. Have $1"
+  fi
+
   # Use bazel's TEST_SRCDIR to find the other binaries if we're running under bazel
-  RESOLVER_TEST_BINDIR="$TEST_SRCDIR/test/cpp/naming"
-  PICK_PORT_BINDIR="$TEST_SRCDIR/test/core/util"
+  PICK_PORT_BINPATH="$TEST_SRCDIR/test/core/util/pick_port_main"
   # Invoke the "grpc_py_binary" bazel target binary
   INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="$TEST_SRCDIR/test/cpp/naming/dns_server"
   ${resolver_component_tests(resolver_component_test_cases)}

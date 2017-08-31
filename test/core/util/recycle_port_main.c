@@ -18,10 +18,10 @@
 
 #include <grpc/grpc.h>
 #include <grpc/support/log.h>
-#include "test/core/util/port.h"
-#include "test/core/util/test_config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "test/core/util/port.h"
+#include "test/core/util/test_config.h"
 
 int main(int argc, char** argv) {
   GPR_ASSERT(argc == 2);

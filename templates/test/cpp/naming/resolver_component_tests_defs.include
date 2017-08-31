@@ -1,5 +1,5 @@
 <%def name="resolver_component_tests(tests)">
-DNS_PORT=`$PICK_PORT_BINDIR/pick_port_main | grep "Got port" | awk '{print $3}'`
+DNS_PORT=`$PICK_PORT_BINPATH | grep "Got port" | awk '{print $3}'`
 echo "dns port is $DNS_PORT"
 if [[ $DNS_PORT == 0 ]]; then echo "failed to get port" && exit 1; fi
 
@@ -8,7 +8,6 @@ if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
 fi
 export GRPC_DNS_RESOLVER=ares
 
-echo "Directory of test binary relative to repo root is: |$RESOLVER_TEST_BINDIR|"
 echo "Start a local DNS server in the background on port $DNS_PORT"
 $INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS --dns_port="$DNS_PORT" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
@@ -45,7 +44,7 @@ trap terminate_all SIGTERM
 EXIT_CODE=0
 
 % for test in tests:
-$RESOLVER_TEST_BINDIR/resolver_component_test \\
+$RESOLVER_TEST_BINPATH \\
 
   --target_name='${test['target_name']}' \\
 

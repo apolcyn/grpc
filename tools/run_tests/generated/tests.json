@@ -4321,7 +4321,31 @@
     ]
   }, 
   {
-    "args": [], 
+    "args": [
+      "--unsecure=true"
+    ], 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "resolver_component_tests_with_run_tests_invoker_unsecure", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ]
+  }, 
+  {
+    "args": [
+      "--unsecure=false"
+    ], 
     "ci_platforms": [
       "linux", 
       "mac", 
