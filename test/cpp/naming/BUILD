@@ -22,7 +22,7 @@ package(
 
 licenses(["notice"])  # Apache v2
 
-load("//bazel:grpc_build_system.bzl", "grpc_cc_test", "grpc_sh_test", "grpc_py_binary")
+load("//bazel:grpc_build_system.bzl", "grpc_cc_test", "grpc_sh_test", "grpc_py_binary", "grpc_cc_binary")
 
 grpc_cc_test(
     name = "resolver_component_test",
@@ -43,6 +43,25 @@ grpc_cc_test(
     ],
 )
 
+grpc_cc_test(
+    name = "resolver_component_test_unsecure",
+    srcs = [
+        "resolver_component_test.cc",
+    ],
+    external_deps = [
+        "gtest",
+    ],
+    deps = [
+        "//test/cpp/util:test_util_unsecure",
+        "//test/core/util:grpc_test_util_unsecure",
+        "//test/core/util:gpr_test_util",
+        "//:grpc++_unsecure",
+        "//:grpc_unsecure",
+        "//:gpr",
+        "//test/cpp/util:test_config",
+    ],
+)
+
 grpc_py_binary(
      name = "dns_server",
      srcs = ["dns_server.py"],
@@ -50,9 +69,19 @@ grpc_py_binary(
          "resolver_test_record_groups.yaml",
      ],
      deps = [
-         "//twisted:TwistedCore",
-         "//yaml"
+         "//py/twisted:TwistedCore",
+         "//py/yaml"
      ],
+)
+
+grpc_cc_binary(
+    name = "pick_port_main",
+    srcs = ["pick_port_main.cc"],
+    deps = [
+        "//test/core/util:grpc_test_util",
+        "//test/core/util:gpr_test_util",
+        "//:grpc",
+    ],
 )
 
 grpc_sh_test(
@@ -61,9 +90,28 @@ grpc_sh_test(
         "resolver_component_tests_with_bazel.sh",
     ],
     data = [
-        "//test/core/util:pick_port_main",
+        ":pick_port_main",
         ":resolver_component_test",
         ":dns_server",
         "resolver_test_record_groups.yaml", # include the transitive dependency so that the py binary can locate this
     ],
+    args = [
+        "--unsecure=false",
+    ]
+)
+
+grpc_sh_test(
+    name = "resolver_component_tests_with_bazel_unsecure",
+    srcs = [
+        "resolver_component_tests_with_bazel.sh",
+    ],
+    data = [
+        ":pick_port_main",
+        ":resolver_component_test_unsecure",
+        ":dns_server",
+        "resolver_test_record_groups.yaml", # include the transitive dependency so that the py binary can locate this
+    ],
+    args = [
+        "--unsecure=true",
+    ]
 )

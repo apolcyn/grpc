@@ -1262,6 +1262,7 @@ h2_sockpair+trace_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair+trace_nosec_test
 h2_sockpair_1byte_nosec_test: $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test
 h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
+pick_port_main: $(BINDIR)/$(CONFIG)/pick_port_main
 resolver_component_test_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure
 resolver_component_test: $(BINDIR)/$(CONFIG)/resolver_component_test
 resolver_component_tests_with_run_tests_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker_unsecure
@@ -1648,6 +1649,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/boringssl_x509_test \
   $(BINDIR)/$(CONFIG)/boringssl_tab_test \
   $(BINDIR)/$(CONFIG)/boringssl_v3name_test \
+  $(BINDIR)/$(CONFIG)/pick_port_main \
   $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker_unsecure \
@@ -1729,6 +1731,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/thread_manager_test \
   $(BINDIR)/$(CONFIG)/thread_stress_test \
   $(BINDIR)/$(CONFIG)/writes_per_rpc_test \
+  $(BINDIR)/$(CONFIG)/pick_port_main \
   $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_with_run_tests_invoker_unsecure \
@@ -19269,6 +19272,49 @@ deps_inproc_nosec_test: $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
 
 ifneq ($(NO_DEPS),true)
 -include $(INPROC_NOSEC_TEST_OBJS:.o=.dep)
+endif
+
+
+PICK_PORT_MAIN_SRC = \
+    test/cpp/naming/pick_port_main.cc \
+
+PICK_PORT_MAIN_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(PICK_PORT_MAIN_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/pick_port_main: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.0.0+.
+
+$(BINDIR)/$(CONFIG)/pick_port_main: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/pick_port_main: $(PROTOBUF_DEP) $(PICK_PORT_MAIN_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(PICK_PORT_MAIN_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/pick_port_main
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/pick_port_main.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc.a
+
+deps_pick_port_main: $(PICK_PORT_MAIN_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(PICK_PORT_MAIN_OBJS:.o=.dep)
+endif
 endif
 
 

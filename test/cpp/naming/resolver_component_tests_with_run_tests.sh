@@ -69,6 +69,8 @@ function terminate_all {
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
+# TODO: this test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
+# in the resolver.
 
 $RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \

@@ -50,6 +50,22 @@ def main():
       ],
       'targets': [
           {
+              # This target is needed by the shell script in this test.
+              # It's labelled as a c++ test only to make sure that it gets built
+              # at the same time that the rest of the binaries in this test are built.
+              'name': 'pick_port_main',
+              'build': 'test',
+              'run': False,
+              'language': 'c++',
+              'src': ['test/cpp/naming/pick_port_main.cc'],
+              'deps': [
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc',
+              ],
+          }
+      ] + [
+          {
               'name': 'resolver_component_test' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',

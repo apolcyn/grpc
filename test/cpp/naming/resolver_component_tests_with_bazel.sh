@@ -19,17 +19,17 @@ set -ex
 
 UNSECURE=`echo "$1" | grep '\--unsecure=' | cut -d "=" -f 2`
 if [[ "$UNSECURE" == true ]]; then
-  RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test_unsecure
+  RESOLVER_TEST_BINPATH="$TEST_SRCDIR/__main__/test/cpp/naming/resolver_component_test_unsecure"
 elif [[ "$UNSECURE" == false ]]; then
-  RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test
+  RESOLVER_TEST_BINPATH="$TEST_SRCDIR/__main__/test/cpp/naming/resolver_component_test"
 else
   echo "--unsecure arg should be true or false. Have $UNSECURE. (whole arge was $1)" && exit 1
 fi
 
 # Use bazel's TEST_SRCDIR to find the other binaries if we're running under bazel
-PICK_PORT_BINPATH="$TEST_SRCDIR/test/core/util/pick_port_main"
+PICK_PORT_BINPATH="$TEST_SRCDIR/__main__/test/cpp/naming/pick_port_main"
 # Invoke the "grpc_py_binary" bazel target binary
-INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="$TEST_SRCDIR/test/cpp/naming/dns_server"
+INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="$TEST_SRCDIR/__main__/test/cpp/naming/dns_server"
 
 DNS_PORT=`$PICK_PORT_BINPATH | grep "Got port" | awk '{print $3}'`
 echo "dns port is $DNS_PORT"
@@ -74,6 +74,8 @@ function terminate_all {
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
+# TODO: this test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
+# in the resolver.
 
 $RESOLVER_TEST_BINPATH \
   --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \
