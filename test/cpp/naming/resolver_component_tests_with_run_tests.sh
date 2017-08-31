@@ -168,5 +168,6 @@ wait $! || EXIT_CODE=1
 
 kill -SIGTERM $DNS_SERVER_PID
 wait
-# TODO: eagerly recycle $DNS_PORT. As is, if using the port server, this relies on the allocated port to get automatically recycled due to max age.
+# Give the port back to the port server
+curl "localhost:32766/drop/$DNS_PORT"
 exit $EXIT_CODE

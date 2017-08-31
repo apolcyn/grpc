@@ -17,13 +17,13 @@
 
 set -ex
 
-UNSECURE=`echo "$1" | grep --unsecure= | cut -d "=" -f 2`
-if [[ "$UNSECURE == "true" ]]; then
+UNSECURE=`echo "$1" | grep '\--unsecure=' | cut -d "=" -f 2`
+if [[ "$UNSECURE" == true ]]; then
   RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test_unsecure
-elif [[ "$UNSECURE == "false" ]]; then
+elif [[ "$UNSECURE" == false ]]; then
   RESOLVER_TEST_BINPATH=$TEST_SRCDIR/test/cpp/naming/resolver_component_test
 else
-  echo "--unsecure arg should be true or false. Have $1"
+  echo "--unsecure arg should be true or false. Have $UNSECURE. (whole arge was $1)" && exit 1
 fi
 
 # Use bazel's TEST_SRCDIR to find the other binaries if we're running under bazel
@@ -173,5 +173,4 @@ wait $! || EXIT_CODE=1
 
 kill -SIGTERM $DNS_SERVER_PID
 wait
-# TODO: eagerly recycle $DNS_PORT. As is, if using the port server, this relies on the allocated port to get automatically recycled due to max age.
 exit $EXIT_CODE

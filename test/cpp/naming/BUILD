@@ -43,7 +43,7 @@ grpc_cc_test(
     ],
 )
 
-py_binary(
+grpc_py_binary(
      name = "dns_server",
      srcs = ["dns_server.py"],
      data = [
@@ -51,8 +51,7 @@ py_binary(
      ],
      deps = [
          "//twisted:TwistedCore",
-         "//twisted:names",
-         "//yaml",
+         "//yaml"
      ],
 )
 

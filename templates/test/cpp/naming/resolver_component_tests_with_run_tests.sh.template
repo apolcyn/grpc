@@ -29,3 +29,6 @@
   PICK_PORT_BINPATH="$2"
   INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="python test/cpp/naming/dns_server.py"
   ${resolver_component_tests(resolver_component_test_cases)}
+  # Give the port back to the port server
+  curl "localhost:32766/drop/$DNS_PORT"
+  exit $EXIT_CODE
