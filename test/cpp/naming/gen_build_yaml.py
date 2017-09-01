@@ -50,22 +50,6 @@ def main():
       ],
       'targets': [
           {
-              # This target is needed by the shell script in this test.
-              # It's labelled as a c++ test only to make sure that it gets built
-              # at the same time that the rest of the binaries in this test are built.
-              'name': 'pick_port_main',
-              'build': 'test',
-              'run': False,
-              'language': 'c++',
-              'src': ['test/cpp/naming/pick_port_main.cc'],
-              'deps': [
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'grpc',
-              ],
-          }
-      ] + [
-          {
               'name': 'resolver_component_test' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',
@@ -85,12 +69,12 @@ def main():
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ] + [
           {
-              'name': 'resolver_component_tests_with_run_tests_invoker' + unsecure_build_config_suffix,
+              'name': 'resolver_component_tests_runner_invoker' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',
               'gtest': False,
               'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_with_run_tests_invoker.cc'],
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
                   'grpc++_test_util' + unsecure_build_config_suffix,
@@ -102,7 +86,7 @@ def main():
                   'grpc++_test_config',
               ],
               'args': [
-                  '--unsecure=%s' % (unsecure_build_config_suffix and 'true' or 'false'),
+                  '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ]

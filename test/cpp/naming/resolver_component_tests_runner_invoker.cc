@@ -16,8 +16,7 @@
  *
  */
 
-/* Provides a c-binary that run_tests.py can invoke to start the resolver
- * component tests shell script. */
+/* Intended for running the resolver component test under run_tests.py */
 
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
@@ -31,25 +30,27 @@
 
 #include "test/cpp/util/test_config.h"
 
-DEFINE_bool(secure, false, "use secure target or not");
+DEFINE_string(test_bin_name, "",
+              "Name, without the preceding path, of the test binary");
 
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
   grpc_init();
-  const std::string binary_suffix = FLAGS_secure ? "_secure" : "";
-  const std::string binary =
-      std::string("resolver_component_test") + binary_suffix;
-  char *exec_args[3];
-  exec_args[0] =
-      (char *)"tools/run_tests/name_resolution/run_resolver_component_tests.sh";
-  // pass the current binary's directory relative to repo root
+  // get the current binary's directory relative to repo root to invoke the
+  // correct build config (asan/tsan/dbg, etc.)
   std::string my_bin = argv[0];
-  std::string const bin_dir =
-      my_bin.substr(0, my_bin.rfind('/')).append(binary);
+  std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
   gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
           my_bin.c_str());
-  exec_args[1] = (char *)bin_dir.c_str();
-  exec_args[2] = NULL;
+  char *exec_args[5];
+  exec_args[0] = (char *)"test/cpp/naming/resolver_component_tests_runner.sh";
+  const std::string test_bin_path_arg =
+      "--test_bin_path=" + bin_dir + "/" + FLAGS_test_bin_name;
+  exec_args[1] = (char *)test_bin_path_arg.c_str();
+  exec_args[2] =
+      (char *)"--dns_server_bin_path=test/cpp/naming/test_dns_server.py";
+  exec_args[3] = (char*)"--records_config_path=test/cpp/naming/resolver_test_record_groups.yaml";
+  exec_args[4] = NULL;
   execv(exec_args[0], exec_args);
   gpr_log(GPR_ERROR, "exec %s failed.", exec_args[0]);
   abort();

@@ -1,4 +1,5 @@
-# Copyright 2017 gRPC authors.
+#!/bin/bash
+# Copyright 2015 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package(
-    default_visibility = ["//visibility:public"],
-    features = [
-        "-layering_check",
-        "-parse_headers",
-    ],
-)
+# Intended for running the resolver component test under bazel
 
-licenses(["notice"])  # Apache v2
+set -ex
 
-load("//bazel:grpc_build_system.bzl", "grpc_cc_binary")
+FLAGS_test_bin_name=`echo $1 | grep '\--test_bin_name=' | cut -d "=" -f 2`
 
-load(":generate_resolver_component_tests.bzl", "generate_resolver_component_tests")
-
-load(":generate_test_dns_server_target.bzl", "generate_test_dns_server_target")
-
-generate_resolver_component_tests()
-generate_test_dns_server_target()
+exec $TEST_SRCDIR/__main__/test/cpp/naming/resolver_component_tests_runner.sh \
+  "--test_bin_path=$TEST_SRCDIR/__main__/test/cpp/naming/$FLAGS_test_bin_name" \
+  "--dns_server_bin_path=$TEST_SRCDIR/__main__/test/cpp/naming/test_dns_server.py" \
+  "--records_config_path=$TEST_SRCDIR/__main__/test/cpp/naming/resolver_test_record_groups.yaml"

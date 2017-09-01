@@ -1,4 +1,5 @@
-# Copyright 2017 gRPC authors.
+#!/usr/bin/env python2.7
+# Copyright 2015 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package(
-    default_visibility = ["//visibility:public"],
-    features = [
-        "-layering_check",
-        "-parse_headers",
+load("//bazel:grpc_build_system.bzl", "grpc_py_binary")
+
+def generate_test_dns_server_target():
+  grpc_py_binary(
+    name = "test_dns_server",
+    srcs = ["test_dns_server.py"],
+    data = [
+        "resolver_test_record_groups.yaml",
     ],
-)
-
-licenses(["notice"])  # Apache v2
-
-load("//bazel:grpc_build_system.bzl", "grpc_cc_binary")
-
-load(":generate_resolver_component_tests.bzl", "generate_resolver_component_tests")
-
-load(":generate_test_dns_server_target.bzl", "generate_test_dns_server_target")
-
-generate_resolver_component_tests()
-generate_test_dns_server_target()
+  )

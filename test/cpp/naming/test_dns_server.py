@@ -44,7 +44,7 @@ class NoFileAuthority(authority.FileAuthority):
     self.soa = soa
     self.records = records
 
-def start_local_dns_server(dns_server_port):
+def start_local_dns_server(port_output_path):
   all_records = {}
   def _push_record(name, r):
     print('pushing record: |%s|' % name)
@@ -92,7 +92,6 @@ def start_local_dns_server(dns_server_port):
           _maybe_split_up_txt_data(record_full_name, r_data, r_ttl)
   # Server health check record
   _push_record(_SERVER_HEALTH_CHECK_RECORD_NAME, dns.Record_A(_SERVER_HEALTH_CHECK_RECORD_DATA, ttl=0))
-  print('starting local dns server on 127.0.0.1:%s' % dns_server_port)
   soa_record = dns.Record_SOA(mname = common_zone_name)
   test_domain_com = NoFileAuthority(
     soa = (common_zone_name, soa_record),
@@ -101,11 +100,14 @@ def start_local_dns_server(dns_server_port):
   server = twisted.names.server.DNSServerFactory(
       authorities=[test_domain_com], verbose=2)
   server.noisy = 2
-  twisted.internet.reactor.listenTCP(dns_server_port, server)
+  port = twisted.internet.reactor.listenTCP(0, server)
   dns_proto = twisted.names.dns.DNSDatagramProtocol(server)
   dns_proto.noisy = 2
-  twisted.internet.reactor.listenUDP(dns_server_port, dns_proto)
+  twisted.internet.reactor.listenUDP(port.getHost().port, dns_proto)
+  with open(port_output_path, 'w') as port_out:
+    port_out.write('port=%s\n' % port.getHost().port)
 
+  print('starting local dns server on 127.0.0.1:%s' % port.getHost().port)
   print('starting twisted.internet.reactor')
   twisted.internet.reactor.suggestThreadPoolSize(1)
   twisted.internet.reactor.run()
@@ -118,13 +120,16 @@ def _quit_on_signal(signum, _frame):
 
 def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
-  argp.add_argument('-p', '--dns_port', default=None, type=int)
+  argp.add_argument('-o', '--port_output_path', default=None, type=str)
+  argp.add_argument('-r', '--records_config_path', default=None, type=str,
+                    help=('Directory of resolver_test_record_groups.yaml file. '
+                          'Defauls to path needed when the test is invoked as part of run_tests.py.'))
   args = argp.parse_args()
   signal.signal(signal.SIGALRM, _quit_on_signal)
   signal.signal(signal.SIGTERM, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
   signal.alarm(2 * 60)
-  start_local_dns_server(args.dns_port)
+  start_local_dns_server(args.port_output_path)
 
 if __name__ == '__main__':
   main()

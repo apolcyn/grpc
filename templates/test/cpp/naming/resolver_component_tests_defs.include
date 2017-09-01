@@ -1,17 +1,39 @@
-<%def name="resolver_component_tests(tests)">
-DNS_PORT=`$PICK_PORT_BINPATH | grep "Got port" | awk '{print $3}'`
-echo "dns port is $DNS_PORT"
-if [[ $DNS_PORT == 0 ]]; then echo "failed to get port" && exit 1; fi
+<%def name="resolver_component_tests(tests)">#!/bin/bash
+# Copyright 2015 gRPC authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is auto-generated
+
+set -ex
+
+# all command args required in this set order
+FLAGS_test_bin_path=`echo "$1" | grep '\--test_bin_path=' | cut -d "=" -f 2`
+FLAGS_dns_server_bin_path=`echo "$2" | grep '\--dns_server_bin_path=' | cut -d "=" -f 2`
+FLAGS_records_config_path=`echo "$3" | grep '\--records_config_bin_path=' | cut -d "=" -f 2`
 
 if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
   echo "This test only works under GRPC_DNS_RESOLVER=ares. Have GRPC_DNS_RESOLVER=$GRPC_DNS_RESOLVER" && exit 1
 fi
 export GRPC_DNS_RESOLVER=ares
 
-echo "Start a local DNS server in the background on port $DNS_PORT"
-$INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS --dns_port="$DNS_PORT" 2>&1 > /dev/null &
+DNS_PORT_OUTPUT_PATH="$(mktemp -d)/fifo"
+mkfifo "$DNS_PORT_OUTPUT_PATH"
+$FLAGS_dns_server_bin_path --records_config_path=$FLAGS_records_config_path --port_output_path="$DNS_PORT_OUTPUT_PATH" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
 echo "Local DNS server started. PID: $DNS_SERVER_PID"
+DNS_PORT=`timeout 10 cat $DNS_PORT_OUTPUT_PATH | grep 'port=' | cut -d "=" -f 2`
+if [[ "$DNS_PORT" == "" ]]; then echo "Failed to find out test DNS server port" && exit 1; fi
 
 # Health check local DNS server TCP and UDP ports
 for ((i=0;i<30;i++));
@@ -42,11 +64,11 @@ function terminate_all {
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
-# TODO: this test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
+# TODO: have test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
 # in the resolver.
 
 % for test in tests:
-$RESOLVER_TEST_BINPATH \\
+$FLAGS_test_bin_path \\
 
   --target_name='${test['target_name']}' \\
 
@@ -61,4 +83,5 @@ wait $! || EXIT_CODE=1
 
 % endfor
 kill -SIGTERM $DNS_SERVER_PID
-wait</%def>
+wait
+exit $EXIT_CODE</%def>

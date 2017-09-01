@@ -17,28 +17,23 @@
 
 set -ex
 
-# change to grpc repo root
-cd $(dirname $0)/../../..
-
-# if we're using run_tests.py, then rely on the invoker of this
-# shell script to tell where the other binaries are
-RESOLVER_TEST_BINPATH="$1"
-PICK_PORT_BINPATH="$2"
-INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS="python test/cpp/naming/dns_server.py"
-
-DNS_PORT=`$PICK_PORT_BINPATH | grep "Got port" | awk '{print $3}'`
-echo "dns port is $DNS_PORT"
-if [[ $DNS_PORT == 0 ]]; then echo "failed to get port" && exit 1; fi
+# all command args required in this set order
+FLAGS_test_bin_path=`echo "$1" | grep '\--test_bin_path=' | cut -d "=" -f 2`
+FLAGS_dns_server_bin_path=`echo "$2" | grep '\--dns_server_bin_path=' | cut -d "=" -f 2`
+FLAGS_records_config_path=`echo "$3" | grep '\--records_config_bin_path=' | cut -d "=" -f 2`
 
 if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
   echo "This test only works under GRPC_DNS_RESOLVER=ares. Have GRPC_DNS_RESOLVER=$GRPC_DNS_RESOLVER" && exit 1
 fi
 export GRPC_DNS_RESOLVER=ares
 
-echo "Start a local DNS server in the background on port $DNS_PORT"
-$INVOKE_DNS_SERVER_CMD_WITHOUT_ARGS --dns_port="$DNS_PORT" 2>&1 > /dev/null &
+DNS_PORT_OUTPUT_PATH="$(mktemp -d)/fifo"
+mkfifo "$DNS_PORT_OUTPUT_PATH"
+$FLAGS_dns_server_bin_path --records_config_path=$FLAGS_records_config_path --port_output_path="$DNS_PORT_OUTPUT_PATH" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
 echo "Local DNS server started. PID: $DNS_SERVER_PID"
+DNS_PORT=`timeout 10 cat $DNS_PORT_OUTPUT_PATH | grep 'port=' | cut -d "=" -f 2`
+if [[ "$DNS_PORT" == "" ]]; then echo "Failed to find out test DNS server port" && exit 1; fi
 
 # Health check local DNS server TCP and UDP ports
 for ((i=0;i<30;i++));
@@ -69,10 +64,10 @@ function terminate_all {
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
-# TODO: this test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
+# TODO: have test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
 # in the resolver.
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv4-single-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True' \
   --expected_chosen_service_config='' \
@@ -80,7 +75,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv4-multi-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.5:1234,True;1.2.3.6:1234,True;1.2.3.7:1234,True' \
   --expected_chosen_service_config='' \
@@ -88,7 +83,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv6-single-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1001]:1234,True' \
   --expected_chosen_service_config='' \
@@ -96,7 +91,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv6-multi-target.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1003]:1234,True;[2607:f8b0:400a:801::1004]:1234,True' \
   --expected_chosen_service_config='' \
@@ -104,7 +99,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv4-simple-service-config.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]}]}' \
@@ -112,7 +107,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='ipv4-no-srv-simple-service-config.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"NoSrvSimpleService","waitForReady":true}]}]}' \
@@ -120,7 +115,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='ipv4-no-config-for-cpp.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -128,7 +123,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='ipv4-cpp-config-has-zero-percentage.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -136,7 +131,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='ipv4-second-language-is-cpp.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"CppService","waitForReady":true}]}]}' \
@@ -144,7 +139,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='ipv4-config-with-percentages.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:443,False' \
   --expected_chosen_service_config='{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"AlwaysPickedService","waitForReady":true}]}]}' \
@@ -152,7 +147,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv4-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
   --expected_addrs='1.2.3.4:1234,True;1.2.3.4:443,False' \
   --expected_chosen_service_config='' \
@@ -160,7 +155,7 @@ $RESOLVER_TEST_BINPATH \
   --local_dns_server_address=127.0.0.1:$DNS_PORT &
 wait $! || EXIT_CODE=1
 
-$RESOLVER_TEST_BINPATH \
+$FLAGS_test_bin_path \
   --target_name='srv-ipv6-target-has-backend-and-balancer.resolver-tests.grpctestingexp.' \
   --expected_addrs='[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1002]:443,False' \
   --expected_chosen_service_config='' \
@@ -170,6 +165,4 @@ wait $! || EXIT_CODE=1
 
 kill -SIGTERM $DNS_SERVER_PID
 wait
-# Give the port back to the port server
-curl "localhost:32766/drop/$DNS_PORT"
 exit $EXIT_CODE
