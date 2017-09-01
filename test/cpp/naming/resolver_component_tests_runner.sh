@@ -64,7 +64,7 @@ function terminate_all {
 
 trap terminate_all SIGTERM
 EXIT_CODE=0
-# TODO: have test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
+# TODO: this test should check for GCE residency and skip tests using _grpclb._tcp.* SRV records once GCE residency checks are made
 # in the resolver.
 
 $FLAGS_test_bin_path \

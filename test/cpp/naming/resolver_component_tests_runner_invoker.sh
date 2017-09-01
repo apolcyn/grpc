@@ -19,7 +19,8 @@ set -ex
 
 FLAGS_test_bin_name=`echo $1 | grep '\--test_bin_name=' | cut -d "=" -f 2`
 
-exec $TEST_SRCDIR/__main__/test/cpp/naming/resolver_component_tests_runner.sh \
+# Don't invoke .py directly, use bazel's bin target to get dependencies
+exec $TEST_SRCDIR/__main__/test/cpp/naming/resolver_component_tests_runner \
   "--test_bin_path=$TEST_SRCDIR/__main__/test/cpp/naming/$FLAGS_test_bin_name" \
-  "--dns_server_bin_path=$TEST_SRCDIR/__main__/test/cpp/naming/test_dns_server.py" \
+  "--dns_server_bin_path=$TEST_SRCDIR/__main__/test/cpp/naming/test_dns_server" \
   "--records_config_path=$TEST_SRCDIR/__main__/test/cpp/naming/resolver_test_record_groups.yaml"

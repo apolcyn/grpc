@@ -24,7 +24,7 @@ def generate_resolver_component_tests():
             "resolver_component_test.cc",
         ],
         external_deps = [
-            "gtest",
+            "gmock",
         ],
         deps = [
             "//test/cpp/util:test_util%s" % unsecure_build_config_suffix,
