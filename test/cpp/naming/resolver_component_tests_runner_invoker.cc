@@ -28,7 +28,14 @@
 #include <string>
 #include <vector>
 
+#include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
+
+extern "C" {
+#include "test/core/util/port.h"
+}
+
+using grpc::SubProcess;
 
 DEFINE_string(test_bin_name, "",
               "Name, without the preceding path, of the test binary");
@@ -42,16 +49,13 @@ int main(int argc, char **argv) {
   std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
   gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
           my_bin.c_str());
-  char *exec_args[5];
-  exec_args[0] = (char *)"test/cpp/naming/resolver_component_tests_runner.sh";
-  const std::string test_bin_path_arg =
-      "--test_bin_path=" + bin_dir + "/" + FLAGS_test_bin_name;
-  exec_args[1] = (char *)test_bin_path_arg.c_str();
-  exec_args[2] =
-      (char *)"--dns_server_bin_path=test/cpp/naming/test_dns_server.py";
-  exec_args[3] = (char*)"--records_config_path=test/cpp/naming/resolver_test_record_groups.yaml";
-  exec_args[4] = NULL;
-  execv(exec_args[0], exec_args);
-  gpr_log(GPR_ERROR, "exec %s failed.", exec_args[0]);
-  abort();
+  int test_dns_server_port = grpc_pick_unused_port_or_die();
+  SubProcess *test_driver = new SubProcess(
+      {"test/cpp/naming/resolver_component_tests_runner.sh",
+       "--test_bin_path=" + bin_dir + "/" + FLAGS_test_bin_name,
+       "--dns_server_bin_path=test/cpp/naming/test_dns_server.py",
+       "--records_config_path=test/cpp/naming/resolver_test_record_groups.yaml",
+       "--dns_server_port=" + std::to_string(test_dns_server_port)});
+  test_driver->Join();
+  grpc_shutdown();
 }

@@ -44,7 +44,7 @@ class NoFileAuthority(authority.FileAuthority):
     self.soa = soa
     self.records = records
 
-def start_local_dns_server(port_output_path):
+def start_local_dns_server(records_config_path, port):
   all_records = {}
   def _push_record(name, r):
     print('pushing record: |%s|' % name)
@@ -64,7 +64,7 @@ def start_local_dns_server(port_output_path):
       start += next_read
     _push_record(name, dns.Record_TXT(*txt_data_list, ttl=r_ttl))
 
-  with open('%s/resolver_test_record_groups.yaml' % os.path.dirname(os.path.realpath(__file__)), 'r') as config:
+  with open(records_config_path) as config:
     test_records_config = yaml.load(config)
   common_zone_name = test_records_config['resolver_component_tests_common_zone_name']
   for group in test_records_config['resolver_component_tests']:
@@ -100,14 +100,11 @@ def start_local_dns_server(port_output_path):
   server = twisted.names.server.DNSServerFactory(
       authorities=[test_domain_com], verbose=2)
   server.noisy = 2
-  port = twisted.internet.reactor.listenTCP(0, server)
+  twisted.internet.reactor.listenTCP(port, server)
   dns_proto = twisted.names.dns.DNSDatagramProtocol(server)
   dns_proto.noisy = 2
-  twisted.internet.reactor.listenUDP(port.getHost().port, dns_proto)
-  with open(port_output_path, 'w') as port_out:
-    port_out.write('port=%s\n' % port.getHost().port)
-
-  print('starting local dns server on 127.0.0.1:%s' % port.getHost().port)
+  twisted.internet.reactor.listenUDP(port, dns_proto)
+  print('starting local dns server on 127.0.0.1:%s' % port)
   print('starting twisted.internet.reactor')
   twisted.internet.reactor.suggestThreadPoolSize(1)
   twisted.internet.reactor.run()
@@ -120,7 +117,8 @@ def _quit_on_signal(signum, _frame):
 
 def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
-  argp.add_argument('-o', '--port_output_path', default=None, type=str)
+  argp.add_argument('-p', '--port', default=None, type=str,
+                    help='Port for DNS server to listen on for TCP and UDP.')
   argp.add_argument('-r', '--records_config_path', default=None, type=str,
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
@@ -129,7 +127,7 @@ def main():
   signal.signal(signal.SIGTERM, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
   signal.alarm(2 * 60)
-  start_local_dns_server(args.port_output_path)
+  start_local_dns_server(args.records_config_path, args.port)
 
 if __name__ == '__main__':
   main()

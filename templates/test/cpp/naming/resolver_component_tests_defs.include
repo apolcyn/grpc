@@ -21,6 +21,7 @@ set -ex
 FLAGS_test_bin_path=`echo "$1" | grep '\--test_bin_path=' | cut -d "=" -f 2`
 FLAGS_dns_server_bin_path=`echo "$2" | grep '\--dns_server_bin_path=' | cut -d "=" -f 2`
 FLAGS_records_config_path=`echo "$3" | grep '\--records_config_bin_path=' | cut -d "=" -f 2`
+FLAGS_test_dns_server_port=`echo "$3" | grep '\--test_dns_server_port=' | cut -d "=" -f 2`
 
 if [[ "$GRPC_DNS_RESOLVER" != "" && "$GRPC_DNS_RESOLVER" != ares ]]; then
   echo "This test only works under GRPC_DNS_RESOLVER=ares. Have GRPC_DNS_RESOLVER=$GRPC_DNS_RESOLVER" && exit 1
@@ -29,7 +30,7 @@ export GRPC_DNS_RESOLVER=ares
 
 DNS_PORT_OUTPUT_PATH="$(mktemp -d)/fifo"
 mkfifo "$DNS_PORT_OUTPUT_PATH"
-$FLAGS_dns_server_bin_path --records_config_path=$FLAGS_records_config_path --port_output_path="$DNS_PORT_OUTPUT_PATH" 2>&1 > /dev/null &
+"$FLAGS_dns_server_bin_path" --records_config_path="$FLAGS_records_config_path" --port="$FLAGS_test_dns_server_port" 2>&1 > /dev/null &
 DNS_SERVER_PID=$!
 echo "Local DNS server started. PID: $DNS_SERVER_PID"
 DNS_PORT=`timeout 10 cat $DNS_PORT_OUTPUT_PATH | grep 'port=' | cut -d "=" -f 2`
@@ -40,9 +41,9 @@ for ((i=0;i<30;i++));
 do
   echo "Retry health-check DNS query to local DNS server over tcp and udp"
   RETRY=0
-  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 | grep '123.123.123.123' || RETRY=1
-  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p $DNS_PORT +tries=1 +timeout=1 +tcp | grep '123.123.123.123' || RETRY=1
-  if [[ $RETRY == 0 ]]; then
+  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p "$DNS_PORT" +tries=1 +timeout=1 | grep '123.123.123.123' || RETRY=1
+  dig A health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. @localhost -p "$DNS_PORT" +tries=1 +timeout=1 +tcp | grep '123.123.123.123' || RETRY=1
+  if [[ "$RETRY" == 0 ]]; then
     break
   fi;
   sleep 0.1
