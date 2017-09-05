@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 
+#include "test/cpp/naming/resolver_component_tests_runner_invoker_common.h"
 #include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
 
@@ -42,20 +43,14 @@ DEFINE_string(test_bin_name, "",
 
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
-  grpc_init();
   // get the current binary's directory relative to repo root to invoke the
   // correct build config (asan/tsan/dbg, etc.)
   std::string my_bin = argv[0];
   std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
   gpr_log(GPR_INFO, "passing %s as relative dir. my bin is %s", bin_dir.c_str(),
           my_bin.c_str());
-  int test_dns_server_port = grpc_pick_unused_port_or_die();
-  SubProcess *test_driver = new SubProcess(
-      {"test/cpp/naming/resolver_component_tests_runner.sh",
-       "--test_bin_path=" + bin_dir + "/" + FLAGS_test_bin_name,
-       "--dns_server_bin_path=test/cpp/naming/test_dns_server.py",
-       "--records_config_path=test/cpp/naming/resolver_test_record_groups.yaml",
-       "--dns_server_port=" + std::to_string(test_dns_server_port)});
-  test_driver->Join();
-  grpc_shutdown();
+  grpc::testing::InvokeResolverComponentTestsRunner(
+      "test/cpp/naming/resolver_component_tests_runner.sh",
+      bin_dir + "/" + FLAGS_test_bin_name, "test/cpp/naming/test_dns_server.py",
+      "test/cpp/naming/resolver_test_record_groups.yaml");
 }

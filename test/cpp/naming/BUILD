@@ -22,11 +22,34 @@ package(
 
 licenses(["notice"])  # Apache v2
 
-load("//bazel:grpc_build_system.bzl", "grpc_cc_binary")
+load("//bazel:grpc_build_system.bzl", "grpc_cc_library", "grpc_sh_binary")
 
 load(":generate_resolver_component_tests.bzl", "generate_resolver_component_tests")
 
 load(":generate_test_dns_server_target.bzl", "generate_test_dns_server_target")
+
+# Meant to be invoked only through the top-level shell script driver.
+grpc_sh_binary(
+    name = "resolver_component_tests_runner",
+    srcs = [
+        "resolver_component_tests_runner.sh",
+    ],
+)
+
+grpc_cc_library(
+  name = "resolver_component_tests_runner_invoker_common",
+  srcs = ["resolver_component_tests_runner_invoker_common.cc"],
+  hdrs = ["resolver_component_tests_runner_invoker_common.h"],
+  deps = [
+      "//test/cpp/util:test_util",
+      "//test/core/util:grpc_test_util",
+      "//test/core/util:gpr_test_util",
+      "//:grpc++",
+      "//:grpc",
+      "//:gpr",
+      "//test/cpp/util:test_config",
+  ],
+)
 
 generate_resolver_component_tests()
 generate_test_dns_server_target()

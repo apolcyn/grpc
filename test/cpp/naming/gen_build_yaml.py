@@ -48,6 +48,25 @@ def main():
               'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
           } for test_case in resolver_component_data['resolver_component_tests']
       ],
+      'libs': [
+          {
+              'name': 'resolver_component_tests_runner_invoker_common',
+              'build': 'private',
+              'language': 'c++',
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.cc'],
+              'headers': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.h'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          },
+      ],
       'targets': [
           {
               'name': 'resolver_component_test' + unsecure_build_config_suffix,
@@ -77,11 +96,12 @@ def main():
               'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
-                  'grpc++_test_util' + unsecure_build_config_suffix,
-                  'grpc_test_util' + unsecure_build_config_suffix,
+                  'resolver_component_tests_runner_invoker_common',
+                  'grpc++_test_util',
+                  'grpc_test_util',
                   'gpr_test_util',
-                  'grpc++' + unsecure_build_config_suffix,
-                  'grpc' + unsecure_build_config_suffix,
+                  'grpc++',
+                  'grpc',
                   'gpr',
                   'grpc++_test_config',
               ],
