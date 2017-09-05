@@ -5596,9 +5596,9 @@
     "headers": [], 
     "is_filegroup": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_unsecure", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests_unsecure", 
     "src": [
-      "test/cpp/naming/resolver_component_tests_runner_invoker.cc"
+      "test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc"
     ], 
     "third_party": false, 
     "type": "target"
@@ -5616,9 +5616,9 @@
     "headers": [], 
     "is_filegroup": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests", 
     "src": [
-      "test/cpp/naming/resolver_component_tests_runner_invoker.cc"
+      "test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc"
     ], 
     "third_party": false, 
     "type": "target"

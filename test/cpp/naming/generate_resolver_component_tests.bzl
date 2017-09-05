@@ -43,10 +43,10 @@ def generate_resolver_component_tests():
             "resolver_component_tests_runner.sh",
         ],
     )
-    grpc_sh_test(
-        name = "resolver_component_tests_runner_invoker%s" % unsecure_build_config_suffix,
+    grpc_cc_test(
+        name = "resolver_component_tests_runner_invoker_for_bazel%s" % unsecure_build_config_suffix,
         srcs = [
-            "resolver_component_tests_runner_invoker.sh",
+            "resolver_component_tests_runner_invoker_for_bazel.cc",
         ],
         data = [
             ":resolver_component_tests_runner%s" % unsecure_build_config_suffix,

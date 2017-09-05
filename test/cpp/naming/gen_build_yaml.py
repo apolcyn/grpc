@@ -69,12 +69,12 @@ def main():
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ] + [
           {
-              'name': 'resolver_component_tests_runner_invoker' + unsecure_build_config_suffix,
+              'name': 'resolver_component_tests_runner_invoker_for_run_tests' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',
               'gtest': False,
               'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
                   'grpc++_test_util' + unsecure_build_config_suffix,

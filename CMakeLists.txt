@@ -773,10 +773,10 @@ if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx resolver_component_test)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx resolver_component_tests_runner_invoker_unsecure)
+add_dependencies(buildtests_cxx resolver_component_tests_runner_invoker_for_run_tests_unsecure)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx resolver_component_tests_runner_invoker)
+add_dependencies(buildtests_cxx resolver_component_tests_runner_invoker_for_run_tests)
 endif()
 
 add_custom_target(buildtests
@@ -14634,14 +14634,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(resolver_component_tests_runner_invoker_unsecure
-  test/cpp/naming/resolver_component_tests_runner_invoker.cc
+add_executable(resolver_component_tests_runner_invoker_for_run_tests_unsecure
+  test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(resolver_component_tests_runner_invoker_unsecure
+target_include_directories(resolver_component_tests_runner_invoker_for_run_tests_unsecure
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14661,7 +14661,7 @@ target_include_directories(resolver_component_tests_runner_invoker_unsecure
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(resolver_component_tests_runner_invoker_unsecure
+target_link_libraries(resolver_component_tests_runner_invoker_for_run_tests_unsecure
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util_unsecure
@@ -14679,14 +14679,14 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(resolver_component_tests_runner_invoker
-  test/cpp/naming/resolver_component_tests_runner_invoker.cc
+add_executable(resolver_component_tests_runner_invoker_for_run_tests
+  test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(resolver_component_tests_runner_invoker
+target_include_directories(resolver_component_tests_runner_invoker_for_run_tests
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${BORINGSSL_ROOT_DIR}/include
@@ -14706,7 +14706,7 @@ target_include_directories(resolver_component_tests_runner_invoker
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(resolver_component_tests_runner_invoker
+target_link_libraries(resolver_component_tests_runner_invoker_for_run_tests
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util

@@ -4335,7 +4335,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_unsecure", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests_unsecure", 
     "platforms": [
       "linux", 
       "mac", 
@@ -4357,7 +4357,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker", 
+    "name": "resolver_component_tests_runner_invoker_for_run_tests", 
     "platforms": [
       "linux", 
       "mac", 
