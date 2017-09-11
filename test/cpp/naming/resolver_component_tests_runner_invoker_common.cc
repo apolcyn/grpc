@@ -53,15 +53,12 @@ static void register_sighandler() {
 }
 
 namespace {
+
+const int kTestTimeoutSeconds = 60 * 2;
+
 void RunSigHandlingThread(SubProcess *test_driver, gpr_mu *test_driver_mu,
                           gpr_cv *test_driver_cv, int *test_driver_done) {
-  for (;;) {
-    if (abort_wait_for_child) {
-      gpr_log(GPR_DEBUG,
-              "Received signal. Interrupting test driver child process.");
-      test_driver->Interrupt();
-      return;
-    }
+  for (size_t i = 0; i < kTestTimeoutSeconds && !abort_wait_for_child; i++) {
     gpr_mu_lock(test_driver_mu);
     if (*test_driver_done) {
       gpr_mu_unlock(test_driver_mu);
@@ -72,6 +69,11 @@ void RunSigHandlingThread(SubProcess *test_driver, gpr_mu *test_driver_mu,
                              gpr_time_from_seconds(1, GPR_TIMESPAN)));
     gpr_mu_unlock(test_driver_mu);
   }
+  gpr_log(GPR_DEBUG,
+          "Test timeout reached or received signal. Interrupting test driver "
+          "child process.");
+  test_driver->Interrupt();
+  return;
 }
 }
 
