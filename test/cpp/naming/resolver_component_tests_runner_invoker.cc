@@ -37,6 +37,21 @@ extern "C" {
 #include "test/core/util/port.h"
 }
 
+DEFINE_bool(
+    running_under_bazel, false,
+    "True if this test is running under bazel. "
+    "False indicates that this test is running under run_tests.py. "
+    "Child process test binaries are located differently based on this flag. ");
+
+DEFINE_string(test_bin_name, "",
+              "Name, without the preceding path, of the test binary");
+
+DEFINE_string(grpc_test_directory_relative_to_test_srcdir, "/__main__",
+              "This flag only applies if runner_under_bazel is true. This "
+              "flag is ignored if runner_under_bazel is false. "
+              "Directory of the <repo-root>/test directory relative to bazel's "
+              "TEST_SRCDIR environment variable");
+
 using grpc::SubProcess;
 
 static volatile sig_atomic_t abort_wait_for_child = 0;
@@ -57,15 +72,20 @@ const int kTestTimeoutSeconds = 60 * 2;
 
 void RunSigHandlingThread(SubProcess *test_driver, gpr_mu *test_driver_mu,
                           gpr_cv *test_driver_cv, int *test_driver_done) {
-  for (size_t i = 0; i < kTestTimeoutSeconds && !abort_wait_for_child; i++) {
+  gpr_timespec overall_deadline =
+      gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
+                   gpr_time_from_seconds(kTestTimeoutSeconds, GPR_TIMESPAN));
+  while (true) {
+    gpr_timespec now = gpr_now(GPR_CLOCK_MONOTONIC);
+    if (gpr_time_cmp(now, overall_deadline) > 0 || abort_wait_for_child) break;
     gpr_mu_lock(test_driver_mu);
     if (*test_driver_done) {
       gpr_mu_unlock(test_driver_mu);
       return;
     }
-    gpr_cv_wait(test_driver_cv, test_driver_mu,
-                gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
-                             gpr_time_from_seconds(1, GPR_TIMESPAN)));
+    gpr_timespec wait_deadline = gpr_time_add(
+        gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_seconds(1, GPR_TIMESPAN));
+    gpr_cv_wait(test_driver_cv, test_driver_mu, wait_deadline);
     gpr_mu_unlock(test_driver_mu);
   }
   gpr_log(GPR_DEBUG,
@@ -134,21 +154,6 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
 }  // namespace testing
 
 }  // namespace grpc
-
-DEFINE_bool(
-    running_under_bazel, false,
-    "True if this test is running under bazel. "
-    "False indicates that this test is running under run_tests.py. "
-    "Child process test binaries are located differently based on this flag. ");
-
-DEFINE_string(test_bin_name, "",
-              "Name, without the preceding path, of the test binary");
-
-DEFINE_string(grpc_test_directory_relative_to_test_srcdir, "/__main__",
-              "This flag only applies if runner_under_bazel is true. This "
-              "flag is ignored if runner_under_bazel is false. "
-              "Directory of the <repo-root>/test directory relative to bazel's "
-              "TEST_SRCDIR environment variable");
 
 int main(int argc, char **argv) {
   grpc::testing::InitTest(&argc, &argv, true);
