@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-"""Generates the appropriate build.json data for all the end2end tests."""
+"""Generates the appropriate build.json data for all the naming tests."""
 
 
 import yaml
@@ -48,25 +48,6 @@ def main():
               'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
           } for test_case in resolver_component_data['resolver_component_tests']
       ],
-      'libs': [
-          {
-              'name': 'resolver_component_tests_runner_invoker_common',
-              'build': 'private',
-              'language': 'c++',
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.cc'],
-              'headers': ['test/cpp/naming/resolver_component_tests_runner_invoker_common.h'],
-              'platforms': ['linux', 'posix', 'mac'],
-              'deps': [
-                  'grpc++_test_util',
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'grpc++',
-                  'grpc',
-                  'gpr',
-                  'grpc++_test_config',
-              ],
-          },
-      ],
       'targets': [
           {
               'name': 'resolver_component_test' + unsecure_build_config_suffix,
@@ -88,15 +69,14 @@ def main():
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ] + [
           {
-              'name': 'resolver_component_tests_runner_invoker_for_run_tests' + unsecure_build_config_suffix,
+              'name': 'resolver_component_tests_runner_invoker' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',
               'gtest': False,
               'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_for_run_tests.cc'],
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
-                  'resolver_component_tests_runner_invoker_common',
                   'grpc++_test_util',
                   'grpc_test_util',
                   'gpr_test_util',
@@ -107,6 +87,7 @@ def main():
               ],
               'args': [
                   '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
+                  '--running_under_bazel=false',
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ]

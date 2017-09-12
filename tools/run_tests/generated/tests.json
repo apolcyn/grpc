@@ -4406,7 +4406,8 @@
   }, 
   {
     "args": [
-      "--test_bin_name=resolver_component_test_unsecure"
+      "--test_bin_name=resolver_component_test_unsecure", 
+      "--running_under_bazel=false"
     ], 
     "ci_platforms": [
       "linux", 
@@ -4419,7 +4420,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_for_run_tests_unsecure", 
+    "name": "resolver_component_tests_runner_invoker_unsecure", 
     "platforms": [
       "linux", 
       "mac", 
@@ -4428,7 +4429,8 @@
   }, 
   {
     "args": [
-      "--test_bin_name=resolver_component_test"
+      "--test_bin_name=resolver_component_test", 
+      "--running_under_bazel=false"
     ], 
     "ci_platforms": [
       "linux", 
@@ -4441,7 +4443,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_for_run_tests", 
+    "name": "resolver_component_tests_runner_invoker", 
     "platforms": [
       "linux", 
       "mac", 

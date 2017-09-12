@@ -38,12 +38,11 @@ def generate_resolver_component_tests():
         ],
     )
     grpc_cc_test(
-        name = "resolver_component_tests_runner_invoker_for_bazel%s" % unsecure_build_config_suffix,
+        name = "resolver_component_tests_runner_invoker" % unsecure_build_config_suffix,
         srcs = [
-            "resolver_component_tests_runner_invoker_for_bazel.cc",
+            "resolver_component_tests_runner_invoker.cc",
         ],
         deps = [
-            ":resolver_component_tests_runner_invoker_common",
             "//test/cpp/util:test_util",
             "//test/core/util:grpc_test_util",
             "//test/core/util:gpr_test_util",
@@ -60,5 +59,6 @@ def generate_resolver_component_tests():
         ],
         args = [
             "--test_bin_name=resolver_component_test%s" % unsecure_build_config_suffix,
+            "--running_under_bazel=true",
         ]
     )

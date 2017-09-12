@@ -32,9 +32,8 @@
 #include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
 
-#include "test/cpp/naming/resolver_component_tests_runner_invoker_common.h"
-
 extern "C" {
+#include "src/core/lib/support/env.h"
 #include "test/core/util/port.h"
 }
 
@@ -135,3 +134,52 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
 }  // namespace testing
 
 }  // namespace grpc
+
+DEFINE_bool(
+    running_under_bazel, false,
+    "True if this test is running under bazel. "
+    "False indicates that this test is running under run_tests.py. "
+    "Child process test binaries are located differently based on this flag. ");
+
+DEFINE_string(test_bin_name, "",
+              "Name, without the preceding path, of the test binary");
+
+DEFINE_string(grpc_test_directory_relative_to_test_srcdir, "/__main__",
+              "This flag only applies if runner_under_bazel is true. This "
+              "flag is ignored if runner_under_bazel is false. "
+              "Directory of the <repo-root>/test directory relative to bazel's "
+              "TEST_SRCDIR environment variable");
+
+int main(int argc, char **argv) {
+  grpc::testing::InitTest(&argc, &argv, true);
+  grpc_init();
+  GPR_ASSERT(FLAGS_test_bin_name != "");
+  std::string my_bin = argv[0];
+  if (FLAGS_running_under_bazel) {
+    GPR_ASSERT(FLAGS_grpc_test_directory_relative_to_test_srcdir != "");
+    // Use bazel's TEST_SRCDIR environment variable to locate the "test data"
+    // binaries.
+    std::string const bin_dir =
+        gpr_getenv("TEST_SRCDIR") +
+        FLAGS_grpc_test_directory_relative_to_test_srcdir +
+        std::string("/test/cpp/naming");
+    // Invoke bazel's executeable links to the .sh and .py scripts (don't use
+    // the .sh and .py suffixes) to make
+    // sure that we're using bazel's test environment.
+    grpc::testing::InvokeResolverComponentTestsRunner(
+        bin_dir + "/resolver_component_tests_runner",
+        bin_dir + "/" + FLAGS_test_bin_name, bin_dir + "/test_dns_server",
+        bin_dir + "/resolver_test_record_groups.yaml");
+  } else {
+    // Get the current binary's directory relative to repo root to invoke the
+    // correct build config (asan/tsan/dbg, etc.).
+    std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+    // Invoke the .sh and .py scripts directly where they are in source code.
+    grpc::testing::InvokeResolverComponentTestsRunner(
+        "test/cpp/naming/resolver_component_tests_runner.sh",
+        bin_dir + "/" + FLAGS_test_bin_name,
+        "test/cpp/naming/test_dns_server.py",
+        "test/cpp/naming/resolver_test_record_groups.yaml");
+  }
+  return 0;
+}

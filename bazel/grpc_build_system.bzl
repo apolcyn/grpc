@@ -113,11 +113,14 @@ def grpc_sh_binary(name, srcs, data = []):
     data = data)
 
 def grpc_py_binary(name, srcs, data = [], deps = []):
-  # TODO: don't ignore deps
+  if name == "test_dns_server":
+    # TODO: allow running test_dns_server in oss bazel test suite
+    deps = []
   native.py_binary(
     name = name,
     srcs = srcs,
-    data = data)
+    data = data,
+    deps = deps)
 
 def grpc_package(name, visibility = "private", features = []):
   if visibility == "tests":

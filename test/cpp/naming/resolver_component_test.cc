@@ -98,22 +98,8 @@ class GrpcLBAddress final {
   std::string address;
 };
 
-bool ConvertStringToBool(std::string bool_str) {
-  if (gpr_stricmp(bool_str.c_str(), "true") == 0) {
-    return true;
-  } else if (gpr_stricmp(bool_str.c_str(), "false") == 0) {
-    return false;
-  } else {
-    gpr_log(GPR_ERROR,
-            "invalid expected_addrs_list entry: expected false or true, got %s",
-            bool_str.c_str());
-    abort();
-  }
-}
-
 vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
   std::vector<GrpcLBAddress> out;
-
   while (expected_addrs.size() != 0) {
     // get the next <ip>,<port> (v4 or v6)
     size_t next_comma = expected_addrs.find(",");
@@ -131,7 +117,7 @@ vector<GrpcLBAddress> ParseExpectedAddrs(std::string expected_addrs) {
     // get the next is_balancer 'bool' associated with this address
     size_t next_semicolon = expected_addrs.find(";");
     bool is_balancer =
-        ConvertStringToBool(expected_addrs.substr(0, next_semicolon));
+        gpr_is_true(expected_addrs.substr(0, next_semicolon).c_str());
     out.emplace_back(GrpcLBAddress(next_addr, is_balancer));
     if (next_semicolon == std::string::npos) {
       break;
@@ -152,7 +138,7 @@ gpr_timespec TestDeadline(void) {
   return grpc_timeout_seconds_to_deadline(100);
 }
 
-typedef struct ArgsStruct {
+struct ArgsStruct {
   gpr_event ev;
   gpr_atm done_atm;
   gpr_mu *mu;
@@ -163,7 +149,7 @@ typedef struct ArgsStruct {
   vector<GrpcLBAddress> expected_addrs;
   std::string expected_service_config_string;
   std::string expected_lb_policy;
-} ArgsStruct;
+};
 
 void ArgsInit(grpc_exec_ctx *exec_ctx, ArgsStruct *args) {
   gpr_event_init(&args->ev);
@@ -269,7 +255,6 @@ void CheckResolverResultLocked(grpc_exec_ctx *exec_ctx, void *argsp,
     char *str;
     grpc_sockaddr_to_string(&str, &addr.address, 1 /* normalize */);
     gpr_log(GPR_INFO, "%s", str);
-
     found_lb_addrs.emplace_back(
         GrpcLBAddress(std::string(str), addr.is_balancer));
     gpr_free(str);
