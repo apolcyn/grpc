@@ -38,7 +38,7 @@ def generate_resolver_component_tests():
         ],
     )
     grpc_cc_test(
-        name = "resolver_component_tests_runner_invoker" % unsecure_build_config_suffix,
+        name = "resolver_component_tests_runner_invoker%s" % unsecure_build_config_suffix,
         srcs = [
             "resolver_component_tests_runner_invoker.cc",
         ],
