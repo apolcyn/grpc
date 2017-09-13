@@ -104,7 +104,6 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
                                         std::string test_bin_path,
                                         std::string dns_server_bin_path,
                                         std::string records_config_path) {
-  grpc_init();
   int test_dns_server_port = grpc_pick_unused_port_or_die();
 
   SubProcess *test_driver = new SubProcess(
@@ -148,7 +147,6 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   delete test_driver;
   gpr_mu_destroy(&test_driver_mu);
   gpr_cv_destroy(&test_driver_cv);
-  grpc_shutdown();
 }
 
 }  // namespace testing
@@ -186,5 +184,6 @@ int main(int argc, char **argv) {
         "test/cpp/naming/test_dns_server.py",
         "test/cpp/naming/resolver_test_record_groups.yaml");
   }
+  grpc_shutdown();
   return 0;
 }
