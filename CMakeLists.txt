@@ -14144,9 +14144,7 @@ target_include_directories(resolver_component_test_unsecure
   PRIVATE ${BENCHMARK_ROOT_DIR}/include
   PRIVATE ${ZLIB_ROOT_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
-  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
   PRIVATE ${CARES_INCLUDE_DIR}
-  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
   PRIVATE third_party/googletest/googletest/include
@@ -14189,9 +14187,7 @@ target_include_directories(resolver_component_test
   PRIVATE ${BENCHMARK_ROOT_DIR}/include
   PRIVATE ${ZLIB_ROOT_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
-  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
   PRIVATE ${CARES_INCLUDE_DIR}
-  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
   PRIVATE third_party/googletest/googletest/include
@@ -14234,9 +14230,7 @@ target_include_directories(resolver_component_tests_runner_invoker_unsecure
   PRIVATE ${BENCHMARK_ROOT_DIR}/include
   PRIVATE ${ZLIB_ROOT_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
-  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
   PRIVATE ${CARES_INCLUDE_DIR}
-  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
   PRIVATE third_party/googletest/googletest/include
@@ -14279,9 +14273,7 @@ target_include_directories(resolver_component_tests_runner_invoker
   PRIVATE ${BENCHMARK_ROOT_DIR}/include
   PRIVATE ${ZLIB_ROOT_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib
-  PRIVATE ${CARES_BUILD_INCLUDE_DIR}
   PRIVATE ${CARES_INCLUDE_DIR}
-  PRIVATE ${CARES_PLATFORM_INCLUDE_DIR}
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/include
   PRIVATE third_party/googletest/googletest/include
