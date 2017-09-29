@@ -121,3 +121,5 @@ def start_port_server():
                                   'Will try killing it.', port_server_url)
                 port_server.kill()
                 raise
+
+start_port_server()
