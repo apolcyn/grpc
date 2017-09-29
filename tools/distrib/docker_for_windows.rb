@@ -20,7 +20,7 @@ end
 def docker_for_windows_image()
   require 'digest'
 
-  dockerfile = File.join(grpc_root, 'third_party', 'rake-compiler-dock', 'Dockerfile') 
+  dockerfile = File.join(grpc_root, 'third_party', 'rake-compiler-dock', 'Dockerfile')
   dockerpath = File.dirname(dockerfile)
   version = Digest::SHA1.file(dockerfile).hexdigest
   image_name = 'rake-compiler-dock_' + version

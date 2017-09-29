@@ -111,7 +111,12 @@ task 'gem:native' do
   if RUBY_PLATFORM =~ /darwin/
     FileUtils.touch 'grpc_c.32.ruby'
     FileUtils.touch 'grpc_c.64.ruby'
-    system "rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    # Set env vars via the system ruby API for portability
+    rake_cmd_env = {
+      'RUBY_CC_VERSION' => '2.4.0:2.3.0:2.2.2:2.1.5:2.0.0',
+      'GRPC_CONFIG' => grpc_config,
+      'V' => verbose }
+    system(rake_cmd_env, 'rake cross native gem')
   else
     Rake::Task['dlls'].execute
     docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
