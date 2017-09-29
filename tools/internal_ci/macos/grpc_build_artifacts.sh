@@ -26,9 +26,17 @@ python3.4 -m pip install cython setuptools wheel
 python3.5 -m pip install cython setuptools wheel
 python3.6 -m pip install cython setuptools wheel
 
-# needed to build ruby artifacts
-wget https://raw.githubusercontent.com/grpc/grpc/master/tools/distrib/build_ruby_environment_macos.sh
-bash build_ruby_environment_macos.sh
+# Needed to build ruby artifacts.
+# Rather than building all of the different versions of ruby for cross
+# compililation right in here, fetch a zip file that contains all of the pre-built ruby
+# versions. The script/makefiles used to build all of the different versions of
+# ruby is flakey, and fetching the results of a successful run avoids that
+# issue. Also, this makes the artifact builds significantly faster.
+curl https://storage.googleapis.com/grpc-precompiled-binaries/ruby/macos-compilers/v1/rake-compilers.zip > ~/rake-compilers.zip
+# Avoid logging too much
+unzip ~/rake-compilers.zip > /dev/null && ls ~/.rake-compilers
+gem install rubygems-update
+update_rubygems
 
 gem install rubygems-update
 update_rubygems
