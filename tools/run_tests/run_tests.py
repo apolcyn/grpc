@@ -57,6 +57,10 @@ sys.path.append(gcp_utils_dir)
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(_ROOT)
 
+# Setting the CPU cost of a test to a value that's too low can overload
+# the test environment with too many tests running in parallel.
+# 0.25 is arbitrary but should be safe. TODO: possibly tune this.
+_MIN_SAFE_TEST_CPU_COST = 0.25
 
 _FORCE_ENVIRON_FOR_WRAPPERS = {
   'GRPC_VERBOSITY': 'DEBUG',
@@ -1268,7 +1272,7 @@ if not args.disable_auto_set_flakes:
   try:
     for test in get_bqtest_data():
       if test.flaky: flaky_tests.add(test.name)
-      if test.cpu > 0: shortname_to_cpu[test.name] = test.cpu
+      if test.cpu > 0: shortname_to_cpu[test.name] = min(test.cpu, _MIN_SAFE_TEST_CPU_COST)
   except:
     print("Unexpected error getting flaky tests:", sys.exc_info()[0])
 
