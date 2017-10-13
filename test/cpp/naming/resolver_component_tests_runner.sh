@@ -195,6 +195,22 @@ $FLAGS_test_bin_path \
   --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
 wait $! || EXIT_CODE=1
 
+$FLAGS_test_bin_path \
+  --target_name='chained-cname-to-ipv4.resolver-tests-version-2.grpctestingexp.' \
+  --expected_addrs='1.2.3.4,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='chained-cname-to-ipv6.resolver-tests-version-2.grpctestingexp.' \
+  --expected_addrs='[2607:f8b0:400a:801::1002]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
 kill -SIGTERM $DNS_SERVER_PID || true
 wait
 exit $EXIT_CODE

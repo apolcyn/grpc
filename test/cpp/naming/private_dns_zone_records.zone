@@ -48,4 +48,10 @@ simple-ipv4-from-cname                                                          
 simple-cname-to-ipv4                                                                                                            2100    IN  CNAME   simple-ipv4-from-cname.resolver-tests-version-2.grpctestingexp
 simple-ipv6-from-cname                                                                                                          2100    IN  AAAA    2607:f8b0:400a:801::1002
 simple-cname-to-ipv6                                                                                                            2100    IN  CNAME   simple-ipv6-from-cname.resolver-tests-version-2.grpctestingexp
+target-of-cname-chain-to-ipv4                                                                                                   2100    IN  A       1.2.3.4
+middle-of-cname-chain-to-ipv4                                                                                                   2100    IN  CNAME   target-of-cname-chain-to-ipv4.resolver-tests-version-2.grpctestingexp
+chained-cname-to-ipv4                                                                                                           2100    IN  CNAME   middle-of-cname-chain-to-ipv4.resolver-tests-version-2.grpctestingexp
+target-of-cname-chain-to-ipv6                                                                                                   2100    IN  AAAA    2607:f8b0:400a:801::1002
+chained-cname-to-ipv6                                                                                                           2100    IN  CNAME   middle-of-cname-chain-to-ipv6.resolver-tests-version-2.grpctestingexp
+middle-of-cname-chain-to-ipv6                                                                                                   2100    IN  CNAME   target-of-cname-chain-to-ipv6.resolver-tests-version-2.grpctestingexp
 
