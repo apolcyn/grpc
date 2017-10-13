@@ -44,4 +44,8 @@ srv-ipv4-target-has-backend-and-balancer                                        
 _grpclb._tcp.srv-ipv6-target-has-backend-and-balancer                                                                           2100    IN  SRV     0 0 1234 balancer-for-ipv6-has-backend-and-balancer.resolver-tests-version-2.grpctestingexp.
 balancer-for-ipv6-has-backend-and-balancer                                                                                      2100    IN  AAAA    2607:f8b0:400a:801::1002
 srv-ipv6-target-has-backend-and-balancer                                                                                        2100    IN  AAAA    2607:f8b0:400a:801::1002
+simple-ipv4-from-cname                                                                                                          2100    IN  A       1.2.3.4
+simple-cname-to-ipv4                                                                                                            2100    IN  CNAME   simple-ipv4-from-cname.resolver-tests-version-2.grpctestingexp
+simple-ipv6-from-cname                                                                                                          2100    IN  AAAA    2607:f8b0:400a:801::1002
+simple-cname-to-ipv6                                                                                                            2100    IN  CNAME   simple-ipv6-from-cname.resolver-tests-version-2.grpctestingexp
 

@@ -60,6 +60,10 @@ def _data_for_type(r_type,
     path = 'test/cpp/naming/service_configs/%s.json' % record_name
     return service_config_utils.convert_service_config_to_txt_data(
         path, use_gcloud_format and 'gcloud' or 'twisted')
+  if r_type == 'CNAME':
+    out = '%s.%s' % (r_data, common_zone_name)
+    assert out[-1] == '.'
+    return out[:-1]
 
 def _fill_column(data, col_width):
   return data + ' ' * (col_width - len(data))

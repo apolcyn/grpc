@@ -250,6 +250,34 @@ if [[ "$ONE_FAILED" != 0 ]]; then
   exit 1
 fi
 
+ONE_FAILED=0
+dig  simple-ipv4-from-cname.resolver-tests-version-2.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig  simple-ipv4-from-cname.resolver-tests-version-2.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig  simple-cname-to-ipv4.resolver-tests-version-2.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig  simple-cname-to-ipv4.resolver-tests-version-2.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig  simple-ipv6-from-cname.resolver-tests-version-2.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig  simple-ipv6-from-cname.resolver-tests-version-2.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig  simple-cname-to-ipv6.resolver-tests-version-2.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig  simple-cname-to-ipv6.resolver-tests-version-2.grpctestingexp. FAILED"
+  exit 1
+fi
+
 echo "Sanity check PASSED. Run resolver tests:"
 
 ONE_FAILED=0
@@ -381,6 +409,28 @@ bins/$CONFIG/resolver_component_test \
   --expected_lb_policy='' || ONE_FAILED=1
 if [[ "$ONE_FAILED" != 0 ]]; then
   echo "Test based on target record: srv-ipv6-target-has-backend-and-balancer.resolver-tests-version-2.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='simple-cname-to-ipv4.resolver-tests-version-2.grpctestingexp.' \
+  --expected_addrs='1.2.3.4:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: simple-cname-to-ipv4.resolver-tests-version-2.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='simple-cname-to-ipv6.resolver-tests-version-2.grpctestingexp.' \
+  --expected_addrs='[2607:f8b0:400a:801::1002]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: simple-cname-to-ipv6.resolver-tests-version-2.grpctestingexp. FAILED"
   EXIT_CODE=1
 fi
 
