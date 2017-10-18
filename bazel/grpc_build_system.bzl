@@ -31,6 +31,8 @@ def _get_external_deps(external_deps):
   for dep in external_deps:
     if dep == "nanopb":
       ret.append("//third_party/nanopb")
+    elif dep == "address_sorting":
+      ret.append("//third_party/address_sorting")
     else:
       ret.append("//external:" + dep)
   return ret
