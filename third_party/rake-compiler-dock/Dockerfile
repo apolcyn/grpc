@@ -1,5 +1,7 @@
 FROM ubuntu:17.04
 
+RUN echo hello
+
 RUN apt-get -y update && \
     apt-get install -y curl git-core xz-utils build-essential wget unzip sudo gpg dirmngr
 
