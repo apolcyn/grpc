@@ -102,6 +102,7 @@ static void grpc_ares_request_unref(grpc_exec_ctx *exec_ctx,
      request */
   if (gpr_unref(&r->pending_queries)) {
     /* TODO(zyc): Sort results with RFC6724 before invoking on_done. */
+    rfc_6724_sort(*r->lb_addrs_out);
     if (exec_ctx == NULL) {
       /* A new exec_ctx is created here, as the c-ares interface does not
          provide one in ares_host_callback. It's safe to schedule on_done with
@@ -521,6 +522,55 @@ static void on_dns_lookup_done_cb(grpc_exec_ctx *exec_ctx, void *arg,
                      GRPC_ERROR_REF(error));
   grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
   gpr_free(r);
+}
+
+struct sortable_address {
+  grpc_lb_address lb_addr;
+  struct sockaddr_in6 source_addr;
+  bool src_addr_exists;
+};
+
+static int rfc_6724_compare(const void *a, const void *b) {
+  sortable_address* sa = (sortable_address*)a;
+  sortable_address* sb = (sortable_address*)b;
+  if (sa->src_addr_exists && !sb->src_addr_exists) {
+    return -1;
+  } else if(!sa->src_addr_exists && sb->src_addr_exists) {
+    return 1;
+  }
+  return 0;
+}
+
+void rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
+  sortable_address* sortable = (sortable_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(sortable_address));
+  for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
+    sortable[i].lb_addr = resolved_lb_addrs->addresses[i];
+    sortable[i].src_addr_exists = false;
+    int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
+    int s = socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    struct sockaddr dest = *(struct sockaddr*)resolved_lb_addrs->addresses[i].address.addr;
+    if (connect(s, &dest, resolved_lb_addrs->addresses[i].address.len) != -1) {
+      grpc_resolved_address src_addr;
+      if (getsockname(s, (struct sockaddr*)&src_addr.addr, (socklen_t*)&src_addr.len) != -1) {
+        sortable[i].src_addr_exists = true;
+        grpc_resolved_address v4_mapped;
+        if (grpc_sockaddr_to_v4mapped(&src_addr, &v4_mapped)) {
+          memcpy(&sortable[i].source_addr, &v4_mapped.addr, sizeof(struct sockaddr_in6));
+        } else {
+          memcpy(&sortable[i].source_addr, &src_addr.addr, sizeof(struct sockaddr_in6));
+        }
+      }
+    }
+    close(s);
+  }
+  qsort(sortable, resolved_lb_addrs->num_addresses, sizeof(sortable_address), rfc_6724_compare);
+  grpc_lb_address *sorted_lb_addrs = (grpc_lb_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(grpc_lb_address));
+  for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
+    sorted_lb_addrs[i] = sortable[i].lb_addr;
+  }
+  gpr_free(sortable);
+  gpr_free(resolved_lb_addrs->addresses);
+  resolved_lb_addrs->addresses = sorted_lb_addrs;
 }
 
 static void grpc_resolve_address_ares_impl(grpc_exec_ctx *exec_ctx,
