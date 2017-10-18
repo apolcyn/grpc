@@ -25,6 +25,7 @@
 
 #include <string.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include <ares.h>
 #include <grpc/support/alloc.h>
@@ -102,7 +103,7 @@ static void grpc_ares_request_unref(grpc_exec_ctx *exec_ctx,
      request */
   if (gpr_unref(&r->pending_queries)) {
     /* TODO(zyc): Sort results with RFC6724 before invoking on_done. */
-    rfc_6724_sort(*r->lb_addrs_out);
+    rfc_6724_sort(*(r->lb_addrs_out));
     if (exec_ctx == NULL) {
       /* A new exec_ctx is created here, as the c-ares interface does not
          provide one in ares_host_callback. It's safe to schedule on_done with
@@ -559,7 +560,24 @@ void rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
         } else {
           memcpy(&sortable[i].source_addr, &src_addr.addr, sizeof(struct sockaddr_in6));
         }
+        char *dst_str;
+        GPR_ASSERT(grpc_sockaddr_to_string(&dst_str, &resolved_lb_addrs->addresses[i].address, true));
+        char *src_str;
+        GPR_ASSERT(grpc_sockaddr_to_string(&src_str, &src_addr, true));
+        gpr_log(GPR_INFO, "Resolved destination %s and found source address candidate %s", dst_str, src_str);
+        gpr_free(dst_str);
+        gpr_free(src_str);
+      } else {
+        char *addr_str;
+        GPR_ASSERT(grpc_sockaddr_to_string(&addr_str, &resolved_lb_addrs->addresses[i].address, true));
+        gpr_log(GPR_INFO, "Resolved destination %s but getsockname after connect failed with %d, so de-prioritizing it", addr_str, errno);
+        gpr_free(addr_str);
       }
+    } else {
+      char *addr_str;
+      GPR_ASSERT(grpc_sockaddr_to_string(&addr_str, &resolved_lb_addrs->addresses[i].address, true));
+      gpr_log(GPR_INFO, "Resolved destination %s but connect failed with %d, so de-prioritizing it", addr_str, errno);
+      gpr_free(addr_str);
     }
     close(s);
   }
