@@ -581,6 +581,21 @@ struct sortable_address {
   bool src_addr_exists;
 };
 
+static int sockaddr_get_scope_id(grpc_resolved_address *resolved_addr) {
+  switch (addr->sa_family) {
+  case AF_INET:
+    return ntohs(((struct sockaddr_in *)addr)->sin_port);
+  case AF_INET6:
+    return ntohs(((struct sockaddr_in6 *)addr)->sin6_port);
+  default:
+    if (grpc_is_unix_socket(resolved_addr)) {
+      return 1;
+    }
+    gpr_log(GPR_ERROR, "Unknown socket family %d in grpc_sockaddr_get_port", addr->sa_family);
+    return 0;
+  }
+}
+
 static int rfc_6724_compare(const void *a, const void *b) {
   sortable_address* sa = (sortable_address*)a;
   sortable_address* sb = (sortable_address*)b;
@@ -589,6 +604,7 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return sa->src_addr_exists ? -1 : 1;
   }
   gpr_log(GPR_INFO, "src addrs both not there or there");
+  if (
   return 0;
 }
 
