@@ -33,7 +33,7 @@ grpc_ares_wrapper_socket_factory_vtable ares_wrapper_socket_factory = {
 
 struct TestAddress {
   string dest_addr;
-  
+  bool reachable;
 }
 
 class GrpcLBAddress final {
@@ -64,14 +64,18 @@ int mock_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 int mock_socket_destroy(int sockfd) {
 }
 
-static void TestAddressSorting() {
-
+TEST(AddressSortingTest, TestDepriotizesUnreachableAddresses) {
+  auto std::vector<TestAddress> test_addrs = std::vector<TestAddress>({
+    {"1.2.3.4", false},
+    {"5.6.7.8", true},
+  });
 }
 
 int main(int argc, char **argv) {
   FLAGS_logtostderr = true;
   InitGoogle(argv[0], &argc, &argv, true);
   grpc_init();
+  RUN_ALL_TESTS();
   TestAddressSorting();
   grpc_shutdown();
   printf("PASS\n");
