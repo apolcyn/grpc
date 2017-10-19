@@ -19,6 +19,9 @@
 #ifndef GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_RESOLVER_DNS_C_ARES_GRPC_ARES_WRAPPER_H
 #define GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_RESOLVER_DNS_C_ARES_GRPC_ARES_WRAPPER_H
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #include "src/core/ext/filters/client_channel/lb_policy_factory.h"
 #include "src/core/lib/iomgr/exec_ctx.h"
 #include "src/core/lib/iomgr/iomgr.h"
@@ -69,8 +72,21 @@ grpc_error *grpc_ares_init(void);
    it has been called the same number of times as grpc_ares_init(). */
 void grpc_ares_cleanup(void);
 
-/* This function is exposed only for testing */
-void rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs);
+/* Exposed for testing */
+void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs);
+
+struct grpc_ares_wrapper_socket_factory_vtable {
+  int (*socket)(struct grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol);
+  int (*connect)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+  int (*getsockname)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+  int (*close)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd);
+};
+
+struct grpc_ares_wrapper_socket_factory {
+  const grpc_ares_wrapper_socket_factory_vtable* vtable;
+};
+
+void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory);
 
 #ifdef __cplusplus
 }

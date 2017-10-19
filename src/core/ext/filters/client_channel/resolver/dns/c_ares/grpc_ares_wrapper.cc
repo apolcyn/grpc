@@ -103,7 +103,7 @@ static void grpc_ares_request_unref(grpc_exec_ctx *exec_ctx,
      request */
   if (gpr_unref(&r->pending_queries)) {
     /* TODO(zyc): Sort results with RFC6724 before invoking on_done. */
-    rfc_6724_sort(*(r->lb_addrs_out));
+    grpc_ares_wrapper_rfc_6724_sort(*(r->lb_addrs_out));
     if (exec_ctx == NULL) {
       /* A new exec_ctx is created here, as the c-ares interface does not
          provide one in ares_host_callback. It's safe to schedule on_done with
@@ -529,6 +529,52 @@ static void on_dns_lookup_done_cb(grpc_exec_ctx *exec_ctx, void *arg,
  * structs and functions related to sorting addresses per RFC 6724
  */
 
+static int default_socket_factory_socket(grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol) {
+  return socket(domain, type, protocol);
+}
+
+static int default_socket_factory_connect(grpc_ares_wrapper_socket_factory *factory, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+  return connect(sockfd, addr, addrlen);
+}
+
+static int default_socket_factory_getsockname(grpc_ares_wrapper_socket_factory *factory, int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+  return getsockname(sockfd, addr, addrlen);
+}
+
+static int default_socket_factory_close(grpc_ares_wrapper_socket_factory *factory, int sockfd) {
+  return close(sockfd);
+}
+
+static const grpc_ares_wrapper_socket_factory_vtable default_socket_factory_vtable = {
+  default_socket_factory_socket,
+  default_socket_factory_connect,
+  default_socket_factory_getsockname,
+  default_socket_factory_close,
+};
+static grpc_ares_wrapper_socket_factory default_socket_factory = {&default_socket_factory_vtable};
+static grpc_ares_wrapper_socket_factory *current_socket_factory = &default_socket_factory;
+
+void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory) {
+  current_socket_factory = factory;
+}
+
+int grpc_ares_wrapper_socket(int domain, int type, int protocol) {
+  GPR_ASSERT(domain == AF_INET || domain == AF_INET6);
+  return current_socket_factory->vtable->socket(current_socket_factory, domain, type, protocol);
+}
+
+int grpc_ares_wrapper_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+  return current_socket_factory->vtable->connect(current_socket_factory, sockfd, addr, addrlen);
+}
+
+int grpc_ares_wrapper_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+  return current_socket_factory->vtable->getsockname(current_socket_factory, sockfd, addr, addrlen);
+}
+
+int grpc_ares_wrapper_close(int sockfd) {
+  return current_socket_factory->vtable->close(current_socket_factory, sockfd);
+}
+
 struct sortable_address {
   grpc_lb_address lb_addr;
   struct sockaddr_in6 source_addr;
@@ -539,86 +585,53 @@ static int rfc_6724_compare(const void *a, const void *b) {
   sortable_address* sa = (sortable_address*)a;
   sortable_address* sb = (sortable_address*)b;
   if (sa->src_addr_exists != sb->src_addr_exists) {
+    gpr_log(GPR_INFO, "src addrs not equal");
     return sa->src_addr_exists ? -1 : 1;
   }
+  gpr_log(GPR_INFO, "src addrs both not there or there");
   return 0;
 }
 
-/* Make socket utilities used by sorting overrideable for testing */
-struct grpc_ares_wrapper_socket_factory_vtable {
-  int (*socket)(grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol);
-  int (*connect)(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-  int (*getsockname)(grpc_ares_wrapper_socket_factory *factory, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-  int (*close)(grpc_ares_wrapper_socket_factory *factory, int sockfd);
-}
-
-struct grpc_ares_wrapper_socket_factory {
-  const grpc_ares_wrapper_socket_factory_vtable* vtable;
-}
-
-grpc_ares_wrapper_socket_factory_vtable ares_wrapper_socket_factory = {
-  {
-    socket,
-    connect,
-    getsockname,
-    close,
-  }
-};
-
-int grpc_ares_wrapper_socket(int domain, int type, int protocol) {
-  grpc_ares_wrapper_socket_factory.socket(domain, type, protocol);
-}
-
-int grpc_ares_wrapper_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-  grpc_ares_wrapper_socket_factory.connect(sockfd, addr, addrlen);
-}
-
-int grpc_ares_wrapper_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
-  grpc_ares_wrapper_socket_factory.getsockname(sockfd, addr, addrlen);
-}
-
-int grpc_ares_wrapper_close(int sockfd) {
-  grpc_ares_wrapper_socket_factory.close(sockfd);
-}
-
-void rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
+void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
   sortable_address* sortable = (sortable_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(sortable_address));
   for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
     sortable[i].lb_addr = resolved_lb_addrs->addresses[i];
     sortable[i].src_addr_exists = false;
     int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
     int s = grpc_ares_wrapper_socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-    struct sockaddr dest = *(struct sockaddr*)resolved_lb_addrs->addresses[i].address.addr;
-    if (grpc_ares_wrapper_connect(s, &dest, resolved_lb_addrs->addresses[i].address.len) != -1) {
-      grpc_resolved_address src_addr;
-      if (grpc_ares_wrapper_getsockname(s, (struct sockaddr*)&src_addr.addr, (socklen_t*)&src_addr.len) != -1) {
-        sortable[i].src_addr_exists = true;
-        grpc_resolved_address v4_mapped;
-        if (grpc_sockaddr_to_v4mapped(&src_addr, &v4_mapped)) {
-          memcpy(&sortable[i].source_addr, &v4_mapped.addr, sizeof(struct sockaddr_in6));
+    if (s != -1) {
+      struct sockaddr dest = *(struct sockaddr*)resolved_lb_addrs->addresses[i].address.addr;
+      if (grpc_ares_wrapper_connect(s, &dest, resolved_lb_addrs->addresses[i].address.len) != -1) {
+        grpc_resolved_address src_addr;
+        if (grpc_ares_wrapper_getsockname(s, (struct sockaddr*)&src_addr.addr, (socklen_t*)&src_addr.len) != -1) {
+          sortable[i].src_addr_exists = true;
+          grpc_resolved_address v4_mapped;
+          if (grpc_sockaddr_to_v4mapped(&src_addr, &v4_mapped)) {
+            memcpy(&sortable[i].source_addr, &v4_mapped.addr, sizeof(struct sockaddr_in6));
+          } else {
+            memcpy(&sortable[i].source_addr, &src_addr.addr, sizeof(struct sockaddr_in6));
+          }
+          char *dst_str;
+          GPR_ASSERT(grpc_sockaddr_to_string(&dst_str, &resolved_lb_addrs->addresses[i].address, true));
+          char *src_str;
+          GPR_ASSERT(grpc_sockaddr_to_string(&src_str, &src_addr, true));
+          gpr_log(GPR_INFO, "Resolved destination %s and found source address candidate %s", dst_str, src_str);
+          gpr_free(dst_str);
+          gpr_free(src_str);
         } else {
-          memcpy(&sortable[i].source_addr, &src_addr.addr, sizeof(struct sockaddr_in6));
+          char *addr_str;
+          GPR_ASSERT(grpc_sockaddr_to_string(&addr_str, &resolved_lb_addrs->addresses[i].address, true));
+          gpr_log(GPR_INFO, "Resolved destination %s but getsockname after connect failed with %d, so de-prioritizing it", addr_str, errno);
+          gpr_free(addr_str);
         }
-        char *dst_str;
-        GPR_ASSERT(grpc_sockaddr_to_string(&dst_str, &resolved_lb_addrs->addresses[i].address, true));
-        char *src_str;
-        GPR_ASSERT(grpc_sockaddr_to_string(&src_str, &src_addr, true));
-        gpr_log(GPR_INFO, "Resolved destination %s and found source address candidate %s", dst_str, src_str);
-        gpr_free(dst_str);
-        gpr_free(src_str);
       } else {
         char *addr_str;
         GPR_ASSERT(grpc_sockaddr_to_string(&addr_str, &resolved_lb_addrs->addresses[i].address, true));
-        gpr_log(GPR_INFO, "Resolved destination %s but getsockname after connect failed with %d, so de-prioritizing it", addr_str, errno);
+        gpr_log(GPR_INFO, "Resolved destination %s but connect failed with %d, so de-prioritizing it", addr_str, errno);
         gpr_free(addr_str);
       }
-    } else {
-      char *addr_str;
-      GPR_ASSERT(grpc_sockaddr_to_string(&addr_str, &resolved_lb_addrs->addresses[i].address, true));
-      gpr_log(GPR_INFO, "Resolved destination %s but connect failed with %d, so de-prioritizing it", addr_str, errno);
-      gpr_free(addr_str);
+      grpc_ares_wrapper_close(s);
     }
-    grpc_ares_wrapper_close(s);
   }
   qsort(sortable, resolved_lb_addrs->num_addresses, sizeof(sortable_address), rfc_6724_compare);
   grpc_lb_address *sorted_lb_addrs = (grpc_lb_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(grpc_lb_address));

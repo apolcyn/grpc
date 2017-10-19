@@ -1,8 +1,39 @@
-#include <stdio.h>
-#include "common/google.h"
-#include "common/commandlineflags.h"
-#include "common/logging.h"
-#include "testing/googletest.h"
+#include <grpc/grpc.h>
+#include <grpc/support/alloc.h>
+#include <grpc/support/host_port.h>
+#include <grpc/support/log.h>
+#include <grpc/support/string_util.h>
+#include <grpc/support/sync.h>
+#include <grpc/support/time.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <gflags/gflags.h>
+#include <gmock/gmock.h>
+#include <vector>
+
+#include "test/cpp/util/subprocess.h"
+#include "test/cpp/util/test_config.h"
+
+extern "C" {
+#include "src/core/ext/filters/client_channel/client_channel.h"
+#include "src/core/ext/filters/client_channel/resolver.h"
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
+#include "src/core/ext/filters/client_channel/resolver_registry.h"
+#include "src/core/lib/channel/channel_args.h"
+#include "src/core/lib/iomgr/combiner.h"
+#include "src/core/lib/iomgr/executor.h"
+#include "src/core/lib/iomgr/iomgr.h"
+#include "src/core/lib/iomgr/resolve_address.h"
+#include "src/core/lib/iomgr/sockaddr_utils.h"
+#include "src/core/lib/support/env.h"
+#include "src/core/lib/support/string.h"
+#include "test/core/util/port.h"
+#include "test/core/util/test_config.h"
+}
+
 
 // int (*grpc_ares_wrapper_socket)(int domain, int type, int protocol) = socket;
 // int (*grpc_ares_wrapper_getsockname)(int sockfd, struct sockaddr *addr, socklen_t *addrlen) = getsockname;
@@ -17,67 +48,193 @@
 //   int (*close)(grpc_ares_wrapper_socket_factory *factory, int sockfd);
 // }
 
-struct mock_ares_wrapper_socket_factory {
-  const grpc_ares_wrapper_socket_factory_vtable* vtable;
-  mock_address<>
-}
-
-grpc_ares_wrapper_socket_factory_vtable ares_wrapper_socket_factory = {
-  {
-    socket,
-    connect,
-    getsockname,
-    close,
-  }
-};
+namespace {
 
 struct TestAddress {
-  string dest_addr;
-  bool reachable;
-}
-
-class GrpcLBAddress final {
-
- public:
-  GrpcLBAddress(std::string address, bool is_balancer)
-      : is_balancer(is_balancer), address(address) {}
-
-  bool operator==(const GrpcLBAddress &other) const {
-    return this->is_balancer == other.is_balancer &&
-           this->address == other.address;
-  }
-
-  bool operator!=(const GrpcLBAddress &other) const {
-    return !(*this == other);
-  }
-
-  bool is_balancer;
-  std::string address;
+  std::string dest_addr;
+  int family;
 };
 
-int mock_socket(int domain, int type, int protocol) {
+struct MockAresWrapperSocketFactory {
+  const grpc_ares_wrapper_socket_factory_vtable* vtable;
+  // user configured test config
+  bool ipv4_supported;
+  bool ipv6_supported;
+  std::map<std::string, TestAddress> dest_addr_to_src_addr;
+  // internal state for mock
+  std::map<int, TestAddress> fd_to_getsockname_return_vals;
+  int cur_socket;
+};
+
+int MockSocket(grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol) {
+  MockAresWrapperSocketFactory *mock = (MockAresWrapperSocketFactory*)factory;
+  gpr_log(GPR_INFO, "domain is: %d", domain);
+  EXPECT_TRUE(domain == AF_INET || domain == AF_INET6);
+  if ((domain == AF_INET && !mock->ipv4_supported) || (domain == AF_INET6 && !mock->ipv6_supported)) {
+    errno = EAFNOSUPPORT;
+    return -1;
+  }
+  return mock->cur_socket++;
 }
 
-int mock_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+int MockConnect(grpc_ares_wrapper_socket_factory *factory, int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+  MockAresWrapperSocketFactory *mock = (MockAresWrapperSocketFactory*)factory;
+  if ((addr->sa_family == AF_INET && !mock->ipv4_supported) || (addr->sa_family == AF_INET6 && !mock->ipv6_supported)) {
+    errno = EAFNOSUPPORT;
+    return -1;
+  }
+  char *ip_addr_str;
+  grpc_resolved_address resolved_addr;
+  memcpy(&resolved_addr.addr, addr, addrlen);
+  resolved_addr.len = addrlen;
+  grpc_sockaddr_to_string(&ip_addr_str, &resolved_addr, false /* normalize */);
+  auto it = mock->dest_addr_to_src_addr.find(ip_addr_str);
+  gpr_log(GPR_DEBUG, "can't find |%s| in dest to src map", ip_addr_str);
+  if (it == mock->dest_addr_to_src_addr.end()) {
+    errno = ENETUNREACH;
+    return -1;
+  }
+  mock->fd_to_getsockname_return_vals.insert(std::pair<int, TestAddress>(sockfd, it->second));
+  return 0;
 }
 
-int mock_socket_destroy(int sockfd) {
+grpc_resolved_address TestAddressToGrpcResolvedAddress(TestAddress test_addr) {
+  char *host;
+  char *port;
+  grpc_resolved_address resolved_addr;
+  gpr_split_host_port(test_addr.dest_addr.c_str(), &host, &port);
+  if (test_addr.family == AF_INET) {
+    sockaddr_in in_dest;
+    in_dest.sin_port = htons(atoi(port));;
+    in_dest.sin_family = AF_INET;
+    int zeros[2]{0, 0};
+    memcpy(&in_dest.sin_zero, &zeros, 8);
+    inet_pton(AF_INET, host, &in_dest.sin_addr);
+    memcpy(&resolved_addr.addr, &in_dest, sizeof(sockaddr_in));
+    resolved_addr.len = sizeof(sockaddr_in);
+  } else {
+    GPR_ASSERT(test_addr.family == AF_INET6);
+    sockaddr_in6 in6_dest;
+    in6_dest.sin6_port = htons(atoi(port));
+    in6_dest.sin6_family = AF_INET6;
+    in6_dest.sin6_flowinfo = 0;
+    in6_dest.sin6_scope_id = 0;
+    inet_pton(AF_INET6, host, &in6_dest.sin6_addr);
+    memcpy(&resolved_addr.addr, &in6_dest, sizeof(sockaddr_in6));
+    resolved_addr.len = sizeof(sockaddr_in6);
+  }
+  return resolved_addr;
 }
+
+int MockGetSockName(grpc_ares_wrapper_socket_factory *factory, int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+  MockAresWrapperSocketFactory *mock = (MockAresWrapperSocketFactory*)factory;
+  auto it = mock->fd_to_getsockname_return_vals.find(sockfd);
+  EXPECT_TRUE(it != mock->fd_to_getsockname_return_vals.end());
+  grpc_resolved_address resolved_addr = TestAddressToGrpcResolvedAddress(it->second);
+  memcpy(addr, &resolved_addr.addr, resolved_addr.len);
+  *addrlen = resolved_addr.len;
+  return 0;
+}
+
+int MockClose(grpc_ares_wrapper_socket_factory *factory, int sockfd) {
+  return 0;
+}
+
+grpc_ares_wrapper_socket_factory_vtable mock_ares_wrapper_socket_factory_vtable =  {
+    MockSocket,
+    MockConnect,
+    MockGetSockName,
+    MockClose,
+};
+
+grpc_lb_addresses *BuildLbAddrInputs(std::vector<TestAddress> test_addrs) {
+  grpc_lb_addresses *lb_addrs = grpc_lb_addresses_create(0, NULL);
+  lb_addrs->addresses = (grpc_lb_address*)gpr_zalloc(sizeof(grpc_lb_address) * test_addrs.size());
+  lb_addrs->num_addresses = test_addrs.size();
+  for (size_t i = 0; i < test_addrs.size(); i++) {
+    lb_addrs->addresses[i].address = TestAddressToGrpcResolvedAddress(test_addrs[i]);
+  }
+  return lb_addrs;
+}
+
+void VerifyLbAddrOutputs(grpc_lb_addresses *lb_addrs, std::vector<std::string> expected_addrs) {
+  EXPECT_EQ(lb_addrs->num_addresses, expected_addrs.size());
+  for (size_t i = 0; i < lb_addrs->num_addresses; i++) {
+    char *ip_addr_str;
+    grpc_sockaddr_to_string(&ip_addr_str, &lb_addrs->addresses[i].address, false /* normalize */);
+    EXPECT_EQ(expected_addrs[i], ip_addr_str);
+    gpr_free(ip_addr_str);
+  }
+}
+
+MockAresWrapperSocketFactory *NewMockAresWrapperSocketFactory() {
+  MockAresWrapperSocketFactory *factory = new MockAresWrapperSocketFactory();
+  factory->vtable = &mock_ares_wrapper_socket_factory_vtable;
+  grpc_ares_wrapper_set_socket_factory((grpc_ares_wrapper_socket_factory*)factory);
+  return factory;
+}
+
+} // namespace
 
 TEST(AddressSortingTest, TestDepriotizesUnreachableAddresses) {
-  auto std::vector<TestAddress> test_addrs = std::vector<TestAddress>({
-    {"1.2.3.4", false},
-    {"5.6.7.8", true},
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"1.2.3.4:443", {"4.3.2.1:443", AF_INET}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"1.2.3.4:443", AF_INET},
+    {"5.6.7.8:443", AF_INET},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "1.2.3.4:443",
+    "5.6.7.8:443",
+  });
+}
+
+TEST(AddressSortingTest, TestDepriotizesUnsupportedDomainIpv6) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = false;
+  mock->dest_addr_to_src_addr = {
+    {"1.2.3.4:443", {"4.3.2.1:443", AF_INET}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[2607:f8b0:400a:801::1002]:443", AF_INET6},
+    {"1.2.3.4:443", AF_INET},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    {"1.2.3.4:443"},
+    {"[2607:f8b0:400a:801::1002]:443"},
+  });
+}
+
+TEST(AddressSortingTest, TestDepriotizesUnsupportedDomainIpv4) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = false;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"1.2.3.4:443", {"4.3.2.1:443", AF_INET}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[2607:f8b0:400a:801::1002]:443", AF_INET6},
+    {"1.2.3.4:443", AF_INET},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    {"[2607:f8b0:400a:801::1002]:443"},
+    {"1.2.3.4:443"},
   });
 }
 
 int main(int argc, char **argv) {
-  FLAGS_logtostderr = true;
-  InitGoogle(argv[0], &argc, &argv, true);
   grpc_init();
-  RUN_ALL_TESTS();
-  TestAddressSorting();
+  grpc_test_init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
+  auto result = RUN_ALL_TESTS();
   grpc_shutdown();
-  printf("PASS\n");
-  return 0;
+  return result;
 }
