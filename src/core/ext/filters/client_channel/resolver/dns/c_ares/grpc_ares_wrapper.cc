@@ -586,16 +586,18 @@ struct sortable_address {
 #define IPV6_ADDR_SCOPE_LINKLOCAL 0x02
 #define IPV6_ADDR_SCOPE_SITELOCAL 0x05
 
-static int sockaddr_get_scope(grpc_resolved_address *resolved_addr) {
-  sockaddr_in6 *s_addr = (sockaddr_in6*)&resolved_addr->addr;
+static int sockaddr_get_scope(sockaddr_in6 *s_addr) {
   switch (s_addr->sin6_family) {
   case AF_INET:
+    gpr_log(GPR_INFO, "ipv4 so global scope");
     return IPV6_ADDR_SCOPE_GLOBAL;
   case AF_INET6:
     if (IN6_IS_ADDR_LOOPBACK(&s_addr->sin6_addr) || IN6_IS_ADDR_LINKLOCAL(&s_addr->sin6_addr)) {
+      gpr_log(GPR_INFO, "found link local scope");
       return IPV6_ADDR_SCOPE_LINKLOCAL;
     }
     if (IN6_IS_ADDR_SITELOCAL(&s_addr->sin6_addr)) {
+      gpr_log(GPR_INFO, "found site local scope");
       return IPV6_ADDR_SCOPE_SITELOCAL;
     }
     gpr_log(GPR_INFO, "found global scope");
@@ -615,12 +617,12 @@ static int rfc_6724_compare(const void *a, const void *b) {
   }
   gpr_log(GPR_INFO, "src addrs both not there or there");
   int a_src_dst_scope_matches = false;
-  if (sockaddr_get_scope(&sa->lb_addr.address) == sockaddr_get_scope(&sa->lb_addr.address)) {
+  if (sockaddr_get_scope((sockaddr_in6*)&sa->lb_addr.address) == sockaddr_get_scope(&sa->source_addr)) {
     gpr_log(GPR_INFO, "a src and dst scopes match");
     a_src_dst_scope_matches = true;
   }
   int b_src_dst_scope_matches = false;
-  if (sockaddr_get_scope(&sb->lb_addr.address) == sockaddr_get_scope(&sb->lb_addr.address)) {
+  if (sockaddr_get_scope((sockaddr_in6*)&sb->lb_addr.address) == sockaddr_get_scope(&sb->source_addr)) {
     gpr_log(GPR_INFO, "b src and dst scopes match");
     b_src_dst_scope_matches = true;
   }

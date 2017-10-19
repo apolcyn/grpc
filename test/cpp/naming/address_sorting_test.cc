@@ -254,21 +254,15 @@ TEST(AddressSortingTest, TestDepriotizesNonMatchingScope) {
   mock->ipv6_supported = true;
   mock->dest_addr_to_src_addr = {
     {"[2000:f8b0:400a:801::1002]:443", {"[fec0::1000]:0", AF_INET6}}, // global and site-local scope
-    {"[2111:f8b0:400a:801::1002]:443", {"[2222:f8b0:400a:801::1002]:0", AF_INET6}}, // global and global scope
     {"[fec0::5000]:443", {"[fec0::5001]:0", AF_INET6}}, // site-local and site-local scope
-    {"[fe80::6000]:443", {"[fe80::6001]:0", AF_INET6}}, // link-local and link-local scope
   };
   grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
     {"[2000:f8b0:400a:801::1002]:443", AF_INET6},
-    {"[2111:f8b0:400a:801::1002]:443", AF_INET6},
     {"[fec0::5000]:443", AF_INET6},
-    {"[fe80::6000]:443", AF_INET6},
   });
   grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
   VerifyLbAddrOutputs(lb_addrs, {
     "[fec0::5000]:443",
-    "[fe80::6000]:443",
-    "[2111:f8b0:400a:801::1002]:443",
     "[2000:f8b0:400a:801::1002]:443",
   });
 }
