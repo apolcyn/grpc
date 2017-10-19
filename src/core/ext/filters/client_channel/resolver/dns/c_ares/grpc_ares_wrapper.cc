@@ -26,6 +26,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <netinet/in.h>
 
 #include <ares.h>
 #include <grpc/support/alloc.h>
@@ -581,17 +582,26 @@ struct sortable_address {
   bool src_addr_exists;
 };
 
-static int sockaddr_get_scope_id(grpc_resolved_address *resolved_addr) {
-  switch (addr->sa_family) {
+#define IPV6_ADDR_SCOPE_GLOBAL 0x0e
+#define IPV6_ADDR_SCOPE_LINKLOCAL 0x02
+#define IPV6_ADDR_SCOPE_SITELOCAL 0x05
+
+static int sockaddr_get_scope(grpc_resolved_address *resolved_addr) {
+  sockaddr_in6 *s_addr = (sockaddr_in6*)&resolved_addr->addr;
+  switch (s_addr->sin6_family) {
   case AF_INET:
-    return ntohs(((struct sockaddr_in *)addr)->sin_port);
+    return IPV6_ADDR_SCOPE_GLOBAL;
   case AF_INET6:
-    return ntohs(((struct sockaddr_in6 *)addr)->sin6_port);
-  default:
-    if (grpc_is_unix_socket(resolved_addr)) {
-      return 1;
+    if (IN6_IS_ADDR_LOOPBACK(&s_addr->sin6_addr) || IN6_IS_ADDR_LINKLOCAL(&s_addr->sin6_addr)) {
+      return IPV6_ADDR_SCOPE_LINKLOCAL;
     }
-    gpr_log(GPR_ERROR, "Unknown socket family %d in grpc_sockaddr_get_port", addr->sa_family);
+    if (IN6_IS_ADDR_SITELOCAL(&s_addr->sin6_addr)) {
+      return IPV6_ADDR_SCOPE_SITELOCAL;
+    }
+    gpr_log(GPR_INFO, "found global scope");
+    return IPV6_ADDR_SCOPE_GLOBAL;
+  default:
+    gpr_log(GPR_ERROR, "Unknown socket family %d in grpc_sockaddr_get_port", s_addr->sin6_family);
     return 0;
   }
 }
@@ -604,7 +614,20 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return sa->src_addr_exists ? -1 : 1;
   }
   gpr_log(GPR_INFO, "src addrs both not there or there");
-  if (
+  int a_src_dst_scope_matches = false;
+  if (sockaddr_get_scope(&sa->lb_addr.address) == sockaddr_get_scope(&sa->lb_addr.address)) {
+    gpr_log(GPR_INFO, "a src and dst scopes match");
+    a_src_dst_scope_matches = true;
+  }
+  int b_src_dst_scope_matches = false;
+  if (sockaddr_get_scope(&sb->lb_addr.address) == sockaddr_get_scope(&sb->lb_addr.address)) {
+    gpr_log(GPR_INFO, "b src and dst scopes match");
+    b_src_dst_scope_matches = true;
+  }
+  if (a_src_dst_scope_matches != b_src_dst_scope_matches) {
+    return a_src_dst_scope_matches ? -1 : 1;
+  }
+  gpr_log(GPR_INFO, "matching of scopes matches");
   return 0;
 }
 
@@ -615,9 +638,17 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
     sortable[i].src_addr_exists = false;
     int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
     int s = grpc_ares_wrapper_socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    if (address_family == AF_INET6) {
+      sockaddr_in6 *s_addr = (sockaddr_in6*)&resolved_lb_addrs->addresses[i].address.addr;
+      char ntop_buf[INET6_ADDRSTRLEN + 1];
+      ntop_buf[INET6_ADDRSTRLEN] = 0;
+      gpr_log(GPR_INFO, "ares wrapper lb addr addr string");
+      inet_ntop(AF_INET6, &s_addr->sin6_addr, ntop_buf, sizeof(ntop_buf));
+      gpr_log(GPR_INFO, "lb addr str: %s", ntop_buf);
+    }
     if (s != -1) {
-      struct sockaddr dest = *(struct sockaddr*)resolved_lb_addrs->addresses[i].address.addr;
-      if (grpc_ares_wrapper_connect(s, &dest, resolved_lb_addrs->addresses[i].address.len) != -1) {
+      struct sockaddr *dest = (struct sockaddr*)resolved_lb_addrs->addresses[i].address.addr;
+      if (grpc_ares_wrapper_connect(s, dest, resolved_lb_addrs->addresses[i].address.len) != -1) {
         grpc_resolved_address src_addr;
         if (grpc_ares_wrapper_getsockname(s, (struct sockaddr*)&src_addr.addr, (socklen_t*)&src_addr.len) != -1) {
           sortable[i].src_addr_exists = true;
