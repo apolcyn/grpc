@@ -585,7 +585,7 @@ struct sortable_address {
 };
 
 struct rfc_6724_table_entry {
-  uint32_t prefix[4];
+  uint8_t prefix[16];
   size_t prefix_len;
   int precedence;
   int label;
@@ -593,55 +593,55 @@ struct rfc_6724_table_entry {
 
 rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
   {
-    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
     128,
     50,
     0,
   },
   {
-    { 0x0, 0x0, 0x0, 0x0 },
+    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     0,
     40,
     1,
   },
   {
-    { 0x00000000, 0x00000000, 0xffffffff, 0x0 },
+    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0},
     96,
     35,
     4,
   },
   {
-    { 0x20020000, 0x0, 0x0, 0x0 },
+    { 0x20, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     16,
     30,
     2,
   },
   {
-    { 0x20010000, 0x0, 0x0, 0x0 },
+    { 0x20, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     32,
     5,
     5,
   },
   {
-    { 0xfc, 0x0, 0x0, 0x0 },
+    { 0xfc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     7,
     3,
     13,
   },
   {
-    { 0xfc, 0x0, 0x0, 0x0 },
+    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     96,
     1,
     3,
   },
   {
-    { 0xfec, 0x0, 0x0, 0x0 },
+    { 0xfe, 0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     10,
     1,
     11,
   },
   {
-    { 0x3ffe, 0x0, 0x0, 0x0 },
+    { 0x3f, 0xfe, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
     16,
     1,
     12,
@@ -651,26 +651,27 @@ rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
 static rfc_6724_table_entry *rfc_6724_policy_table = rfc_6724_default_policy_table;
 static size_t rfc_6724_policy_table_size = 9;
 
-static int ipv6_prefix_match_length(int32_t *a, int32_t *b) {
-  int cur_match = 0;
-  while (cur_match < 128) {
-    int a_bit = a[cur_match / 32] & (1 << (cur_match % 32));
-    int b_bit = b[cur_match / 32] & (1 << (cur_match % 32));
-    if (a_bit == b_bit) {
-      cur_match++;
+static int ipv6_prefix_match_length(unsigned char *a, unsigned char *b) {
+  int cur_bit = 0;
+  while (cur_bit < 128) {
+    int a_val = a[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
+    int b_val = b[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
+    if (a_val == b_val) {
+      cur_bit++;
     } else {
       break;
     }
   }
-  return cur_match;
+  return cur_bit;
 }
 
 rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
   rfc_6724_table_entry *best_match  = NULL;
   for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
-    size_t prefix_match = ipv6_prefix_match_length((int32_t*)rfc_6724_policy_table[i].prefix, (int32_t*)&s_addr->sin6_addr);
+    size_t prefix_match = ipv6_prefix_match_length((unsigned char*)rfc_6724_policy_table[i].prefix, (unsigned char*)&s_addr->sin6_addr.s6_addr);
     if (prefix_match >= rfc_6724_policy_table[i].prefix_len) {
-      if (best_match == NULL || prefix_match > best_match->prefix_len) {
+      if (best_match == NULL || rfc_6724_policy_table[i].prefix_len > best_match->prefix_len) {
+        gpr_log(GPR_INFO, "best match so far is index: %d", (int)i);
         best_match = &rfc_6724_policy_table[i];
       }
     }
@@ -787,8 +788,8 @@ static int rfc_6724_compare(const void *a, const void *b) {
 
   // Use longest matching prefix
   if (grpc_sockaddr_get_family(&sa->lb_addr.address) == grpc_sockaddr_get_family(&sb->lb_addr.address) && grpc_sockaddr_get_family(&sa->lb_addr.address) == AF_INET6) {
-    int a_match = ipv6_prefix_match_length((int32_t*)&sa->source_addr, (int32_t*)&sa->dest_addr);
-    int b_match = ipv6_prefix_match_length((int32_t*)&sb->source_addr, (int32_t*)&sb->dest_addr);
+    int a_match = ipv6_prefix_match_length((unsigned char*)&sa->source_addr.sin6_addr.s6_addr, (unsigned char*)&sa->dest_addr.sin6_addr.s6_addr);
+    int b_match = ipv6_prefix_match_length((unsigned char*)&sb->source_addr.sin6_addr.s6_addr, (unsigned char*)&sb->dest_addr.sin6_addr.s6_addr);
     if (a_match != b_match) {
       return a_match - b_match;
     }
