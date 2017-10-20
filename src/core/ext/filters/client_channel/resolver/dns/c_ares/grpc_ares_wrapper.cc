@@ -682,6 +682,7 @@ rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
 static int get_label_value(sockaddr_in6 *s_addr) {
   rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
   GPR_ASSERT(entry != NULL);
+  gpr_log(GPR_INFO, "returning label: %d", entry->label);
   return entry->label;
 }
 
@@ -730,12 +731,12 @@ static int rfc_6724_compare(const void *a, const void *b) {
 
   // Prefer destinations with a source address of a matching scope
   int a_src_dst_scope_matches = false;
-  if (sockaddr_get_scope((sockaddr_in6*)&sa->lb_addr.address) == sockaddr_get_scope(&sa->source_addr)) {
+  if (sockaddr_get_scope((sockaddr_in6*)&sa->dest_addr) == sockaddr_get_scope(&sa->source_addr)) {
     gpr_log(GPR_INFO, "a src and dst scopes match");
     a_src_dst_scope_matches = true;
   }
   int b_src_dst_scope_matches = false;
-  if (sockaddr_get_scope((sockaddr_in6*)&sb->lb_addr.address) == sockaddr_get_scope(&sb->source_addr)) {
+  if (sockaddr_get_scope((sockaddr_in6*)&sb->dest_addr) == sockaddr_get_scope(&sb->source_addr)) {
     gpr_log(GPR_INFO, "b src and dst scopes match");
     b_src_dst_scope_matches = true;
   }
@@ -749,24 +750,26 @@ static int rfc_6724_compare(const void *a, const void *b) {
 
   // Prefer destinations with a source address having a matching label
   int a_label_matches = false;
-  if (get_label_value((sockaddr_in6*)&sa->lb_addr.address) == get_label_value(&sa->source_addr)) {
+  if (get_label_value((sockaddr_in6*)&sa->dest_addr) == get_label_value(&sa->source_addr)) {
     a_label_matches = true;
   }
   int b_label_matches = false;
-  if (get_label_value((sockaddr_in6*)&sb->lb_addr.address) == get_label_value(&sb->source_addr)) {
+  if (get_label_value((sockaddr_in6*)&sb->dest_addr) == get_label_value(&sb->source_addr)) {
     b_label_matches = true;
   }
   if (a_label_matches != b_label_matches) {
+    gpr_log(GPR_INFO, "labels dont match");
     return a_label_matches ? -1 : 1;
   }
+  gpr_log(GPR_INFO, "labels match");
 
   // Prefer destinations with a source address having a matching precedence
   int a_precedence_matches = false;
-  if (get_precedence_value((sockaddr_in6*)&sa->lb_addr.address) == get_precedence_value(&sa->source_addr)) {
+  if (get_precedence_value((sockaddr_in6*)&sa->dest_addr) == get_precedence_value(&sa->source_addr)) {
     a_precedence_matches = true;
   }
   int b_precedence_matches = false;
-  if (get_precedence_value((sockaddr_in6*)&sb->lb_addr.address) == get_precedence_value(&sb->source_addr)) {
+  if (get_precedence_value((sockaddr_in6*)&sb->dest_addr) == get_precedence_value(&sb->source_addr)) {
     b_precedence_matches = true;
   }
   if (a_precedence_matches != b_precedence_matches) {
@@ -776,8 +779,8 @@ static int rfc_6724_compare(const void *a, const void *b) {
   // TODO: prefer native transport
 
   // Prefer smaller scope
-  int scope_dest_a = sockaddr_get_scope((sockaddr_in6*)&sa->lb_addr.address);
-  int scope_dest_b = sockaddr_get_scope((sockaddr_in6*)&sb->lb_addr.address);
+  int scope_dest_a = sockaddr_get_scope((sockaddr_in6*)&sa->dest_addr);
+  int scope_dest_b = sockaddr_get_scope((sockaddr_in6*)&sb->dest_addr);
   if (scope_dest_a != scope_dest_b) {
     return scope_dest_a - scope_dest_b;
   }

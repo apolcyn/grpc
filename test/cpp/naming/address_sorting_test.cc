@@ -194,6 +194,8 @@ MockAresWrapperSocketFactory *NewMockAresWrapperSocketFactory() {
 
 } // namespace
 
+
+/* Tests for rule 1 */
 TEST(AddressSortingTest, TestDepriotizesUnreachableAddresses) {
   auto mock = NewMockAresWrapperSocketFactory();
   mock->ipv4_supported = true;
@@ -248,6 +250,8 @@ TEST(AddressSortingTest, TestDepriotizesUnsupportedDomainIpv4) {
   });
 }
 
+/* Tests for rule 2 */
+
 TEST(AddressSortingTest, TestDepriotizesNonMatchingScope) {
   auto mock = NewMockAresWrapperSocketFactory();
   mock->ipv4_supported = true;
@@ -264,6 +268,27 @@ TEST(AddressSortingTest, TestDepriotizesNonMatchingScope) {
   VerifyLbAddrOutputs(lb_addrs, {
     "[fec0::5000]:443",
     "[2000:f8b0:400a:801::1002]:443",
+  });
+}
+
+/* Tests for rule 5 */
+
+TEST(AddressSortingTest, TestUsesLabelFromDefaultTable) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[2002::5001]:443", {"[2001::5002]:0", AF_INET6}},
+    {"[2001::5001]:443", {"[2001::5002]:0", AF_INET6}}, // matching labels
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[2002::5001]:443", AF_INET6},
+    {"[2001::5001]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[2001::5001]:443",
+    "[2002::5001]:443",
   });
 }
 
