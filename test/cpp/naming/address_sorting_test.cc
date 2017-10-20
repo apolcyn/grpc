@@ -354,6 +354,101 @@ TEST(AddressSortingTest, TestUsesDestinationWithHigherPrecedenceWithLinkAndSiteL
   });
 }
 
+/* Tests for rule 8 */
+
+TEST(AddressSortingTest, TestPrefersSmallerScope) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    // Both of these destinations have the same precedence in default policy
+    // table.
+    {"[fec0::1234]:443", {"[fec0::5678]:0", AF_INET6}},
+    {"[3ffe::5001]:443", {"[3ffe::5002]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[3ffe::5001]:443", AF_INET6},
+    {"[fec0::1234]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[fec0::1234]:443",
+    "[3ffe::5001]:443",
+  });
+}
+
+/* Tests for rule 9 */
+
+TEST(AddressSortingTest, TestPrefersLongestMatchingSrcDstPrefix) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    // Both of these destinations have the same precedence in default policy
+    // table.
+    {"[3ffe::1234]:443", {"[3ffe::1235]:0", AF_INET6}},
+    {"[3ffe::5001]:443", {"[3ffe::4321]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[3ffe::5001]:443", AF_INET6},
+    {"[3ffe::1234]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[3ffe::1234]:443",
+    "[3ffe::5001]:443",
+  });
+}
+
+/* Tests for rule 10 */
+
+TEST(AddressSortingTest, TestStableSort) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[3ffe::1234]:443", {"[3ffe::1236]:0", AF_INET6}},
+    {"[3ffe::1235]:443", {"[3ffe::1237]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[3ffe::1234]:443", AF_INET6},
+    {"[3ffe::1235]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[3ffe::1234]:443",
+    "[3ffe::1235]:443",
+  });
+}
+
+TEST(AddressSortingTest, TestStableSortFiveElements) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[3ffe::1231]:443", {"[3ffe::1201]:0", AF_INET6}},
+    {"[3ffe::1232]:443", {"[3ffe::1202]:0", AF_INET6}},
+    {"[3ffe::1233]:443", {"[3ffe::1203]:0", AF_INET6}},
+    {"[3ffe::1234]:443", {"[3ffe::1204]:0", AF_INET6}},
+    {"[3ffe::1235]:443", {"[3ffe::1205]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[3ffe::1231]:443", AF_INET6},
+    {"[3ffe::1232]:443", AF_INET6},
+    {"[3ffe::1233]:443", AF_INET6},
+    {"[3ffe::1234]:443", AF_INET6},
+    {"[3ffe::1235]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[3ffe::1231]:443",
+    "[3ffe::1232]:443",
+    "[3ffe::1233]:443",
+    "[3ffe::1234]:443",
+    "[3ffe::1235]:443",
+  });
+}
+
 int main(int argc, char **argv) {
   grpc_init();
   grpc_test_init(argc, argv);

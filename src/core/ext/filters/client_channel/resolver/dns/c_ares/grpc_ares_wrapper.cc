@@ -788,9 +788,7 @@ static int compare_src_dst_prefix_match_lengths(sortable_address *sa, sortable_a
   if (grpc_sockaddr_get_family(&sa->lb_addr.address) == grpc_sockaddr_get_family(&sb->lb_addr.address) && grpc_sockaddr_get_family(&sa->lb_addr.address) == AF_INET6) {
     int a_match = ipv6_prefix_match_length((unsigned char*)&sa->source_addr.sin6_addr.s6_addr, (unsigned char*)&sa->dest_addr.sin6_addr.s6_addr);
     int b_match = ipv6_prefix_match_length((unsigned char*)&sb->source_addr.sin6_addr.s6_addr, (unsigned char*)&sb->dest_addr.sin6_addr.s6_addr);
-    if (a_match != b_match) {
-      return a_match - b_match;
-    }
+    return b_match - a_match;
   }
   return 0;
 }
@@ -829,8 +827,22 @@ static void update_maybe_v4map(grpc_resolved_address *resolved_addr, sockaddr_in
   }
 }
 
+static void log_address_sorting_list(grpc_lb_addresses *lb_addrs, const char *input_output_str) {
+  for (size_t i = 0; i < lb_addrs->num_addresses; i++) {
+    char *addr_str;
+    if (grpc_sockaddr_to_string(&addr_str, &lb_addrs->addresses[i].address, true)) {
+      gpr_log(GPR_INFO, "C-ares sockaddr address sorting %s index: %" PRIdPTR ". Sockaddr-to-string: %s", input_output_str, i, addr_str);
+    } else {
+      gpr_log(GPR_INFO, "Failed to convert sockaddr c-ares address sorting %s index: %" PRIdPTR " to string.", input_output_str, i);
+    }
+  }
+}
+
 void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
   sortable_address* sortable = (sortable_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(sortable_address));
+  if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
+    log_address_sorting_list(resolved_lb_addrs, "input");
+  }
   for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
     sortable[i].lb_addr = resolved_lb_addrs->addresses[i];
     sortable[i].src_addr_exists = false;
@@ -889,6 +901,9 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
   gpr_free(sortable);
   gpr_free(resolved_lb_addrs->addresses);
   resolved_lb_addrs->addresses = sorted_lb_addrs;
+  if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
+    log_address_sorting_list(resolved_lb_addrs, "output");
+  }
 }
 
 static void grpc_resolve_address_ares_impl(grpc_exec_ctx *exec_ctx,
