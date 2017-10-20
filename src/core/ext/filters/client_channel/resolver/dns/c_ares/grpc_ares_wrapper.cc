@@ -578,16 +578,18 @@ int grpc_ares_wrapper_close(int sockfd) {
 
 struct sortable_address {
   grpc_lb_address lb_addr;
+  struct sockaddr_in6 dest_addr;
   struct sockaddr_in6 source_addr;
+  size_t original_index;
   bool src_addr_exists;
 };
 
 struct rfc_6724_table_entry {
   uint32_t prefix[4];
-  int mask_len;
+  size_t prefix_len;
   int precedence;
   int label;
-}
+};
 
 rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
   {
@@ -644,24 +646,30 @@ rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
     1,
     12,
   },
-}
+};
 
-static rfc_6724_table_entry *rfc_6724_policy_table = &rfc_6724_default_policy_table;
-static int rfc_6724_policy_table_size = 9;
+static rfc_6724_table_entry *rfc_6724_policy_table = rfc_6724_default_policy_table;
+static size_t rfc_6724_policy_table_size = 9;
+
+static int ipv6_prefix_match_length(int32_t *a, int32_t *b) {
+  int cur_match = 0;
+  while (cur_match < 128) {
+    int a_bit = a[cur_match / 32] & (1 << (cur_match % 32));
+    int b_bit = b[cur_match / 32] & (1 << (cur_match % 32));
+    if (a_bit == b_bit) {
+      cur_match++;
+    } else {
+      break;
+    }
+  }
+  return cur_match;
+}
 
 rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
   rfc_6724_table_entry *best_match  = NULL;
   for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
-    size_t prefix_match = 0;
-    int32_t *addr = (int32_t*)s_addr->sin6_addr;
-    while (prefix_match < rfc_6724_policy_table[i].prefix_len) {
-      int cur_addr_bit = addr[prefix_match / 32] & (1 << (prefix % 32));
-      int cur_prefix_bit =  rfc_6724_policy_table[i].prefix[prefix_match / 32] & (1 << (prefix % 32));
-      if (cur_addr_bit == cur_prefix_bit) {
-        prefix_match++;
-      }
-    }
-    if (prefix_match == rfc_6724_policy_table[i].prefix_len) {
+    size_t prefix_match = ipv6_prefix_match_length((int32_t*)rfc_6724_policy_table[i].prefix, (int32_t*)&s_addr->sin6_addr);
+    if (prefix_match >= rfc_6724_policy_table[i].prefix_len) {
       if (best_match == NULL || prefix_match > best_match->prefix_len) {
         best_match = &rfc_6724_policy_table[i];
       }
@@ -677,13 +685,10 @@ static int get_label_value(sockaddr_in6 *s_addr) {
   return entry->label;
 }
 
-static int get_label_precedence(sockaddr_in6 *s_addr) {
+static int get_precedence_value(sockaddr_in6 *s_addr) {
   rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
   GPR_ASSERT(entry != NULL);
   return entry->precedence;
-}
-
-rfc_6724_table_entry *lookup_table_entry(sockaddr_in6 *s_addr) {
 }
 
 #define IPV6_ADDR_SCOPE_GLOBAL 0x0e
@@ -756,12 +761,12 @@ static int rfc_6724_compare(const void *a, const void *b) {
   }
 
   // Prefer destinations with a source address having a matching precedence
-  int a_precdence_matches = false;
-  if (get_label_value((sockaddr_in6*)&sa->lb_addr.address) == get_label_value(&sa->source_addr)) {
+  int a_precedence_matches = false;
+  if (get_precedence_value((sockaddr_in6*)&sa->lb_addr.address) == get_precedence_value(&sa->source_addr)) {
     a_precedence_matches = true;
   }
-  int b_label_matches = false;
-  if (get_label_value((sockaddr_in6*)&sb->lb_addr.address) == get_label_value(&sb->source_addr)) {
+  int b_precedence_matches = false;
+  if (get_precedence_value((sockaddr_in6*)&sb->lb_addr.address) == get_precedence_value(&sb->source_addr)) {
     b_precedence_matches = true;
   }
   if (a_precedence_matches != b_precedence_matches) {
@@ -777,10 +782,26 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return scope_dest_a - scope_dest_b;
   }
 
-  // TODO: prefer longest matching prefix
-  // TODO: prefer that the sort be stable otherwise
+  // Use longest matching prefix
+  if (grpc_sockaddr_get_family(&sa->lb_addr.address) == grpc_sockaddr_get_family(&sb->lb_addr.address) && grpc_sockaddr_get_family(&sa->lb_addr.address) == AF_INET6) {
+    int a_match = ipv6_prefix_match_length((int32_t*)&sa->source_addr, (int32_t*)&sa->dest_addr);
+    int b_match = ipv6_prefix_match_length((int32_t*)&sb->source_addr, (int32_t*)&sb->dest_addr);
+    if (a_match != b_match) {
+      return a_match - b_match;
+    }
+  }
 
-  return 0;
+  // Prefer that the sort be stable otherwise
+  return sa->original_index - sb->original_index;
+}
+
+static void update_maybe_v4map(grpc_resolved_address *resolved_addr, sockaddr_in6 *to_update) {
+  grpc_resolved_address v4_mapped;
+  if (grpc_sockaddr_to_v4mapped(resolved_addr, &v4_mapped)) {
+    memcpy(to_update, &v4_mapped.addr, sizeof(struct sockaddr_in6));
+  } else {
+    memcpy(to_update, &resolved_addr->addr, sizeof(struct sockaddr_in6));
+  }
 }
 
 void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
@@ -788,6 +809,8 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
   for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
     sortable[i].lb_addr = resolved_lb_addrs->addresses[i];
     sortable[i].src_addr_exists = false;
+    sortable[i].original_index = i;
+    update_maybe_v4map(&resolved_lb_addrs->addresses[i].address, &sortable[i].dest_addr);
     int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
     // TODO: possible optimization: reuse already-opened sockets when possible
     int s = grpc_ares_wrapper_socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
@@ -805,12 +828,8 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
         grpc_resolved_address src_addr;
         if (grpc_ares_wrapper_getsockname(s, (struct sockaddr*)&src_addr.addr, (socklen_t*)&src_addr.len) != -1) {
           sortable[i].src_addr_exists = true;
-          grpc_resolved_address v4_mapped;
-          if (grpc_sockaddr_to_v4mapped(&src_addr, &v4_mapped)) {
-            memcpy(&sortable[i].source_addr, &v4_mapped.addr, sizeof(struct sockaddr_in6));
-          } else {
-            memcpy(&sortable[i].source_addr, &src_addr.addr, sizeof(struct sockaddr_in6));
-          }
+          update_maybe_v4map(&src_addr, &sortable[i].source_addr);
+          // Do logging
           char *dst_str;
           GPR_ASSERT(grpc_sockaddr_to_string(&dst_str, &resolved_lb_addrs->addresses[i].address, true));
           char *src_str;
