@@ -88,6 +88,8 @@ struct grpc_ares_wrapper_socket_factory {
 
 void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory);
 
+extern grpc_tracer_flag grpc_trace_cares_address_sorting;
+
 #ifdef __cplusplus
 }
 #endif

@@ -292,6 +292,68 @@ TEST(AddressSortingTest, TestUsesLabelFromDefaultTable) {
   });
 }
 
+/* Tests for rule 6 */
+
+TEST(AddressSortingTest, TestUsesDestinationWithHigherPrecedenceWithAnIpv4Address) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[3ffe::5001]:443", {"[3ffe::5002]:0", AF_INET6}},
+    {"1.2.3.4:443", {"5.6.7.8:0", AF_INET}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[3ffe::5001]:443", AF_INET6},
+    {"1.2.3.4:443", AF_INET},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    // The AF_INET address should be v4-mapped by the sort, and v4-mapped
+    // addresses have higher precedence than 3ffe::/16 by spec.
+    "1.2.3.4:443",
+    "[3ffe::5001]:443",
+  });
+}
+
+TEST(AddressSortingTest, TestUsesDestinationWithHigherPrecedenceWith2000PrefixedAddress) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[2001::1234]:443", {"[2001::5678]:0", AF_INET6}},
+    {"[2000::5001]:443", {"[2000::5002]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[2001::1234]:443", AF_INET6},
+    {"[2000::5001]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    // The 2000::/16 address should match the ::/0 prefix rule
+    "[2000::5001]:443",
+    "[2001::1234]:443",
+  });
+}
+
+TEST(AddressSortingTest, TestUsesDestinationWithHigherPrecedenceWithLinkAndSiteLocalAddresses) {
+  auto mock = NewMockAresWrapperSocketFactory();
+  mock->ipv4_supported = true;
+  mock->ipv6_supported = true;
+  mock->dest_addr_to_src_addr = {
+    {"[fec0::1234]:443", {"[fec0::5678]:0", AF_INET6}},
+    {"[fc00::5001]:443", {"[fc00::5002]:0", AF_INET6}},
+  };
+  grpc_lb_addresses *lb_addrs = BuildLbAddrInputs({
+    {"[fec0::1234]:443", AF_INET6},
+    {"[fc00::5001]:443", AF_INET6},
+  });
+  grpc_ares_wrapper_rfc_6724_sort(lb_addrs);
+  VerifyLbAddrOutputs(lb_addrs, {
+    "[fc00::5001]:443",
+    "[fec0::1234]:443",
+  });
+}
+
 int main(int argc, char **argv) {
   grpc_init();
   grpc_test_init(argc, argv);

@@ -435,6 +435,8 @@ extern "C" void grpc_resolver_dns_ares_init(void) {
     }
     grpc_resolve_address = grpc_resolve_address_ares;
     grpc_register_resolver_type(dns_ares_resolver_factory_create());
+    grpc_register_tracer(&grpc_trace_cares_address_sorting);
+    gpr_log(GPR_DEBUG, "JUST REGISTERED TRACER");
   }
   gpr_free(resolver);
 }

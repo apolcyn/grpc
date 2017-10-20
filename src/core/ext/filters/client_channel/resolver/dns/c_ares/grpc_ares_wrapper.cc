@@ -45,6 +45,8 @@
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/support/string.h"
 
+grpc_tracer_flag grpc_trace_cares_address_sorting = GRPC_TRACER_INITIALIZER(false, "cares_address_sorting");
+
 static gpr_once g_basic_init = GPR_ONCE_INIT;
 static gpr_mu g_init_mu;
 
@@ -667,16 +669,20 @@ static int ipv6_prefix_match_length(unsigned char *a, unsigned char *b) {
 
 rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
   rfc_6724_table_entry *best_match  = NULL;
+  size_t best_match_index = -1;
   for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
     size_t prefix_match = ipv6_prefix_match_length((unsigned char*)rfc_6724_policy_table[i].prefix, (unsigned char*)&s_addr->sin6_addr.s6_addr);
     if (prefix_match >= rfc_6724_policy_table[i].prefix_len) {
       if (best_match == NULL || rfc_6724_policy_table[i].prefix_len > best_match->prefix_len) {
-        gpr_log(GPR_INFO, "best match so far is index: %d", (int)i);
         best_match = &rfc_6724_policy_table[i];
+        best_match_index = i;
       }
     }
   }
   GPR_ASSERT(best_match);
+  if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
+    gpr_log(GPR_INFO, "Looked up best match in policy table. Index: %" PRIdPTR ". Label: %d. Precedence: %d", best_match_index, best_match->label, best_match->precedence);
+  }
   return best_match;
 }
 
@@ -719,18 +725,16 @@ static int sockaddr_get_scope(sockaddr_in6 *s_addr) {
   }
 }
 
-static int rfc_6724_compare(const void *a, const void *b) {
-  sortable_address* sa = (sortable_address*)a;
-  sortable_address* sb = (sortable_address*)b;
-
-  // Prefer destinations with a valid source address
+static int compare_src_addr_exists(sortable_address *sa, sortable_address *sb) {
   if (sa->src_addr_exists != sb->src_addr_exists) {
     gpr_log(GPR_INFO, "src addrs not equal");
     return sa->src_addr_exists ? -1 : 1;
   }
   gpr_log(GPR_INFO, "src addrs both not there or there");
+  return 0;
+}
 
-  // Prefer destinations with a source address of a matching scope
+static int compre_src_dst_scope_matches(sortable_address *sa, sortable_address *sb) {
   int a_src_dst_scope_matches = false;
   if (sockaddr_get_scope((sockaddr_in6*)&sa->dest_addr) == sockaddr_get_scope(&sa->source_addr)) {
     gpr_log(GPR_INFO, "a src and dst scopes match");
@@ -745,11 +749,10 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return a_src_dst_scope_matches ? -1 : 1;
   }
   gpr_log(GPR_INFO, "matching of scopes matches");
+  return 0;
+}
 
-  // TODO: avoid deprecated addresses
-  // TODO: avoid temporary addresses
-
-  // Prefer destinations with a source address having a matching label
+static int compare_src_dst_labels_match(sortable_address *sa, sortable_address *sb) {
   int a_label_matches = false;
   if (get_label_value((sockaddr_in6*)&sa->dest_addr) == get_label_value(&sa->source_addr)) {
     a_label_matches = true;
@@ -763,30 +766,25 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return a_label_matches ? -1 : 1;
   }
   gpr_log(GPR_INFO, "labels match");
+  return 0;
+}
 
-  // Prefer destinations with a source address having a matching precedence
-  int a_precedence_matches = false;
-  if (get_precedence_value((sockaddr_in6*)&sa->dest_addr) == get_precedence_value(&sa->source_addr)) {
-    a_precedence_matches = true;
+static int compare_dst_precedence(sortable_address *sa, sortable_address *sb) {
+  if (get_precedence_value(&sa->dest_addr) != get_precedence_value(&sb->dest_addr)) {
+    return get_precedence_value(&sb->dest_addr) - get_precedence_value(&sa->dest_addr);
   }
-  int b_precedence_matches = false;
-  if (get_precedence_value((sockaddr_in6*)&sb->dest_addr) == get_precedence_value(&sb->source_addr)) {
-    b_precedence_matches = true;
-  }
-  if (a_precedence_matches != b_precedence_matches) {
-    return a_precedence_matches ? -1 : 1;
-  }
+  gpr_log(GPR_INFO, "precedence of both destinations match");
+  return 0;
+}
 
-  // TODO: prefer native transport
-
-  // Prefer smaller scope
-  int scope_dest_a = sockaddr_get_scope((sockaddr_in6*)&sa->dest_addr);
-  int scope_dest_b = sockaddr_get_scope((sockaddr_in6*)&sb->dest_addr);
-  if (scope_dest_a != scope_dest_b) {
-    return scope_dest_a - scope_dest_b;
+static int compare_dst_scope(sortable_address *sa, sortable_address *sb) {
+  if (sockaddr_get_scope(&sa->dest_addr) != sockaddr_get_scope(&sb->dest_addr)) {
+    return sockaddr_get_scope(&sa->dest_addr) - sockaddr_get_scope(&sb->dest_addr);
   }
+  return 0;
+}
 
-  // Use longest matching prefix
+static int compare_src_dst_prefix_match_lengths(sortable_address *sa, sortable_address *sb) {
   if (grpc_sockaddr_get_family(&sa->lb_addr.address) == grpc_sockaddr_get_family(&sb->lb_addr.address) && grpc_sockaddr_get_family(&sa->lb_addr.address) == AF_INET6) {
     int a_match = ipv6_prefix_match_length((unsigned char*)&sa->source_addr.sin6_addr.s6_addr, (unsigned char*)&sa->dest_addr.sin6_addr.s6_addr);
     int b_match = ipv6_prefix_match_length((unsigned char*)&sb->source_addr.sin6_addr.s6_addr, (unsigned char*)&sb->dest_addr.sin6_addr.s6_addr);
@@ -794,7 +792,30 @@ static int rfc_6724_compare(const void *a, const void *b) {
       return a_match - b_match;
     }
   }
+  return 0;
+}
 
+static int rfc_6724_compare(const void *a, const void *b) {
+  sortable_address* sa = (sortable_address*)a;
+  sortable_address* sb = (sortable_address*)b;
+
+  int out = 0;
+  if ((out = compare_src_addr_exists(sa, sb))) {
+    return out;
+  } else if ((out = compre_src_dst_scope_matches(sa, sb))) {
+    return out;
+  } else if ((out = compare_src_dst_labels_match(sa, sb))) {
+    return out;
+  // TODO: avoid deprecated addresses
+  // TODO: avoid temporary addresses
+  } else if ((out = compare_dst_precedence(sa, sb))) {
+    return out;
+  // TODO: prefer native transport
+  } else if ((out = compare_dst_scope(sa, sb))) {
+    return out;
+  } else if ((out = compare_src_dst_prefix_match_lengths(sa, sb))) {
+    return out;
+  }
   // Prefer that the sort be stable otherwise
   return sa->original_index - sb->original_index;
 }
@@ -816,7 +837,7 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
     sortable[i].original_index = i;
     update_maybe_v4map(&resolved_lb_addrs->addresses[i].address, &sortable[i].dest_addr);
     int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
-    // TODO: possible optimization: reuse already-opened sockets when possible
+    // TODO: reset already-created sockets when possible, if needed
     int s = grpc_ares_wrapper_socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (address_family == AF_INET6) {
       sockaddr_in6 *s_addr = (sockaddr_in6*)&resolved_lb_addrs->addresses[i].address.addr;
@@ -860,6 +881,10 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
   grpc_lb_address *sorted_lb_addrs = (grpc_lb_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(grpc_lb_address));
   for (size_t i = 0; i < resolved_lb_addrs->num_addresses; i++) {
     sorted_lb_addrs[i] = sortable[i].lb_addr;
+    char *src_str;
+    GPR_ASSERT(grpc_sockaddr_to_string(&src_str, &sorted_lb_addrs[i].address, false));
+    gpr_log(GPR_INFO, "Adding sorted address: %s", src_str);
+    gpr_free(src_str);
   }
   gpr_free(sortable);
   gpr_free(resolved_lb_addrs->addresses);
