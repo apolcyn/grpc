@@ -582,6 +582,110 @@ struct sortable_address {
   bool src_addr_exists;
 };
 
+struct rfc_6724_table_entry {
+  uint32_t prefix[4];
+  int mask_len;
+  int precedence;
+  int label;
+}
+
+rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
+  {
+    { 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
+    128,
+    50,
+    0,
+  },
+  {
+    { 0x0, 0x0, 0x0, 0x0 },
+    0,
+    40,
+    1,
+  },
+  {
+    { 0x00000000, 0x00000000, 0xffffffff, 0x0 },
+    96,
+    35,
+    4,
+  },
+  {
+    { 0x20020000, 0x0, 0x0, 0x0 },
+    16,
+    30,
+    2,
+  },
+  {
+    { 0x20010000, 0x0, 0x0, 0x0 },
+    32,
+    5,
+    5,
+  },
+  {
+    { 0xfc, 0x0, 0x0, 0x0 },
+    7,
+    3,
+    13,
+  },
+  {
+    { 0xfc, 0x0, 0x0, 0x0 },
+    96,
+    1,
+    3,
+  },
+  {
+    { 0xfec, 0x0, 0x0, 0x0 },
+    10,
+    1,
+    11,
+  },
+  {
+    { 0x3ffe, 0x0, 0x0, 0x0 },
+    16,
+    1,
+    12,
+  },
+}
+
+static rfc_6724_table_entry *rfc_6724_policy_table = &rfc_6724_default_policy_table;
+static int rfc_6724_policy_table_size = 9;
+
+rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
+  rfc_6724_table_entry *best_match  = NULL;
+  for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
+    size_t prefix_match = 0;
+    int32_t *addr = (int32_t*)s_addr->sin6_addr;
+    while (prefix_match < rfc_6724_policy_table[i].prefix_len) {
+      int cur_addr_bit = addr[prefix_match / 32] & (1 << (prefix % 32));
+      int cur_prefix_bit =  rfc_6724_policy_table[i].prefix[prefix_match / 32] & (1 << (prefix % 32));
+      if (cur_addr_bit == cur_prefix_bit) {
+        prefix_match++;
+      }
+    }
+    if (prefix_match == rfc_6724_policy_table[i].prefix_len) {
+      if (best_match == NULL || prefix_match > best_match->prefix_len) {
+        best_match = &rfc_6724_policy_table[i];
+      }
+    }
+  }
+  GPR_ASSERT(best_match);
+  return best_match;
+}
+
+static int get_label_value(sockaddr_in6 *s_addr) {
+  rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
+  GPR_ASSERT(entry != NULL);
+  return entry->label;
+}
+
+static int get_label_precedence(sockaddr_in6 *s_addr) {
+  rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
+  GPR_ASSERT(entry != NULL);
+  return entry->precedence;
+}
+
+rfc_6724_table_entry *lookup_table_entry(sockaddr_in6 *s_addr) {
+}
+
 #define IPV6_ADDR_SCOPE_GLOBAL 0x0e
 #define IPV6_ADDR_SCOPE_LINKLOCAL 0x02
 #define IPV6_ADDR_SCOPE_SITELOCAL 0x05
@@ -611,11 +715,15 @@ static int sockaddr_get_scope(sockaddr_in6 *s_addr) {
 static int rfc_6724_compare(const void *a, const void *b) {
   sortable_address* sa = (sortable_address*)a;
   sortable_address* sb = (sortable_address*)b;
+
+  // Prefer destinations with a valid source address
   if (sa->src_addr_exists != sb->src_addr_exists) {
     gpr_log(GPR_INFO, "src addrs not equal");
     return sa->src_addr_exists ? -1 : 1;
   }
   gpr_log(GPR_INFO, "src addrs both not there or there");
+
+  // Prefer destinations with a source address of a matching scope
   int a_src_dst_scope_matches = false;
   if (sockaddr_get_scope((sockaddr_in6*)&sa->lb_addr.address) == sockaddr_get_scope(&sa->source_addr)) {
     gpr_log(GPR_INFO, "a src and dst scopes match");
@@ -630,6 +738,48 @@ static int rfc_6724_compare(const void *a, const void *b) {
     return a_src_dst_scope_matches ? -1 : 1;
   }
   gpr_log(GPR_INFO, "matching of scopes matches");
+
+  // TODO: avoid deprecated addresses
+  // TODO: avoid temporary addresses
+
+  // Prefer destinations with a source address having a matching label
+  int a_label_matches = false;
+  if (get_label_value((sockaddr_in6*)&sa->lb_addr.address) == get_label_value(&sa->source_addr)) {
+    a_label_matches = true;
+  }
+  int b_label_matches = false;
+  if (get_label_value((sockaddr_in6*)&sb->lb_addr.address) == get_label_value(&sb->source_addr)) {
+    b_label_matches = true;
+  }
+  if (a_label_matches != b_label_matches) {
+    return a_label_matches ? -1 : 1;
+  }
+
+  // Prefer destinations with a source address having a matching precedence
+  int a_precdence_matches = false;
+  if (get_label_value((sockaddr_in6*)&sa->lb_addr.address) == get_label_value(&sa->source_addr)) {
+    a_precedence_matches = true;
+  }
+  int b_label_matches = false;
+  if (get_label_value((sockaddr_in6*)&sb->lb_addr.address) == get_label_value(&sb->source_addr)) {
+    b_precedence_matches = true;
+  }
+  if (a_precedence_matches != b_precedence_matches) {
+    return a_precedence_matches ? -1 : 1;
+  }
+
+  // TODO: prefer native transport
+
+  // Prefer smaller scope
+  int scope_dest_a = sockaddr_get_scope((sockaddr_in6*)&sa->lb_addr.address);
+  int scope_dest_b = sockaddr_get_scope((sockaddr_in6*)&sb->lb_addr.address);
+  if (scope_dest_a != scope_dest_b) {
+    return scope_dest_a - scope_dest_b;
+  }
+
+  // TODO: prefer longest matching prefix
+  // TODO: prefer that the sort be stable otherwise
+
   return 0;
 }
 
@@ -639,6 +789,7 @@ void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
     sortable[i].lb_addr = resolved_lb_addrs->addresses[i];
     sortable[i].src_addr_exists = false;
     int address_family = grpc_sockaddr_get_family(&resolved_lb_addrs->addresses[i].address);
+    // TODO: possible optimization: reuse already-opened sockets when possible
     int s = grpc_ares_wrapper_socket(address_family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (address_family == AF_INET6) {
       sockaddr_in6 *s_addr = (sockaddr_in6*)&resolved_lb_addrs->addresses[i].address.addr;
