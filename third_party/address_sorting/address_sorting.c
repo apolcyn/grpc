@@ -66,117 +66,179 @@ struct sortable_address {
   bool src_addr_exists;
 };
 
-struct rfc_6724_table_entry {
-  uint8_t prefix[16];
-  size_t prefix_len;
-  int precedence;
-  int label;
-};
+//struct rfc_6724_table_entry {
+//  uint8_t prefix[16];
+//  size_t prefix_len;
+//  int precedence;
+//  int label;
+//};
+//
+//rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
+//  {
+//    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+//    128,
+//    50,
+//    0,
+//  },
+//  {
+//    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    0,
+//    40,
+//    1,
+//  },
+//  {
+//    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0},
+//    96,
+//    35,
+//    4,
+//  },
+//  {
+//    { 0x20, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    16,
+//    30,
+//    2,
+//  },
+//  {
+//    { 0x20, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    32,
+//    5,
+//    5,
+//  },
+//  {
+//    { 0xfc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    7,
+//    3,
+//    13,
+//  },
+//  {
+//    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    96,
+//    1,
+//    3,
+//  },
+//  {
+//    { 0xfe, 0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    10,
+//    1,
+//    11,
+//  },
+//  {
+//    { 0x3f, 0xfe, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+//    16,
+//    1,
+//    12,
+//  },
+//};_
 
-rfc_6724_table_entry rfc_6724_default_policy_table[9] = {
-  {
-    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-    128,
-    50,
-    0,
-  },
-  {
-    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    0,
-    40,
-    1,
-  },
-  {
-    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0},
-    96,
-    35,
-    4,
-  },
-  {
-    { 0x20, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    16,
-    30,
-    2,
-  },
-  {
-    { 0x20, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    32,
-    5,
-    5,
-  },
-  {
-    { 0xfc, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    7,
-    3,
-    13,
-  },
-  {
-    { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    96,
-    1,
-    3,
-  },
-  {
-    { 0xfe, 0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    10,
-    1,
-    11,
-  },
-  {
-    { 0x3f, 0xfe, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-    16,
-    1,
-    12,
-  },
-};
-
-static rfc_6724_table_entry *rfc_6724_policy_table = rfc_6724_default_policy_table;
-static size_t rfc_6724_policy_table_size = 9;
-
-static int ipv6_prefix_match_length(unsigned char *a, unsigned char *b) {
-  int cur_bit = 0;
-  while (cur_bit < 128) {
-    int a_val = a[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
-    int b_val = b[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
-    if (a_val == b_val) {
-      cur_bit++;
-    } else {
-      break;
-    }
-  }
-  return cur_bit;
+static int
+_get_label(const struct sockaddr *addr)
+{
+        if (addr->sa_family == AF_INET) {
+                return 4;
+        } else if (addr->sa_family == AF_INET6) {
+                const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6 *) addr;
+                if (IN6_IS_ADDR_LOOPBACK(&addr6->sin6_addr)) {
+                        return 0;
+                } else if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+                        return 4;
+                } else if (IN6_IS_ADDR_6TO4(&addr6->sin6_addr)) {
+                        return 2;
+                } else if (IN6_IS_ADDR_TEREDO(&addr6->sin6_addr)) {
+                        return 5;
+                } else if (IN6_IS_ADDR_ULA(&addr6->sin6_addr)) {
+                        return 13;
+                } else if (IN6_IS_ADDR_V4COMPAT(&addr6->sin6_addr)) {
+                        return 3;
+                } else if (IN6_IS_ADDR_SITELOCAL(&addr6->sin6_addr)) {
+                        return 11;
+                } else if (IN6_IS_ADDR_6BONE(&addr6->sin6_addr)) {
+                        return 12;
+                } else {
+                        /* All other IPv6 addresses, including global unicast addresses. */
+                        return 1;
+                }
+        } else {
+          gpr_log(GPR_ERROR, "Failed to get label of sock addr");
+          abort();
+        }
 }
 
-rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
-  rfc_6724_table_entry *best_match  = NULL;
-  size_t best_match_index = -1;
-  for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
-    size_t prefix_match = ipv6_prefix_match_length((unsigned char*)rfc_6724_policy_table[i].prefix, (unsigned char*)&s_addr->sin6_addr.s6_addr);
-    if (prefix_match >= rfc_6724_policy_table[i].prefix_len) {
-      if (best_match == NULL || rfc_6724_policy_table[i].prefix_len > best_match->prefix_len) {
-        best_match = &rfc_6724_policy_table[i];
-        best_match_index = i;
-      }
-    }
-  }
-  GPR_ASSERT(best_match);
-  if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
-    gpr_log(GPR_INFO, "Looked up best match in policy table. Index: %" PRIdPTR ". Label: %d. Precedence: %d", best_match_index, best_match->label, best_match->precedence);
-  }
-  return best_match;
+static int get_precedence(const struct sockaddr *addr)
+{
+        if (addr->sa_family == AF_INET) {
+                return 35;
+        } else if (addr->sa_family == AF_INET6) {
+                const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6 *)addr;
+                if (IN6_IS_ADDR_LOOPBACK(&addr6->sin6_addr)) {
+                        return 50;
+                } else if (IN6_IS_ADDR_V4MAPPED(&addr6->sin6_addr)) {
+                        return 35;
+                } else if (IN6_IS_ADDR_6TO4(&addr6->sin6_addr)) {
+                        return 30;
+                } else if (IN6_IS_ADDR_TEREDO(&addr6->sin6_addr)) {
+                        return 5;
+                } else if (IN6_IS_ADDR_ULA(&addr6->sin6_addr)) {
+                        return 3;
+                } else if (IN6_IS_ADDR_V4COMPAT(&addr6->sin6_addr) ||
+                           IN6_IS_ADDR_SITELOCAL(&addr6->sin6_addr) ||
+                           IN6_IS_ADDR_6BONE(&addr6->sin6_addr)) {
+                        return 1;
+                } else {
+                        /* All other IPv6 addresses, including global unicast addresses. */
+                        return 40;
+                }
+        } else {
+          gpr_log(GPR_ERROR, "Failed to get label of sock addr");
+          abort();
+        }
 }
+
+//static rfc_6724_table_entry *rfc_6724_policy_table = rfc_6724_default_policy_table;
+//static size_t rfc_6724_policy_table_size = 9;
+//
+//static int ipv6_prefix_match_length(unsigned char *a, unsigned char *b) {
+//  int cur_bit = 0;
+//  while (cur_bit < 128) {
+//    int a_val = a[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
+//    int b_val = b[cur_bit / CHAR_BIT] & (1 << (cur_bit % CHAR_BIT));
+//    if (a_val == b_val) {
+//      cur_bit++;
+//    } else {
+//      break;
+//    }
+//  }
+//  return cur_bit;
+//}
+//
+//rfc_6724_table_entry *lookup_policy_table_match(sockaddr_in6 *s_addr) {
+//  rfc_6724_table_entry *best_match  = NULL;
+//  size_t best_match_index = -1;
+//  for (size_t i = 0; i < rfc_6724_policy_table_size; i++) {
+//    size_t prefix_match = ipv6_prefix_match_length((unsigned char*)rfc_6724_policy_table[i].prefix, (unsigned char*)&s_addr->sin6_addr.s6_addr);
+//    if (prefix_match >= rfc_6724_policy_table[i].prefix_len) {
+//      if (best_match == NULL || rfc_6724_policy_table[i].prefix_len > best_match->prefix_len) {
+//        best_match = &rfc_6724_policy_table[i];
+//        best_match_index = i;
+//      }
+//    }
+//  }
+//  GPR_ASSERT(best_match);
+//  if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
+//    gpr_log(GPR_INFO, "Looked up best match in policy table. Index: %" PRIdPTR ". Label: %d. Precedence: %d", best_match_index, best_match->label, best_match->precedence);
+//  }
+//  return best_match;
+//}
 
 static int get_label_value(sockaddr_in6 *s_addr) {
-  rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
-  GPR_ASSERT(entry != NULL);
+  int label = get_label(s_addr);
   gpr_log(GPR_INFO, "returning label: %d", entry->label);
-  return entry->label;
+  return label;
 }
 
 static int get_precedence_value(sockaddr_in6 *s_addr) {
-  rfc_6724_table_entry *entry = lookup_policy_table_match(s_addr);
-  GPR_ASSERT(entry != NULL);
-  return entry->precedence;
+  int precedence = get_precedence(s_addr);
+  gpr_log(GPR_INFO, "returning precedence: %d", precedence);
+  return precedence;
 }
 
 #define IPV6_ADDR_SCOPE_GLOBAL 0x0e
