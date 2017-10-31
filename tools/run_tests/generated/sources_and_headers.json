@@ -6182,6 +6182,21 @@
   {
     "deps": [
       "gpr", 
+      "grpc"
+    ], 
+    "headers": [
+      "third_party/address_sorting/address_sorting.h"
+    ], 
+    "is_filegroup": false, 
+    "language": "c++", 
+    "name": "address_sorting", 
+    "src": [], 
+    "third_party": false, 
+    "type": "lib"
+  }, 
+  {
+    "deps": [
+      "gpr", 
       "grpc", 
       "grpc++_base", 
       "grpc++_codegen_base", 

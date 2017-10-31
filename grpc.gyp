@@ -1185,6 +1185,17 @@
       ],
     },
     {
+      'target_name': 'address_sorting',
+      'type': 'static_library',
+      'dependencies': [
+        'grpc',
+        'gpr',
+      ],
+      'sources': [
+        'third_party/address_sorting/address_sorting.cc',
+      ],
+    },
+    {
       'target_name': 'grpc++',
       'type': 'static_library',
       'dependencies': [
