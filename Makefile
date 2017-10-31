@@ -8446,7 +8446,7 @@ ifneq ($(NO_DEPS),true)
 endif
 
 LIBADDR_SORTING_SRC = \
-    third_party/address_sorting/address_sorting.c.
+    third_party/address_sorting/address_sorting.cc
 
 LIBADDR_SORTING_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBADDR_SORTING_SRC))))
 
