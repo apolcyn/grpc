@@ -16,12 +16,12 @@
 
 #include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
-#include "address_sorting.h"
 
 extern "C" {
 #include "src/core/ext/filters/client_channel/client_channel.h"
 #include "src/core/ext/filters/client_channel/resolver.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.h"
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/iomgr/combiner.h"

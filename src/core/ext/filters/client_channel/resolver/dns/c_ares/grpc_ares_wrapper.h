@@ -75,8 +75,6 @@ void grpc_ares_cleanup(void);
 /* Exposed for testing */
 void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_addrs);
 
-extern grpc_tracer_flag grpc_trace_cares_address_sorting;
-
 #ifdef __cplusplus
 }
 #endif

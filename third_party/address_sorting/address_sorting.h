@@ -11,7 +11,7 @@
 #include "src/core/ext/filters/client_channel/lb_policy_factory.h"
 
 /* Exposed for testing */
-void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs);
+void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_addrs);
 
 struct grpc_ares_wrapper_socket_factory_vtable {
   int (*socket)(struct grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol);
@@ -24,7 +24,7 @@ struct grpc_ares_wrapper_socket_factory {
   const grpc_ares_wrapper_socket_factory_vtable* vtable;
 };
 
-void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory);
+void grpc_ares_wrapper_set_socket_factory_internal(grpc_ares_wrapper_socket_factory *factory);
 
 extern grpc_tracer_flag grpc_trace_cares_address_sorting;
 

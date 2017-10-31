@@ -42,6 +42,7 @@
 #include "src/core/lib/support/env.h"
 #include "src/core/lib/support/string.h"
 #include "src/core/lib/transport/service_config.h"
+#include "third_party/address_sorting/address_sorting.h"
 
 #define GRPC_DNS_MIN_CONNECT_TIMEOUT_SECONDS 1
 #define GRPC_DNS_INITIAL_CONNECT_BACKOFF_SECONDS 1

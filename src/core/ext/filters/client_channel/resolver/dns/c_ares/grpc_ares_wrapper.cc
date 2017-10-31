@@ -45,9 +45,7 @@
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/support/string.h"
 
-#include "address_sorting.h"
-
-grpc_tracer_flag grpc_trace_cares_address_sorting = GRPC_TRACER_INITIALIZER(false, "cares_address_sorting");
+#include "address_sorting_wrapper.h"
 
 static gpr_once g_basic_init = GPR_ONCE_INIT;
 static gpr_mu g_init_mu;

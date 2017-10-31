@@ -41,6 +41,9 @@
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 //#include "src/core/lib/iomgr/socket_utils_posix.h"
 #include "src/core/ext/filters/client_channel/lb_policy_factory.h"
+#include <grpc/support/useful.h>
+
+grpc_tracer_flag grpc_trace_cares_address_sorting = GRPC_TRACER_INITIALIZER(false, "cares_address_sorting");
 
 static int default_socket_factory_socket(grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol) {
         return socket(domain, type, protocol);
@@ -64,10 +67,11 @@ static const grpc_ares_wrapper_socket_factory_vtable default_socket_factory_vtab
     default_socket_factory_getsockname,
     default_socket_factory_close,
 };
+
 static grpc_ares_wrapper_socket_factory default_socket_factory = {&default_socket_factory_vtable};
 static grpc_ares_wrapper_socket_factory *current_socket_factory = &default_socket_factory;
 
-void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory) {
+void grpc_ares_wrapper_set_socket_factory_internal(grpc_ares_wrapper_socket_factory *factory) {
         current_socket_factory = factory;
 }
 
@@ -404,7 +408,7 @@ static void log_address_sorting_list(grpc_lb_addresses *lb_addrs, const char *in
         }
 }
 
-void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs) {
+void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_addrs) {
         sortable_address* sortable = (sortable_address*)gpr_zalloc(resolved_lb_addrs->num_addresses * sizeof(sortable_address));
         if (GRPC_TRACER_ON(grpc_trace_cares_address_sorting)) {
                 log_address_sorting_list(resolved_lb_addrs, "input");
