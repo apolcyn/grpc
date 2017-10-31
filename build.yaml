@@ -1315,7 +1315,7 @@ libs:
 - name: address_sorting
   build: private
   language: c++
-  headers:
+  public_headers:
   - third_party/address_sorting/address_sorting.h
   src:
   - third_party/address_sorting/address_sorting.cc

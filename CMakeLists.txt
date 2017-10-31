@@ -2584,6 +2584,15 @@ target_link_libraries(address_sorting
   gpr
 )
 
+foreach(_hdr
+  third_party/address_sorting/address_sorting.h
+)
+  string(REPLACE "include/" "" _path ${_hdr})
+  get_filename_component(_path ${_path} PATH)
+  install(FILES ${_hdr}
+    DESTINATION "${gRPC_INSTALL_INCLUDEDIR}/${_path}"
+  )
+endforeach()
 
 endif (gRPC_BUILD_TESTS)
 

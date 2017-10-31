@@ -590,6 +590,10 @@
   endif
 
   ADDRESS_SORTING_DEP = $(LIBDIR)/$(CONFIG)/libaddress_sorting.a
+  ADDRESS_SORTING_MERGE_OBJS = $(LIBADDRESS_SORTING_OBJS)
+  ADDRESS_SORTING_MERGE_LIBS = $(LIBDIR)/$(CONFIG)/libaddress_sorting.a
+  CPPFLAGS := -Ithird_party/address_sorting $(CPPFLAGS)
+  LDFLAGS := $(LIBDIR)/$(CONFIG)/libaddress_sorting.a $(LDFLAGS)
 
   ifeq ($(EMBED_CARES),true)
   CARES_DEP = $(LIBDIR)/$(CONFIG)/libares.a
@@ -1567,7 +1571,7 @@
     security = lib.get('secure', 'check')
     if security == True:
       common = common + ' $(OPENSSL_MERGE_LIBS) $(LDLIBS_SECURE)'
-    common = common + ' $(ZLIB_MERGE_LIBS) $(CARES_MERGE_LIBS)'
+    common = common + ' $(ZLIB_MERGE_LIBS) $(CARES_MERGE_LIBS) $(ADDRESS_SORTING_MERGE_LIBS)'
 
     if security in [True, 'check']:
       for src in lib.src:
