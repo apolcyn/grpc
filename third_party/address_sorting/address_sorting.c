@@ -1,6 +1,8 @@
 /*        $NetBSD: getaddrinfo.c,v 1.82 2006/03/25 12:09:40 rpaulo Exp $        */
 /*        $KAME: getaddrinfo.c,v 1.29 2000/08/31 17:26:57 itojun Exp $        */
 
+// some source taken from https://github.com/freebsd/freebsd/blob/master/sys/netinet6/in6.h
+
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -1150,9 +1152,9 @@ _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
 //                return 0;
 //        switch (ai->ai_family) {
 //        case AF_INET:
-#i//fdef AF_INET6
+//#ifdef AF_INET6
 //        case AF_INET6:
-#e//ndif
+//#endif
 //                break;
 //        default:
 //                return 0;
@@ -1166,11 +1168,11 @@ _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
 //                allownumeric = 1;
 //                break;
 //        case ANY:
-#i//f 1  /* ANDROID-SPECIFIC CHANGE TO MATCH GLIBC */
+//#if 1  /* ANDROID-SPECIFIC CHANGE TO MATCH GLIBC */
 //                allownumeric = 1;
-#e//lse
+//#else
 //                allownumeric = 0;
-#e//ndif
+//#endif
 //                break;
 //        default:
 //                return EAI_SOCKTYPE;
@@ -1483,6 +1485,17 @@ _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
 //        return NULL;
 //}
 
+#define IPV6_ADDR_SCOPE_NODELOCAL 0x01
+#define IPV6_ADDR_SCOPE_INTFACELOCAL  0x01
+#define IPV6_ADDR_SCOPE_LINKLOCAL 0x02
+#define IPV6_ADDR_SCOPE_SITELOCAL 0x05
+#define IPV6_ADDR_SCOPE_ORGLOCAL  0x08  /* just used in this file */
+#define IPV6_ADDR_SCOPE_GLOBAL    0x0e
+#define IPV6_ADDR_MC_SCOPE(a)   ((a)->s6_addr[1] & 0x0f)
+
+#define IN_LOOPBACK(a) ((na) & 0x7f000000 == 0x7f000000)
+
+
 struct addrinfo_sort_elem {
         struct addrinfo *ai;
         int has_src_addr;
@@ -1546,6 +1559,9 @@ _get_scope(const struct sockaddr *addr)
 /* 6bone testing address area (3ffe::/16), deprecated in RFC 3701. */
 #define IN6_IS_ADDR_6BONE(a)      \
         (((a)->s6_addr[0] == 0x3f) && ((a)->s6_addr[1] == 0xfe))
+
+#define IN6_IS_ADDR_ULA(a)    \
+        (((a)->s6_addr[0] == 0xfe) && ((a)->s6_addr[1] == 0xfc))
 
 /*
  * Get the label for a given IPv4/IPv6 address.
