@@ -16,6 +16,7 @@
 
 #include "test/cpp/util/subprocess.h"
 #include "test/cpp/util/test_config.h"
+#include "address_sorting.h"
 
 extern "C" {
 #include "src/core/ext/filters/client_channel/client_channel.h"
@@ -33,7 +34,6 @@ extern "C" {
 #include "test/core/util/port.h"
 #include "test/core/util/test_config.h"
 }
-
 
 // int (*grpc_ares_wrapper_socket)(int domain, int type, int protocol) = socket;
 // int (*grpc_ares_wrapper_getsockname)(int sockfd, struct sockaddr *addr, socklen_t *addrlen) = getsockname;

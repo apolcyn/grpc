@@ -73,20 +73,7 @@ grpc_error *grpc_ares_init(void);
 void grpc_ares_cleanup(void);
 
 /* Exposed for testing */
-void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs);
-
-struct grpc_ares_wrapper_socket_factory_vtable {
-  int (*socket)(struct grpc_ares_wrapper_socket_factory *factory, int domain, int type, int protocol);
-  int (*connect)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-  int (*getsockname)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-  int (*close)(struct grpc_ares_wrapper_socket_factory *factory, int sockfd);
-};
-
-struct grpc_ares_wrapper_socket_factory {
-  const grpc_ares_wrapper_socket_factory_vtable* vtable;
-};
-
-void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory);
+void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_addrs);
 
 extern grpc_tracer_flag grpc_trace_cares_address_sorting;
 
