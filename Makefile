@@ -8441,11 +8441,31 @@ ifeq ($(SYSTEM),Darwin)
 	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/libares.a
 endif
 
-
-
-
 ifneq ($(NO_DEPS),true)
 -include $(LIBARES_OBJS:.o=.dep)
+endif
+
+LIBADDR_SORTING_SRC = \
+    third_party/address_sorting/address_sorting.c
+
+LIBADDR_SORTING_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBADDR_SORTING_SRC))))
+
+$(LIBADDR_SORTING_OBJS): CPPFLAGS += -Ithird_party/address_sorting
+
+libaddr_sorting2.a:
+	$(E) "shoud be: |$(LIBDIR)/$(CONFIG)/libaddr_sorting.a: $(LIBADDR_SORTING_OBJS)|"
+	$(E) "shoud be: |$(LIBADDR_SORTING_OBJS)|"
+	$(E) "CFLAGS: |$(CFLAGS)|"
+	$(E) "CPPFLAGS: |$(CPPFLAGS)|"
+	$(Q) g++ -c third_party/address_sorting/address_sorting.c
+
+$(LIBDIR)/$(CONFIG)/libaddr_sorting.a: $(LIBADDR_SORTING_OBJS)
+	$(E) "[AR]      Creating $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) rm -f $(LIBDIR)/$(CONFIG)/libaddr_sorting.a
+	$(Q) $(AR) $(AROPTS) $(LIBDIR)/$(CONFIG)/libaddr_sorting.a $(LIBADDR_SORTING_OBJS) 
+ifeq ($(SYSTEM),Darwin)
+	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/libaddr_sorting.a
 endif
 
 

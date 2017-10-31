@@ -79,37 +79,42 @@
  *          friends.
  */
 
-#include <fcntl.h>
-#include <sys/cdefs.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <net/if.h>
+//#include <fcntl.h>
+//#include <sys/cdefs.h>
+//#include <sys/types.h>
+//#include <sys/stat.h>
+//#include <sys/param.h>
+//#include <sys/socket.h>
+//#include <sys/un.h>
+//#include <net/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 //#include "arpa_nameser.h"
 #include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <netdb.h>
+//#include <ctype.h>
+//#include <errno.h>
+//#include <netdb.h>
 //#include "resolv_private.h"
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
+//#include <stdbool.h>
+//#include <stddef.h>
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <strings.h>
+//#include <unistd.h>
 
-#include <syslog.h>
-#include <stdarg.h>
+/* Added by me: */
+//#include <sys/types.h>
+//#include <sys/socket.h>
+//#include <netdb.h>
+
+//#include <syslog.h>
+//#include <stdarg.h>
 //#include "nsswitch.h"
 
-#ifdef ANDROID_CHANGES
-#include <sys/system_properties.h>
-#endif /* ANDROID_CHANGES */
+//#ifdef ANDROID_CHANGES
+//#include <sys/system_properties.h>
+//#endif /* ANDROID_CHANGES */
 
 typedef union sockaddr_union {
     struct sockaddr     generic;
@@ -215,25 +220,25 @@ static const struct explore explore[] = {
 //        int n;                        /* result length */
 //};
 
-static int str2number(const char *);
-static int explore_fqdn(const struct addrinfo *, const char *,
-        const char *, struct addrinfo **, const char *iface, int mark);
-static int explore_null(const struct addrinfo *,
-        const char *, struct addrinfo **);
-static int explore_numeric(const struct addrinfo *, const char *,
-        const char *, struct addrinfo **, const char *);
-static int explore_numeric_scope(const struct addrinfo *, const char *,
-        const char *, struct addrinfo **);
-static int get_canonname(const struct addrinfo *,
-        struct addrinfo *, const char *);
-static struct addrinfo *get_ai(const struct addrinfo *,
-        const struct afd *, const char *);
-static int get_portmatch(const struct addrinfo *, const char *);
-static int get_port(const struct addrinfo *, const char *, int);
-static const struct afd *find_afd(int);
-#ifdef INET6
+//static int str2number(const char *);
+//static int explore_fqdn(const struct addrinfo *, const char *,
+//        const char *, struct addrinfo **, const char *iface, int mark);
+//static int explore_null(const struct addrinfo *,
+//        const char *, struct addrinfo **);
+//static int explore_numeric(const struct addrinfo *, const char *,
+//        const char *, struct addrinfo **, const char *);
+//static int explore_numeric_scope(const struct addrinfo *, const char *,
+//        const char *, struct addrinfo **);
+//static int get_canonname(const struct addrinfo *,
+//        struct addrinfo *, const char *);
+//static struct addrinfo *get_ai(const struct addrinfo *,
+//        const struct afd *, const char *);
+//static int get_portmatch(const struct addrinfo *, const char *);
+//static int get_port(const struct addrinfo *, const char *, int);
+//static const struct afd *find_afd(int);
+//#ifdef INET6
 //static int ip6_str2scopeid(char *, struct sockaddr_in6 *, u_int32_t *);
-#endif
+//#endif
 
 //static struct addrinfo *getanswer(const querybuf *, int, const char *, int,
 //        const struct addrinfo *);
@@ -318,62 +323,62 @@ do {                                                                 \
 //        return ai_errlist[ecode];
 //}
 
-void
-freeaddrinfo(struct addrinfo *ai)
-{
-        struct addrinfo *next;
+//void
+//freeaddrinfo(struct addrinfo *ai)
+//{
+//        struct addrinfo *next;
+//
+//        assert(ai != NULL);
+//
+//        do {
+//                next = ai->ai_next;
+//                if (ai->ai_canonname)
+//                        free(ai->ai_canonname);
+//                /* no need to free(ai->ai_addr) */
+//                free(ai);
+//                ai = next;
+//        } while (ai);
+//}
 
-        assert(ai != NULL);
-
-        do {
-                next = ai->ai_next;
-                if (ai->ai_canonname)
-                        free(ai->ai_canonname);
-                /* no need to free(ai->ai_addr) */
-                free(ai);
-                ai = next;
-        } while (ai);
-}
-
-static int
-str2number(const char *p)
-{
-        char *ep;
-        unsigned long v;
-
-        assert(p != NULL);
-
-        if (*p == '\0')
-                return -1;
-        ep = NULL;
-        errno = 0;
-        v = strtoul(p, &ep, 10);
-        if (errno == 0 && ep && *ep == '\0' && v <= UINT_MAX)
-                return v;
-        else
-                return -1;
-}
+//static int
+//str2number(const char *p)
+//{
+//        char *ep;
+//        unsigned long v;
+//
+//        assert(p != NULL);
+//
+//        if (*p == '\0')
+//                return -1;
+//        ep = NULL;
+//        errno = 0;
+//        v = strtoul(p, &ep, 10);
+//        if (errno == 0 && ep && *ep == '\0' && v <= UINT_MAX)
+//                return v;
+//        else
+//                return -1;
+//}
 
 /*
  * Connect a UDP socket to a given unicast address. This will cause no network
  * traffic, but will fail fast if the system has no or limited reachability to
  * the destination (e.g., no IPv4 address, no IPv6 default route, ...).
  */
-static int
-_test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
-        int s = socket(pf, SOCK_DGRAM, IPPROTO_UDP);
-        if (s < 0)
-                return 0;
-        int ret;
-        do {
-                ret = connect(s, addr, addrlen);
-        } while (ret < 0 && errno == EINTR);
-        int success = (ret == 0);
-        do {
-                ret = close(s);
-        } while (ret < 0 && errno == EINTR);
-        return success;
-}
+//static int
+//_test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
+//        int s = socket(pf, SOCK_DGRAM, IPPROTO_UDP);
+//        if (s < 0)
+//                return 0;
+//        int ret;
+//        do {
+//                ret = connect(s, addr, addrlen);
+//        } while (ret < 0 && errno == EINTR);
+//        int success = (ret == 0);
+//        do {
+//                ret = close(s);
+//        } while (ret < 0 && errno == EINTR);
+//        return success;
+//}
 
 /*
  * The following functions determine whether IPv4 or IPv6 connectivity is
@@ -1493,7 +1498,7 @@ _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
 #define IPV6_ADDR_SCOPE_GLOBAL    0x0e
 #define IPV6_ADDR_MC_SCOPE(a)   ((a)->s6_addr[1] & 0x0f)
 
-#define IN_LOOPBACK(a) ((na) & 0x7f000000 == 0x7f000000)
+#define IN_LOOPBACK(a) ((a) & 0x7f000000 == 0x7f000000)
 
 
 struct addrinfo_sort_elem {
