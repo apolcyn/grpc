@@ -1,5 +1,5 @@
-/*	$NetBSD: getaddrinfo.c,v 1.82 2006/03/25 12:09:40 rpaulo Exp $	*/
-/*	$KAME: getaddrinfo.c,v 1.29 2000/08/31 17:26:57 itojun Exp $	*/
+/*        $NetBSD: getaddrinfo.c,v 1.82 2006/03/25 12:09:40 rpaulo Exp $        */
+/*        $KAME: getaddrinfo.c,v 1.29 2000/08/31 17:26:57 itojun Exp $        */
 
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -60,21 +60,21 @@
  *   lower layer function to lookup "IPv4 or IPv6" record.  Calling
  *   gethostbyname2 from getaddrinfo will end up in wrong search order, as
  *   follows:
- *	- The code makes use of following calls when asked to resolver with
- *	  ai_family  = PF_UNSPEC:
- *		getipnodebyname(host, AF_INET6);
- *		getipnodebyname(host, AF_INET);
- *	  This will result in the following queries if the node is configure to
- *	  prefer /etc/hosts than DNS:
- *		lookup /etc/hosts for IPv6 address
- *		lookup DNS for IPv6 address
- *		lookup /etc/hosts for IPv4 address
- *		lookup DNS for IPv4 address
- *	  which may not meet people's requirement.
- *	  The right thing to happen is to have underlying layer which does
- *	  PF_UNSPEC lookup (lookup both) and return chain of addrinfos.
- *	  This would result in a bit of code duplicate with _dns_ghbyname() and
- *	  friends.
+ *        - The code makes use of following calls when asked to resolver with
+ *          ai_family  = PF_UNSPEC:
+ *                getipnodebyname(host, AF_INET6);
+ *                getipnodebyname(host, AF_INET);
+ *          This will result in the following queries if the node is configure to
+ *          prefer /etc/hosts than DNS:
+ *                lookup /etc/hosts for IPv6 address
+ *                lookup DNS for IPv6 address
+ *                lookup /etc/hosts for IPv4 address
+ *                lookup DNS for IPv4 address
+ *          which may not meet people's requirement.
+ *          The right thing to happen is to have underlying layer which does
+ *          PF_UNSPEC lookup (lookup both) and return chain of addrinfos.
+ *          This would result in a bit of code duplicate with _dns_ghbyname() and
+ *          friends.
  */
 
 #include <fcntl.h>
@@ -87,12 +87,12 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "arpa_nameser.h"
+//#include "arpa_nameser.h"
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <netdb.h>
-#include "resolv_private.h"
+//#include "resolv_private.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -103,7 +103,7 @@
 
 #include <syslog.h>
 #include <stdarg.h>
-#include "nsswitch.h"
+//#include "nsswitch.h"
 
 #ifdef ANDROID_CHANGES
 #include <sys/system_properties.h>
@@ -124,10 +124,10 @@ static const char in_addrany[] = { 0, 0, 0, 0 };
 static const char in_loopback[] = { 127, 0, 0, 1 };
 #ifdef INET6
 static const char in6_addrany[] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 static const char in6_loopback[] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
 };
 #endif
 
@@ -135,221 +135,221 @@ static const char in6_loopback[] = {
 static const int DnsProxyQueryResult = 222;
 
 static const struct afd {
-	int a_af;
-	int a_addrlen;
-	int a_socklen;
-	int a_off;
-	const char *a_addrany;
-	const char *a_loopback;
-	int a_scoped;
+        int a_af;
+        int a_addrlen;
+        int a_socklen;
+        int a_off;
+        const char *a_addrany;
+        const char *a_loopback;
+        int a_scoped;
 } afdl [] = {
 #ifdef INET6
-	{PF_INET6, sizeof(struct in6_addr),
-	 sizeof(struct sockaddr_in6),
-	 offsetof(struct sockaddr_in6, sin6_addr),
-	 in6_addrany, in6_loopback, 1},
+        {PF_INET6, sizeof(struct in6_addr),
+         sizeof(struct sockaddr_in6),
+         offsetof(struct sockaddr_in6, sin6_addr),
+         in6_addrany, in6_loopback, 1},
 #endif
-	{PF_INET, sizeof(struct in_addr),
-	 sizeof(struct sockaddr_in),
-	 offsetof(struct sockaddr_in, sin_addr),
-	 in_addrany, in_loopback, 0},
-	{0, 0, 0, 0, NULL, NULL, 0},
+        {PF_INET, sizeof(struct in_addr),
+         sizeof(struct sockaddr_in),
+         offsetof(struct sockaddr_in, sin_addr),
+         in_addrany, in_loopback, 0},
+        {0, 0, 0, 0, NULL, NULL, 0},
 };
 
 struct explore {
-	int e_af;
-	int e_socktype;
-	int e_protocol;
-	const char *e_protostr;
-	int e_wild;
-#define WILD_AF(ex)		((ex)->e_wild & 0x01)
-#define WILD_SOCKTYPE(ex)	((ex)->e_wild & 0x02)
-#define WILD_PROTOCOL(ex)	((ex)->e_wild & 0x04)
+        int e_af;
+        int e_socktype;
+        int e_protocol;
+        const char *e_protostr;
+        int e_wild;
+#define WILD_AF(ex)                ((ex)->e_wild & 0x01)
+#define WILD_SOCKTYPE(ex)        ((ex)->e_wild & 0x02)
+#define WILD_PROTOCOL(ex)        ((ex)->e_wild & 0x04)
 };
 
 static const struct explore explore[] = {
 #if 0
-	{ PF_LOCAL, 0, ANY, ANY, NULL, 0x01 },
+        { PF_LOCAL, 0, ANY, ANY, NULL, 0x01 },
 #endif
 #ifdef INET6
-	{ PF_INET6, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
-	{ PF_INET6, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
-	{ PF_INET6, SOCK_RAW, ANY, NULL, 0x05 },
+        { PF_INET6, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
+        { PF_INET6, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
+        { PF_INET6, SOCK_RAW, ANY, NULL, 0x05 },
 #endif
-	{ PF_INET, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
-	{ PF_INET, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
-	{ PF_INET, SOCK_RAW, ANY, NULL, 0x05 },
-	{ PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
-	{ PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
-	{ PF_UNSPEC, SOCK_RAW, ANY, NULL, 0x05 },
-	{ -1, 0, 0, NULL, 0 },
+        { PF_INET, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
+        { PF_INET, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
+        { PF_INET, SOCK_RAW, ANY, NULL, 0x05 },
+        { PF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP, "udp", 0x07 },
+        { PF_UNSPEC, SOCK_STREAM, IPPROTO_TCP, "tcp", 0x07 },
+        { PF_UNSPEC, SOCK_RAW, ANY, NULL, 0x05 },
+        { -1, 0, 0, NULL, 0 },
 };
 
 #ifdef INET6
-#define PTON_MAX	16
+#define PTON_MAX        16
 #else
-#define PTON_MAX	4
+#define PTON_MAX        4
 #endif
 
-static const ns_src default_dns_files[] = {
-	{ NSSRC_FILES, 	NS_SUCCESS },
-	{ NSSRC_DNS, 	NS_SUCCESS },
-	{ 0, 0 }
-};
+//static const ns_src default_dns_files[] = {
+//        { NSSRC_FILES,         NS_SUCCESS },
+//        { NSSRC_DNS,         NS_SUCCESS },
+//        { 0, 0 }
+//};
 
-#define MAXPACKET	(64*1024)
+#define MAXPACKET        (64*1024)
 
-typedef union {
-	HEADER hdr;
-	u_char buf[MAXPACKET];
-} querybuf;
+//typedef union {
+//        HEADER hdr;
+//        u_char buf[MAXPACKET];
+//} querybuf;
 
-struct res_target {
-	struct res_target *next;
-	const char *name;	/* domain name */
-	int qclass, qtype;	/* class and type of query */
-	u_char *answer;		/* buffer to put answer */
-	int anslen;		/* size of answer buffer */
-	int n;			/* result length */
-};
+//struct res_target {
+//        struct res_target *next;
+//        const char *name;        /* domain name */
+//        int qclass, qtype;        /* class and type of query */
+//        u_char *answer;                /* buffer to put answer */
+//        int anslen;                /* size of answer buffer */
+//        int n;                        /* result length */
+//};
 
 static int str2number(const char *);
 static int explore_fqdn(const struct addrinfo *, const char *,
-	const char *, struct addrinfo **, const char *iface, int mark);
+        const char *, struct addrinfo **, const char *iface, int mark);
 static int explore_null(const struct addrinfo *,
-	const char *, struct addrinfo **);
+        const char *, struct addrinfo **);
 static int explore_numeric(const struct addrinfo *, const char *,
-	const char *, struct addrinfo **, const char *);
+        const char *, struct addrinfo **, const char *);
 static int explore_numeric_scope(const struct addrinfo *, const char *,
-	const char *, struct addrinfo **);
+        const char *, struct addrinfo **);
 static int get_canonname(const struct addrinfo *,
-	struct addrinfo *, const char *);
+        struct addrinfo *, const char *);
 static struct addrinfo *get_ai(const struct addrinfo *,
-	const struct afd *, const char *);
+        const struct afd *, const char *);
 static int get_portmatch(const struct addrinfo *, const char *);
 static int get_port(const struct addrinfo *, const char *, int);
 static const struct afd *find_afd(int);
 #ifdef INET6
-static int ip6_str2scopeid(char *, struct sockaddr_in6 *, u_int32_t *);
+//static int ip6_str2scopeid(char *, struct sockaddr_in6 *, u_int32_t *);
 #endif
 
-static struct addrinfo *getanswer(const querybuf *, int, const char *, int,
-	const struct addrinfo *);
-static int _dns_getaddrinfo(void *, void *, va_list);
-static void _sethtent(FILE **);
-static void _endhtent(FILE **);
-static struct addrinfo *_gethtent(FILE **, const char *,
-    const struct addrinfo *);
-static int _files_getaddrinfo(void *, void *, va_list);
+//static struct addrinfo *getanswer(const querybuf *, int, const char *, int,
+//        const struct addrinfo *);
+//static int _dns_getaddrinfo(void *, void *, va_list);
+//static void _sethtent(FILE **);
+//static void _endhtent(FILE **);
+//static struct addrinfo *_gethtent(FILE **, const char *,
+//    const struct addrinfo *);
+//static int _files_getaddrinfo(void *, void *, va_list);
 
-static int res_queryN(const char *, struct res_target *, res_state);
-static int res_searchN(const char *, struct res_target *, res_state);
-static int res_querydomainN(const char *, const char *,
-	struct res_target *, res_state);
+//static int res_queryN(const char *, struct res_target *, res_state);
+//tatic int res_searchN(const char *, struct res_target *, res_state);
+//static int res_querydomainN(const char *, const char *,
+//        struct res_target *, res_state);
 
 static const char * const ai_errlist[] = {
-	"Success",
-	"Address family for hostname not supported",	/* EAI_ADDRFAMILY */
-	"Temporary failure in name resolution",		/* EAI_AGAIN      */
-	"Invalid value for ai_flags",		       	/* EAI_BADFLAGS   */
-	"Non-recoverable failure in name resolution", 	/* EAI_FAIL       */
-	"ai_family not supported",			/* EAI_FAMILY     */
-	"Memory allocation failure", 			/* EAI_MEMORY     */
-	"No address associated with hostname", 		/* EAI_NODATA     */
-	"hostname nor servname provided, or not known",	/* EAI_NONAME     */
-	"servname not supported for ai_socktype",	/* EAI_SERVICE    */
-	"ai_socktype not supported", 			/* EAI_SOCKTYPE   */
-	"System error returned in errno", 		/* EAI_SYSTEM     */
-	"Invalid value for hints",			/* EAI_BADHINTS	  */
-	"Resolved protocol is unknown",			/* EAI_PROTOCOL   */
-	"Argument buffer overflow",			/* EAI_OVERFLOW   */
-	"Unknown error", 				/* EAI_MAX        */
+        "Success",
+        "Address family for hostname not supported",        /* EAI_ADDRFAMILY */
+        "Temporary failure in name resolution",                /* EAI_AGAIN      */
+        "Invalid value for ai_flags",                               /* EAI_BADFLAGS   */
+        "Non-recoverable failure in name resolution",         /* EAI_FAIL       */
+        "ai_family not supported",                        /* EAI_FAMILY     */
+        "Memory allocation failure",                         /* EAI_MEMORY     */
+        "No address associated with hostname",                 /* EAI_NODATA     */
+        "hostname nor servname provided, or not known",        /* EAI_NONAME     */
+        "servname not supported for ai_socktype",        /* EAI_SERVICE    */
+        "ai_socktype not supported",                         /* EAI_SOCKTYPE   */
+        "System error returned in errno",                 /* EAI_SYSTEM     */
+        "Invalid value for hints",                        /* EAI_BADHINTS          */
+        "Resolved protocol is unknown",                        /* EAI_PROTOCOL   */
+        "Argument buffer overflow",                        /* EAI_OVERFLOW   */
+        "Unknown error",                                 /* EAI_MAX        */
 };
 
 /* XXX macros that make external reference is BAD. */
 
-#define GET_AI(ai, afd, addr) 					\
-do { 								\
-	/* external reference: pai, error, and label free */ 	\
-	(ai) = get_ai(pai, (afd), (addr)); 			\
-	if ((ai) == NULL) { 					\
-		error = EAI_MEMORY; 				\
-		goto free; 					\
-	} 							\
+#define GET_AI(ai, afd, addr)                                         \
+do {                                                                 \
+        /* external reference: pai, error, and label free */         \
+        (ai) = get_ai(pai, (afd), (addr));                         \
+        if ((ai) == NULL) {                                         \
+                error = EAI_MEMORY;                                 \
+                goto free;                                         \
+        }                                                         \
 } while (/*CONSTCOND*/0)
 
-#define GET_PORT(ai, serv) 					\
-do { 								\
-	/* external reference: error and label free */ 		\
-	error = get_port((ai), (serv), 0); 			\
-	if (error != 0) 					\
-		goto free; 					\
+#define GET_PORT(ai, serv)                                         \
+do {                                                                 \
+        /* external reference: error and label free */                 \
+        error = get_port((ai), (serv), 0);                         \
+        if (error != 0)                                         \
+                goto free;                                         \
 } while (/*CONSTCOND*/0)
 
-#define GET_CANONNAME(ai, str) 					\
-do { 								\
-	/* external reference: pai, error and label free */ 	\
-	error = get_canonname(pai, (ai), (str)); 		\
-	if (error != 0) 					\
-		goto free; 					\
+#define GET_CANONNAME(ai, str)                                         \
+do {                                                                 \
+        /* external reference: pai, error and label free */         \
+        error = get_canonname(pai, (ai), (str));                 \
+        if (error != 0)                                         \
+                goto free;                                         \
 } while (/*CONSTCOND*/0)
 
-#define ERR(err) 						\
-do { 								\
-	/* external reference: error, and label bad */ 		\
-	error = (err); 						\
-	goto bad; 						\
-	/*NOTREACHED*/ 						\
+#define ERR(err)                                                 \
+do {                                                                 \
+        /* external reference: error, and label bad */                 \
+        error = (err);                                                 \
+        goto bad;                                                 \
+        /*NOTREACHED*/                                                 \
 } while (/*CONSTCOND*/0)
 
-#define MATCH_FAMILY(x, y, w) 						\
-	((x) == (y) || (/*CONSTCOND*/(w) && ((x) == PF_UNSPEC || 	\
-	    (y) == PF_UNSPEC)))
-#define MATCH(x, y, w) 							\
-	((x) == (y) || (/*CONSTCOND*/(w) && ((x) == ANY || (y) == ANY)))
+#define MATCH_FAMILY(x, y, w)                                                 \
+        ((x) == (y) || (/*CONSTCOND*/(w) && ((x) == PF_UNSPEC ||         \
+            (y) == PF_UNSPEC)))
+#define MATCH(x, y, w)                                                         \
+        ((x) == (y) || (/*CONSTCOND*/(w) && ((x) == ANY || (y) == ANY)))
 
-const char *
-gai_strerror(int ecode)
-{
-	if (ecode < 0 || ecode > EAI_MAX)
-		ecode = EAI_MAX;
-	return ai_errlist[ecode];
-}
+//const char *
+//gai_strerror(int ecode)
+//{
+//        if (ecode < 0 || ecode > EAI_MAX)
+//                ecode = EAI_MAX;
+//        return ai_errlist[ecode];
+//}
 
 void
 freeaddrinfo(struct addrinfo *ai)
 {
-	struct addrinfo *next;
+        struct addrinfo *next;
 
-	assert(ai != NULL);
+        assert(ai != NULL);
 
-	do {
-		next = ai->ai_next;
-		if (ai->ai_canonname)
-			free(ai->ai_canonname);
-		/* no need to free(ai->ai_addr) */
-		free(ai);
-		ai = next;
-	} while (ai);
+        do {
+                next = ai->ai_next;
+                if (ai->ai_canonname)
+                        free(ai->ai_canonname);
+                /* no need to free(ai->ai_addr) */
+                free(ai);
+                ai = next;
+        } while (ai);
 }
 
 static int
 str2number(const char *p)
 {
-	char *ep;
-	unsigned long v;
+        char *ep;
+        unsigned long v;
 
-	assert(p != NULL);
+        assert(p != NULL);
 
-	if (*p == '\0')
-		return -1;
-	ep = NULL;
-	errno = 0;
-	v = strtoul(p, &ep, 10);
-	if (errno == 0 && ep && *ep == '\0' && v <= UINT_MAX)
-		return v;
-	else
-		return -1;
+        if (*p == '\0')
+                return -1;
+        ep = NULL;
+        errno = 0;
+        v = strtoul(p, &ep, 10);
+        if (errno == 0 && ep && *ep == '\0' && v <= UINT_MAX)
+                return v;
+        else
+                return -1;
 }
 
 /*
@@ -359,18 +359,18 @@ str2number(const char *p)
  */
 static int
 _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
-	int s = socket(pf, SOCK_DGRAM, IPPROTO_UDP);
-	if (s < 0)
-		return 0;
-	int ret;
-	do {
-		ret = connect(s, addr, addrlen);
-	} while (ret < 0 && errno == EINTR);
-	int success = (ret == 0);
-	do {
-		ret = close(s);
-	} while (ret < 0 && errno == EINTR);
-	return success;
+        int s = socket(pf, SOCK_DGRAM, IPPROTO_UDP);
+        if (s < 0)
+                return 0;
+        int ret;
+        do {
+                ret = connect(s, addr, addrlen);
+        } while (ret < 0 && errno == EINTR);
+        int success = (ret == 0);
+        do {
+                ret = close(s);
+        } while (ret < 0 && errno == EINTR);
+        return success;
 }
 
 /*
@@ -382,1054 +382,1054 @@ _test_connect(int pf, struct sockaddr *addr, size_t addrlen) {
  * on the local system". However, bionic doesn't currently support getifaddrs,
  * so checking for connectivity is the next best thing.
  */
-static int
-_have_ipv6() {
-	static const struct sockaddr_in6 sin6_test = {
-		.sin6_family = AF_INET6,
-		.sin6_addr.s6_addr = {  // 2000::
-			0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		};
-        sockaddr_union addr = { .in6 = sin6_test };
-	return _test_connect(PF_INET6, &addr.generic, sizeof(addr.in6));
-}
-
-static int
-_have_ipv4() {
-	static const struct sockaddr_in sin_test = {
-		.sin_family = AF_INET,
-		.sin_addr.s_addr = __constant_htonl(0x08080808L)  // 8.8.8.8
-	};
-        sockaddr_union addr = { .in = sin_test };
-        return _test_connect(PF_INET, &addr.generic, sizeof(addr.in));
-}
+//static int
+//_have_ipv6() {
+//        static const struct sockaddr_in6 sin6_test = {
+//                .sin6_family = AF_INET6,
+//                .sin6_addr.s6_addr = {  // 2000::
+//                        0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+//                };
+//        sockaddr_union addr = { .in6 = sin6_test };
+//        return _test_connect(PF_INET6, &addr.generic, sizeof(addr.in6));
+//}
+//
+//static int
+//_have_ipv4() {
+//        static const struct sockaddr_in sin_test = {
+//                .sin_family = AF_INET,
+//                .sin_addr.s_addr = __constant_htonl(0x08080808L)  // 8.8.8.8
+//        };
+//        sockaddr_union addr = { .in = sin_test };
+//        return _test_connect(PF_INET, &addr.generic, sizeof(addr.in));
+//}
 
 // Returns 0 on success, else returns on error.
-static int
-android_getaddrinfo_proxy(
-    const char *hostname, const char *servname,
-    const struct addrinfo *hints, struct addrinfo **res, const char *iface)
-{
-	int sock;
-	const int one = 1;
-	struct sockaddr_un proxy_addr;
-	FILE* proxy = NULL;
-	int success = 0;
-
-	// Clear this at start, as we use its non-NULLness later (in the
-	// error path) to decide if we have to free up any memory we
-	// allocated in the process (before failing).
-	*res = NULL;
-
-	// Bogus things we can't serialize.  Don't use the proxy.  These will fail - let them.
-	if ((hostname != NULL &&
-	     strcspn(hostname, " \n\r\t^'\"") != strlen(hostname)) ||
-	    (servname != NULL &&
-	     strcspn(servname, " \n\r\t^'\"") != strlen(servname))) {
-		return EAI_NODATA;
-	}
-
-	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (sock < 0) {
-		return EAI_NODATA;
-	}
-
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-	memset(&proxy_addr, 0, sizeof(proxy_addr));
-	proxy_addr.sun_family = AF_UNIX;
-	strlcpy(proxy_addr.sun_path, "/dev/socket/dnsproxyd",
-		sizeof(proxy_addr.sun_path));
-	if (TEMP_FAILURE_RETRY(connect(sock,
-				       (const struct sockaddr*) &proxy_addr,
-				       sizeof(proxy_addr))) != 0) {
-		close(sock);
-		return EAI_NODATA;
-	}
-
-	// Send the request.
-	proxy = fdopen(sock, "r+");
-	if (fprintf(proxy, "getaddrinfo %s %s %d %d %d %d %s",
-		    hostname == NULL ? "^" : hostname,
-		    servname == NULL ? "^" : servname,
-		    hints == NULL ? -1 : hints->ai_flags,
-		    hints == NULL ? -1 : hints->ai_family,
-		    hints == NULL ? -1 : hints->ai_socktype,
-		    hints == NULL ? -1 : hints->ai_protocol,
-		    iface == NULL ? "^" : iface) < 0) {
-		goto exit;
-	}
-	// literal NULL byte at end, required by FrameworkListener
-	if (fputc(0, proxy) == EOF ||
-	    fflush(proxy) != 0) {
-		goto exit;
-	}
-
-	char buf[4];
-	// read result code for gethostbyaddr
-	if (fread(buf, 1, sizeof(buf), proxy) != sizeof(buf)) {
-		goto exit;
-	}
-
-	int result_code = (int)strtol(buf, NULL, 10);
-	// verify the code itself
-	if (result_code != DnsProxyQueryResult ) {
-		fread(buf, 1, sizeof(buf), proxy);
-		goto exit;
-	}
-
-	struct addrinfo* ai = NULL;
-	struct addrinfo** nextres = res;
-	while (1) {
-		uint32_t addrinfo_len;
-		if (fread(&addrinfo_len, sizeof(addrinfo_len),
-			  1, proxy) != 1) {
-			break;
-		}
-		addrinfo_len = ntohl(addrinfo_len);
-		if (addrinfo_len == 0) {
-			success = 1;
-			break;
-		}
-
-		if (addrinfo_len < sizeof(struct addrinfo)) {
-			break;
-		}
-		struct addrinfo* ai = calloc(1, addrinfo_len +
-					     sizeof(struct sockaddr_storage));
-		if (ai == NULL) {
-			break;
-		}
-
-		if (fread(ai, addrinfo_len, 1, proxy) != 1) {
-			// Error; fall through.
-			break;
-		}
-
-		// Zero out the pointer fields we copied which aren't
-		// valid in this address space.
-		ai->ai_addr = NULL;
-		ai->ai_canonname = NULL;
-		ai->ai_next = NULL;
-
-		// struct sockaddr
-		uint32_t addr_len;
-		if (fread(&addr_len, sizeof(addr_len), 1, proxy) != 1) {
-			break;
-		}
-		addr_len = ntohl(addr_len);
-		if (addr_len != 0) {
-			if (addr_len > sizeof(struct sockaddr_storage)) {
-				// Bogus; too big.
-				break;
-			}
-			struct sockaddr* addr = (struct sockaddr*)(ai + 1);
-			if (fread(addr, addr_len, 1, proxy) != 1) {
-				break;
-			}
-			ai->ai_addr = addr;
-		}
-
-		// cannonname
-		uint32_t name_len;
-		if (fread(&name_len, sizeof(name_len), 1, proxy) != 1) {
-			break;
-		}
-		name_len = ntohl(name_len);
-		if (name_len != 0) {
-			ai->ai_canonname = (char*) malloc(name_len);
-			if (fread(ai->ai_canonname, name_len, 1, proxy) != 1) {
-				break;
-			}
-			if (ai->ai_canonname[name_len - 1] != '\0') {
-				// The proxy should be returning this
-				// NULL-terminated.
-				break;
-			}
-		}
-
-		*nextres = ai;
-		nextres = &ai->ai_next;
-		ai = NULL;
-	}
-
-	if (ai != NULL) {
-		// Clean up partially-built addrinfo that we never ended up
-		// attaching to the response.
-		freeaddrinfo(ai);
-	}
-exit:
-	if (proxy != NULL) {
-		fclose(proxy);
-	}
-
-	if (success) {
-		return 0;
-	}
-
-	// Proxy failed;
-	// clean up memory we might've allocated.
-	if (*res) {
-		freeaddrinfo(*res);
-		*res = NULL;
-	}
-	return EAI_NODATA;
-}
-
-int
-getaddrinfo(const char *hostname, const char *servname,
-    const struct addrinfo *hints, struct addrinfo **res)
-{
-	return android_getaddrinfoforiface(hostname, servname, hints, NULL, 0, res);
-}
-
-int
-android_getaddrinfoforiface(const char *hostname, const char *servname,
-    const struct addrinfo *hints, const char *iface, int mark, struct addrinfo **res)
-{
-	struct addrinfo sentinel;
-	struct addrinfo *cur;
-	int error = 0;
-	struct addrinfo ai;
-	struct addrinfo ai0;
-	struct addrinfo *pai;
-	const struct explore *ex;
-	const char* cache_mode = getenv("ANDROID_DNS_MODE");
-
-	/* hostname is allowed to be NULL */
-	/* servname is allowed to be NULL */
-	/* hints is allowed to be NULL */
-	assert(res != NULL);
-	memset(&sentinel, 0, sizeof(sentinel));
-	cur = &sentinel;
-	pai = &ai;
-	pai->ai_flags = 0;
-	pai->ai_family = PF_UNSPEC;
-	pai->ai_socktype = ANY;
-	pai->ai_protocol = ANY;
-	pai->ai_addrlen = 0;
-	pai->ai_canonname = NULL;
-	pai->ai_addr = NULL;
-	pai->ai_next = NULL;
-
-	if (hostname == NULL && servname == NULL)
-		return EAI_NONAME;
-	if (hints) {
-		/* error check for hints */
-		if (hints->ai_addrlen || hints->ai_canonname ||
-		    hints->ai_addr || hints->ai_next)
-			ERR(EAI_BADHINTS); /* xxx */
-		if (hints->ai_flags & ~AI_MASK)
-			ERR(EAI_BADFLAGS);
-		switch (hints->ai_family) {
-		case PF_UNSPEC:
-		case PF_INET:
-#ifdef INET6
-		case PF_INET6:
-#endif
-			break;
-		default:
-			ERR(EAI_FAMILY);
-		}
-		memcpy(pai, hints, sizeof(*pai));
-
-		/*
-		 * if both socktype/protocol are specified, check if they
-		 * are meaningful combination.
-		 */
-		if (pai->ai_socktype != ANY && pai->ai_protocol != ANY) {
-			for (ex = explore; ex->e_af >= 0; ex++) {
-				if (pai->ai_family != ex->e_af)
-					continue;
-				if (ex->e_socktype == ANY)
-					continue;
-				if (ex->e_protocol == ANY)
-					continue;
-				if (pai->ai_socktype == ex->e_socktype
-				 && pai->ai_protocol != ex->e_protocol) {
-					ERR(EAI_BADHINTS);
-				}
-			}
-		}
-	}
-
-	/*
-	 * check for special cases.  (1) numeric servname is disallowed if
-	 * socktype/protocol are left unspecified. (2) servname is disallowed
-	 * for raw and other inet{,6} sockets.
-	 */
-	if (MATCH_FAMILY(pai->ai_family, PF_INET, 1)
-#ifdef PF_INET6
-	 || MATCH_FAMILY(pai->ai_family, PF_INET6, 1)
-#endif
-	    ) {
-		ai0 = *pai;	/* backup *pai */
-
-		if (pai->ai_family == PF_UNSPEC) {
-#ifdef PF_INET6
-			pai->ai_family = PF_INET6;
-#else
-			pai->ai_family = PF_INET;
-#endif
-		}
-		error = get_portmatch(pai, servname);
-		if (error)
-			ERR(error);
-
-		*pai = ai0;
-	}
-
-	ai0 = *pai;
-
-	/* NULL hostname, or numeric hostname */
-	for (ex = explore; ex->e_af >= 0; ex++) {
-		*pai = ai0;
-
-		/* PF_UNSPEC entries are prepared for DNS queries only */
-		if (ex->e_af == PF_UNSPEC)
-			continue;
-
-		if (!MATCH_FAMILY(pai->ai_family, ex->e_af, WILD_AF(ex)))
-			continue;
-		if (!MATCH(pai->ai_socktype, ex->e_socktype, WILD_SOCKTYPE(ex)))
-			continue;
-		if (!MATCH(pai->ai_protocol, ex->e_protocol, WILD_PROTOCOL(ex)))
-			continue;
-
-		if (pai->ai_family == PF_UNSPEC)
-			pai->ai_family = ex->e_af;
-		if (pai->ai_socktype == ANY && ex->e_socktype != ANY)
-			pai->ai_socktype = ex->e_socktype;
-		if (pai->ai_protocol == ANY && ex->e_protocol != ANY)
-			pai->ai_protocol = ex->e_protocol;
-
-		if (hostname == NULL)
-			error = explore_null(pai, servname, &cur->ai_next);
-		else
-			error = explore_numeric_scope(pai, hostname, servname,
-			    &cur->ai_next);
-
-		if (error)
-			goto free;
-
-		while (cur->ai_next)
-			cur = cur->ai_next;
-	}
-
-	/*
-	 * XXX
-	 * If numeric representation of AF1 can be interpreted as FQDN
-	 * representation of AF2, we need to think again about the code below.
-	 */
-	if (sentinel.ai_next)
-		goto good;
-
-	if (hostname == NULL)
-		ERR(EAI_NODATA);
-	if (pai->ai_flags & AI_NUMERICHOST)
-		ERR(EAI_NONAME);
-
-        /*
-         * BEGIN ANDROID CHANGES; proxying to the cache
-         */
-	if (cache_mode == NULL || strcmp(cache_mode, "local") != 0) {
-		// we're not the proxy - pass the request to them
-		return android_getaddrinfo_proxy(hostname, servname, hints, res, iface);
-	}
-
-	/*
-	 * hostname as alphabetical name.
-	 * we would like to prefer AF_INET6 than AF_INET, so we'll make a
-	 * outer loop by AFs.
-	 */
-	for (ex = explore; ex->e_af >= 0; ex++) {
-		*pai = ai0;
-
-		/* require exact match for family field */
-		if (pai->ai_family != ex->e_af)
-			continue;
-
-		if (!MATCH(pai->ai_socktype, ex->e_socktype,
-				WILD_SOCKTYPE(ex))) {
-			continue;
-		}
-		if (!MATCH(pai->ai_protocol, ex->e_protocol,
-				WILD_PROTOCOL(ex))) {
-			continue;
-		}
-
-		if (pai->ai_socktype == ANY && ex->e_socktype != ANY)
-			pai->ai_socktype = ex->e_socktype;
-		if (pai->ai_protocol == ANY && ex->e_protocol != ANY)
-			pai->ai_protocol = ex->e_protocol;
-
-		error = explore_fqdn(pai, hostname, servname,
-			&cur->ai_next, iface, mark);
-
-		while (cur && cur->ai_next)
-			cur = cur->ai_next;
-	}
-
-	/* XXX */
-	if (sentinel.ai_next)
-		error = 0;
-
-	if (error)
-		goto free;
-	if (error == 0) {
-		if (sentinel.ai_next) {
- good:
-			*res = sentinel.ai_next;
-			return SUCCESS;
-		} else
-			error = EAI_FAIL;
-	}
- free:
- bad:
-	if (sentinel.ai_next)
-		freeaddrinfo(sentinel.ai_next);
-	*res = NULL;
-	return error;
-}
-
-/*
- * FQDN hostname, DNS lookup
- */
-static int
-explore_fqdn(const struct addrinfo *pai, const char *hostname,
-    const char *servname, struct addrinfo **res, const char *iface, int mark)
-{
-	struct addrinfo *result;
-	struct addrinfo *cur;
-	int error = 0;
-	static const ns_dtab dtab[] = {
-		NS_FILES_CB(_files_getaddrinfo, NULL)
-		{ NSSRC_DNS, _dns_getaddrinfo, NULL },	/* force -DHESIOD */
-		NS_NIS_CB(_yp_getaddrinfo, NULL)
-		{ 0, 0, 0 }
-	};
-
-	assert(pai != NULL);
-	/* hostname may be NULL */
-	/* servname may be NULL */
-	assert(res != NULL);
-
-	result = NULL;
-
-	/*
-	 * if the servname does not match socktype/protocol, ignore it.
-	 */
-	if (get_portmatch(pai, servname) != 0)
-		return 0;
-
-	switch (nsdispatch(&result, dtab, NSDB_HOSTS, "getaddrinfo",
-			default_dns_files, hostname, pai, iface, mark)) {
-	case NS_TRYAGAIN:
-		error = EAI_AGAIN;
-		goto free;
-	case NS_UNAVAIL:
-		error = EAI_FAIL;
-		goto free;
-	case NS_NOTFOUND:
-		error = EAI_NODATA;
-		goto free;
-	case NS_SUCCESS:
-		error = 0;
-		for (cur = result; cur; cur = cur->ai_next) {
-			GET_PORT(cur, servname);
-			/* canonname should be filled already */
-		}
-		break;
-	}
-
-	*res = result;
-
-	return 0;
-
-free:
-	if (result)
-		freeaddrinfo(result);
-	return error;
-}
-
-/*
- * hostname == NULL.
- * passive socket -> anyaddr (0.0.0.0 or ::)
- * non-passive socket -> localhost (127.0.0.1 or ::1)
- */
-static int
-explore_null(const struct addrinfo *pai, const char *servname,
-    struct addrinfo **res)
-{
-	int s;
-	const struct afd *afd;
-	struct addrinfo *cur;
-	struct addrinfo sentinel;
-	int error;
-
-	assert(pai != NULL);
-	/* servname may be NULL */
-	assert(res != NULL);
-
-	*res = NULL;
-	sentinel.ai_next = NULL;
-	cur = &sentinel;
-
-	/*
-	 * filter out AFs that are not supported by the kernel
-	 * XXX errno?
-	 */
-	s = socket(pai->ai_family, SOCK_DGRAM, 0);
-	if (s < 0) {
-		if (errno != EMFILE)
-			return 0;
-	} else
-		close(s);
-
-	/*
-	 * if the servname does not match socktype/protocol, ignore it.
-	 */
-	if (get_portmatch(pai, servname) != 0)
-		return 0;
-
-	afd = find_afd(pai->ai_family);
-	if (afd == NULL)
-		return 0;
-
-	if (pai->ai_flags & AI_PASSIVE) {
-		GET_AI(cur->ai_next, afd, afd->a_addrany);
-		/* xxx meaningless?
-		 * GET_CANONNAME(cur->ai_next, "anyaddr");
-		 */
-		GET_PORT(cur->ai_next, servname);
-	} else {
-		GET_AI(cur->ai_next, afd, afd->a_loopback);
-		/* xxx meaningless?
-		 * GET_CANONNAME(cur->ai_next, "localhost");
-		 */
-		GET_PORT(cur->ai_next, servname);
-	}
-	cur = cur->ai_next;
-
-	*res = sentinel.ai_next;
-	return 0;
-
-free:
-	if (sentinel.ai_next)
-		freeaddrinfo(sentinel.ai_next);
-	return error;
-}
-
-/*
- * numeric hostname
- */
-static int
-explore_numeric(const struct addrinfo *pai, const char *hostname,
-    const char *servname, struct addrinfo **res, const char *canonname)
-{
-	const struct afd *afd;
-	struct addrinfo *cur;
-	struct addrinfo sentinel;
-	int error;
-	char pton[PTON_MAX];
-
-	assert(pai != NULL);
-	/* hostname may be NULL */
-	/* servname may be NULL */
-	assert(res != NULL);
-
-	*res = NULL;
-	sentinel.ai_next = NULL;
-	cur = &sentinel;
-
-	/*
-	 * if the servname does not match socktype/protocol, ignore it.
-	 */
-	if (get_portmatch(pai, servname) != 0)
-		return 0;
-
-	afd = find_afd(pai->ai_family);
-	if (afd == NULL)
-		return 0;
-
-	switch (afd->a_af) {
-#if 0 /*X/Open spec*/
-	case AF_INET:
-		if (inet_aton(hostname, (struct in_addr *)pton) == 1) {
-			if (pai->ai_family == afd->a_af ||
-			    pai->ai_family == PF_UNSPEC /*?*/) {
-				GET_AI(cur->ai_next, afd, pton);
-				GET_PORT(cur->ai_next, servname);
-				if ((pai->ai_flags & AI_CANONNAME)) {
-					/*
-					 * Set the numeric address itself as
-					 * the canonical name, based on a
-					 * clarification in rfc2553bis-03.
-					 */
-					GET_CANONNAME(cur->ai_next, canonname);
-				}
-				while (cur && cur->ai_next)
-					cur = cur->ai_next;
-			} else
-				ERR(EAI_FAMILY);	/*xxx*/
-		}
-		break;
-#endif
-	default:
-		if (inet_pton(afd->a_af, hostname, pton) == 1) {
-			if (pai->ai_family == afd->a_af ||
-			    pai->ai_family == PF_UNSPEC /*?*/) {
-				GET_AI(cur->ai_next, afd, pton);
-				GET_PORT(cur->ai_next, servname);
-				if ((pai->ai_flags & AI_CANONNAME)) {
-					/*
-					 * Set the numeric address itself as
-					 * the canonical name, based on a
-					 * clarification in rfc2553bis-03.
-					 */
-					GET_CANONNAME(cur->ai_next, canonname);
-				}
-				while (cur->ai_next)
-					cur = cur->ai_next;
-			} else
-				ERR(EAI_FAMILY);	/*xxx*/
-		}
-		break;
-	}
-
-	*res = sentinel.ai_next;
-	return 0;
-
-free:
-bad:
-	if (sentinel.ai_next)
-		freeaddrinfo(sentinel.ai_next);
-	return error;
-}
-
-/*
- * numeric hostname with scope
- */
-static int
-explore_numeric_scope(const struct addrinfo *pai, const char *hostname,
-    const char *servname, struct addrinfo **res)
-{
-#if !defined(SCOPE_DELIMITER) || !defined(INET6)
-	return explore_numeric(pai, hostname, servname, res, hostname);
-#else
-	const struct afd *afd;
-	struct addrinfo *cur;
-	int error;
-	char *cp, *hostname2 = NULL, *scope, *addr;
-	struct sockaddr_in6 *sin6;
-
-	assert(pai != NULL);
-	/* hostname may be NULL */
-	/* servname may be NULL */
-	assert(res != NULL);
-
-	/*
-	 * if the servname does not match socktype/protocol, ignore it.
-	 */
-	if (get_portmatch(pai, servname) != 0)
-		return 0;
-
-	afd = find_afd(pai->ai_family);
-	if (afd == NULL)
-		return 0;
-
-	if (!afd->a_scoped)
-		return explore_numeric(pai, hostname, servname, res, hostname);
-
-	cp = strchr(hostname, SCOPE_DELIMITER);
-	if (cp == NULL)
-		return explore_numeric(pai, hostname, servname, res, hostname);
-
-	/*
-	 * Handle special case of <scoped_address><delimiter><scope id>
-	 */
-	hostname2 = strdup(hostname);
-	if (hostname2 == NULL)
-		return EAI_MEMORY;
-	/* terminate at the delimiter */
-	hostname2[cp - hostname] = '\0';
-	addr = hostname2;
-	scope = cp + 1;
-
-	error = explore_numeric(pai, addr, servname, res, hostname);
-	if (error == 0) {
-		u_int32_t scopeid;
-
-		for (cur = *res; cur; cur = cur->ai_next) {
-			if (cur->ai_family != AF_INET6)
-				continue;
-			sin6 = (struct sockaddr_in6 *)(void *)cur->ai_addr;
-			if (ip6_str2scopeid(scope, sin6, &scopeid) == -1) {
-				free(hostname2);
-				return(EAI_NODATA); /* XXX: is return OK? */
-			}
-			sin6->sin6_scope_id = scopeid;
-		}
-	}
-
-	free(hostname2);
-
-	return error;
-#endif
-}
-
-static int
-get_canonname(const struct addrinfo *pai, struct addrinfo *ai, const char *str)
-{
-
-	assert(pai != NULL);
-	assert(ai != NULL);
-	assert(str != NULL);
-
-	if ((pai->ai_flags & AI_CANONNAME) != 0) {
-		ai->ai_canonname = strdup(str);
-		if (ai->ai_canonname == NULL)
-			return EAI_MEMORY;
-	}
-	return 0;
-}
-
-static struct addrinfo *
-get_ai(const struct addrinfo *pai, const struct afd *afd, const char *addr)
-{
-	char *p;
-	struct addrinfo *ai;
-
-	assert(pai != NULL);
-	assert(afd != NULL);
-	assert(addr != NULL);
-
-	ai = (struct addrinfo *)malloc(sizeof(struct addrinfo)
-		+ (afd->a_socklen));
-	if (ai == NULL)
-		return NULL;
-
-	memcpy(ai, pai, sizeof(struct addrinfo));
-	ai->ai_addr = (struct sockaddr *)(void *)(ai + 1);
-	memset(ai->ai_addr, 0, (size_t)afd->a_socklen);
-
-#ifdef HAVE_SA_LEN
-	ai->ai_addr->sa_len = afd->a_socklen;
-#endif
-
-	ai->ai_addrlen = afd->a_socklen;
-#if defined (__alpha__) || (defined(__i386__) && defined(_LP64)) || defined(__sparc64__)
-	ai->__ai_pad0 = 0;
-#endif
-	ai->ai_addr->sa_family = ai->ai_family = afd->a_af;
-	p = (char *)(void *)(ai->ai_addr);
-	memcpy(p + afd->a_off, addr, (size_t)afd->a_addrlen);
-	return ai;
-}
-
-static int
-get_portmatch(const struct addrinfo *ai, const char *servname)
-{
-
-	assert(ai != NULL);
-	/* servname may be NULL */
-
-	return get_port(ai, servname, 1);
-}
-
-static int
-get_port(const struct addrinfo *ai, const char *servname, int matchonly)
-{
-	const char *proto;
-	struct servent *sp;
-	int port;
-	int allownumeric;
-
-	assert(ai != NULL);
-	/* servname may be NULL */
-
-	if (servname == NULL)
-		return 0;
-	switch (ai->ai_family) {
-	case AF_INET:
-#ifdef AF_INET6
-	case AF_INET6:
-#endif
-		break;
-	default:
-		return 0;
-	}
-
-	switch (ai->ai_socktype) {
-	case SOCK_RAW:
-		return EAI_SERVICE;
-	case SOCK_DGRAM:
-	case SOCK_STREAM:
-		allownumeric = 1;
-		break;
-	case ANY:
-#if 1  /* ANDROID-SPECIFIC CHANGE TO MATCH GLIBC */
-		allownumeric = 1;
-#else
-		allownumeric = 0;
-#endif
-		break;
-	default:
-		return EAI_SOCKTYPE;
-	}
-
-	port = str2number(servname);
-	if (port >= 0) {
-		if (!allownumeric)
-			return EAI_SERVICE;
-		if (port < 0 || port > 65535)
-			return EAI_SERVICE;
-		port = htons(port);
-	} else {
-		if (ai->ai_flags & AI_NUMERICSERV)
-			return EAI_NONAME;
-
-		switch (ai->ai_socktype) {
-		case SOCK_DGRAM:
-			proto = "udp";
-			break;
-		case SOCK_STREAM:
-			proto = "tcp";
-			break;
-		default:
-			proto = NULL;
-			break;
-		}
-
-		if ((sp = getservbyname(servname, proto)) == NULL)
-			return EAI_SERVICE;
-		port = sp->s_port;
-	}
-
-	if (!matchonly) {
-		switch (ai->ai_family) {
-		case AF_INET:
-			((struct sockaddr_in *)(void *)
-			    ai->ai_addr)->sin_port = port;
-			break;
-#ifdef INET6
-		case AF_INET6:
-			((struct sockaddr_in6 *)(void *)
-			    ai->ai_addr)->sin6_port = port;
-			break;
-#endif
-		}
-	}
-
-	return 0;
-}
-
-static const struct afd *
-find_afd(int af)
-{
-	const struct afd *afd;
-
-	if (af == PF_UNSPEC)
-		return NULL;
-	for (afd = afdl; afd->a_af; afd++) {
-		if (afd->a_af == af)
-			return afd;
-	}
-	return NULL;
-}
-
-#ifdef INET6
-/* convert a string to a scope identifier. XXX: IPv6 specific */
-static int
-ip6_str2scopeid(char *scope, struct sockaddr_in6 *sin6, u_int32_t *scopeid)
-{
-	u_long lscopeid;
-	struct in6_addr *a6;
-	char *ep;
-
-	assert(scope != NULL);
-	assert(sin6 != NULL);
-	assert(scopeid != NULL);
-
-	a6 = &sin6->sin6_addr;
-
-	/* empty scopeid portion is invalid */
-	if (*scope == '\0')
-		return -1;
-
-	if (IN6_IS_ADDR_LINKLOCAL(a6) || IN6_IS_ADDR_MC_LINKLOCAL(a6)) {
-		/*
-		 * We currently assume a one-to-one mapping between links
-		 * and interfaces, so we simply use interface indices for
-		 * like-local scopes.
-		 */
-		*scopeid = if_nametoindex(scope);
-		if (*scopeid == 0)
-			goto trynumeric;
-		return 0;
-	}
-
-	/* still unclear about literal, allow numeric only - placeholder */
-	if (IN6_IS_ADDR_SITELOCAL(a6) || IN6_IS_ADDR_MC_SITELOCAL(a6))
-		goto trynumeric;
-	if (IN6_IS_ADDR_MC_ORGLOCAL(a6))
-		goto trynumeric;
-	else
-		goto trynumeric;	/* global */
-
-	/* try to convert to a numeric id as a last resort */
-  trynumeric:
-	errno = 0;
-	lscopeid = strtoul(scope, &ep, 10);
-	*scopeid = (u_int32_t)(lscopeid & 0xffffffffUL);
-	if (errno == 0 && ep && *ep == '\0' && *scopeid == lscopeid)
-		return 0;
-	else
-		return -1;
-}
-#endif
+//static int
+//android_getaddrinfo_proxy(
+//    const char *hostname, const char *servname,
+//    const struct addrinfo *hints, struct addrinfo **res, const char *iface)
+//{
+//        int sock;
+//        const int one = 1;
+//        struct sockaddr_un proxy_addr;
+//        FILE* proxy = NULL;
+//        int success = 0;
+//
+//        // Clear this at start, as we use its non-NULLness later (in the
+//        // error path) to decide if we have to free up any memory we
+//        // allocated in the process (before failing).
+//        *res = NULL;
+//
+//        // Bogus things we can't serialize.  Don't use the proxy.  These will fail - let them.
+//        if ((hostname != NULL &&
+//             strcspn(hostname, " \n\r\t^'\"") != strlen(hostname)) ||
+//            (servname != NULL &&
+//             strcspn(servname, " \n\r\t^'\"") != strlen(servname))) {
+//                return EAI_NODATA;
+//        }
+//
+//        sock = socket(AF_UNIX, SOCK_STREAM, 0);
+//        if (sock < 0) {
+//                return EAI_NODATA;
+//        }
+//
+//        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+//        memset(&proxy_addr, 0, sizeof(proxy_addr));
+//        proxy_addr.sun_family = AF_UNIX;
+//        strlcpy(proxy_addr.sun_path, "/dev/socket/dnsproxyd",
+//                sizeof(proxy_addr.sun_path));
+//        if (TEMP_FAILURE_RETRY(connect(sock,
+//                                       (const struct sockaddr*) &proxy_addr,
+//                                       sizeof(proxy_addr))) != 0) {
+//                close(sock);
+//                return EAI_NODATA;
+//        }
+//
+//        // Send the request.
+//        proxy = fdopen(sock, "r+");
+//        if (fprintf(proxy, "getaddrinfo %s %s %d %d %d %d %s",
+//                    hostname == NULL ? "^" : hostname,
+//                    servname == NULL ? "^" : servname,
+//                    hints == NULL ? -1 : hints->ai_flags,
+//                    hints == NULL ? -1 : hints->ai_family,
+//                    hints == NULL ? -1 : hints->ai_socktype,
+//                    hints == NULL ? -1 : hints->ai_protocol,
+//                    iface == NULL ? "^" : iface) < 0) {
+//                goto exit;
+//        }
+//        // literal NULL byte at end, required by FrameworkListener
+//        if (fputc(0, proxy) == EOF ||
+//            fflush(proxy) != 0) {
+//                goto exit;
+//        }
+//
+//        char buf[4];
+//        // read result code for gethostbyaddr
+//        if (fread(buf, 1, sizeof(buf), proxy) != sizeof(buf)) {
+//                goto exit;
+//        }
+//
+//        int result_code = (int)strtol(buf, NULL, 10);
+//        // verify the code itself
+//        if (result_code != DnsProxyQueryResult ) {
+//                fread(buf, 1, sizeof(buf), proxy);
+//                goto exit;
+//        }
+//
+//        struct addrinfo* ai = NULL;
+//        struct addrinfo** nextres = res;
+//        while (1) {
+//                uint32_t addrinfo_len;
+//                if (fread(&addrinfo_len, sizeof(addrinfo_len),
+//                          1, proxy) != 1) {
+//                        break;
+//                }
+//                addrinfo_len = ntohl(addrinfo_len);
+//                if (addrinfo_len == 0) {
+//                        success = 1;
+//                        break;
+//                }
+//
+//                if (addrinfo_len < sizeof(struct addrinfo)) {
+//                        break;
+//                }
+//                struct addrinfo* ai = calloc(1, addrinfo_len +
+//                                             sizeof(struct sockaddr_storage));
+//                if (ai == NULL) {
+//                        break;
+//                }
+//
+//                if (fread(ai, addrinfo_len, 1, proxy) != 1) {
+//                        // Error; fall through.
+//                        break;
+//                }
+//
+//                // Zero out the pointer fields we copied which aren't
+//                // valid in this address space.
+//                ai->ai_addr = NULL;
+//                ai->ai_canonname = NULL;
+//                ai->ai_next = NULL;
+//
+//                // struct sockaddr
+//                uint32_t addr_len;
+//                if (fread(&addr_len, sizeof(addr_len), 1, proxy) != 1) {
+//                        break;
+//                }
+//                addr_len = ntohl(addr_len);
+//                if (addr_len != 0) {
+//                        if (addr_len > sizeof(struct sockaddr_storage)) {
+//                                // Bogus; too big.
+//                                break;
+//                        }
+//                        struct sockaddr* addr = (struct sockaddr*)(ai + 1);
+//                        if (fread(addr, addr_len, 1, proxy) != 1) {
+//                                break;
+//                        }
+//                        ai->ai_addr = addr;
+//                }
+//
+//                // cannonname
+//                uint32_t name_len;
+//                if (fread(&name_len, sizeof(name_len), 1, proxy) != 1) {
+//                        break;
+//                }
+//                name_len = ntohl(name_len);
+//                if (name_len != 0) {
+//                        ai->ai_canonname = (char*) malloc(name_len);
+//                        if (fread(ai->ai_canonname, name_len, 1, proxy) != 1) {
+//                                break;
+//                        }
+//                        if (ai->ai_canonname[name_len - 1] != '\0') {
+//                                // The proxy should be returning this
+//                                // NULL-terminated.
+//                                break;
+//                        }
+//                }
+//
+//                *nextres = ai;
+//                nextres = &ai->ai_next;
+//                ai = NULL;
+//        }
+//
+//        if (ai != NULL) {
+//                // Clean up partially-built addrinfo that we never ended up
+//                // attaching to the response.
+//                freeaddrinfo(ai);
+//        }
+//exit:
+//        if (proxy != NULL) {
+//                fclose(proxy);
+//        }
+//
+//        if (success) {
+//                return 0;
+//        }
+//
+//        // Proxy failed;
+//        // clean up memory we might've allocated.
+//        if (*res) {
+//                freeaddrinfo(*res);
+//                *res = NULL;
+//        }
+//        return EAI_NODATA;
+//}
+//
+//int
+//getaddrinfo(const char *hostname, const char *servname,
+//    const struct addrinfo *hints, struct addrinfo **res)
+//{
+//        return android_getaddrinfoforiface(hostname, servname, hints, NULL, 0, res);
+//}
+//
+//int
+//android_getaddrinfoforiface(const char *hostname, const char *servname,
+//    const struct addrinfo *hints, const char *iface, int mark, struct addrinfo **res)
+//{
+//        struct addrinfo sentinel;
+//        struct addrinfo *cur;
+//        int error = 0;
+//        struct addrinfo ai;
+//        struct addrinfo ai0;
+//        struct addrinfo *pai;
+//        const struct explore *ex;
+//        const char* cache_mode = getenv("ANDROID_DNS_MODE");
+//
+//        /* hostname is allowed to be NULL */
+//        /* servname is allowed to be NULL */
+//        /* hints is allowed to be NULL */
+//        assert(res != NULL);
+//        memset(&sentinel, 0, sizeof(sentinel));
+//        cur = &sentinel;
+//        pai = &ai;
+//        pai->ai_flags = 0;
+//        pai->ai_family = PF_UNSPEC;
+//        pai->ai_socktype = ANY;
+//        pai->ai_protocol = ANY;
+//        pai->ai_addrlen = 0;
+//        pai->ai_canonname = NULL;
+//        pai->ai_addr = NULL;
+//        pai->ai_next = NULL;
+//
+//        if (hostname == NULL && servname == NULL)
+//                return EAI_NONAME;
+//        if (hints) {
+//                /* error check for hints */
+//                if (hints->ai_addrlen || hints->ai_canonname ||
+//                    hints->ai_addr || hints->ai_next)
+//                        ERR(EAI_BADHINTS); /* xxx */
+//                if (hints->ai_flags & ~AI_MASK)
+//                        ERR(EAI_BADFLAGS);
+//                switch (hints->ai_family) {
+//                case PF_UNSPEC:
+//                case PF_INET:
+//#ifdef INET6
+//                case PF_INET6:
+//#endif
+//                        break;
+//                default:
+//                        ERR(EAI_FAMILY);
+//                }
+//                memcpy(pai, hints, sizeof(*pai));
+//
+//                /*
+//                 * if both socktype/protocol are specified, check if they
+//                 * are meaningful combination.
+//                 */
+//                if (pai->ai_socktype != ANY && pai->ai_protocol != ANY) {
+//                        for (ex = explore; ex->e_af >= 0; ex++) {
+//                                if (pai->ai_family != ex->e_af)
+//                                        continue;
+//                                if (ex->e_socktype == ANY)
+//                                        continue;
+//                                if (ex->e_protocol == ANY)
+//                                        continue;
+//                                if (pai->ai_socktype == ex->e_socktype
+//                                 && pai->ai_protocol != ex->e_protocol) {
+//                                        ERR(EAI_BADHINTS);
+//                                }
+//                        }
+//                }
+//        }
+//
+//        /*
+//         * check for special cases.  (1) numeric servname is disallowed if
+//         * socktype/protocol are left unspecified. (2) servname is disallowed
+//         * for raw and other inet{,6} sockets.
+//         */
+//        if (MATCH_FAMILY(pai->ai_family, PF_INET, 1)
+//#ifdef PF_INET6
+//         || MATCH_FAMILY(pai->ai_family, PF_INET6, 1)
+//#endif
+//            ) {
+//                ai0 = *pai;        /* backup *pai */
+//
+//                if (pai->ai_family == PF_UNSPEC) {
+//#ifdef PF_INET6
+//                        pai->ai_family = PF_INET6;
+//#else
+//                        pai->ai_family = PF_INET;
+//#endif
+//                }
+//                error = get_portmatch(pai, servname);
+//                if (error)
+//                        ERR(error);
+//
+//                *pai = ai0;
+//        }
+//
+//        ai0 = *pai;
+//
+//        /* NULL hostname, or numeric hostname */
+//        for (ex = explore; ex->e_af >= 0; ex++) {
+//                *pai = ai0;
+//
+//                /* PF_UNSPEC entries are prepared for DNS queries only */
+//                if (ex->e_af == PF_UNSPEC)
+//                        continue;
+//
+//                if (!MATCH_FAMILY(pai->ai_family, ex->e_af, WILD_AF(ex)))
+//                        continue;
+//                if (!MATCH(pai->ai_socktype, ex->e_socktype, WILD_SOCKTYPE(ex)))
+//                        continue;
+//                if (!MATCH(pai->ai_protocol, ex->e_protocol, WILD_PROTOCOL(ex)))
+//                        continue;
+//
+//                if (pai->ai_family == PF_UNSPEC)
+//                        pai->ai_family = ex->e_af;
+//                if (pai->ai_socktype == ANY && ex->e_socktype != ANY)
+//                        pai->ai_socktype = ex->e_socktype;
+//                if (pai->ai_protocol == ANY && ex->e_protocol != ANY)
+//                        pai->ai_protocol = ex->e_protocol;
+//
+//                if (hostname == NULL)
+//                        error = explore_null(pai, servname, &cur->ai_next);
+//                else
+//                        error = explore_numeric_scope(pai, hostname, servname,
+//                            &cur->ai_next);
+//
+//                if (error)
+//                        goto free;
+//
+//                while (cur->ai_next)
+//                        cur = cur->ai_next;
+//        }
+//
+//        /*
+//         * XXX
+//         * If numeric representation of AF1 can be interpreted as FQDN
+//         * representation of AF2, we need to think again about the code below.
+//         */
+//        if (sentinel.ai_next)
+//                goto good;
+//
+//        if (hostname == NULL)
+//                ERR(EAI_NODATA);
+//        if (pai->ai_flags & AI_NUMERICHOST)
+//                ERR(EAI_NONAME);
+//
+//        /*
+//         * BEGIN ANDROID CHANGES; proxying to the cache
+//         */
+//        if (cache_mode == NULL || strcmp(cache_mode, "local") != 0) {
+//                // we're not the proxy - pass the request to them
+//                return android_getaddrinfo_proxy(hostname, servname, hints, res, iface);
+//        }
+//
+//        /*
+//         * hostname as alphabetical name.
+//         * we would like to prefer AF_INET6 than AF_INET, so we'll make a
+//         * outer loop by AFs.
+//         */
+//        for (ex = explore; ex->e_af >= 0; ex++) {
+//                *pai = ai0;
+//
+//                /* require exact match for family field */
+//                if (pai->ai_family != ex->e_af)
+//                        continue;
+//
+//                if (!MATCH(pai->ai_socktype, ex->e_socktype,
+//                                WILD_SOCKTYPE(ex))) {
+//                        continue;
+//                }
+//                if (!MATCH(pai->ai_protocol, ex->e_protocol,
+//                                WILD_PROTOCOL(ex))) {
+//                        continue;
+//                }
+//
+//                if (pai->ai_socktype == ANY && ex->e_socktype != ANY)
+//                        pai->ai_socktype = ex->e_socktype;
+//                if (pai->ai_protocol == ANY && ex->e_protocol != ANY)
+//                        pai->ai_protocol = ex->e_protocol;
+//
+//                error = explore_fqdn(pai, hostname, servname,
+//                        &cur->ai_next, iface, mark);
+//
+//                while (cur && cur->ai_next)
+//                        cur = cur->ai_next;
+//        }
+//
+//        /* XXX */
+//        if (sentinel.ai_next)
+//                error = 0;
+//
+//        if (error)
+//                goto free;
+//        if (error == 0) {
+//                if (sentinel.ai_next) {
+// good:
+//                        *res = sentinel.ai_next;
+//                        return SUCCESS;
+//                } else
+//                        error = EAI_FAIL;
+//        }
+// free:
+// bad:
+//        if (sentinel.ai_next)
+//                freeaddrinfo(sentinel.ai_next);
+//        *res = NULL;
+//        return error;
+//}
+//
+///*
+// * FQDN hostname, DNS lookup
+// */
+//static int
+//explore_fqdn(const struct addrinfo *pai, const char *hostname,
+//    const char *servname, struct addrinfo **res, const char *iface, int mark)
+//{
+//        struct addrinfo *result;
+//        struct addrinfo *cur;
+//        int error = 0;
+//        static const ns_dtab dtab[] = {
+//                NS_FILES_CB(_files_getaddrinfo, NULL)
+//                { NSSRC_DNS, _dns_getaddrinfo, NULL },        /* force -DHESIOD */
+//                NS_NIS_CB(_yp_getaddrinfo, NULL)
+//                { 0, 0, 0 }
+//        };
+//
+//        assert(pai != NULL);
+//        /* hostname may be NULL */
+//        /* servname may be NULL */
+//        assert(res != NULL);
+//
+//        result = NULL;
+//
+//        /*
+//         * if the servname does not match socktype/protocol, ignore it.
+//         */
+//        if (get_portmatch(pai, servname) != 0)
+//                return 0;
+//
+//        switch (nsdispatch(&result, dtab, NSDB_HOSTS, "getaddrinfo",
+//                        default_dns_files, hostname, pai, iface, mark)) {
+//        case NS_TRYAGAIN:
+//                error = EAI_AGAIN;
+//                goto free;
+//        case NS_UNAVAIL:
+//                error = EAI_FAIL;
+//                goto free;
+//        case NS_NOTFOUND:
+//                error = EAI_NODATA;
+//                goto free;
+//        case NS_SUCCESS:
+//                error = 0;
+//                for (cur = result; cur; cur = cur->ai_next) {
+//                        GET_PORT(cur, servname);
+//                        /* canonname should be filled already */
+//                }
+//                break;
+//        }
+//
+//        *res = result;
+//
+//        return 0;
+//
+//free:
+//        if (result)
+//                freeaddrinfo(result);
+//        return error;
+//}
+//
+///*
+// * hostname == NULL.
+// * passive socket -> anyaddr (0.0.0.0 or ::)
+// * non-passive socket -> localhost (127.0.0.1 or ::1)
+// */
+//static int
+//explore_null(const struct addrinfo *pai, const char *servname,
+//    struct addrinfo **res)
+//{
+//        int s;
+//        const struct afd *afd;
+//        struct addrinfo *cur;
+//        struct addrinfo sentinel;
+//        int error;
+//
+//        assert(pai != NULL);
+//        /* servname may be NULL */
+//        assert(res != NULL);
+//
+//        *res = NULL;
+//        sentinel.ai_next = NULL;
+//        cur = &sentinel;
+//
+//        /*
+//         * filter out AFs that are not supported by the kernel
+//         * XXX errno?
+//         */
+//        s = socket(pai->ai_family, SOCK_DGRAM, 0);
+//        if (s < 0) {
+//                if (errno != EMFILE)
+//                        return 0;
+//        } else
+//                close(s);
+//
+//        /*
+//         * if the servname does not match socktype/protocol, ignore it.
+//         */
+//        if (get_portmatch(pai, servname) != 0)
+//                return 0;
+//
+//        afd = find_afd(pai->ai_family);
+//        if (afd == NULL)
+//                return 0;
+//
+//        if (pai->ai_flags & AI_PASSIVE) {
+//                GET_AI(cur->ai_next, afd, afd->a_addrany);
+//                /* xxx meaningless?
+//                 * GET_CANONNAME(cur->ai_next, "anyaddr");
+//                 */
+//                GET_PORT(cur->ai_next, servname);
+//        } else {
+//                GET_AI(cur->ai_next, afd, afd->a_loopback);
+//                /* xxx meaningless?
+//                 * GET_CANONNAME(cur->ai_next, "localhost");
+//                 */
+//                GET_PORT(cur->ai_next, servname);
+//        }
+//        cur = cur->ai_next;
+//
+//        *res = sentinel.ai_next;
+//        return 0;
+//
+//free:
+//        if (sentinel.ai_next)
+//                freeaddrinfo(sentinel.ai_next);
+//        return error;
+//}
+//
+///*
+// * numeric hostname
+// */
+//static int
+//explore_numeric(const struct addrinfo *pai, const char *hostname,
+//    const char *servname, struct addrinfo **res, const char *canonname)
+//{
+//        const struct afd *afd;
+//        struct addrinfo *cur;
+//        struct addrinfo sentinel;
+//        int error;
+//        char pton[PTON_MAX];
+//
+//        assert(pai != NULL);
+//        /* hostname may be NULL */
+//        /* servname may be NULL */
+//        assert(res != NULL);
+//
+//        *res = NULL;
+//        sentinel.ai_next = NULL;
+//        cur = &sentinel;
+//
+//        /*
+//         * if the servname does not match socktype/protocol, ignore it.
+//         */
+//        if (get_portmatch(pai, servname) != 0)
+//                return 0;
+//
+//        afd = find_afd(pai->ai_family);
+//        if (afd == NULL)
+//                return 0;
+//
+//        switch (afd->a_af) {
+//#if 0 /*X/Open spec*/
+//        case AF_INET:
+//                if (inet_aton(hostname, (struct in_addr *)pton) == 1) {
+//                        if (pai->ai_family == afd->a_af ||
+//                            pai->ai_family == PF_UNSPEC /*?*/) {
+//                                GET_AI(cur->ai_next, afd, pton);
+//                                GET_PORT(cur->ai_next, servname);
+//                                if ((pai->ai_flags & AI_CANONNAME)) {
+//                                        /*
+//                                         * Set the numeric address itself as
+//                                         * the canonical name, based on a
+//                                         * clarification in rfc2553bis-03.
+//                                         */
+//                                        GET_CANONNAME(cur->ai_next, canonname);
+//                                }
+//                                while (cur && cur->ai_next)
+//                                        cur = cur->ai_next;
+//                        } else
+//                                ERR(EAI_FAMILY);        /*xxx*/
+//                }
+//                break;
+//#endif
+//        default:
+//                if (inet_pton(afd->a_af, hostname, pton) == 1) {
+//                        if (pai->ai_family == afd->a_af ||
+//                            pai->ai_family == PF_UNSPEC /*?*/) {
+//                                GET_AI(cur->ai_next, afd, pton);
+//                                GET_PORT(cur->ai_next, servname);
+//                                if ((pai->ai_flags & AI_CANONNAME)) {
+//                                        /*
+//                                         * Set the numeric address itself as
+//                                         * the canonical name, based on a
+//                                         * clarification in rfc2553bis-03.
+//                                         */
+//                                        GET_CANONNAME(cur->ai_next, canonname);
+//                                }
+//                                while (cur->ai_next)
+//                                        cur = cur->ai_next;
+//                        } else
+//                                ERR(EAI_FAMILY);        /*xxx*/
+//                }
+//                break;
+//        }
+//
+//        *res = sentinel.ai_next;
+//        return 0;
+//
+//free:
+//bad:
+//        if (sentinel.ai_next)
+//                freeaddrinfo(sentinel.ai_next);
+//        return error;
+//}
+//
+///*
+// * numeric hostname with scope
+// */
+//static int
+//explore_numeric_scope(const struct addrinfo *pai, const char *hostname,
+//    const char *servname, struct addrinfo **res)
+//{
+//#if !defined(SCOPE_DELIMITER) || !defined(INET6)
+//        return explore_numeric(pai, hostname, servname, res, hostname);
+//#else
+//        const struct afd *afd;
+//        struct addrinfo *cur;
+//        int error;
+//        char *cp, *hostname2 = NULL, *scope, *addr;
+//        struct sockaddr_in6 *sin6;
+//
+//        assert(pai != NULL);
+//        /* hostname may be NULL */
+//        /* servname may be NULL */
+//        assert(res != NULL);
+//
+//        /*
+//         * if the servname does not match socktype/protocol, ignore it.
+//         */
+//        if (get_portmatch(pai, servname) != 0)
+//                return 0;
+//
+//        afd = find_afd(pai->ai_family);
+//        if (afd == NULL)
+//                return 0;
+////
+//        if (!afd->a_scoped)
+//                return explore_numeric(pai, hostname, servname, res, hostname);
+
+//        cp = strchr(hostname, SCOPE_DELIMITER);
+//        if (cp == NULL)
+//                return explore_numeric(pai, hostname, servname, res, hostname);
+
+//        /*
+//         * Handle special case of <scoped_address><delimiter><scope id>
+//         */
+//        hostname2 = strdup(hostname);
+//        if (hostname2 == NULL)
+//                return EAI_MEMORY;
+//        /* terminate at the delimiter */
+//        hostname2[cp - hostname] = '\0';
+//        addr = hostname2;
+//        scope = cp + 1;
+
+//        error = explore_numeric(pai, addr, servname, res, hostname);
+//        if (error == 0) {
+//                u_int32_t scopeid;
+
+//                for (cur = *res; cur; cur = cur->ai_next) {
+//                        if (cur->ai_family != AF_INET6)
+//                                continue;
+//                        sin6 = (struct sockaddr_in6 *)(void *)cur->ai_addr;
+//                        if (ip6_str2scopeid(scope, sin6, &scopeid) == -1) {
+//                                free(hostname2);
+//                                return(EAI_NODATA); /* XXX: is return OK? */
+//                        }
+//                        sin6->sin6_scope_id = scopeid;
+//                }
+//        }
+
+//        free(hostname2);
+
+//        return error;
+//#e//ndif
+//}
+//
+//st//atic int
+//ge//t_canonname(const struct addrinfo *pai, struct addrinfo *ai, const char *str)
+//{
+
+//        assert(pai != NULL);
+//        assert(ai != NULL);
+//        assert(str != NULL);
+
+//        if ((pai->ai_flags & AI_CANONNAME) != 0) {
+//                ai->ai_canonname = strdup(str);
+//                if (ai->ai_canonname == NULL)
+//                        return EAI_MEMORY;
+//        }
+//        return 0;
+//}
+//
+//st//atic struct addrinfo *
+//ge//t_ai(const struct addrinfo *pai, const struct afd *afd, const char *addr)
+//{
+//        char *p;
+//        struct addrinfo *ai;
+
+//        assert(pai != NULL);
+//        assert(afd != NULL);
+//        assert(addr != NULL);
+
+//        ai = (struct addrinfo *)malloc(sizeof(struct addrinfo)
+//                + (afd->a_socklen));
+//        if (ai == NULL)
+//                return NULL;
+
+//        memcpy(ai, pai, sizeof(struct addrinfo));
+//        ai->ai_addr = (struct sockaddr *)(void *)(ai + 1);
+//        memset(ai->ai_addr, 0, (size_t)afd->a_socklen);
+
+//#ifdef HAVE_SA_LEN
+//        ai->ai_addr->sa_len = afd->a_socklen;
+//#endif
+//
+//        ai->ai_addrlen = afd->a_socklen;
+//#if defined (__alpha__) || (defined(__i386__) && defined(_LP64)) || defined(__sparc64__)
+//        ai->__ai_pad0 = 0;
+//#endif
+//        ai->ai_addr->sa_family = ai->ai_family = afd->a_af;
+//        p = (char *)(void *)(ai->ai_addr);
+//        memcpy(p + afd->a_off, addr, (size_t)afd->a_addrlen);
+//        return ai;
+//}
+
+//static int
+//get_portmatch(const struct addrinfo *ai, const char *servname)
+//{
+//
+//        assert(ai != NULL);
+//        /* servname may be NULL */
+////
+//        return get_port(ai, servname, 1);
+//}
+//
+//st//atic int
+//ge//t_port(const struct addrinfo *ai, const char *servname, int matchonly)
+//{
+//        const char *proto;
+//        struct servent *sp;
+//        int port;
+//        int allownumeric;
+
+//        assert(ai != NULL);
+//        /* servname may be NULL */
+
+//        if (servname == NULL)
+//                return 0;
+//        switch (ai->ai_family) {
+//        case AF_INET:
+#i//fdef AF_INET6
+//        case AF_INET6:
+#e//ndif
+//                break;
+//        default:
+//                return 0;
+//        }
+
+//        switch (ai->ai_socktype) {
+//        case SOCK_RAW:
+//                return EAI_SERVICE;
+//        case SOCK_DGRAM:
+//        case SOCK_STREAM:
+//                allownumeric = 1;
+//                break;
+//        case ANY:
+#i//f 1  /* ANDROID-SPECIFIC CHANGE TO MATCH GLIBC */
+//                allownumeric = 1;
+#e//lse
+//                allownumeric = 0;
+#e//ndif
+//                break;
+//        default:
+//                return EAI_SOCKTYPE;
+//        }
+
+//        port = str2number(servname);
+//        if (port >= 0) {
+//                if (!allownumeric)
+//                        return EAI_SERVICE;
+//                if (port < 0 || port > 65535)
+//                        return EAI_SERVICE;
+//                port = htons(port);
+//        } else {
+//                if (ai->ai_flags & AI_NUMERICSERV)
+//                        return EAI_NONAME;
+
+//                switch (ai->ai_socktype) {
+//                case SOCK_DGRAM:
+//                        proto = "udp";
+//                        break;
+//                case SOCK_STREAM:
+//                        proto = "tcp";
+//                        break;
+//                default:
+//                        proto = NULL;
+//                        break;
+//                }
+
+//                if ((sp = getservbyname(servname, proto)) == NULL)
+//                        return EAI_SERVICE;
+//                port = sp->s_port;
+//        }
+
+//        if (!matchonly) {
+//                switch (ai->ai_family) {
+//                case AF_INET:
+//                        ((struct sockaddr_in *)(void *)
+//                            ai->ai_addr)->sin_port = port;
+//                        break;
+//#ifdef INET6
+//                case AF_INET6:
+//                        ((struct sockaddr_in6 *)(void *)
+//                            ai->ai_addr)->sin6_port = port;
+//                        break;
+//#endif
+//                }
+//        }
+//
+//        return 0;
+//}
+//
+//static const struct afd *
+//find_afd(int af)
+//{
+//        const struct afd *afd;
+//
+//        if (af == PF_UNSPEC)
+//                return NULL;
+//        for (afd = afdl; afd->a_af; afd++) {
+//                if (afd->a_af == af)
+//                        return afd;
+//        }
+//        return NULL;
+//}
+
+//#ifdef INET6
+///* convert a string to a scope identifier. XXX: IPv6 specific */
+//static int
+//ip6_str2scopeid(char *scope, struct sockaddr_in6 *sin6, u_int32_t *scopeid)
+//{
+//        u_long lscopeid;
+//        struct in6_addr *a6;
+//        char *ep;
+//
+//        assert(scope != NULL);
+//        assert(sin6 != NULL);
+//        assert(scopeid != NULL);
+//
+//        a6 = &sin6->sin6_addr;
+//
+//        /* empty scopeid portion is invalid */
+//        if (*scope == '\0')
+//                return -1;
+//
+//        if (IN6_IS_ADDR_LINKLOCAL(a6) || IN6_IS_ADDR_MC_LINKLOCAL(a6)) {
+//                /*
+//                 * We currently assume a one-to-one mapping between links
+//                 * and interfaces, so we simply use interface indices for
+//                 * like-local scopes.
+//                 */
+//                *scopeid = if_nametoindex(scope);
+//                if (*scopeid == 0)
+//                        goto trynumeric;
+//                return 0;
+//        }
+//
+//        /* still unclear about literal, allow numeric only - placeholder */
+//        if (IN6_IS_ADDR_SITELOCAL(a6) || IN6_IS_ADDR_MC_SITELOCAL(a6))
+//                goto trynumeric;
+//        if (IN6_IS_ADDR_MC_ORGLOCAL(a6))
+//                goto trynumeric;
+//        else
+//                goto trynumeric;        /* global */
+//
+//        /* try to convert to a numeric id as a last resort */
+//  trynumeric:
+//        errno = 0;
+//        lscopeid = strtoul(scope, &ep, 10);
+//        *scopeid = (u_int32_t)(lscopeid & 0xffffffffUL);
+//        if (errno == 0 && ep && *ep == '\0' && *scopeid == lscopeid)
+//                return 0;
+//        else
+//                return -1;
+//}
+//#endif
 
 /* code duplicate with gethnamaddr.c */
 
 static const char AskedForGot[] =
-	"gethostby*.getanswer: asked for \"%s\", got \"%s\"";
+        "gethostby*.getanswer: asked for \"%s\", got \"%s\"";
 
 static struct addrinfo *
 getanswer(const querybuf *answer, int anslen, const char *qname, int qtype,
     const struct addrinfo *pai)
 {
-	struct addrinfo sentinel, *cur;
-	struct addrinfo ai;
-	const struct afd *afd;
-	char *canonname;
-	const HEADER *hp;
-	const u_char *cp;
-	int n;
-	const u_char *eom;
-	char *bp, *ep;
-	int type, class, ancount, qdcount;
-	int haveanswer, had_error;
-	char tbuf[MAXDNAME];
-	int (*name_ok) (const char *);
-	char hostbuf[8*1024];
+        struct addrinfo sentinel, *cur;
+        struct addrinfo ai;
+        const struct afd *afd;
+        char *canonname;
+        const HEADER *hp;
+        const u_char *cp;
+        int n;
+        const u_char *eom;
+        char *bp, *ep;
+        int type, class, ancount, qdcount;
+        int haveanswer, had_error;
+        char tbuf[MAXDNAME];
+        int (*name_ok) (const char *);
+        char hostbuf[8*1024];
 
-	assert(answer != NULL);
-	assert(qname != NULL);
-	assert(pai != NULL);
+        assert(answer != NULL);
+        assert(qname != NULL);
+        assert(pai != NULL);
 
-	memset(&sentinel, 0, sizeof(sentinel));
-	cur = &sentinel;
+        memset(&sentinel, 0, sizeof(sentinel));
+        cur = &sentinel;
 
-	canonname = NULL;
-	eom = answer->buf + anslen;
-	switch (qtype) {
-	case T_A:
-	case T_AAAA:
-	case T_ANY:	/*use T_ANY only for T_A/T_AAAA lookup*/
-		name_ok = res_hnok;
-		break;
-	default:
-		return NULL;	/* XXX should be abort(); */
-	}
-	/*
-	 * find first satisfactory answer
-	 */
-	hp = &answer->hdr;
-	ancount = ntohs(hp->ancount);
-	qdcount = ntohs(hp->qdcount);
-	bp = hostbuf;
-	ep = hostbuf + sizeof hostbuf;
-	cp = answer->buf + HFIXEDSZ;
-	if (qdcount != 1) {
-		h_errno = NO_RECOVERY;
-		return (NULL);
-	}
-	n = dn_expand(answer->buf, eom, cp, bp, ep - bp);
-	if ((n < 0) || !(*name_ok)(bp)) {
-		h_errno = NO_RECOVERY;
-		return (NULL);
-	}
-	cp += n + QFIXEDSZ;
-	if (qtype == T_A || qtype == T_AAAA || qtype == T_ANY) {
-		/* res_send() has already verified that the query name is the
-		 * same as the one we sent; this just gets the expanded name
-		 * (i.e., with the succeeding search-domain tacked on).
-		 */
-		n = strlen(bp) + 1;		/* for the \0 */
-		if (n >= MAXHOSTNAMELEN) {
-			h_errno = NO_RECOVERY;
-			return (NULL);
-		}
-		canonname = bp;
-		bp += n;
-		/* The qname can be abbreviated, but h_name is now absolute. */
-		qname = canonname;
-	}
-	haveanswer = 0;
-	had_error = 0;
-	while (ancount-- > 0 && cp < eom && !had_error) {
-		n = dn_expand(answer->buf, eom, cp, bp, ep - bp);
-		if ((n < 0) || !(*name_ok)(bp)) {
-			had_error++;
-			continue;
-		}
-		cp += n;			/* name */
-		type = _getshort(cp);
- 		cp += INT16SZ;			/* type */
-		class = _getshort(cp);
- 		cp += INT16SZ + INT32SZ;	/* class, TTL */
-		n = _getshort(cp);
-		cp += INT16SZ;			/* len */
-		if (class != C_IN) {
-			/* XXX - debug? syslog? */
-			cp += n;
-			continue;		/* XXX - had_error++ ? */
-		}
-		if ((qtype == T_A || qtype == T_AAAA || qtype == T_ANY) &&
-		    type == T_CNAME) {
-			n = dn_expand(answer->buf, eom, cp, tbuf, sizeof tbuf);
-			if ((n < 0) || !(*name_ok)(tbuf)) {
-				had_error++;
-				continue;
-			}
-			cp += n;
-			/* Get canonical name. */
-			n = strlen(tbuf) + 1;	/* for the \0 */
-			if (n > ep - bp || n >= MAXHOSTNAMELEN) {
-				had_error++;
-				continue;
-			}
-			strlcpy(bp, tbuf, (size_t)(ep - bp));
-			canonname = bp;
-			bp += n;
-			continue;
-		}
-		if (qtype == T_ANY) {
-			if (!(type == T_A || type == T_AAAA)) {
-				cp += n;
-				continue;
-			}
-		} else if (type != qtype) {
-			if (type != T_KEY && type != T_SIG)
-				syslog(LOG_NOTICE|LOG_AUTH,
-	       "gethostby*.getanswer: asked for \"%s %s %s\", got type \"%s\"",
-				       qname, p_class(C_IN), p_type(qtype),
-				       p_type(type));
-			cp += n;
-			continue;		/* XXX - had_error++ ? */
-		}
-		switch (type) {
-		case T_A:
-		case T_AAAA:
-			if (strcasecmp(canonname, bp) != 0) {
-				syslog(LOG_NOTICE|LOG_AUTH,
-				       AskedForGot, canonname, bp);
-				cp += n;
-				continue;	/* XXX - had_error++ ? */
-			}
-			if (type == T_A && n != INADDRSZ) {
-				cp += n;
-				continue;
-			}
-			if (type == T_AAAA && n != IN6ADDRSZ) {
+        canonname = NULL;
+        eom = answer->buf + anslen;
+        switch (qtype) {
+        case T_A:
+        case T_AAAA:
+        case T_ANY:        /*use T_ANY only for T_A/T_AAAA lookup*/
+                name_ok = res_hnok;
+                break;
+        default:
+                return NULL;        /* XXX should be abort(); */
+        }
+        /*
+         * find first satisfactory answer
+         */
+        hp = &answer->hdr;
+        ancount = ntohs(hp->ancount);
+        qdcount = ntohs(hp->qdcount);
+        bp = hostbuf;
+        ep = hostbuf + sizeof hostbuf;
+        cp = answer->buf + HFIXEDSZ;
+        if (qdcount != 1) {
+                h_errno = NO_RECOVERY;
+                return (NULL);
+        }
+        n = dn_expand(answer->buf, eom, cp, bp, ep - bp);
+        if ((n < 0) || !(*name_ok)(bp)) {
+                h_errno = NO_RECOVERY;
+                return (NULL);
+        }
+        cp += n + QFIXEDSZ;
+        if (qtype == T_A || qtype == T_AAAA || qtype == T_ANY) {
+                /* res_send() has already verified that the query name is the
+                 * same as the one we sent; this just gets the expanded name
+                 * (i.e., with the succeeding search-domain tacked on).
+                 */
+                n = strlen(bp) + 1;                /* for the \0 */
+                if (n >= MAXHOSTNAMELEN) {
+                        h_errno = NO_RECOVERY;
+                        return (NULL);
+                }
+                canonname = bp;
+                bp += n;
+                /* The qname can be abbreviated, but h_name is now absolute. */
+                qname = canonname;
+        }
+        haveanswer = 0;
+        had_error = 0;
+        while (ancount-- > 0 && cp < eom && !had_error) {
+                n = dn_expand(answer->buf, eom, cp, bp, ep - bp);
+                if ((n < 0) || !(*name_ok)(bp)) {
+                        had_error++;
+                        continue;
+                }
+                cp += n;                        /* name */
+                type = _getshort(cp);
+                 cp += INT16SZ;                        /* type */
+                class = _getshort(cp);
+                 cp += INT16SZ + INT32SZ;        /* class, TTL */
+                n = _getshort(cp);
+                cp += INT16SZ;                        /* len */
+                if (class != C_IN) {
+                        /* XXX - debug? syslog? */
+                        cp += n;
+                        continue;                /* XXX - had_error++ ? */
+                }
+                if ((qtype == T_A || qtype == T_AAAA || qtype == T_ANY) &&
+                    type == T_CNAME) {
+                        n = dn_expand(answer->buf, eom, cp, tbuf, sizeof tbuf);
+                        if ((n < 0) || !(*name_ok)(tbuf)) {
+                                had_error++;
+                                continue;
+                        }
+                        cp += n;
+                        /* Get canonical name. */
+                        n = strlen(tbuf) + 1;        /* for the \0 */
+                        if (n > ep - bp || n >= MAXHOSTNAMELEN) {
+                                had_error++;
+                                continue;
+                        }
+                        strlcpy(bp, tbuf, (size_t)(ep - bp));
+                        canonname = bp;
+                        bp += n;
+                        continue;
+                }
+                if (qtype == T_ANY) {
+                        if (!(type == T_A || type == T_AAAA)) {
+                                cp += n;
+                                continue;
+                        }
+                } else if (type != qtype) {
+                        if (type != T_KEY && type != T_SIG)
+                                syslog(LOG_NOTICE|LOG_AUTH,
+               "gethostby*.getanswer: asked for \"%s %s %s\", got type \"%s\"",
+                                       qname, p_class(C_IN), p_type(qtype),
+                                       p_type(type));
+                        cp += n;
+                        continue;                /* XXX - had_error++ ? */
+                }
+                switch (type) {
+                case T_A:
+                case T_AAAA:
+                        if (strcasecmp(canonname, bp) != 0) {
+                                syslog(LOG_NOTICE|LOG_AUTH,
+                                       AskedForGot, canonname, bp);
+                                cp += n;
+                                continue;        /* XXX - had_error++ ? */
+                        }
+                        if (type == T_A && n != INADDRSZ) {
+                                cp += n;
+                                continue;
+                        }
+        		if (type == T_AAAA && n != IN6ADDRSZ) {
 				cp += n;
 				continue;
 			}
