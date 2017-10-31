@@ -1716,6 +1716,16 @@ libs:
   - openssl
   - winsock
   - global
+- name: address_sorting
+  build: private
+  language: c++
+  headers:
+  - third_party/address_sorting/address_sorting.h
+  src:
+  - third_party/address_sorting/address_sorting.cc
+  deps:
+  - grpc
+  - gpr
 targets:
 - name: alarm_test
   cpu_cost: 0.1
