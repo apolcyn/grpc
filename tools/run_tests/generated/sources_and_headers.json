@@ -8731,6 +8731,7 @@
       "grpc_client_channel"
     ], 
     "headers": [
+      "src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
     ], 
@@ -8738,6 +8739,8 @@
     "language": "c", 
     "name": "grpc_resolver_dns_ares", 
     "src": [
+      "src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.cc", 
+      "src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc", 

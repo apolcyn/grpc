@@ -20,6 +20,7 @@
 #if GRPC_ARES == 1 && !defined(GRPC_UV)
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.h"
 #include "src/core/lib/iomgr/sockaddr.h"
 #include "src/core/lib/iomgr/socket_utils_posix.h"
 
@@ -45,7 +46,6 @@
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/support/string.h"
 
-#include "address_sorting_wrapper.h"
 
 static gpr_once g_basic_init = GPR_ONCE_INIT;
 static gpr_mu g_init_mu;
@@ -106,7 +106,7 @@ static void grpc_ares_request_unref(grpc_exec_ctx *exec_ctx,
      request */
   if (gpr_unref(&r->pending_queries)) {
     /* TODO(zyc): Sort results with RFC6724 before invoking on_done. */
-    grpc_ares_wrapper_rfc_6724_sort_internal(*(r->lb_addrs_out));
+    grpc_ares_wrapper_rfc_6724_sort(*(r->lb_addrs_out));
     if (exec_ctx == NULL) {
       /* A new exec_ctx is created here, as the c-ares interface does not
          provide one in ares_host_callback. It's safe to schedule on_done with
@@ -526,10 +526,6 @@ static void on_dns_lookup_done_cb(grpc_exec_ctx *exec_ctx, void *arg,
                      GRPC_ERROR_REF(error));
   grpc_lb_addresses_destroy(exec_ctx, r->lb_addrs);
   gpr_free(r);
-}
-
-void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_addrs) {
-  grpc_ares_wrapper_rfc_6724_sort(resolved_lb_addrs);
 }
 
 static void grpc_resolve_address_ares_impl(grpc_exec_ctx *exec_ctx,

@@ -607,6 +607,8 @@
   endif
   endif
 
+  ADDR_SORTING_DEP = $(LIBDIR)/$(CONFIG)/lib_address_sorting.a
+
   OPENSSL_PKG_CONFIG = false
 
   PC_REQUIRES_SECURE =

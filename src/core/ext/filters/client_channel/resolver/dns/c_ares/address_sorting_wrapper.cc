@@ -2,6 +2,7 @@
 // Created by apolcyn on 10/30/17.
 //
 
+#include <grpc/support/port_platform.h>
 #include "address_sorting_wrapper.h"
 #include "third_party/address_sorting/address_sorting.h"
 

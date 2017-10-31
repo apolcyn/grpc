@@ -39,6 +39,7 @@
 #include "address_sorting.h"
 #include "src/core/lib/iomgr/sockaddr.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
+#include "third_party/address_sorting/address_sorting.h"
 //#include "src/core/lib/iomgr/socket_utils_posix.h"
 #include "src/core/ext/filters/client_channel/lb_policy_factory.h"
 #include <grpc/support/useful.h>
@@ -441,7 +442,7 @@ void grpc_ares_wrapper_rfc_6724_sort_internal(grpc_lb_addresses *resolved_lb_add
                                         GPR_ASSERT(grpc_sockaddr_to_string(&dst_str, &resolved_lb_addrs->addresses[i].address, true));
                                         char *src_str;
                                         GPR_ASSERT(grpc_sockaddr_to_string(&src_str, &src_addr, true));
-                                        gpr_log(GPR_INFO, "Resolved destination %s and found source address candidate %s", dst_str, src_str);
+                                        gpr_log(GPR_INFO, "Resolved  destination %s and found source address candidate %s", dst_str, src_str);
                                         gpr_free(dst_str);
                                         gpr_free(src_str);
                                 } else {

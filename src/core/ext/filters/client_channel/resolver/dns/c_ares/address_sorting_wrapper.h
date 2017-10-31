@@ -7,8 +7,16 @@
 
 #include "third_party/address_sorting/address_sorting.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void grpc_ares_wrapper_set_socket_factory(grpc_ares_wrapper_socket_factory *factory);
 
 void grpc_ares_wrapper_rfc_6724_sort(grpc_lb_addresses *resolved_lb_addrs);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //GRPC_ADDRESS_SORTING_WRAPPER_H

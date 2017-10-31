@@ -3187,6 +3187,7 @@ LIBGRPC_SRC = \
     src/core/ext/filters/client_channel/resolver/fake/fake_resolver.cc \
     src/core/ext/filters/client_channel/lb_policy/pick_first/pick_first.cc \
     src/core/ext/filters/client_channel/lb_policy/round_robin/round_robin.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc \
@@ -3266,7 +3267,7 @@ $(LIBDIR)/$(CONFIG)/$(SHARED_PREFIX)grpc$(SHARED_VERSION_CORE).$(SHARED_EXT_CORE
 else
 
 
-$(LIBDIR)/$(CONFIG)/libgrpc.a: $(ZLIB_DEP) $(OPENSSL_DEP) $(CARES_DEP) $(LIBGRPC_OBJS)  $(LIBGPR_OBJS)  $(ZLIB_MERGE_OBJS)  $(CARES_MERGE_OBJS)  $(OPENSSL_MERGE_OBJS)  $(LIBADDR_SORTING_OBJS)
+$(LIBDIR)/$(CONFIG)/libgrpc.a: $(ZLIB_DEP) $(OPENSSL_DEP) $(CARES_DEP) $(LIBGRPC_OBJS)  $(LIBGPR_OBJS)  $(ZLIB_MERGE_OBJS)  $(CARES_MERGE_OBJS)  $(OPENSSL_MERGE_OBJS) 
 	$(E) "[AR]      Creating $@"
 	$(Q) mkdir -p `dirname $@`
 	$(Q) rm -f $(LIBDIR)/$(CONFIG)/libgrpc.a
@@ -4297,6 +4298,7 @@ LIBGRPC_UNSECURE_SRC = \
     src/core/ext/filters/deadline/deadline_filter.cc \
     src/core/ext/transport/inproc/inproc_plugin.cc \
     src/core/ext/transport/inproc/inproc_transport.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/address_sorting_wrapper.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc \
@@ -4693,7 +4695,7 @@ $(LIBDIR)/$(CONFIG)/$(SHARED_PREFIX)grpc++$(SHARED_VERSION_CPP).$(SHARED_EXT_CPP
 
 else
 
-$(LIBDIR)/$(CONFIG)/libgrpc++.a: $(ZLIB_DEP) $(OPENSSL_DEP) $(CARES_DEP) $(PROTOBUF_DEP) $(LIBGRPC++_OBJS)  $(LIBGPR_OBJS)  $(ZLIB_MERGE_OBJS)  $(CARES_MERGE_OBJS) $(LIBADDR_SORTING_OBJS)
+$(LIBDIR)/$(CONFIG)/libgrpc++.a: $(ZLIB_DEP) $(OPENSSL_DEP) $(CARES_DEP) $(PROTOBUF_DEP) $(LIBGRPC++_OBJS)  $(LIBGPR_OBJS)  $(ZLIB_MERGE_OBJS)  $(CARES_MERGE_OBJS) 
 	$(E) "[AR]      Creating $@"
 	$(Q) mkdir -p `dirname $@`
 	$(Q) rm -f $(LIBDIR)/$(CONFIG)/libgrpc++.a
@@ -8441,31 +8443,11 @@ ifeq ($(SYSTEM),Darwin)
 	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/libares.a
 endif
 
+
+
+
 ifneq ($(NO_DEPS),true)
 -include $(LIBARES_OBJS:.o=.dep)
-endif
-
-LIBADDR_SORTING_SRC = \
-    third_party/address_sorting/address_sorting.cc
-
-LIBADDR_SORTING_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(LIBADDR_SORTING_SRC))))
-
-$(LIBADDR_SORTING_OBJS): CPPFLAGS += -Ithird_party/address_sorting
-
-libaddr_sorting2.a:
-	$(E) "shoud be: |$(LIBDIR)/$(CONFIG)/libaddr_sorting.a: $(LIBADDR_SORTING_OBJS)|"
-	$(E) "shoud be: |$(LIBADDR_SORTING_OBJS)|"
-	$(E) "CFLAGS: |$(CFLAGS)|"
-	$(E) "CPPFLAGS: |$(CPPFLAGS)|"
-	$(Q) g++ -c third_party/address_sorting/address_sorting.c
-
-$(LIBDIR)/$(CONFIG)/libaddr_sorting.a: $(LIBADDR_SORTING_OBJS)
-	$(E) "[AR]      Creating $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) rm -f $(LIBDIR)/$(CONFIG)/libaddr_sorting.a
-	$(Q) $(AR) $(AROPTS) $(LIBDIR)/$(CONFIG)/libaddr_sorting.a $(LIBADDR_SORTING_OBJS) 
-ifeq ($(SYSTEM),Darwin)
-	$(Q) ranlib -no_warning_for_no_symbols $(LIBDIR)/$(CONFIG)/libaddr_sorting.a
 endif
 
 
