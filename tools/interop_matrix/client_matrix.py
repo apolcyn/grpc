@@ -81,7 +81,7 @@ LANG_RELEASE_MATRIX = {
         'v1.6.6',
     ],
     'ruby': [
-        # Ruby v1.0.x doesn't have the fix #8914, therefore not supported.
+        'v1.0.1',
         'v1.1.4',
         'v1.2.5',
         'v1.3.9',
