@@ -214,6 +214,24 @@ def cleanup():
 docker_images_cleanup = []
 atexit.register(cleanup)
 
+def maybe_perform_hacks_on_git_repo(stack_base, lang, release):
+  if lang != 'ruby' or release != 'v1.0.1':
+    return
+  docker_file_to_patch = os.path.join(stack_base, 'tools/dockerfile/interoptest/grpc_interop_ruby/Dockerfile')
+  docker_file_patch = os.path.join(os.path.dirname(__file__), 'ruby_v101_docker_image_patch.patch')
+  subprocess.check_output(['patch', docker_file_to_patch, docker_file_patch], stderr=subprocess.STDOUT)
+  build_interop_script_to_patch = os.path.join(stack_base, 'tools/dockerfile/interoptest/grpc_interop_ruby/build_interop.sh')
+  build_interop_script_patch = os.path.join(os.path.dirname(__file__), 'ruby_v101_build_interop_patch.patch')
+  subprocess.check_output(['patch', build_interop_script_to_patch, build_interop_script_patch])
+  output = subprocess.check_output(
+      ['git', 'add', docker_file_to_patch], cwd=stack_base, stderr=subprocess.STDOUT)
+  output = subprocess.check_output(
+      ['git', 'add', build_interop_script_to_patch], cwd=stack_base, stderr=subprocess.STDOUT)
+  output = subprocess.check_output(
+      ['git', 'commit', '-m', ('Hack performed on top of v1.0.1 git tag in order '
+                               'to build and run the ruby interop tests on that tag')],
+      cwd=stack_base, stderr=subprocess.STDOUT)
+
 def checkout_grpc_stack(lang, release):
   """Invokes 'git check' for the lang/release and returns directory created."""
   assert args.git_checkout and args.git_checkout_root
@@ -238,6 +256,7 @@ def checkout_grpc_stack(lang, release):
   assert not os.path.dirname(__file__).startswith(stack_base)
   output = subprocess.check_output(
       ['git', 'checkout', release], cwd=stack_base, stderr=subprocess.STDOUT)
+  maybe_perform_hacks_on_git_repo(stack_base, lang, release)
   commit_log = subprocess.check_output(['git', 'log', '-1'], cwd=stack_base)
   jobset.message('SUCCESS', 'git checkout', 
                  '%s: %s' % (str(output), commit_log), 
