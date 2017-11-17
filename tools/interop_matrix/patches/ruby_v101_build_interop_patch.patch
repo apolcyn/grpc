@@ -1,0 +1,11 @@
+--- build_interop	2017-11-15 00:27:57.478490290 +0000
++++ build_interop2	2017-11-15 00:28:15.374483365 +0000
+@@ -38,7 +38,7 @@
+ cp -r /var/local/jenkins/service_account $HOME || true
+ 
+ cd /var/local/git/grpc
+-rvm --default use ruby-2.1
++rvm --default use ruby-2.1.8
+ 
+ # build Ruby interop client and server
+ (cd src/ruby && gem update bundler && bundle && rake compile)
