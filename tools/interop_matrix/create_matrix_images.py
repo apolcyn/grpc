@@ -38,8 +38,8 @@ import jobset
 _IMAGE_BUILDER = 'tools/run_tests/dockerize/build_interop_image.sh'
 _LANGUAGES = client_matrix.LANG_RUNTIME_MATRIX.keys()
 # All gRPC release tags, flattened, deduped and sorted.
-_RELEASES = sorted(list(set(
-    i for l in client_matrix.LANG_RELEASE_MATRIX.values() for i in l)))
+_RELEASES = map(lambda v: v['version'], sorted(list(set(
+    i for l in client_matrix.LANG_RELEASE_MATRIX.values() for i in l))))
 
 # Destination directory inside docker image to keep extra info from build time.
 _BUILD_INFO = '/var/local/build_info'
@@ -148,10 +148,10 @@ def build_all_images_for_lang(lang):
     releases = ['master']
   else:
     if args.release == 'all':
-      releases = client_matrix.LANG_RELEASE_MATRIX[lang]
+      releases = map(lambda v: v['version'], client_matrix.LANG_RELEASE_MATRIX[lang])
     else:
       # Build a particular release.
-      if args.release not in ['master'] + client_matrix.LANG_RELEASE_MATRIX[lang]:
+      if args.release not in ['master'] + map(lambda v: v['version'], client_matrix.LANG_RELEASE_MATRIX[lang]):
         jobset.message('SKIPPED',
                        '%s for %s is not defined' % (args.release, lang),
                        do_newline=True)
@@ -215,21 +215,26 @@ docker_images_cleanup = []
 atexit.register(cleanup)
 
 def maybe_perform_hacks_on_git_repo(stack_base, lang, release):
-  if lang != 'ruby' or release != 'v1.0.1':
+  apply_patch = False
+  for release_info in client_matrix.LANG_RELEASE_MATRIX[lang]:
+    if release_info['version'] == release and release_info['patch']:
+      apply_patch = True
+  if not apply_patch:
     return
-  docker_file_to_patch = os.path.join(stack_base, 'tools/dockerfile/interoptest/grpc_interop_ruby/Dockerfile')
-  docker_file_patch = os.path.join(os.path.dirname(__file__), 'ruby_v101_docker_image_patch.patch')
-  subprocess.check_output(['patch', docker_file_to_patch, docker_file_patch], stderr=subprocess.STDOUT)
-  build_interop_script_to_patch = os.path.join(stack_base, 'tools/dockerfile/interoptest/grpc_interop_ruby/build_interop.sh')
-  build_interop_script_patch = os.path.join(os.path.dirname(__file__), 'ruby_v101_build_interop_patch.patch')
-  subprocess.check_output(['patch', build_interop_script_to_patch, build_interop_script_patch])
+  if lang != 'ruby' or release != 'v1.0.1':
+    print('WHAT IS HAPPENDING')
+    return
+  patch_file_relative_path = 'patches/%s_%s/git_repo.patch' % (lang, release)
+  patch_file = os.path.join(os.path.dirname(__file__), patch_file_relative_path)
+  subprocess.check_output(['git', 'apply', patch_file], cwd=stack_base, stderr=subprocess.STDOUT)
   output = subprocess.check_output(
       ['git', 'add', docker_file_to_patch], cwd=stack_base, stderr=subprocess.STDOUT)
   output = subprocess.check_output(
       ['git', 'add', build_interop_script_to_patch], cwd=stack_base, stderr=subprocess.STDOUT)
   output = subprocess.check_output(
-      ['git', 'commit', '-m', ('Hack performed on top of v1.0.1 git tag in order '
-                               'to build and run the ruby interop tests on that tag')],
+      ['git', 'commit', '-m', ('Hack performed on top of %s git '
+                               'tag in order to build and run the %s '
+                               'interop tests on that tag.' % (lang, release))],
       cwd=stack_base, stderr=subprocess.STDOUT)
 
 def checkout_grpc_stack(lang, release):
