@@ -1,8 +1,10 @@
 set -ex
 export CONFIG=dbg
 export GRPC_VERBOSITY=DEBUG
-make interop_client interop_server -j2
-bins/dbg/interop_server --port=10443 --use_tls=true &
+USE_TLS=false
+make interop_server -j2
+bash build_go_interop_client.sh
+bins/dbg/interop_server --port=10443 --use_tls="$USE_TLS" &
 INTEROP_SERVER_PID=$!
 export GRPC_DNS_RESOLVER=ares
 python test/cpp/naming/test_dns_server.py --port=15353 --records_config_path=test/cpp/naming/resolver_test_record_groups.yaml &
@@ -30,7 +32,9 @@ DNS_SERVER=127.0.0.1:15353
 SERVER_NAME=srv-ipv4-target-has-backend-and-balancer.resolver-tests-version-4.grpctestingexp
 CLIENT_TARGET="dns://$DNS_SERVER/$SERVER_NAME"
 FAILED=0
-bins/dbg/interop_client --server_host=$CLIENT_TARGET --server_port=10443  --use_tls=true --use_test_ca=true --test_case=empty_unary || FAILED=1
+export GOPATH=../gopath
+export PATH=$GOPATH/bin:$PATH
+client --server_host=$CLIENT_TARGET --server_port=10443  --use_tls="$USE_TLS" --use_test_ca="$USE_TLS" --test_case=empty_unary || FAILED=1
 echo "Failed? $FAILED"
 kill -SIGINT $DNS_SERVER_PID
 kill -SIGINT $INTEROP_SERVER_PID
