@@ -153,3 +153,67 @@ resolver_component_tests:
     _grpc_config.ipv4-config-causing-fallback-to-tcp:
     - {TTL: '2100', data: 'grpc_config=[{"serviceConfig":{"loadBalancingPolicy":"round_robin","methodConfig":[{"name":[{"method":"Foo","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTwo","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooThree","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooFour","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooFive","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooSix","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooSeven","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooEight","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooNine","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTen","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooEleven","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTwelve","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTwelve","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTwelve","service":"SimpleService","waitForReady":true}]},{"name":[{"method":"FooTwelve","service":"SimpleService","waitForReady":true}]}]}}]',
       type: TXT}
+- expected_addrs:
+  - {address: '23.23.23.23:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv4-srv-query-returns-no-data
+  records:
+    _grpclb._tcp.ipv4-srv-query-returns-no-data:
+    - {TTL: '2100', data: 'dummy-TXT-record-that-has-name-of-queried-SRV-record,to-cause-no-data-response-instead-of-NXDOMAIN', type: TXT}
+    ipv4-srv-query-returns-no-data:
+    - {TTL: '2100', data: '23.23.23.23', type: A}
+- expected_addrs:
+  - {address: '[1234::1234]:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv6-srv-query-returns-no-data
+  records:
+    _grpclb._tcp.ipv6-srv-query-returns-no-data:
+    - {TTL: '2100', data: 'dummy-TXT-record-that-has-name-of-queried-SRV-record,to-cause-no-data-response-instead-of-NXDOMAIN', type: TXT}
+    ipv6-srv-query-returns-no-data:
+    - {TTL: '2100', data: '1234::1234', type: AAAA}
+- expected_addrs:
+  - {address: '122.122.122.122:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv4-srv-record-but-no-balancer
+  records:
+    _grpclb._tcp.ipv4-srv-record-but-no-balancer:
+    - {TTL: '2100', data: 0 0 1234 non-existant-balancer-name, type: SRV}
+    ipv4-srv-record-but-no-balancer:
+    - {TTL: '2100', data: '122.122.122.122', type: A}
+- expected_addrs:
+  - {address: '[2002::1234]:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv6-srv-record-but-no-balancer
+  records:
+    _grpclb._tcp.ipv6-srv-record-but-no-balancer:
+    - {TTL: '2100', data: 0 0 1234 non-existant-balancer-name, type: SRV}
+    ipv6-srv-record-but-no-balancer:
+    - {TTL: '2100', data: '2002::1234', type: AAAA}
+- expected_addrs:
+  - {address: '101.101.101.101:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv4-srv-record-but-balancer-query-is-no-data
+  records:
+    _grpclb._tcp.ipv4-srv-record-but-balancer-query-is-no-data:
+    - {TTL: '2100', data: 0 0 1234 ipv4-balancer-name-is-actually-txt-record, type: SRV}
+    ipv4-balancer-name-is-actually-txt-record:
+    - {TTL: '2100', data: 'dummy-TXT-record-with-name-of-queried-balancer-name,to-cause-no-data-response-instead-of-nx-domain', type: TXT}
+    ipv4-srv-record-but-balancer-query-is-no-data:
+    - {TTL: '2100', data: '101.101.101.101', type: A}
+- expected_addrs:
+  - {address: '[1001::1001]:443', is_balancer: false}
+  expected_chosen_service_config: null
+  expected_lb_policy: null
+  record_to_resolve: ipv6-srv-record-but-balancer-query-is-no-data
+  records:
+    _grpclb._tcp.ipv6-srv-record-but-balancer-query-is-no-data:
+    - {TTL: '2100', data: 0 0 1234 ipv6-balancer-name-is-actually-txt-record, type: SRV}
+    ipv6-balancer-name-is-actually-txt-record:
+    - {TTL: '2100', data: 'dummy-TXT-record-with-name-of-queried-balancer-name,to-cause-no-data-response-instead-of-nx-domain', type: TXT}
+    ipv6-srv-record-but-balancer-query-is-no-data:
+    - {TTL: '2100', data: '1001::1001', type: AAAA}

@@ -210,6 +210,104 @@ gcloud dns record-sets transaction add \
   --ttl=2100 \
   "2607:f8b0:400a:801::1002"
 
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=A \
+  --ttl=2100 \
+  "23.23.23.23"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=TXT \
+  --ttl=2100 \
+  '"dummy-TXT-record-that-has-name-of-queried-SRV-record,to-cause-no-data-response-instead-of-NXDOMAIN"'
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=AAAA \
+  --ttl=2100 \
+  "1234::1234"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=TXT \
+  --ttl=2100 \
+  '"dummy-TXT-record-that-has-name-of-queried-SRV-record,to-cause-no-data-response-instead-of-NXDOMAIN"'
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. \
+  --type=SRV \
+  --ttl=2100 \
+  "0 0 1234 non-existant-balancer-name.resolver-tests-version-4.grpctestingexp."
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. \
+  --type=A \
+  --ttl=2100 \
+  "122.122.122.122"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. \
+  --type=SRV \
+  --ttl=2100 \
+  "0 0 1234 non-existant-balancer-name.resolver-tests-version-4.grpctestingexp."
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. \
+  --type=AAAA \
+  --ttl=2100 \
+  "2002::1234"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv4-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. \
+  --type=TXT \
+  --ttl=2100 \
+  '"dummy-TXT-record-with-name-of-queried-balancer-name,to-cause-no-data-response-instead-of-nx-domain"'
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=A \
+  --ttl=2100 \
+  "101.101.101.101"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=SRV \
+  --ttl=2100 \
+  "0 0 1234 ipv4-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp."
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=_grpclb._tcp.ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=SRV \
+  --ttl=2100 \
+  "0 0 1234 ipv6-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp."
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. \
+  --type=AAAA \
+  --ttl=2100 \
+  "1001::1001"
+
+gcloud dns record-sets transaction add \
+  -z=resolver-tests-version-4-grpctestingexp-zone-id \
+  --name=ipv6-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. \
+  --type=TXT \
+  --ttl=2100 \
+  '"dummy-TXT-record-with-name-of-queried-balancer-name,to-cause-no-data-response-instead-of-nx-domain"'
+
 gcloud dns record-sets transaction describe -z=resolver-tests-version-4-grpctestingexp-zone-id
 gcloud dns record-sets transaction execute -z=resolver-tests-version-4-grpctestingexp-zone-id
 gcloud dns record-sets list -z=resolver-tests-version-4-grpctestingexp-zone-id

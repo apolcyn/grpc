@@ -222,6 +222,104 @@ if [[ "$ONE_FAILED" != 0 ]]; then
   exit 1
 fi
 
+ONE_FAILED=0
+dig A ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig A ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig TXT _grpclb._tcp.ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig TXT _grpclb._tcp.ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig AAAA ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig AAAA ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig TXT _grpclb._tcp.ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig TXT _grpclb._tcp.ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig SRV _grpclb._tcp.ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig SRV _grpclb._tcp.ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig A ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig A ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig SRV _grpclb._tcp.ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig SRV _grpclb._tcp.ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig AAAA ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig AAAA ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig TXT ipv4-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig TXT ipv4-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig A ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig A ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig SRV _grpclb._tcp.ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig SRV _grpclb._tcp.ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig SRV _grpclb._tcp.ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig SRV _grpclb._tcp.ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig AAAA ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig AAAA ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
+ONE_FAILED=0
+dig TXT ipv6-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. | grep 'ANSWER SECTION' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Sanity check: dig TXT ipv6-balancer-name-is-actually-txt-record.resolver-tests-version-4.grpctestingexp. FAILED"
+  exit 1
+fi
+
 echo "Sanity check PASSED. Run resolver tests:"
 
 ONE_FAILED=0
@@ -353,6 +451,72 @@ bins/$CONFIG/resolver_component_test \
   --expected_lb_policy='' || ONE_FAILED=1
 if [[ "$ONE_FAILED" != 0 ]]; then
   echo "Test based on target record: srv-ipv6-target-has-backend-and-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='23.23.23.23:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[1234::1234]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='122.122.122.122:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[2002::1234]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='101.101.101.101:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
+  EXIT_CODE=1
+fi
+
+ONE_FAILED=0
+bins/$CONFIG/resolver_component_test \
+  --target_name='ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[1001::1001]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' || ONE_FAILED=1
+if [[ "$ONE_FAILED" != 0 ]]; then
+  echo "Test based on target record: ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp. FAILED"
   EXIT_CODE=1
 fi
 

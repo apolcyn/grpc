@@ -176,6 +176,54 @@ $FLAGS_test_bin_path \
   --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
 wait $! || EXIT_CODE=1
 
+$FLAGS_test_bin_path \
+  --target_name='ipv4-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='23.23.23.23:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='ipv6-srv-query-returns-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[1234::1234]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='ipv4-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='122.122.122.122:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='ipv6-srv-record-but-no-balancer.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[2002::1234]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='ipv4-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='101.101.101.101:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
+$FLAGS_test_bin_path \
+  --target_name='ipv6-srv-record-but-balancer-query-is-no-data.resolver-tests-version-4.grpctestingexp.' \
+  --expected_addrs='[1001::1001]:443,False' \
+  --expected_chosen_service_config='' \
+  --expected_lb_policy='' \
+  --local_dns_server_address=127.0.0.1:$FLAGS_test_dns_server_port &
+wait $! || EXIT_CODE=1
+
 kill -SIGTERM $DNS_SERVER_PID || true
 wait
 exit $EXIT_CODE
