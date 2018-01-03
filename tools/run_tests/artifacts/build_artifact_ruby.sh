@@ -42,7 +42,6 @@ tools/run_tests/helper_scripts/bundle_install_wrapper.sh
 
 set -ex
 
-export DOCKERHUB_ORGANIZATION=grpctesting
 rake gem:native
 
 if [ "$SYSTEM" == "Darwin" ] ; then
