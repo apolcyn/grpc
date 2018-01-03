@@ -7,8 +7,6 @@ require 'fileutils'
 
 require_relative 'build_config.rb'
 
-load 'tools/distrib/docker_for_windows.rb'
-
 # Add rubocop style checking tasks
 RuboCop::RakeTask.new(:rubocop) do |task|
   task.options = ['-c', 'src/ruby/.rubocop.yml']
@@ -99,7 +97,7 @@ task 'dlls' do
     env_comp = "CC=#{opt[:cross]}-gcc "
     env_comp += "CXX=#{opt[:cross]}-g++ "
     env_comp += "LD=#{opt[:cross]}-gcc "
-    docker_for_windows "gem update --system && #{env} #{env_comp} make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}"
+    system "rake-compiler-dock bash -c \'gem update --system && #{env} #{env_comp} make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}\'"
   end
 
 end
@@ -116,7 +114,7 @@ task 'gem:native' do
     system "rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
     Rake::Task['dlls'].execute
-    docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    system "rake-compiler-dock bash -c \'gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}\'"
   end
 end
 
