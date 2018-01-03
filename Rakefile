@@ -80,28 +80,26 @@ task 'dlls' do
   grpc_config = ENV['GRPC_CONFIG'] || 'opt'
   verbose = ENV['V'] || '0'
 
-  env = {}
-  env['CPPFLAGS'] = "-D_WIN32_WINNT=0x600 -DNTDDI_VERSION=0x06000000 -DUNICODE -D_UNICODE -Wno-unused-variable -Wno-unused-result -DCARES_STATICLIB -Wno-error=conversion -Wno-sign-compare -Wno-parentheses -Wno-format -DWIN32_LEAN_AND_MEAN"
-  env['CFLAGS'] = "-Wno-incompatible-pointer-types"
-  env['CXXFLAGS'] = "-std=c++11"
-  env['LDFLAGS'] = '-static'
-  env['SYSTEM'] = 'MINGW32'
-  env['EMBED_ZLIB'] = 'true'
-  env['EMBED_OPENSSL'] = 'true'
-  env['EMBED_CARES'] = 'true'
-  env['BUILDDIR'] = '/tmp'
-  env["V"] = "#{verbose}"
+  env = 'CPPFLAGS="-D_WIN32_WINNT=0x600 -DNTDDI_VERSION=0x06000000 -DUNICODE -D_UNICODE -Wno-unused-variable -Wno-unused-result -DCARES_STATICLIB -Wno-error=conversion -Wno-sign-compare -Wno-parentheses -Wno-format -DWIN32_LEAN_AND_MEAN" '
+  env += 'CFLAGS="-Wno-incompatible-pointer-types" '
+  env += 'CXXFLAGS="-std=c++11" '
+  env += 'LDFLAGS=-static '
+  env += 'SYSTEM=MINGW32 '
+  env += 'EMBED_ZLIB=true '
+  env += 'EMBED_OPENSSL=true '
+  env += 'EMBED_CARES=true '
+  env += 'BUILDDIR=/tmp '
+  env += "V=#{verbose} "
   out = GrpcBuildConfig::CORE_WINDOWS_DLL
 
   w64 = { cross: 'x86_64-w64-mingw32', out: 'grpc_c.64.ruby' }
   w32 = { cross: 'i686-w64-mingw32', out: 'grpc_c.32.ruby' }
 
   [ w64, w32 ].each do |opt|
-    env_comp = {}
-    env_comp["CC"] = "#{opt[:cross]}-gcc"
-    env_comp["CXX"] = "#{opt[:cross]}-g++"
-    env_comp["LD"] = "#{opt[:cross]}-gcc"
-    system(env.merge(env_comp), "gem update --system && make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}")
+    env_comp = "CC=#{opt[:cross]}-gcc "
+    env_comp += "CXX=#{opt[:cross]}-g++ "
+    env_comp += "LD=#{opt[:cross]}-gcc "
+    rake-compiler-dock "gem update --system && #{env} #{env_comp} make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}"
   end
 
 end
@@ -115,10 +113,10 @@ task 'gem:native' do
   if RUBY_PLATFORM =~ /darwin/
     FileUtils.touch 'grpc_c.32.ruby'
     FileUtils.touch 'grpc_c.64.ruby'
-    system "rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    system "rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
     Rake::Task['dlls'].execute
-    docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.5:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    rake-compiler-dock "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
 
