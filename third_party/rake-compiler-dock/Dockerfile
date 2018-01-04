@@ -6,5 +6,6 @@ RUN sed -i 's/defined.__MINGW64__.$/1/' /usr/local/rake-compiler/ruby/i686-w64-m
 RUN find / -name libwinpthread.dll.a | xargs rm
 RUN find / -name libwinpthread-1.dll | xargs rm
 RUN find / -name *msvcrt-ruby*.dll.a | while read f ; do n=`echo $f | sed s/.dll//` ; mv $f $n ; done
+RUN apt-get install -y g++-multilib
 
 CMD "bash"
