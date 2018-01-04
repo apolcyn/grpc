@@ -8,4 +8,4 @@ RUN find / -name libwinpthread-1.dll | xargs rm
 RUN find / -name *msvcrt-ruby*.dll.a | while read f ; do n=`echo $f | sed s/.dll//` ; mv $f $n ; done
 RUN apt-get install -y g++-multilib
 
-CMD "bash"
+CMD bash
