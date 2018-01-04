@@ -42,7 +42,7 @@ tools/run_tests/helper_scripts/bundle_install_wrapper.sh
 
 set -ex
 
-# TODO(apolcyn): Set dockerhub env variable to pull image
+export DOCKERHUB_ORGANIZATION=grpctesting
 rake gem:native
 
 if [ "$SYSTEM" == "Darwin" ] ; then
