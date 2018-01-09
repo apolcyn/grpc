@@ -553,8 +553,23 @@ static void rr_ping_one_locked(grpc_lb_policy* pol, grpc_closure* on_initiate,
 static void rr_update_locked(grpc_lb_policy* policy,
                              const grpc_lb_policy_args* args) {
   round_robin_lb_policy* p = (round_robin_lb_policy*)policy;
+  gpr_log(GPR_DEBUG, "Begin rr update locked");
   const grpc_arg* arg =
       grpc_channel_args_find(args->args, GRPC_ARG_LB_ADDRESSES);
+  const grpc_arg* is_balancer_arg =
+      grpc_channel_args_find(args->args, "grpc.target_is_grpclb_balancer");
+  const grpc_arg* is_backend_arg =
+      grpc_channel_args_find(args->args, "grpc.target_is_backend_from_grpclb_balancer");
+  if (grpc_channel_arg_get_bool(is_balancer_arg, false)) {
+    gpr_log(GPR_DEBUG, "is_balancer_arg is set to true");
+  } else {
+    gpr_log(GPR_DEBUG, "is_balancer_arg is set to false");
+  }
+  if (grpc_channel_arg_get_bool(is_backend_arg, false)) {
+    gpr_log(GPR_DEBUG, "is_backend_arg is set to true");
+  } else {
+    gpr_log(GPR_DEBUG, "is_backend_arg is set to false");
+  }
   if (arg == nullptr || arg->type != GRPC_ARG_POINTER) {
     gpr_log(GPR_ERROR, "[RR %p] update provided no addresses; ignoring", p);
     // If we don't have a current subchannel list, go into TRANSIENT_FAILURE.
@@ -619,6 +634,7 @@ static void rr_update_locked(grpc_lb_policy* policy,
     }
     p->subchannel_list = subchannel_list;
   }
+  gpr_log(GPR_DEBUG, "end rr update locked");
 }
 
 static void rr_set_reresolve_closure_locked(

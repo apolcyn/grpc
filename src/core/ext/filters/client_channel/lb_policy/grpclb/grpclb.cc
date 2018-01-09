@@ -729,9 +729,11 @@ static bool pick_from_internal_rr_locked(
 
 static grpc_lb_policy_args* lb_policy_args_create(glb_lb_policy* glb_policy) {
   grpc_lb_addresses* addresses;
+  bool targets_are_backends_from_balancers = false;
   if (glb_policy->serverlist != nullptr) {
     GPR_ASSERT(glb_policy->serverlist->num_servers > 0);
     addresses = process_serverlist_locked(glb_policy->serverlist);
+    targets_are_backends_from_balancers = true;
   } else {
     // If rr_handover_locked() is invoked when we haven't received any
     // serverlist from the balancer, we use the fallback backends returned by
@@ -747,10 +749,17 @@ static grpc_lb_policy_args* lb_policy_args_create(glb_lb_policy* glb_policy) {
   // Replace the LB addresses in the channel args that we pass down to
   // the subchannel.
   static const char* keys_to_remove[] = {GRPC_ARG_LB_ADDRESSES};
-  const grpc_arg arg = grpc_lb_addresses_create_channel_arg(addresses);
+  grpc_arg args_to_add[2];
+  memset(args_to_add, 0, sizeof(grpc_arg) * 2);
+  args_to_add[0] = grpc_lb_addresses_create_channel_arg(addresses);
+  size_t num_args_to_add = 1;
+  if (targets_are_backends_from_balancers) {
+    gpr_log(GPR_DEBUG, "adding targets_are_backends_from_balancers arg");
+    args_to_add[num_args_to_add++] = grpc_channel_arg_integer_create((char*)"grpc.target_is_backend_from_grpclb_balancer", 1);
+  }
   args->args = grpc_channel_args_copy_and_add_and_remove(
-      glb_policy->args, keys_to_remove, GPR_ARRAY_SIZE(keys_to_remove), &arg,
-      1);
+      glb_policy->args, keys_to_remove, GPR_ARRAY_SIZE(keys_to_remove), args_to_add,
+      num_args_to_add);
   grpc_lb_addresses_destroy(addresses);
   return args;
 }
@@ -981,6 +990,13 @@ static grpc_channel_args* build_lb_channel_args(
   grpc_slice_hash_table_unref(targets_info);
   grpc_channel_args_destroy(lb_channel_args);
   grpc_lb_addresses_destroy(lb_addresses);
+
+  grpc_channel_args *prev = result;
+  gpr_log(GPR_DEBUG, "adding target_is_grpclb_balancer arg");
+  const grpc_arg backend_type_arg = grpc_channel_arg_integer_create((char*)"grpc.target_is_grpclb_balancer", 1);
+  result = grpc_channel_args_copy_and_add(
+      prev, &backend_type_arg, 1);
+  grpc_channel_args_destroy(prev);
   return result;
 }
 

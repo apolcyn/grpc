@@ -258,12 +258,21 @@ static void pf_update_locked(grpc_lb_policy* policy,
     }
     return;
   }
+  gpr_log(GPR_DEBUG, "begin pf update locked check arg");
+  const grpc_arg* is_balancer_arg =
+      grpc_channel_args_find(args->args, "grpc.target_is_grpclb_balancer");
+  if (grpc_channel_arg_get_bool(is_balancer_arg, false)) {
+    gpr_log(GPR_DEBUG, "is_balancer_arg is set to true");
+  } else {
+    gpr_log(GPR_DEBUG, "is_balancer_arg is set to false");
+  }
   const grpc_lb_addresses* addresses =
       (const grpc_lb_addresses*)arg->value.pointer.p;
   if (grpc_lb_pick_first_trace.enabled()) {
     gpr_log(GPR_INFO, "Pick First %p received update with %lu addresses",
             (void*)p, (unsigned long)addresses->num_addresses);
   }
+  gpr_log(GPR_DEBUG, "end pf update locked check arg");
   grpc_lb_subchannel_list* subchannel_list = grpc_lb_subchannel_list_create(
       &p->base, &grpc_lb_pick_first_trace, addresses, args,
       pf_connectivity_changed_locked);
