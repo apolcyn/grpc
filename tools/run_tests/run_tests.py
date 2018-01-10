@@ -863,7 +863,7 @@ class RubyLanguage(object):
             for relative_name in files:
               assert relative_name.strip()
               test_file = os.path.join('src/ruby/spec', relative_name.strip())
-              job_specs.append(self.config.job_spec(['rspec', test_file],
+              job_specs.append(self.config.job_spec(['rspec', '--tag', 'test', test_file],
                                                     timeout_seconds=4*60,
                                                     environ=env,
                                                     shortname='%s-ruby-asan-dynamic' % test_file))

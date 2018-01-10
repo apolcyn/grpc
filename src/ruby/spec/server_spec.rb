@@ -28,7 +28,7 @@ describe Server do
     GRPC::Core::ServerCredentials.new(*load_test_certs)
   end
 
-  describe '#start' do
+  describe '#start', test: true do
     it 'runs without failing' do
       blk = proc { new_core_server_for_testing(nil).start }
       expect(&blk).to_not raise_error
