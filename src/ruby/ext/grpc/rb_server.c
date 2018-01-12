@@ -125,7 +125,6 @@ static VALUE grpc_rb_server_init(VALUE self, VALUE channel_args) {
 
   grpc_ruby_once_init();
 
-  cq = grpc_completion_queue_create_for_pluck(NULL);
   TypedData_Get_Struct(self, grpc_rb_server, &grpc_rb_server_data_type,
                        wrapper);
   grpc_rb_hash_convert_to_channel_args(channel_args, &args);
@@ -137,6 +136,7 @@ static VALUE grpc_rb_server_init(VALUE self, VALUE channel_args) {
   if (srv == NULL) {
     rb_raise(rb_eRuntimeError, "could not create a gRPC server, not sure why");
   }
+  cq = grpc_completion_queue_create_for_pluck(NULL);
   grpc_server_register_completion_queue(srv, cq, NULL);
   wrapper->wrapped = srv;
   wrapper->queue = cq;
