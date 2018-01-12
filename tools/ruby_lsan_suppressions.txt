@@ -34,3 +34,9 @@ leak:compile_quantifier_node
 leak:objspace_xmalloc
 leak:onig_new
 leak:gc_mark
+
+# this is busted in BoringSSL (copied from c-core's suppressions)
+leak:CRYPTO_set_thread_local
+leak:err_get_state
+leak:ERR_add_error_dataf
+leak:err_add_error_vdata
