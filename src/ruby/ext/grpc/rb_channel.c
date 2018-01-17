@@ -125,6 +125,7 @@ static void grpc_rb_channel_watch_connection_state_op_complete(
 
 /* Avoids destroying a channel twice. */
 static void grpc_rb_channel_safe_destroy(bg_watched_channel* bg) {
+  gpr_log(GPR_DEBUG, "grpc channel safe destroy is called");
   gpr_mu_lock(&global_connection_polling_mu);
   GPR_ASSERT(bg_watched_channel_list_lookup(bg));
   if (!bg->channel_destroyed) {
@@ -136,6 +137,7 @@ static void grpc_rb_channel_safe_destroy(bg_watched_channel* bg) {
     bg_watched_channel_list_free_and_remove(bg);
   }
   gpr_mu_unlock(&global_connection_polling_mu);
+  gpr_log(GPR_DEBUG, "grpc channel safe destroy is DONE");
 }
 
 static void* channel_safe_destroy_without_gil(void* arg) {
@@ -145,8 +147,10 @@ static void* channel_safe_destroy_without_gil(void* arg) {
 
 /* Destroys Channel instances. */
 static void grpc_rb_channel_free(void* p) {
+  gpr_log(GPR_DEBUG, "grpc channel free is called");
   grpc_rb_channel* ch = NULL;
   if (p == NULL) {
+    gpr_log(GPR_DEBUG, "grpc channel free early out");
     return;
   };
   ch = (grpc_rb_channel*)p;
@@ -161,6 +165,7 @@ static void grpc_rb_channel_free(void* p) {
   }
 
   xfree(p);
+  gpr_log(GPR_DEBUG, "grpc channel free is DONE");
 }
 
 /* Protects the mark object from GC */
@@ -216,12 +221,15 @@ static VALUE grpc_rb_channel_init(int argc, VALUE* argv, VALUE self) {
   int stop_waiting_for_thread_start = 0;
   MEMZERO(&args, grpc_channel_args, 1);
 
+  gpr_log(GPR_DEBUG, "channel init call grpc_ruby_once_init");
   grpc_ruby_once_init();
+  gpr_log(GPR_DEBUG, "channel init grpc_ruby_once_init done. wait for connection polling to start");
   rb_thread_call_without_gvl(
       wait_until_channel_polling_thread_started_no_gil,
       &stop_waiting_for_thread_start,
       wait_until_channel_polling_thread_started_unblocking_func,
       &stop_waiting_for_thread_start);
+  gpr_log(GPR_DEBUG, "channel init wait for connection polling thread to start DONE");
 
   /* "3" == 3 mandatory args */
   rb_scan_args(argc, argv, "3", &target, &channel_args, &credentials);
@@ -245,6 +253,7 @@ static VALUE grpc_rb_channel_init(int argc, VALUE* argv, VALUE self) {
   GPR_ASSERT(ch);
   stack.channel = ch;
   stack.wrapper = wrapper;
+  gpr_log(GPR_DEBUG, "rb thread try register channel for connection polling");
   rb_thread_call_without_gvl(
       channel_init_try_register_connection_polling_without_gil, &stack, NULL,
       NULL);
@@ -253,11 +262,13 @@ static VALUE grpc_rb_channel_init(int argc, VALUE* argv, VALUE self) {
     xfree(args.args); /* Allocated by grpc_rb_hash_convert_to_channel_args */
   }
   if (ch == NULL) {
+    gpr_log(GPR_DEBUG, "rb raise exception could not create channel");
     rb_raise(rb_eRuntimeError, "could not create an rpc channel to target:%s",
              target_chars);
     return Qnil;
   }
   rb_ivar_set(self, id_target, target);
+  gpr_log(GPR_DEBUG, "rb channel init DONE. returning");
   return self;
 }
 

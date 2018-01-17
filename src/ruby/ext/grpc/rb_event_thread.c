@@ -91,10 +91,13 @@ static void* grpc_rb_wait_for_event_no_gil(void* param) {
   (void)param;
   gpr_mu_lock(&event_queue.mu);
   while (!event_queue.abort) {
+    gpr_log(GPR_DEBUG, "event thread dequeue begin");
     if ((event = grpc_rb_event_queue_dequeue()) != NULL) {
+      gpr_log(GPR_DEBUG, "event thread dequeue success");
       gpr_mu_unlock(&event_queue.mu);
       return event;
     }
+    gpr_log(GPR_DEBUG, "event thread wait for cv signal");
     gpr_cv_wait(&event_queue.cv, &event_queue.mu,
                 gpr_inf_future(GPR_CLOCK_REALTIME));
   }
@@ -104,10 +107,12 @@ static void* grpc_rb_wait_for_event_no_gil(void* param) {
 
 static void grpc_rb_event_unblocking_func(void* arg) {
   (void)arg;
+  gpr_log(GPR_DEBUG, "event thread unblocking func called.");
   gpr_mu_lock(&event_queue.mu);
   event_queue.abort = true;
   gpr_cv_signal(&event_queue.cv);
   gpr_mu_unlock(&event_queue.mu);
+  gpr_log(GPR_DEBUG, "event thread unblocking func done.");
 }
 
 /* This is the implementation of the thread that handles auth metadata plugin
@@ -115,19 +120,25 @@ static void grpc_rb_event_unblocking_func(void* arg) {
 static VALUE grpc_rb_event_thread(VALUE arg) {
   grpc_rb_event* event;
   (void)arg;
+  gpr_log(GPR_DEBUG, "begin event thread");
   while (true) {
+    gpr_log(GPR_DEBUG, "event thread top of one iteration");
     event = (grpc_rb_event*)rb_thread_call_without_gvl(
         grpc_rb_wait_for_event_no_gil, NULL, grpc_rb_event_unblocking_func,
         NULL);
+    gpr_log(GPR_DEBUG, "event thread done with one iteration. event:%p", event);
     if (event == NULL) {
       // Indicates that the thread needs to shut down
       break;
     } else {
+      gpr_log(GPR_DEBUG, "event thread begin call back");
       event->callback(event->argument);
       gpr_free(event);
     }
   }
+  gpr_log(GPR_DEBUG, "event thread queue destroy");
   grpc_rb_event_queue_destroy();
+  gpr_log(GPR_DEBUG, "event thread done.");
   return Qnil;
 }
 
