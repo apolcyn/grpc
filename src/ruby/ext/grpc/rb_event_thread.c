@@ -97,10 +97,10 @@ static void* grpc_rb_wait_for_event_no_gil(void* param) {
       gpr_mu_unlock(&event_queue.mu);
       return event;
     }
-    gpr_log(GPR_DEBUG, "event thread wait for cv signal");
+    gpr_log(GPR_DEBUG, "LATEST event thread wait for cv signal");
     gpr_cv_wait(&event_queue.cv, &event_queue.mu,
                 gpr_inf_future(GPR_CLOCK_REALTIME));
-    gpr_log(GPR_DEBUG, "event thread DONE waiting for cv signal");
+    gpr_log(GPR_DEBUG, "LATEST event thread DONE waiting for cv signal");
   }
   gpr_mu_unlock(&event_queue.mu);
   gpr_log(GPR_DEBUG, "event thread wait for event return. ABORTED");
@@ -109,12 +109,12 @@ static void* grpc_rb_wait_for_event_no_gil(void* param) {
 
 static void grpc_rb_event_unblocking_func(void* arg) {
   (void)arg;
-  gpr_log(GPR_DEBUG, "event thread unblocking func called.");
+  gpr_log(GPR_DEBUG, "LATEST event thread unblocking func called.");
   gpr_mu_lock(&event_queue.mu);
   event_queue.abort = true;
-  gpr_cv_signal(&event_queue.cv);
+  gpr_cv_broadcast(&event_queue.cv);
   gpr_mu_unlock(&event_queue.mu);
-  gpr_log(GPR_DEBUG, "event thread unblocking func done.");
+  gpr_log(GPR_DEBUG, "LATEST event thread unblocking func done.");
 }
 
 /* This is the implementation of the thread that handles auth metadata plugin
