@@ -357,41 +357,4 @@ class ProtocArtifact:
 
 def targets():
   """Gets list of supported targets"""
-  return ([Cls(platform, arch)
-           for Cls in (CSharpExtArtifact, NodeExtArtifact, ProtocArtifact)
-           for platform in ('linux', 'macos', 'windows')
-           for arch in ('x86', 'x64')] +
-          [PythonArtifact('linux', 'x86', 'cp27-cp27m'),
-           PythonArtifact('linux', 'x86', 'cp27-cp27mu'),
-           PythonArtifact('linux', 'x86', 'cp34-cp34m'),
-           PythonArtifact('linux', 'x86', 'cp35-cp35m'),
-           PythonArtifact('linux', 'x86', 'cp36-cp36m'),
-           PythonArtifact('linux_extra', 'armv7', '2.7'),
-           PythonArtifact('linux_extra', 'armv7', '3.4'),
-           PythonArtifact('linux_extra', 'armv7', '3.5'),
-           PythonArtifact('linux_extra', 'armv7', '3.6'),
-           PythonArtifact('linux_extra', 'armv6', '2.7'),
-           PythonArtifact('linux_extra', 'armv6', '3.4'),
-           PythonArtifact('linux_extra', 'armv6', '3.5'),
-           PythonArtifact('linux_extra', 'armv6', '3.6'),
-           PythonArtifact('linux', 'x64', 'cp27-cp27m'),
-           PythonArtifact('linux', 'x64', 'cp27-cp27mu'),
-           PythonArtifact('linux', 'x64', 'cp34-cp34m'),
-           PythonArtifact('linux', 'x64', 'cp35-cp35m'),
-           PythonArtifact('linux', 'x64', 'cp36-cp36m'),
-           PythonArtifact('macos', 'x64', 'python2.7'),
-           PythonArtifact('macos', 'x64', 'python3.4'),
-           PythonArtifact('macos', 'x64', 'python3.5'),
-           PythonArtifact('macos', 'x64', 'python3.6'),
-           PythonArtifact('windows', 'x86', 'Python27_32bits'),
-           PythonArtifact('windows', 'x86', 'Python34_32bits'),
-           PythonArtifact('windows', 'x86', 'Python35_32bits'),
-           PythonArtifact('windows', 'x86', 'Python36_32bits'),
-           PythonArtifact('windows', 'x64', 'Python27'),
-           PythonArtifact('windows', 'x64', 'Python34'),
-           PythonArtifact('windows', 'x64', 'Python35'),
-           PythonArtifact('windows', 'x64', 'Python36'),
-           RubyArtifact('linux', 'x64'),
-           RubyArtifact('macos', 'x64'),
-           PHPArtifact('linux', 'x64'),
-           PHPArtifact('macos', 'x64')])
+  return ([RubyArtifact('linux', 'x64')])

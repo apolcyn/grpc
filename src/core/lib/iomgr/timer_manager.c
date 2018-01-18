@@ -235,7 +235,9 @@ static void stop_threads(void) {
   }
   if (g_threaded) {
     g_threaded = false;
+    gpr_log(GPR_DEBUG, "CV BROADCAST BEGIN");
     gpr_cv_broadcast(&g_cv_wait);
+    gpr_log(GPR_DEBUG, "CV BROADCAST DONE");
     if (GRPC_TRACER_ON(grpc_timer_check_trace)) {
       gpr_log(GPR_DEBUG, "num timer threads: %d", g_thread_count);
     }
