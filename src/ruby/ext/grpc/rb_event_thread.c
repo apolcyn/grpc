@@ -100,8 +100,10 @@ static void* grpc_rb_wait_for_event_no_gil(void* param) {
     gpr_log(GPR_DEBUG, "event thread wait for cv signal");
     gpr_cv_wait(&event_queue.cv, &event_queue.mu,
                 gpr_inf_future(GPR_CLOCK_REALTIME));
+    gpr_log(GPR_DEBUG, "event thread DONE waiting for cv signal");
   }
   gpr_mu_unlock(&event_queue.mu);
+  gpr_log(GPR_DEBUG, "event thread wait for event return. ABORTED");
   return NULL;
 }
 
