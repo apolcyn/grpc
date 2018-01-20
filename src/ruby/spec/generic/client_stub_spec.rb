@@ -83,6 +83,11 @@ def sanity_check_values_of_accessors(op_view,
          op_view.deadline.is_a?(Time)).to be(true)
 end
 
+def close_active_server_call(active_server_call)
+  active_server_call.set_input_stream_done
+  active_server_call.set_output_stream_done
+end
+
 describe 'ClientStub' do
   let(:noop) { proc { |x| x } }
 
@@ -493,6 +498,7 @@ describe 'ClientStub' do
             p 'remote_send failed (allowed because call expected to cancel)'
           ensure
             c.send_status(OK, 'OK', true)
+            close_active_server_call(c)
           end
         end
       end
@@ -659,6 +665,7 @@ describe 'ClientStub' do
           end
           # can't fail since initial metadata already sent
           server_call.send_status(@pass, 'OK', true)
+          close_active_server_call(server_call)
         end
 
         def verify_error_from_write_thread(stub, requests_to_push,
@@ -809,6 +816,7 @@ describe 'ClientStub' do
       replys.each { |r| c.remote_send(r) }
       c.send_status(status, status == @pass ? 'OK' : 'NOK', true,
                     metadata: server_trailing_md)
+      close_active_server_call(c)
     end
   end
 
@@ -819,6 +827,7 @@ describe 'ClientStub' do
       expected_inputs.each { |i| expect(c.remote_read).to eq(i) }
       replys.each { |r| c.remote_send(r) }
       c.send_status(status, status == @pass ? 'OK' : 'NOK', true)
+      close_active_server_call(c)
     end
   end
 
@@ -844,6 +853,7 @@ describe 'ClientStub' do
       end
       c.send_status(status, status == @pass ? 'OK' : 'NOK', true,
                     metadata: server_trailing_md)
+      close_active_server_call(c)
     end
   end
 
@@ -862,6 +872,7 @@ describe 'ClientStub' do
       c.remote_send(resp)
       c.send_status(status, status == @pass ? 'OK' : 'NOK', true,
                     metadata: server_trailing_md)
+      close_active_server_call(c)
     end
   end
 
@@ -880,6 +891,7 @@ describe 'ClientStub' do
       c.remote_send(resp)
       c.send_status(status, status == @pass ? 'OK' : 'NOK', true,
                     metadata: server_trailing_md)
+      close_active_server_call(c)
     end
   end
 

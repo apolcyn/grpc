@@ -35,6 +35,9 @@ leak:objspace_xmalloc
 leak:onig_new
 leak:gc_mark
 
+# ruby background threads not joined on process shutdown
+leak:th_init
+
 # this is busted in BoringSSL (copied from c-core's suppressions)
 leak:CRYPTO_set_thread_local
 leak:err_get_state
