@@ -88,7 +88,7 @@ def close_active_server_call(active_server_call)
   active_server_call.set_output_stream_done
 end
 
-describe 'ClientStub' do
+describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
   let(:noop) { proc { |x| x } }
 
   before(:each) do
