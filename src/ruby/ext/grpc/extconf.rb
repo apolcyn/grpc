@@ -96,7 +96,7 @@ end
 
 $LDFLAGS << ' -Wl,-wrap,memcpy' if RUBY_PLATFORM =~ /linux/
 $LDFLAGS << ' -static' if windows
-$LDFLAGS << ' -Wl,--no-undefined'
+$LDFLAGS << ' -Wl,--no-undefined' unless grpc_config == 'asan-dynamic'
 
 $CFLAGS << ' -std=c99 '
 $CFLAGS << ' -Wall '

@@ -178,8 +178,7 @@ static VALUE grpc_rb_server_request_call(VALUE self) {
   request_call_stack st;
   VALUE result;
   void* tag = (void*)&st;
-  grpc_completion_queue* call_queue =
-      grpc_completion_queue_create_for_pluck(NULL);
+  grpc_completion_queue* call_queue = NULL;
   gpr_timespec deadline;
 
   TypedData_Get_Struct(self, grpc_rb_server, &grpc_rb_server_data_type, s);
@@ -190,9 +189,11 @@ static VALUE grpc_rb_server_request_call(VALUE self) {
   grpc_request_call_stack_init(&st);
   /* call grpc_server_request_call, then wait for it to complete using
    * pluck_event */
+  call_queue = grpc_completion_queue_create_for_pluck(NULL);
   err = grpc_server_request_call(s->wrapped, &call, &st.details, &st.md_ary,
                                  call_queue, s->queue, tag);
   if (err != GRPC_CALL_OK) {
+    grpc_rb_completion_queue_destroy(call_queue);
     grpc_request_call_stack_cleanup(&st);
     rb_raise(grpc_rb_eCallError,
              "grpc_server_request_call failed: %s (code=%d)",
@@ -203,6 +204,7 @@ static VALUE grpc_rb_server_request_call(VALUE self) {
   ev = rb_completion_queue_pluck(s->queue, tag,
                                  gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
   if (!ev.success) {
+    grpc_rb_completion_queue_destroy(call_queue);
     grpc_request_call_stack_cleanup(&st);
     rb_raise(grpc_rb_eCallError, "request_call completion failed");
     return Qnil;
