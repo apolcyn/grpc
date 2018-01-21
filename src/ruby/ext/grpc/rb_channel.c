@@ -158,7 +158,6 @@ static void grpc_rb_channel_free(void* p) {
      * yield the gil. */
     grpc_rb_channel_safe_destroy(ch->bg_wrapped);
     ch->bg_wrapped = NULL;
-    something_non_existant();
   }
 
   xfree(p);
