@@ -94,6 +94,7 @@ static void grpc_rb_call_credentials_callback_with_gil(void* param) {
   grpc_status_code status;
   VALUE details;
   char* error_details;
+  grpc_rb_ruby_error_to_raise ruby_error_to_raise;
   grpc_metadata_array_init(&md_ary);
   rb_hash_aset(args, ID2SYM(rb_intern("jwt_aud_uri")), auth_uri);
   rb_ary_push(callback_args, params->get_metadata);
@@ -101,8 +102,11 @@ static void grpc_rb_call_credentials_callback_with_gil(void* param) {
   result = rb_rescue(grpc_rb_call_credentials_callback, callback_args,
                      grpc_rb_call_credentials_callback_rescue, Qnil);
   // Both callbacks return a hash, so result should be a hash
-  grpc_rb_md_ary_convert(rb_hash_aref(result, rb_str_new2("metadata")),
-                         &md_ary);
+  if (!grpc_rb_md_ary_convert(rb_hash_aref(result, rb_str_new2("metadata")),
+                             &md_ary, &ruby_error_to_raise)) {
+    rb_raise(ruby_error_to_raise.error_class, ruby_error_to_raise.error_msg);
+    return;
+  }
   status = NUM2INT(rb_hash_aref(result, rb_str_new2("status")));
   details = rb_hash_aref(result, rb_str_new2("details"));
   error_details = StringValueCStr(details);
