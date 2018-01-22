@@ -25,6 +25,7 @@
 #include <grpc/impl/codegen/compression_types.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
+#include <grpc/support/string_util.h>
 
 #include "rb_byte_buffer.h"
 #include "rb_call_credentials.h"
@@ -48,7 +49,7 @@ static VALUE grpc_rb_sBatchResult;
 
 /* grpc_rb_cMdAry is the MetadataArray class whose instances proxy
  * grpc_metadata_array. */
-static VALUE grpc_rb_cMdAry;
+static VALUE grpc_rb_cMdAryConversionWrapper;
 
 /* id_credentials is the name of the hidden ivar that preserves the value
  * of the credentials added to the call */
@@ -103,8 +104,16 @@ static void grpc_rb_call_destroy(void* p) {
   xfree(p);
 }
 
-static size_t md_ary_datasize(const void* p) {
-  const grpc_metadata_array* const ary = (grpc_metadata_array*)p;
+typedef struct grpc_rb_metadata_array_conversion_wrapper {
+  grpc_metadata_array *md_array;
+  // If non-null, error_msg explains the reason why conversion
+  // from ruby Hash to grpc_metadata_array failed.
+  char* error_msg;
+  VALUE error_class;
+} grpc_rb_metadata_array_conversion_wrapper;
+
+static size_t md_ary_conversion_wrapper_datasize(const void* p) {
+  const grpc_metadata_array* const ary = ((grpc_rb_metadata_array_conversion_wrapper*)p)->md_array;
   size_t i, datasize = sizeof(grpc_metadata_array);
   for (i = 0; i < ary->count; ++i) {
     const grpc_metadata* const md = &ary->metadata[i];
@@ -115,11 +124,11 @@ static size_t md_ary_datasize(const void* p) {
   return datasize;
 }
 
-static const rb_data_type_t grpc_rb_md_ary_data_type = {
+static const rb_data_type_t grpc_rb_md_ary_conversion_wrapper_data_type = {
     "grpc_metadata_array",
     {GRPC_RB_GC_NOT_MARKED,
      GRPC_RB_GC_DONT_FREE,
-     md_ary_datasize,
+     md_ary_conversion_wrapper_datasize,
      {NULL, NULL}},
     NULL,
     NULL,
@@ -406,12 +415,17 @@ static VALUE grpc_rb_call_set_credentials(VALUE self, VALUE credentials) {
    grpc_rb_md_ary_capacity_hash_cb
 */
 static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
-  grpc_metadata_array* md_ary = NULL;
+  grpc_rb_metadata_array_conversion_wrapper* md_ary_conversion_wrapper = NULL;
+  grpc_metadata_array *md_ary = NULL;
   long array_length;
   long i;
   grpc_slice key_slice;
   grpc_slice value_slice;
   char* tmp_str = NULL;
+
+  TypedData_Get_Struct(md_ary_obj, grpc_rb_metadata_array_conversion_wrapper,
+                       &grpc_rb_md_ary_conversion_wrapper_data_type, md_ary_conversion_wrapper);
+  md_ary = md_ary_conversion_wrapper->md_array;
 
   if (TYPE(key) == T_SYMBOL) {
     key_slice = grpc_slice_from_static_string(rb_id2name(SYM2ID(key)));
@@ -419,22 +433,20 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
     key_slice =
         grpc_slice_from_copied_buffer(RSTRING_PTR(key), RSTRING_LEN(key));
   } else {
-    rb_raise(rb_eTypeError,
-             "grpc_rb_md_ary_fill_hash_cb: bad type for key parameter");
+    md_ary_conversion_wrapper->error_msg = strdup("grpc_rb_md_ary_fill_hash_cb: bad type for key parameter");
+    md_ary_conversion_wrapper->error_class = rb_eTypeError;
     return ST_STOP;
   }
 
   if (!grpc_header_key_is_legal(key_slice)) {
     tmp_str = grpc_slice_to_c_string(key_slice);
-    rb_raise(rb_eArgError,
-             "'%s' is an invalid header key, must match [a-z0-9-_.]+", tmp_str);
+    GPR_ASSERT(gpr_asprintf(&md_ary_conversion_wrapper->error_msg, "'%s' is an invalid header key, must match [a-z0-9-_.]+", tmp_str) != -1);
+    gpr_free(tmp_str);
+    md_ary_conversion_wrapper->error_class = rb_eArgError;
     return ST_STOP;
   }
 
   /* Construct a metadata object from key and value and add it */
-  TypedData_Get_Struct(md_ary_obj, grpc_metadata_array,
-                       &grpc_rb_md_ary_data_type, md_ary);
-
   if (TYPE(val) == T_ARRAY) {
     array_length = RARRAY_LEN(val);
     /* If the value is an array, add capacity for each value in the array */
@@ -445,8 +457,9 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
           !grpc_header_nonbin_value_is_legal(value_slice)) {
         // The value has invalid characters
         tmp_str = grpc_slice_to_c_string(value_slice);
-        rb_raise(rb_eArgError, "Header value '%s' has invalid characters",
-                 tmp_str);
+        GPR_ASSERT(gpr_asprintf(&md_ary_conversion_wrapper->error_msg, "Header value '%s' has invalid characters", tmp_str) != -1);
+        md_ary_conversion_wrapper->error_class = rb_eArgError;
+        gpr_free(tmp_str);
         return ST_STOP;
       }
       GPR_ASSERT(md_ary->count < md_ary->capacity);
@@ -461,8 +474,9 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
         !grpc_header_nonbin_value_is_legal(value_slice)) {
       // The value has invalid characters
       tmp_str = grpc_slice_to_c_string(value_slice);
-      rb_raise(rb_eArgError, "Header value '%s' has invalid characters",
-               tmp_str);
+      GPR_ASSERT(gpr_asprintf(&md_ary_conversion_wrapper->error_msg, "Header value '%s' has invalid characters", tmp_str) != -1);
+      md_ary_conversion_wrapper->error_class = rb_eArgError;
+      gpr_free(tmp_str);
       return ST_STOP;
     }
     GPR_ASSERT(md_ary->count < md_ary->capacity);
@@ -470,7 +484,8 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
     md_ary->metadata[md_ary->count].value = value_slice;
     md_ary->count += 1;
   } else {
-    rb_raise(rb_eArgError, "Header values must be of type string or array");
+    md_ary_conversion_wrapper->error_msg = strdup("Header values must be of type string or array");
+    md_ary_conversion_wrapper->error_class = rb_eArgError;
     return ST_STOP;
   }
   return ST_CONTINUE;
@@ -481,22 +496,41 @@ static int grpc_rb_md_ary_fill_hash_cb(VALUE key, VALUE val, VALUE md_ary_obj) {
 */
 static int grpc_rb_md_ary_capacity_hash_cb(VALUE key, VALUE val,
                                            VALUE md_ary_obj) {
-  grpc_metadata_array* md_ary = NULL;
+  grpc_rb_metadata_array_conversion_wrapper* md_ary_conversion_wrapper = NULL;
 
   (void)key;
 
   /* Construct a metadata object from key and value and add it */
-  TypedData_Get_Struct(md_ary_obj, grpc_metadata_array,
-                       &grpc_rb_md_ary_data_type, md_ary);
+  TypedData_Get_Struct(md_ary_obj, grpc_rb_metadata_array_conversion_wrapper,
+                       &grpc_rb_md_ary_conversion_wrapper_data_type, md_ary_conversion_wrapper);
 
   if (TYPE(val) == T_ARRAY) {
     /* If the value is an array, add capacity for each value in the array */
-    md_ary->capacity += RARRAY_LEN(val);
+    md_ary_conversion_wrapper->md_array->capacity += RARRAY_LEN(val);
   } else {
-    md_ary->capacity += 1;
+    md_ary_conversion_wrapper->md_array->capacity += 1;
   }
 
   return ST_CONTINUE;
+}
+
+void grpc_rb_metadata_array_destroy_including_entries(
+    grpc_metadata_array* array) {
+  size_t i;
+  if (array->metadata) {
+    for (i = 0; i < array->count; i++) {
+      grpc_slice_unref(array->metadata[i].key);
+      grpc_slice_unref(array->metadata[i].value);
+    }
+  }
+  grpc_metadata_array_destroy(array);
+}
+
+static void grpc_rb_metadata_array_conversion_wrapper_destroy_and_raise_error(grpc_rb_metadata_array_conversion_wrapper *wrapped) {
+  VALUE ruby_error_msg = rb_str_new(wrapped->error_msg, strlen(wrapped->error_msg));
+  grpc_rb_metadata_array_destroy_including_entries(wrapped->md_array);
+  gpr_free(wrapped->error_msg);
+  rb_raise(wrapped->error_class, StringValueCStr(ruby_error_msg));
 }
 
 /* grpc_rb_md_ary_convert converts a ruby metadata hash into
@@ -504,6 +538,8 @@ static int grpc_rb_md_ary_capacity_hash_cb(VALUE key, VALUE val,
 */
 void grpc_rb_md_ary_convert(VALUE md_ary_hash, grpc_metadata_array* md_ary) {
   VALUE md_ary_obj = Qnil;
+  grpc_rb_metadata_array_conversion_wrapper md_array_conversion_wrapper;
+  memset(&md_array_conversion_wrapper, 0, sizeof(grpc_rb_metadata_array_conversion_wrapper));
   if (md_ary_hash == Qnil) {
     return; /* Do nothing if the expected has value is nil */
   }
@@ -515,11 +551,15 @@ void grpc_rb_md_ary_convert(VALUE md_ary_hash, grpc_metadata_array* md_ary) {
 
   /* Initialize the array, compute it's capacity, then fill it. */
   grpc_metadata_array_init(md_ary);
+  md_array_conversion_wrapper.md_array = md_ary;
   md_ary_obj =
-      TypedData_Wrap_Struct(grpc_rb_cMdAry, &grpc_rb_md_ary_data_type, md_ary);
+      TypedData_Wrap_Struct(grpc_rb_cMdAryConversionWrapper, &grpc_rb_md_ary_conversion_wrapper_data_type, &md_array_conversion_wrapper);
   rb_hash_foreach(md_ary_hash, grpc_rb_md_ary_capacity_hash_cb, md_ary_obj);
   md_ary->metadata = gpr_zalloc(md_ary->capacity * sizeof(grpc_metadata));
   rb_hash_foreach(md_ary_hash, grpc_rb_md_ary_fill_hash_cb, md_ary_obj);
+  if (md_array_conversion_wrapper.error_msg != NULL) {
+    grpc_rb_metadata_array_conversion_wrapper_destroy_and_raise_error(&md_array_conversion_wrapper);
+  }
 }
 
 /* Converts a metadata array to a hash. */
@@ -647,18 +687,6 @@ static void grpc_run_batch_stack_init(run_batch_stack* st,
   grpc_metadata_array_init(&st->recv_trailing_metadata);
   st->op_num = 0;
   st->write_flag = write_flag;
-}
-
-void grpc_rb_metadata_array_destroy_including_entries(
-    grpc_metadata_array* array) {
-  size_t i;
-  if (array->metadata) {
-    for (i = 0; i < array->count; i++) {
-      grpc_slice_unref(array->metadata[i].key);
-      grpc_slice_unref(array->metadata[i].value);
-    }
-  }
-  grpc_metadata_array_destroy(array);
 }
 
 /* grpc_run_batch_stack_cleanup ensures the run_batch_stack is properly
@@ -975,8 +1003,8 @@ void Init_grpc_call() {
   grpc_rb_eOutOfTime =
       rb_define_class_under(grpc_rb_mGrpcCore, "OutOfTime", rb_eException);
   grpc_rb_cCall = rb_define_class_under(grpc_rb_mGrpcCore, "Call", rb_cObject);
-  grpc_rb_cMdAry =
-      rb_define_class_under(grpc_rb_mGrpcCore, "MetadataArray", rb_cObject);
+  grpc_rb_cMdAryConversionWrapper =
+      rb_define_class_under(grpc_rb_mGrpcCore, "MetadataArrayConversionWrapper", rb_cObject);
 
   /* Prevent allocation or inialization of the Call class */
   rb_define_alloc_func(grpc_rb_cCall, grpc_rb_cannot_alloc);
