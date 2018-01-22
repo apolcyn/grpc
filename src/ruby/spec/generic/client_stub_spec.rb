@@ -235,7 +235,15 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
 
       it 'should receive UNAUTHENTICATED if call credentials plugin fails' do
         server_port = create_secure_test_server
-        th = run_request_response(@sent_msg, @resp, @pass)
+	server_started_notifier = GRPC::Notifier.new
+        th = Thread.new do
+          @server.start
+          server_started_notifier.notify(nil)
+	  # Poll on the server so that the client connection can proceed.
+	  # We don't expect the server to actually accept a call though.
+          expect { @server.request_call }.to raise_error(GRPC::Core::CallError)
+        end
+	server_started_notifier.wait
 
         certs = load_test_certs
         secure_channel_creds = GRPC::Core::ChannelCredentials.new(
@@ -263,8 +271,8 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
         end
         expect(unauth_error_occured).to eq(true)
 
-        # Kill the server thread so tests can complete
-        th.kill
+	@server.close(Time.now + 3)
+	th.join
       end
 
       it 'should raise ArgumentError if metadata contains invalid values' do
