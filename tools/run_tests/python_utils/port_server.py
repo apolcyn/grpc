@@ -108,7 +108,7 @@ def refill_pool(max_timeout, req):
             req.log_message("kill old request %d" % i)
             del in_use[i]
         if can_bind(i, socket.AF_INET) and can_bind(
-                i, socket.AF_INET6) and not can_connect(i):
+                i, socket.AF_INET) and not can_connect(i):
             req.log_message("found available port %d" % i)
             pool.append(i)
 

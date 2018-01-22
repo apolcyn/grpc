@@ -84,8 +84,8 @@ def sanity_check_values_of_accessors(op_view,
 end
 
 def close_active_server_call(active_server_call)
-  active_server_call.set_input_stream_done
-  active_server_call.set_output_stream_done
+  active_server_call.send(:set_input_stream_done)
+  active_server_call.send(:set_output_stream_done)
 end
 
 describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength

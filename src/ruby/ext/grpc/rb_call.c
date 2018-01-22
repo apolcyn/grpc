@@ -551,7 +551,6 @@ int grpc_rb_md_ary_convert(VALUE md_ary_hash, grpc_metadata_array* md_ary, grpc_
   md_ary->metadata = gpr_zalloc(md_ary->capacity * sizeof(grpc_metadata));
   rb_hash_foreach(md_ary_hash, grpc_rb_md_ary_fill_hash_cb, md_ary_obj);
   if (md_array_conversion_wrapper.error_msg != NULL) {
-    grpc_rb_metadata_array_destroy_including_entries(md_ary);
     ruby_error_to_raise->error_msg = md_array_conversion_wrapper.error_msg;
     ruby_error_to_raise->error_class = md_array_conversion_wrapper.error_class;
     return 0;
@@ -723,6 +722,7 @@ static int grpc_run_batch_stack_fill_ops(run_batch_stack* st, VALUE ops_hash, gr
   VALUE this_value = Qnil;
   VALUE ops_ary = rb_ary_new();
   size_t i = 0;
+  int md_ary_convert_result = 0;
 
   /* Create a ruby array with just the operation keys */
   rb_hash_foreach(ops_hash, grpc_rb_call_check_op_keys_hash_cb, ops_ary);
@@ -734,13 +734,17 @@ static int grpc_run_batch_stack_fill_ops(run_batch_stack* st, VALUE ops_hash, gr
     st->ops[st->op_num].flags = 0;
     switch (NUM2INT(this_op)) {
       case GRPC_OP_SEND_INITIAL_METADATA:
-        if(!grpc_rb_md_ary_convert(this_value, &st->send_metadata, ruby_error_to_raise)) {
-          return 0;
-        }
+        md_ary_convert_result = grpc_rb_md_ary_convert(this_value, &st->send_metadata, ruby_error_to_raise);
         st->ops[st->op_num].data.send_initial_metadata.count =
             st->send_metadata.count;
         st->ops[st->op_num].data.send_initial_metadata.metadata =
             st->send_metadata.metadata;
+        if (!md_ary_convert_result) {
+          st->ops[st->op_num].op = (grpc_op_type)NUM2INT(this_op);
+          st->ops[st->op_num].reserved = NULL;
+          st->op_num++;
+          return 0;
+        }
         break;
       case GRPC_OP_SEND_MESSAGE:
         st->ops[st->op_num].data.send_message.send_message =
@@ -881,6 +885,7 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   if (!grpc_run_batch_stack_fill_ops(st, ops_hash, &ruby_error_to_raise)) {
     GPR_ASSERT(ruby_error_to_raise.error_msg != NULL);
     ruby_error_msg = rb_str_new(ruby_error_to_raise.error_msg, strlen(ruby_error_to_raise.error_msg));
+    gpr_free(ruby_error_to_raise.error_msg);
     grpc_run_batch_stack_cleanup(st);
     gpr_free(st);
     rb_raise(ruby_error_to_raise.error_class, StringValueCStr(ruby_error_msg));
