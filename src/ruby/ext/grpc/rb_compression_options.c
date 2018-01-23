@@ -176,12 +176,15 @@ void grpc_rb_compression_options_algorithm_name_to_value_internal(
    * the algorithm parse function
    * in GRPC core. */
   if (!grpc_compression_algorithm_parse(name_slice, algorithm_value)) {
-    char *name_slice_str = grpc_slice_to_c_string(name_slice);
-    char *error_message_str = NULL;
+    char* name_slice_str = grpc_slice_to_c_string(name_slice);
+    char* error_message_str = NULL;
     VALUE error_message_ruby_str = Qnil;
-    GPR_ASSERT(gpr_asprintf(&error_message_str, "Invalid compression algorithm name: %s", name_slice_str) != -1);
+    GPR_ASSERT(gpr_asprintf(&error_message_str,
+                            "Invalid compression algorithm name: %s",
+                            name_slice_str) != -1);
     gpr_free(name_slice_str);
-    error_message_ruby_str = rb_str_new(error_message_str, strlen(error_message_str));
+    error_message_ruby_str =
+        rb_str_new(error_message_str, strlen(error_message_str));
     gpr_free(error_message_str);
     rb_raise(rb_eNameError, StringValueCStr(error_message_ruby_str));
   }

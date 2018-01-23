@@ -86,11 +86,16 @@ static VALUE grpc_rb_call_credentials_callback_rescue(VALUE args,
   return new_failing_auth_callback_hash(rb_exception_info);
 }
 
-static VALUE grpc_rb_call_credentials_md_conversion_failed_result(const grpc_rb_ruby_error_to_raise *ruby_error_to_raise) {
-  VALUE rb_exception_info = rb_funcall(ruby_error_to_raise->error_class, rb_intern("to_s"), 0);
-  rb_exception_info = rb_funcall(rb_exception_info, rb_intern("<<"), 1, rb_str_new2(": "));
-  rb_exception_info = rb_funcall(rb_exception_info, rb_intern("<<"), 1, rb_str_new2(ruby_error_to_raise->error_msg));
-  gpr_log(GPR_INFO, "Metadata conversion from call credentials callback failed: %s",
+static VALUE grpc_rb_call_credentials_md_conversion_failed_result(
+    const grpc_rb_ruby_error_to_raise* ruby_error_to_raise) {
+  VALUE rb_exception_info =
+      rb_funcall(ruby_error_to_raise->error_class, rb_intern("to_s"), 0);
+  rb_exception_info =
+      rb_funcall(rb_exception_info, rb_intern("<<"), 1, rb_str_new2(": "));
+  rb_exception_info = rb_funcall(rb_exception_info, rb_intern("<<"), 1,
+                                 rb_str_new2(ruby_error_to_raise->error_msg));
+  gpr_log(GPR_INFO,
+          "Metadata conversion from call credentials callback failed: %s",
           StringValueCStr(rb_exception_info));
   return new_failing_auth_callback_hash(rb_exception_info);
 }
@@ -115,8 +120,9 @@ static void grpc_rb_call_credentials_callback_with_gil(void* param) {
   result = rb_rescue(grpc_rb_call_credentials_callback, callback_args,
                      grpc_rb_call_credentials_callback_rescue, Qnil);
   if (!grpc_rb_md_ary_convert(rb_hash_aref(result, rb_str_new2("metadata")),
-                             &md_ary, &ruby_error_to_raise)) {
-    result = grpc_rb_call_credentials_md_conversion_failed_result(&ruby_error_to_raise);
+                              &md_ary, &ruby_error_to_raise)) {
+    result = grpc_rb_call_credentials_md_conversion_failed_result(
+        &ruby_error_to_raise);
     gpr_free(ruby_error_to_raise.error_msg);
   }
   // Both callbacks return a hash, so result should be a hash
