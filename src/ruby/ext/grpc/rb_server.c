@@ -61,8 +61,12 @@ static void destroy_server(grpc_rb_server* server, gpr_timespec deadline) {
         rb_completion_queue_pluck(server->queue, NULL,
                                   gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
       }
+      gpr_log(GPR_DEBUG, "BEGIN DESTROY SERVER");
       grpc_server_destroy(server->wrapped);
+      gpr_log(GPR_DEBUG, "DONE DESTROY SERVER");
+      gpr_log(GPR_DEBUG, "BEGIN DESTROY SERVER CQ");
       grpc_rb_completion_queue_destroy(server->queue);
+      gpr_log(GPR_DEBUG, "DONE DESTROY SERVER CQ");
       server->wrapped = NULL;
       server->queue = NULL;
     }
@@ -190,8 +194,10 @@ static VALUE grpc_rb_server_request_call(VALUE self) {
   grpc_request_call_stack_init(&st);
   /* call grpc_server_request_call, then wait for it to complete using
    * pluck_event */
+  gpr_log(GPR_DEBUG, "BEGIN REQUEST CALL START");
   err = grpc_server_request_call(s->wrapped, &call, &st.details, &st.md_ary,
                                  call_queue, s->queue, tag);
+  gpr_log(GPR_DEBUG, "DONE REQUEST CALL START");
   if (err != GRPC_CALL_OK) {
     grpc_request_call_stack_cleanup(&st);
     rb_raise(grpc_rb_eCallError,
@@ -200,8 +206,10 @@ static VALUE grpc_rb_server_request_call(VALUE self) {
     return Qnil;
   }
 
+  gpr_log(GPR_DEBUG, "BEGIN REQUEST CALL PLUCK");
   ev = rb_completion_queue_pluck(s->queue, tag,
                                  gpr_inf_future(GPR_CLOCK_REALTIME), NULL);
+  gpr_log(GPR_DEBUG, "DONE REQUEST CALL PLUCK");
   if (!ev.success) {
     grpc_request_call_stack_cleanup(&st);
     rb_raise(grpc_rb_eCallError, "request_call completion failed");

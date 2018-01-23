@@ -19,10 +19,17 @@
 # Usage: $ path/to/greeter_server.rb
 
 this_dir = File.expand_path(File.dirname(__FILE__))
-lib_dir = File.join(this_dir, 'lib')
+this_lib_dir = File.join(this_dir, 'lib')
+root_dir = File.expand_path(File.dirname(File.expand_path(File.dirname(this_dir))))
+p root_dir
+lib_dir = File.join(File.join(File.join(File.join(root_dir, 'src'), 'ruby'), 'lib'), 'grpc')
+before_lib_dir = File.join(File.join(File.join(root_dir, 'src'), 'ruby'), 'lib')
+p lib_dir
+$LOAD_PATH.unshift(this_lib_dir) unless $LOAD_PATH.include?(this_lib_dir)
 $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
+$LOAD_PATH.unshift(before_lib_dir) unless $LOAD_PATH.include?(before_lib_dir)
 
-require 'grpc'
+require_relative '../../src/ruby/lib/grpc'
 require 'helloworld_services_pb'
 
 # GreeterServer is simple server that implements the Helloworld Greeter server.
@@ -32,6 +39,7 @@ class GreeterServer < Helloworld::Greeter::Service
     Helloworld::HelloReply.new(message: "Hello #{hello_req.name}")
   end
 end
+
 # main starts an RpcServer that receives requests to GreeterServer at the sample
 # server port.
 def main
@@ -47,7 +55,7 @@ def main
     end
     s.stop
   end
-  trap("INT") do
+  trap('INT') do
     stop_server = true
     stop_server_cv.broadcast
   end
