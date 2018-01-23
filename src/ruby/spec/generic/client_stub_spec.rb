@@ -236,7 +236,7 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
         th.join
       end
 
-      it 'should receive UNAUTHENTICATED if call credentials plugin fails' do
+      def failing_call_credentials_test(call_creds_proc, expected_error_message)
         server_port = create_secure_test_server
         server_started_notifier = GRPC::Notifier.new
         th = Thread.new do
@@ -258,25 +258,39 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
         }
         stub = GRPC::ClientStub.new("localhost:#{server_port}",
                                     secure_channel_creds, **secure_stub_opts)
-
-        error_message = 'Failing call credentials callback'
-        failing_auth = proc do
-          fail error_message
-        end
-        creds = GRPC::Core::CallCredentials.new(failing_auth)
+        creds = GRPC::Core::CallCredentials.new(call_creds_proc)
 
         unauth_error_occured = false
         begin
           get_response(stub, credentials: creds)
         rescue GRPC::Unauthenticated => e
           unauth_error_occured = true
-          expect(e.details.include?(error_message)).to be true
+          expect(e.details.include?(expected_error_message)).to be true
         end
         expect(unauth_error_occured).to eq(true)
 
         @server.shutdown_and_notify(Time.now + 3)
         th.join
         @server.close
+      end
+
+      it 'should receive UNAUTHENTICATED if call credentials plugin fails' do
+        expected_error_message = 'Failing call credentials callback'
+        failing_auth = proc do
+          fail expected_error_message
+        end
+        failing_call_credentials_test(failing_auth, expected_error_message)
+      end
+
+      it 'should receive UNAUTHENTICATED with useful error details if call '\
+        'credentials plugin fails because of invalid metadata' do
+        bad_metadata_proc = proc do
+          bad_metadata = { k1: 'v1', k2: 'v2' }
+          bad_metadata.merge!(k3: 3)
+          bad_metadata
+        end
+        expected_error_message = 'ArgumentError: Header values must be of type string or array'
+        failing_call_credentials_test(bad_metadata_proc, expected_error_message)
       end
 
       it 'should raise ArgumentError if metadata contains invalid values' do
