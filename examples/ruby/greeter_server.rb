@@ -32,14 +32,29 @@ class GreeterServer < Helloworld::Greeter::Service
     Helloworld::HelloReply.new(message: "Hello #{hello_req.name}")
   end
 end
-
 # main starts an RpcServer that receives requests to GreeterServer at the sample
 # server port.
 def main
+  Thread.abort_on_exception = true
   s = GRPC::RpcServer.new
+  stop_server = false
+  stop_server_cv = ConditionVariable.new
+  stop_server_mu = Mutex.new
+  stop_server_thread = Thread.new do
+    loop do
+      break if stop_server
+      stop_server_mu.synchronize { stop_server_cv.wait(stop_server_mu, 60) }
+    end
+    s.stop
+  end
+  trap("INT") do
+    stop_server = true
+    stop_server_cv.broadcast
+  end
   s.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
   s.handle(GreeterServer)
   s.run_till_terminated
+  stop_server_thread.join
 end
 
 main
