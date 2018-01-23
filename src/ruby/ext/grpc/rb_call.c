@@ -567,6 +567,7 @@ int grpc_rb_md_ary_convert(VALUE md_ary_hash, grpc_metadata_array* md_ary,
   md_ary->metadata = gpr_zalloc(md_ary->capacity * sizeof(grpc_metadata));
   rb_hash_foreach(md_ary_hash, grpc_rb_md_ary_fill_hash_cb, md_ary_obj);
   if (md_array_conversion_wrapper.error_msg != NULL) {
+    GPR_ASSERT(ruby_error_to_raise != NULL);
     ruby_error_to_raise->error_msg = md_array_conversion_wrapper.error_msg;
     ruby_error_to_raise->error_class = md_array_conversion_wrapper.error_class;
     return 0;
@@ -643,7 +644,6 @@ static void grpc_rb_op_update_status_from_server(
   VALUE code = rb_struct_aref(status, sym_code);
   VALUE details = rb_struct_aref(status, sym_details);
   VALUE metadata_hash = rb_struct_aref(status, sym_metadata);
-  grpc_rb_ruby_error_to_raise unused_ruby_error_to_raise;
 
   /* TODO: add check to ensure status is the correct struct type */
   if (TYPE(code) != T_FIXNUM) {
@@ -663,7 +663,8 @@ static void grpc_rb_op_update_status_from_server(
   op->data.send_status_from_server.status = NUM2INT(code);
   op->data.send_status_from_server.status_details = send_status_details;
   GPR_ASSERT(grpc_rb_md_ary_convert(metadata_hash, md_ary,
-                                    &unused_ruby_error_to_raise) != 0);
+                                    NULL /* unused ruby_error_to_raise */) !=
+             0);
   op->data.send_status_from_server.trailing_metadata_count = md_ary->count;
   op->data.send_status_from_server.trailing_metadata = md_ary->metadata;
 }
@@ -883,7 +884,6 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   VALUE rb_write_flag = rb_ivar_get(self, id_write_flag);
   unsigned write_flag = 0;
   void* tag = (void*)&st;
-  VALUE ruby_error_msg = Qnil;
   grpc_rb_ruby_error_to_raise ruby_error_to_raise;
   if (RTYPEDDATA_DATA(self) == NULL) {
     rb_raise(grpc_rb_eCallError, "Cannot run batch on closed call");
@@ -903,6 +903,7 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
   grpc_run_batch_stack_init(st, write_flag);
   memset(&ruby_error_to_raise, 0, sizeof(ruby_error_to_raise));
   if (!grpc_run_batch_stack_fill_ops(st, ops_hash, &ruby_error_to_raise)) {
+    VALUE ruby_error_msg = Qnil;
     GPR_ASSERT(ruby_error_to_raise.error_msg != NULL);
     ruby_error_msg = rb_str_new(ruby_error_to_raise.error_msg,
                                 strlen(ruby_error_to_raise.error_msg));
@@ -912,6 +913,7 @@ static VALUE grpc_rb_call_run_batch(VALUE self, VALUE ops_hash) {
     rb_raise(ruby_error_to_raise.error_class, StringValueCStr(ruby_error_msg));
     return Qnil;
   }
+  GPR_ASSERT(ruby_error_to_raise.error_msg == NULL);
 
   /* call grpc_call_start_batch, then wait for it to complete using
    * pluck_event */
