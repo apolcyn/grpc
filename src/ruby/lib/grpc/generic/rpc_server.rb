@@ -233,9 +233,6 @@ module GRPC
       @running_state = :not_started
       @server = Core::Server.new(server_args)
       @interceptors = InterceptorRegistry.new(interceptors)
-      @server_refcount = 0
-      @server_refcount_mu = Mutex.new
-      ref_server
     end
 
     # stops a running server
@@ -250,7 +247,6 @@ module GRPC
         return if @running_state != :running
         transition_running_state(:stopping)
       end
-      unref_server
       @pool.stop
     end
 
@@ -390,7 +386,6 @@ module GRPC
     # handles calls to the server
     def loop_handle_server_calls
       fail 'not started' if running_state == :not_started
-      ref_server
       while running_state == :running
         begin
           an_rpc = @server.request_call
@@ -423,7 +418,7 @@ module GRPC
       # @running_state should be :stopping here
       @run_mutex.synchronize { transition_running_state(:stopped) }
       GRPC.logger.info("stopped: #{self}")
-      unref_server
+      @server.close
     end
 
     def new_active_server_call(an_rpc)
@@ -455,19 +450,6 @@ module GRPC
     end
 
     protected
-
-    def ref_server
-      @server_refcount_mu.synchronize do
-        @server_refcount += 1
-      end
-    end
-
-    def unref_server
-      @server_refcount_mu.synchronize do
-        @server_refcount -= 1
-        @server.close if @server_refcount.zero?
-      end
-    end
 
     def rpc_descs
       @rpc_descs ||= {}
