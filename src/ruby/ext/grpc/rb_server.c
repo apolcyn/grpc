@@ -67,9 +67,8 @@ static void grpc_rb_server_shutdown_and_notify_inner(grpc_rb_server* server, gpr
   }
 }
 
-static void destroy_server(grpc_rb_server* server, gpr_timespec deadline) {
+static void destroy_server(grpc_rb_server* server) {
   // This can be started by app or implicitly by GC. Avoid a race between these.
-  grpc_rb_server_shutdown_and_notify_inner(server, deadline);
   if (!server->destroy_done) {
     server->destroy_done = 1;
     if (server->wrapped != NULL) {
@@ -93,7 +92,8 @@ static void grpc_rb_server_free(void* p) {
   deadline = gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
                           gpr_time_from_seconds(2, GPR_TIMESPAN));
 
-  destroy_server(svr, deadline);
+  grpc_rb_server_shutdown_and_notify_inner(svr, deadline);
+  destroy_server(svr);
 
   xfree(p);
 }
@@ -268,29 +268,16 @@ static VALUE grpc_rb_server_shutdown_and_notify(VALUE self, VALUE timeout) {
     server = Server.new({'arg1': 'value1'})
     ... // do stuff with server
     ...
+    ... // initiate server shutdown
+    server.shutdown_and_notify(timeout)
     ... // to shutdown the server
     server.destroy()
 
-    ... // to shutdown the server with a timeout
-    server.destroy(timeout)
-
   Destroys server instances. */
-static VALUE grpc_rb_server_destroy(int argc, VALUE* argv, VALUE self) {
-  VALUE timeout = Qnil;
-  gpr_timespec deadline;
+static VALUE grpc_rb_server_destroy(VALUE self) {
   grpc_rb_server* s = NULL;
-
-  /* "01" == 0 mandatory args, 1 (timeout) is optional */
-  rb_scan_args(argc, argv, "01", &timeout);
   TypedData_Get_Struct(self, grpc_rb_server, &grpc_rb_server_data_type, s);
-  if (TYPE(timeout) == T_NIL) {
-    deadline = gpr_inf_future(GPR_CLOCK_REALTIME);
-  } else {
-    deadline = grpc_rb_time_timeval(timeout, /* absolute time*/ 0);
-  }
-
-  destroy_server(s, deadline);
-
+  destroy_server(s);
   return Qnil;
 }
 
@@ -358,7 +345,7 @@ void Init_grpc_server() {
                    0);
   rb_define_method(grpc_rb_cServer, "start", grpc_rb_server_start, 0);
   rb_define_method(grpc_rb_cServer, "shutdown_and_notify", grpc_rb_server_shutdown_and_notify, 1);
-  rb_define_method(grpc_rb_cServer, "destroy", grpc_rb_server_destroy, -1);
+  rb_define_method(grpc_rb_cServer, "destroy", grpc_rb_server_destroy, 0);
   rb_define_alias(grpc_rb_cServer, "close", "destroy");
   rb_define_method(grpc_rb_cServer, "add_http2_port",
                    grpc_rb_server_add_http2_port, 2);

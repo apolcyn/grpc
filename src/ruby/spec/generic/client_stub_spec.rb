@@ -101,7 +101,10 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
   end
 
   after(:each) do
-    @server.close(from_relative_time(2)) unless @server.nil?
+    unless @server.nil?
+      @server.shutdown_and_notify(from_relative_time(2))
+      @server.close
+    end
   end
 
   describe '#new' do
@@ -271,8 +274,9 @@ describe 'ClientStub' do  # rubocop:disable Metrics/BlockLength
         end
         expect(unauth_error_occured).to eq(true)
 
-        @server.close(Time.now + 3)
+        @server.shutdown_and_notify(Time.now + 3)
         th.join
+        @server.close
       end
 
       it 'should raise ArgumentError if metadata contains invalid values' do
