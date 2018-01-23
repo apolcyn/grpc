@@ -551,8 +551,12 @@ int grpc_rb_md_ary_convert(VALUE md_ary_hash, grpc_metadata_array* md_ary,
     return 1; /* Do nothing if the expected has value is nil */
   }
   if (TYPE(md_ary_hash) != T_HASH) {
-    rb_raise(rb_eTypeError, "md_ary_convert: got <%s>, want <Hash>",
-             rb_obj_classname(md_ary_hash));
+    char* tmp_str = NULL;
+    GPR_ASSERT(ruby_error_to_raise != NULL);
+    GPR_ASSERT(gpr_asprintf(&tmp_str, "md_ary_convert: got <%s>, want <Hash>",
+                            rb_obj_classname(md_ary_hash)) != -1);
+    ruby_error_to_raise->error_msg = tmp_str;
+    ruby_error_to_raise->error_class = rb_eTypeError;
     return 0;
   }
 
