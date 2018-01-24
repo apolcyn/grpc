@@ -113,8 +113,9 @@ typedef struct grpc_rb_metadata_array_conversion_wrapper {
 } grpc_rb_metadata_array_conversion_wrapper;
 
 static size_t md_ary_conversion_wrapper_datasize(const void* p) {
-  const grpc_metadata_array* ary =
-      ((grpc_rb_metadata_array_conversion_wrapper*)p)->md_array;
+  const grpc_rb_metadata_array_conversion_wrapper* wrapper =
+      (grpc_rb_metadata_array_conversion_wrapper*)p;
+  const grpc_metadata_array* const ary = wrapper->md_array;
   size_t i, datasize = sizeof(grpc_metadata_array);
   for (i = 0; i < ary->count; ++i) {
     const grpc_metadata* const md = &ary->metadata[i];
@@ -122,6 +123,9 @@ static size_t md_ary_conversion_wrapper_datasize(const void* p) {
     datasize += GRPC_SLICE_LENGTH(md->value);
   }
   datasize += ary->capacity * sizeof(grpc_metadata);
+  if (wrapper->error_msg != NULL) {
+    datasize += strlen(wrapper->error_msg);
+  }
   return datasize;
 }
 
