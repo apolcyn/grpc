@@ -21,25 +21,30 @@ spec = Gem::Specification.load('grpc.gemspec')
 Gem::PackageTask.new(spec) do |pkg|
 end
 
-# Add the extension compiler task
-Rake::ExtensionTask.new('grpc_c', spec) do |ext|
-  ext.source_pattern = '**/*.{c,h}'
-  ext.ext_dir = File.join('src', 'ruby', 'ext', 'grpc')
-  ext.lib_dir = File.join('src', 'ruby', 'lib', 'grpc')
-  ext.cross_compile = true
-  ext.cross_platform = [
-    'x86-mingw32', 'x64-mingw32',
-    'x86_64-linux', 'x86-linux',
-    'universal-darwin'
-  ]
-  ext.cross_compiling do |spec|
-    spec.files = %w( etc/roots.pem grpc_c.32.ruby grpc_c.64.ruby )
-    spec.files += Dir.glob('src/ruby/bin/**/*')
-    spec.files += Dir.glob('src/ruby/ext/**/*')
-    spec.files += Dir.glob('src/ruby/lib/**/*')
-    spec.files += Dir.glob('src/ruby/pb/**/*')
+def create_extension_task(spec, no_native)
+  # Add the extension compiler task
+  Rake::ExtensionTask.new('grpc_c', spec) do |ext|
+    ext.source_pattern = '**/*.{c,h}'
+    ext.ext_dir = File.join('src', 'ruby', 'ext', 'grpc')
+    ext.lib_dir = File.join('src', 'ruby', 'lib', 'grpc')
+    ext.cross_compile = true
+    ext.no_native = no_native
+    ext.cross_platform = [
+  #    'x86-mingw32', 'x64-mingw32',
+      'x86_64-linux', #'x86-linux',
+  #    'universal-darwin'
+    ]
+    ext.cross_compiling do |spec|
+      spec.files = %w( etc/roots.pem grpc_c.32.ruby grpc_c.64.ruby )
+      spec.files += Dir.glob('src/ruby/bin/**/*')
+      spec.files += Dir.glob('src/ruby/ext/**/*')
+      spec.files += Dir.glob('src/ruby/lib/**/*')
+      spec.files += Dir.glob('src/ruby/pb/**/*')
+    end
   end
 end
+
+create_extension_task(spec, true)
 
 # Define the test suites
 SPEC_SUITES = [
@@ -104,8 +109,24 @@ task 'dlls' do
 
 end
 
+task :b do
+	p "B"
+end
+
+task 'a' => 'b' do
+	p "A"
+end
+
+task 'create_extension_task_no_native' do
+	p "HELLO no native"
+end
+
+task 'create_extension_task' do
+	p "HELLLO native"
+end
+
 desc 'Build the native gem file under rake_compiler_dock'
-task 'gem:native' do
+task 'gem:native' => 'create_extension_task_no_native' do
   verbose = ENV['V'] || '0'
 
   grpc_config = ENV['GRPC_CONFIG'] || 'opt'
@@ -115,8 +136,8 @@ task 'gem:native' do
     FileUtils.touch 'grpc_c.64.ruby'
     system "rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
-    Rake::Task['dlls'].execute
-    docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+#    Rake::Task['dlls'].execute
+    docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
 
@@ -128,5 +149,6 @@ task 'suite:server' => 'suite:wrapper'
 task 'suite:pb' => 'suite:server'
 
 desc 'Compiles the gRPC extension then runs all the tests'
+task 'compile' => 'create_extension_task'
 task all: ['suite:idiomatic', 'suite:bidi', 'suite:pb', 'suite:server']
 task default: :all
