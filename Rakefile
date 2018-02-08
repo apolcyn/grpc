@@ -28,7 +28,8 @@ def create_extension_task(spec, no_native)
     ext.ext_dir = File.join('src', 'ruby', 'ext', 'grpc')
     ext.lib_dir = File.join('src', 'ruby', 'lib', 'grpc')
     ext.cross_compile = true
-    ext.no_native = no_native
+    ext.no_native = true
+    ext.only_cross_compile = true
     ext.cross_platform = [
   #    'x86-mingw32', 'x64-mingw32',
       'x86_64-linux', #'x86-linux',
@@ -136,7 +137,7 @@ task 'gem:native' => 'create_extension_task_no_native' do
     FileUtils.touch 'grpc_c.64.ruby'
     system "rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
-#    Rake::Task['dlls'].execute
+    Rake::Task['dlls'].execute
     docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
