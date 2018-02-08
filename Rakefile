@@ -137,8 +137,8 @@ task 'gem:native' => 'create_extension_task_no_native' do
     FileUtils.touch 'grpc_c.64.ruby'
     system "rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0:2.3.0:2.2.2:2.1.6:2.0.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
-    Rake::Task['dlls'].execute
-    docker_for_windows "gem update --system && bundle && rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+#    Rake::Task['dlls'].execute
+    docker_for_windows "gem update --system --no-ri --no-doc && gem install rake-compiler-1.0.5.gem && bundle && rake cross native gem RUBY_CC_VERSION=2.5.0:2.4.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
 
