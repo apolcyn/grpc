@@ -38,6 +38,7 @@ Rake::ExtensionTask.new('grpc_c', spec) do |ext|
     spec.files += Dir.glob('src/ruby/ext/**/*')
     spec.files += Dir.glob('src/ruby/lib/**/*')
     spec.files += Dir.glob('src/ruby/pb/**/*')
+    spec.files.reject! { |f| f == 'src/ruby/lib/grpc/grpc_c.so' }
   end
 end
 
