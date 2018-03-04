@@ -191,7 +191,6 @@ def grpc_test_only_deps():
         native.new_http_archive(
             name = "com_github_isc_projects_bind9",
             strip_prefix = "bind9-9_11_2",
-            #TODO: use .zip instead of .tar.gz once bazel 0.11.0 is used here
             url = "https://github.com/isc-projects/bind9/archive/v9_11_2.tar.gz",
-            build_file = "@com_github_grpc_grpc//third_party:bind9.BUILD",
+            build_file = "@com_github_grpc_grpc//third_party/bind9:bind9.BUILD",
         )
