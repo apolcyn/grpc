@@ -57,6 +57,11 @@ def grpc_deps():
         actual = "@com_github_gflags_gflags//:gflags",
     )
 
+    native.bind(
+        name = "dig",
+        actual = "@com_github_isc_projects_bind9//:dig",
+    )
+
     if "boringssl" not in native.existing_rules():
         native.http_archive(
             name = "boringssl",
@@ -180,4 +185,13 @@ def grpc_test_only_deps():
             strip_prefix = "constantly-15.1.0",
             url = "https://github.com/twisted/constantly/archive/15.1.0.zip",
             build_file = "@com_github_grpc_grpc//third_party:constantly.BUILD",
+        )
+
+    if "com_github_isc_projects_bind9" not in native.existing_rules():
+        native.new_http_archive(
+            name = "com_github_isc_projects_bind9",
+            strip_prefix = "bind9-9_11_2",
+            #TODO: use .zip instead of .tar.gz once bazel 0.11.0 is used here
+            url = "https://github.com/isc-projects/bind9/archive/v9_11_2.tar.gz",
+            build_file = "@com_github_grpc_grpc//third_party:bind9.BUILD",
         )
