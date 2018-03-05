@@ -62,7 +62,7 @@ def main():
     lookup_func = lookups.get(args.qtype)
     assert lookup_func, ('Unsupported qtype: %s' % args.qtype)
     deferred_result = lookup_func(qname)
-    deferred_result.addCallback(OnResolverResultAvailable) 
+    deferred_result.addCallback(OnResolverResultAvailable)
     return deferred_result
   task.react(BeginQuery, [args.qname])
 
