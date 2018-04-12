@@ -299,6 +299,15 @@ extern grpc_auth_context_add_cstring_property_type grpc_auth_context_add_cstring
 typedef int(*grpc_auth_context_set_peer_identity_property_name_type)(grpc_auth_context* ctx, const char* name);
 extern grpc_auth_context_set_peer_identity_property_name_type grpc_auth_context_set_peer_identity_property_name_import;
 #define grpc_auth_context_set_peer_identity_property_name grpc_auth_context_set_peer_identity_property_name_import
+typedef grpc_ssl_session_cache*(*grpc_ssl_session_cache_create_lru_type)(size_t capacity);
+extern grpc_ssl_session_cache_create_lru_type grpc_ssl_session_cache_create_lru_import;
+#define grpc_ssl_session_cache_create_lru grpc_ssl_session_cache_create_lru_import
+typedef void(*grpc_ssl_session_cache_destroy_type)(grpc_ssl_session_cache* cache);
+extern grpc_ssl_session_cache_destroy_type grpc_ssl_session_cache_destroy_import;
+#define grpc_ssl_session_cache_destroy grpc_ssl_session_cache_destroy_import
+typedef grpc_arg(*grpc_ssl_session_cache_create_channel_arg_type)(grpc_ssl_session_cache* cache);
+extern grpc_ssl_session_cache_create_channel_arg_type grpc_ssl_session_cache_create_channel_arg_import;
+#define grpc_ssl_session_cache_create_channel_arg grpc_ssl_session_cache_create_channel_arg_import
 typedef void(*grpc_channel_credentials_release_type)(grpc_channel_credentials* creds);
 extern grpc_channel_credentials_release_type grpc_channel_credentials_release_import;
 #define grpc_channel_credentials_release grpc_channel_credentials_release_import
@@ -590,6 +599,9 @@ extern gpr_log_severity_string_type gpr_log_severity_string_import;
 typedef void(*gpr_log_type)(const char* file, int line, gpr_log_severity severity, const char* format, ...) GPR_PRINT_FORMAT_CHECK(4, 5);
 extern gpr_log_type gpr_log_import;
 #define gpr_log gpr_log_import
+typedef int(*gpr_should_log_type)(gpr_log_severity severity);
+extern gpr_should_log_type gpr_should_log_import;
+#define gpr_should_log gpr_should_log_import
 typedef void(*gpr_log_message_type)(const char* file, int line, gpr_log_severity severity, const char* message);
 extern gpr_log_message_type gpr_log_message_import;
 #define gpr_log_message gpr_log_message_import
