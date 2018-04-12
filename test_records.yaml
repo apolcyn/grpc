@@ -2,7 +2,7 @@ resolver_tests_common_zone_name: test.com.
 resolver_component_tests:
 - records:
     _grpclb._tcp.server:
-    - {TTL: '2100', data: 0 0 25354 lb-target, type: SRV}
+    - {TTL: '2100', data: 0 0 15354 lb-target, type: SRV}
     lb-target:
     - {TTL: '2100', data: 127.0.0.1, type: A}
     server:
