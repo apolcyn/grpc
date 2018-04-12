@@ -1,6 +1,6 @@
 set -eux
 readonly BACKEND_PORT=15353
-readonly FALLBACK_PORT=15353
+readonly FALLBACK_PORT=2000
 readonly GRPCLB_PORT=15354
 readonly DNS_SERVER_PORT=15355
 readonly GRPCLB_LOG="$(mktemp)"
@@ -25,7 +25,7 @@ resolver_component_tests:
     lb-target:
     - {TTL: '2100', data: 127.0.0.1, type: A}
     server:
-    - {TTL: '2100', data: 127.0.0.1, type: A}" > "$RECORD_CONFIG"
+    - {TTL: '2100', data: 127.0.0.1, type: A}" > "$RECORDS_CONFIG"
 # Start up all of the "fake" local servers.
 export GRPC_GO_VERBOSITY_LEVEL=3
 export GRPC_GO_SEVERITY_LEVEL=INFO
@@ -45,22 +45,24 @@ function tcp_health_check_server() {
   while [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]]; do
     nc localhost "$PORT" -w 1 && return
     ATTEMPT="$((ATTEMPT+1))"
+    sleep 1
   done
   echo "Could not connect to server on port "$PORT"."
   exit 1
 }
 
-tpc_health_check_server "$BACKEND_PORT"
-tpc_health_check_server "$FALLBACK_PORT"
-tpc_health_check_server "$GRPCLB_PORT"
-tpc_health_check_server "$DNS_SERVER_PORT" # Check the DNS server's TCP port
+tcp_health_check_server "$BACKEND_PORT"
+tcp_health_check_server "$FALLBACK_PORT"
+tcp_health_check_server "$GRPCLB_PORT"
+tcp_health_check_server "$DNS_SERVER_PORT" # Check the DNS server's TCP port
 
 function dns_health_check() {
   local MAX_RETRIES=30
   local ATTEMPT=0
   while [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]]; do
-    python test/cpp/naming/utils/dns_resolver.py -s 127.0.0.1 -p "$DNS_SERVER_PORT" health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. && return
+    python test/cpp/naming/utils/dns_resolver.py -s 127.0.0.1 -p "$DNS_SERVER_PORT" -n health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. -t 1 && return
     ATTEMPT="$((ATTEMPT+1))"
+    sleep 1
   done
   echo "Could not resolve records from DNS server. It's likely not runnning."
   exit 1
