@@ -26,16 +26,16 @@ resolver_component_tests:
 # Start up all of the "fake" local servers.
 export GRPC_GO_VERBOSITY_LEVEL=3
 export GRPC_GO_SEVERITY_LEVEL=INFO
-export GOPATH=/
-/src/google.golang.org/grpc/interop/server/server \
+export GOPATH=/go
+/go/src/google.golang.org/grpc/interop/server/server \
   --port="$FALLBACK_PORT" \
   --use_tls=true > "$FALLBACK_LOG" 2>&1 &
 FALLBACK_PID="$!"
-/src/google.golang.org/grpc/interop/server/server \
+/go/src/google.golang.org/grpc/interop/server/server \
   --port="$BACKEND_PORT" \
   --use_alts=true > "$BACKEND_LOG" 2>&1 &
 BACKEND_PID="$!"
-/src/google.golang.org/fake_grpclb/fake_grpclb \
+/go/src/google.golang.org/fake_grpclb/fake_grpclb \
   --port="$GRPCLB_PORT" \
   --backend_port="$BACKEND_PORT" > "$GRPCLB_LOG" 2>&1 &
 GRPCLB_PID="$!"
@@ -70,7 +70,7 @@ function display_all_logs_and_exit() {
   exit 1
 }
 
-function tcp_health_check_server() {
+function tcp_health_check() {
   local PORT="$1"
   local MAX_RETRIES=4
   local ATTEMPT=0
@@ -86,13 +86,13 @@ function tcp_health_check_server() {
   display_all_logs_and_exit
 }
 
-tcp_health_check_server "$DNS_SERVER_PORT" # Check the DNS server's TCP port
-tcp_health_check_server "$BACKEND_PORT"
-tcp_health_check_server "$FALLBACK_PORT"
-tcp_health_check_server "$GRPCLB_PORT"
+tcp_health_check "$DNS_SERVER_PORT" # Check the DNS server's TCP port
+tcp_health_check "$BACKEND_PORT"
+tcp_health_check "$FALLBACK_PORT"
+tcp_health_check "$GRPCLB_PORT"
 
 function dns_health_check() {
-  local MAX_RETRIES=30
+  local MAX_RETRIES=20
   local ATTEMPT=0
   while [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]]; do
     python test/cpp/naming/utils/dns_resolver.py \
