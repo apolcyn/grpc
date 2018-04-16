@@ -95,7 +95,7 @@ function dns_health_check() {
     sleep 1
   done
   echo "Could not resolve records from DNS server. It's likely not runnning."
-  exit 1
+  display_all_logs_and_exit
 }
 
 dns_health_check
