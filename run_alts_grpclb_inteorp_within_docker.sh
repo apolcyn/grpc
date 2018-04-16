@@ -12,20 +12,14 @@ readonly CXX_TEST_CONFIG="${CXX_TEST_CONFIG:-opt}"
 
 cd /var/local/git/grpc
 
-# Create a config that allows the local DNS server
-# to resolve:
-# 1) _grpclb._tcp.server.test.com
-#    > 'SRV' record of '0 0 $GRPCLB_PORT lb-target.test.com'
-# 2) server.test.com
-#    > 'A' record of '127.0.0.1' (for the fallback server)
-# 3) lb-target.test.com (the grpclb sever)
-#    > 'A' record of 127.0.0.1 (for the grpclb server)
+# Create DNS records that allows the local DNS server
+# to resolve the grpclb balancer and "fallback" server.
 echo "resolver_tests_common_zone_name: test.com.
 resolver_component_tests:
 - records:
     _grpclb._tcp.server:
-    - {TTL: '2100', data: 0 0 15354 lb-target, type: SRV}
-    lb-target:
+    - {TTL: '2100', data: 0 0 15354 grpclb-balancer, type: SRV}
+    grpclb-balancer:
     - {TTL: '2100', data: 127.0.0.1, type: A}
     server:
     - {TTL: '2100', data: 127.0.0.1, type: A}" > "$RECORDS_CONFIG"
@@ -33,13 +27,21 @@ resolver_component_tests:
 export GRPC_GO_VERBOSITY_LEVEL=3
 export GRPC_GO_SEVERITY_LEVEL=INFO
 export GOPATH=/
-/src/google.golang.org/grpc/interop/server/server --port="$FALLBACK_PORT" --use_tls=true > "$FALLBACK_LOG" 2>&1 &
+/src/google.golang.org/grpc/interop/server/server \
+  --port="$FALLBACK_PORT" \
+  --use_tls=true > "$FALLBACK_LOG" 2>&1 &
 FALLBACK_PID="$!"
-/src/google.golang.org/grpc/interop/server/server --port="$BACKEND_PORT" --use_alts=true > "$BACKEND_LOG" 2>&1 &
+/src/google.golang.org/grpc/interop/server/server \
+  --port="$BACKEND_PORT" \
+  --use_alts=true > "$BACKEND_LOG" 2>&1 &
 BACKEND_PID="$!"
-/src/google.golang.org/fake_grpclb/fake_grpclb --port="$GRPCLB_PORT" --backend_port="$BACKEND_PORT" > "$GRPCLB_LOG" 2>&1 &
+/src/google.golang.org/fake_grpclb/fake_grpclb \
+  --port="$GRPCLB_PORT" \
+  --backend_port="$BACKEND_PORT" > "$GRPCLB_LOG" 2>&1 &
 GRPCLB_PID="$!"
-python test/cpp/naming/utils/dns_server.py -p "$DNS_SERVER_PORT" -r "$RECORDS_CONFIG" > "$DNS_SERVER_LOG" 2>&1 &
+python test/cpp/naming/utils/dns_server.py \
+  -p "$DNS_SERVER_PORT" \
+  -r "$RECORDS_CONFIG" > "$DNS_SERVER_LOG" 2>&1 &
 DNS_SERVER_PID="$!"
 
 function display_log() {
@@ -73,7 +75,10 @@ function tcp_health_check_server() {
   local MAX_RETRIES=4
   local ATTEMPT=0
   while [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]]; do
-    python test/cpp/naming/utils/tcp_connect.py --server_host=localhost --server_port="$PORT" --timeout=1 && return
+    python test/cpp/naming/utils/tcp_connect.py \
+      --server_host=localhost \
+      --server_port="$PORT" \
+      --timeout=1 && return
     ATTEMPT="$((ATTEMPT+1))"
     sleep 1
   done
@@ -90,7 +95,11 @@ function dns_health_check() {
   local MAX_RETRIES=30
   local ATTEMPT=0
   while [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]]; do
-    python test/cpp/naming/utils/dns_resolver.py -s 127.0.0.1 -p "$DNS_SERVER_PORT" -n health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. -t 1 && return
+    python test/cpp/naming/utils/dns_resolver.py \
+      -s 127.0.0.1 \
+      -p "$DNS_SERVER_PORT" \
+      -n health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp. \
+      -t 1 && return
     ATTEMPT="$((ATTEMPT+1))"
     sleep 1
   done
@@ -101,19 +110,27 @@ function dns_health_check() {
 dns_health_check
 
 export GRPC_VERBOSITY=DEBUG
-export GRPC_DNS_RESOLVER=ares # TODO: unset this when c-ares is default DNS resolver.
+export GRPC_DNS_RESOLVER=ares # TODO: unset when c-ares is default DNS resolver.
 ONE_FAILED=0
-timeout 2 "bins/${CXX_TEST_CONFIG}/interop_client" --server_host="dns://127.0.0.1:${DNS_SERVER_PORT}/server.test.com" --server_port="$FALLBACK_PORT" --use_alts=true || ONE_FAILED=1
-if [[ "$?" != 0 ]]; then
-  echo "FAILED: ALTS client -> successul grpclb server interaction -> backend."
-fi
-#   # TODO: perhaps don't share the fake servers across each of these tests.
-#   timeout 30 "bins/${CXX_TEST_CONFIG}/interop_client" --server_host="dns://127.0.0.1:${DNS_SERVER_PORT}/server.test.com" --server_port="$FALLBACK_PORT" --use_tls=true --use_test_ca=true || ONE_FAILED=1
-#   if [[ "$?" != 0 ]]; then
-#     echo "FAILED: SSL client -> failed grpclb server interaction -> fallback."
-#   fi
-
-# Display fake server logs in case of error.
+# A successful grpclb interaction should be fast, so give a short timeout.
+timeout 2 "bins/${CXX_TEST_CONFIG}/interop_client" \
+  --server_host="dns://127.0.0.1:${DNS_SERVER_PORT}/server.test.com" \
+  --server_port="$FALLBACK_PORT" --use_alts=true || ONE_FAILED=1
+[[ "$?" != 0 ]] && \
+  echo "FAILED: ALTS client -> successful grpclb interaction -> backend server."
+# When the client is not able to get backends from the balancer
+# (in this case because of attempt to use SSL to connect to an ALTS balancer),
+# the client if forced to wait for the "fallback timeout" to go off before
+# attempting to connect to the "fallback servers", so give this
+# test a long timeout (at this time of writing, the default
+# "fallback timeout" is 10 seconds, so 30 seconds should be plenty of time).
+timeout 30 "bins/${CXX_TEST_CONFIG}/interop_client" \
+  --server_host="dns://127.0.0.1:${DNS_SERVER_PORT}/server.test.com" \
+  --server_port="$FALLBACK_PORT" \
+  --use_tls=true \
+  --use_test_ca=true || ONE_FAILED=1
+[[ "$?" != 0 ]] && \
+  echo "FAILED: SSL client -> failed grpclb interaction -> fallback server."
 if [[ "$ONE_FAILED" != 0 ]]; then
   echo "At least one test failed."
   display_all_logs_and_exit

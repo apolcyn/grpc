@@ -24,6 +24,7 @@ RUN mkdir -p /var/local/git/grpc && git clone https://github.com/grpc/grpc.git /
 # Fully initialize the github repo at an arbitrary but stable commit.
 # We can update this commit to sync with later gRPC revisions.
 # TODO: don't use personal branch here
+RUN echo invalidate cache
 RUN cd /var/local/git/grpc && \
     git remote add apolcyn https://github.com/apolcyn/grpc.git && \
     git fetch apolcyn my_alts_kokoro_tests && \
