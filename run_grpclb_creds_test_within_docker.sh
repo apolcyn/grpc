@@ -110,14 +110,24 @@ function dns_health_check() {
 dns_health_check
 
 export GRPC_VERBOSITY=DEBUG
-export GRPC_DNS_RESOLVER=ares # TODO: unset when c-ares is default DNS resolver.
 ONE_FAILED=0
-# A successful grpclb interaction should be fast, so give a short timeout.
+# First run the basic, client -> server RPC's.
+# TODO: also test these scenarios with other languages
+timeout 2 "bins/${CXX_TEST_CONFIG}/interop_client" \
+  --server_host="127.0.0.1" \
+  --server_port="$BACKEND_PORT" \
+  --use_alts=true || ONE_FAILED=1
+timeout 2 "bins/${CXX_TEST_CONFIG}/interop_client" \
+  --server_host="127.0.0.1" \
+  --server_port="$FALLBACK_PORT" \
+  --use_tls=true \
+  --use_test_ca=true || ONE_FAILED=1
+# Now run the tests that involve grpclb-in-DNS
+export GRPC_DNS_RESOLVER=ares # TODO: unset when c-ares is default DNS resolver.
 timeout 2 "bins/${CXX_TEST_CONFIG}/interop_client" \
   --server_host="dns://127.0.0.1:${DNS_SERVER_PORT}/server.test.com" \
-  --server_port="$FALLBACK_PORT" --use_alts=true || ONE_FAILED=1
-[[ "$?" != 0 ]] && \
-  echo "FAILED: ALTS client -> successful grpclb interaction -> backend server."
+  --server_port="$FALLBACK_PORT" \
+  --use_alts=true || ONE_FAILED=1
 # When the client is not able to get backends from the balancer
 # (in this case because of attempt to use SSL to connect to an ALTS balancer),
 # the client if forced to wait for the "fallback timeout" to go off before
@@ -129,8 +139,6 @@ timeout 30 "bins/${CXX_TEST_CONFIG}/interop_client" \
   --server_port="$FALLBACK_PORT" \
   --use_tls=true \
   --use_test_ca=true || ONE_FAILED=1
-[[ "$?" != 0 ]] && \
-  echo "FAILED: SSL client -> failed grpclb interaction -> fallback server."
 if [[ "$ONE_FAILED" != 0 ]]; then
   echo "At least one test failed."
   display_all_logs_and_exit

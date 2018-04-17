@@ -55,6 +55,11 @@ RUN mkdir /go/src/google.golang.org/fake_grpclb
 COPY fake_grpclb.go /go/src/google.golang.org/fake_grpclb/
 RUN cd /go/src/google.golang.org/fake_grpclb && go build fake_grpclb.go
 
+# Sanity check that we're not using an out-of-date fake_grpclb.go
+RUN FAKE_GRPCLB_SHA1="$(sha1sum /go/src/google.golang.org/fake_grpclb/fake_grpclb.go | awk '{ print $1 }')" && \
+    EXPECTED_SHA1=b5e0863f84fe1a8a73b0610e397de0229ce8428e && \
+    echo "$FAKE_GRPCLB_SHA1" | grep "$EXPECTED_SHA1"
+
 # Install Python test utility deps.
 RUN pip install --upgrade pip==9.0.2
 RUN pip install twisted==17.5.0
