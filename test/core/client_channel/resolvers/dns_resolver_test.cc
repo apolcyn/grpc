@@ -24,6 +24,7 @@
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
 #include "src/core/lib/iomgr/combiner.h"
 #include "test/core/util/test_config.h"
+#include "src/core/lib/gpr/env.h"
 
 static grpc_combiner* g_combiner;
 
@@ -68,6 +69,7 @@ int main(int argc, char** argv) {
   grpc_core::ResolverFactory* dns =
       grpc_core::ResolverRegistry::LookupResolverFactory("dns");
 
+  gpr_log(GPR_DEBUG, "RESOLVER:%s", gpr_getenv("GRPC_DNS_RESOLVER"));
   test_succeeds(dns, "dns:10.2.1.1");
   test_succeeds(dns, "dns:10.2.1.1:1234");
   test_succeeds(dns, "ipv4:www.google.com");
