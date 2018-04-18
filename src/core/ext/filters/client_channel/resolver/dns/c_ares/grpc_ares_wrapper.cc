@@ -22,7 +22,6 @@
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/iomgr/sockaddr.h"
-#include "src/core/lib/iomgr/socket_utils_posix.h"
 
 #include <string.h>
 #include <sys/types.h>
@@ -210,7 +209,7 @@ static void on_hostbyname_done_cb(void* arg, int status, int timeouts,
           memset(&addr, 0, addr_len);
           memcpy(&addr.sin6_addr, hostent->h_addr_list[i - prev_naddr],
                  sizeof(struct in6_addr));
-          addr.sin6_family = static_cast<sa_family_t>(hostent->h_addrtype);
+          addr.sin6_family = static_cast<unsigned char>(hostent->h_addrtype);
           addr.sin6_port = hr->port;
           grpc_lb_addresses_set_address(
               *lb_addresses, i, &addr, addr_len,
@@ -221,8 +220,8 @@ static void on_hostbyname_done_cb(void* arg, int status, int timeouts,
           ares_inet_ntop(AF_INET6, &addr.sin6_addr, output, INET6_ADDRSTRLEN);
           gpr_log(GPR_DEBUG,
                   "c-ares resolver gets a AF_INET6 result: \n"
-                  "  addr: %s\n  port: %d\n  sin6_scope_id: %d\n",
-                  output, ntohs(hr->port), addr.sin6_scope_id);
+                  "  addr: %s\n  port: %d\n  sin6_scope_id: %u\n",
+                  output, ntohs(hr->port), (unsigned int)addr.sin6_scope_id);
           break;
         }
         case AF_INET: {
@@ -231,7 +230,7 @@ static void on_hostbyname_done_cb(void* arg, int status, int timeouts,
           memset(&addr, 0, addr_len);
           memcpy(&addr.sin_addr, hostent->h_addr_list[i - prev_naddr],
                  sizeof(struct in_addr));
-          addr.sin_family = static_cast<sa_family_t>(hostent->h_addrtype);
+          addr.sin_family = static_cast<unsigned char>(hostent->h_addrtype);
           addr.sin_port = hr->port;
           grpc_lb_addresses_set_address(
               *lb_addresses, i, &addr, addr_len,
@@ -277,14 +276,14 @@ static void on_srv_query_done_cb(void* arg, int status, int timeouts,
       ares_channel* channel = grpc_ares_ev_driver_get_channel(r->ev_driver);
       for (struct ares_srv_reply* srv_it = reply; srv_it != nullptr;
            srv_it = srv_it->next) {
-        if (grpc_ipv6_loopback_available()) {
-          grpc_ares_hostbyname_request* hr = create_hostbyname_request(
-              r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
-          ares_gethostbyname(*channel, hr->host, AF_INET6,
-                             on_hostbyname_done_cb, hr);
-        }
-        grpc_ares_hostbyname_request* hr = create_hostbyname_request(
-            r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
+        grpc_ares_hostbyname_request *hr;
+        uint16_t nport = htons(srv_it->port);
+        hr = create_hostbyname_request(r, srv_it->host, nport,
+                                       true /* is_balancer */);
+        ares_gethostbyname(*channel, hr->host, AF_INET6, on_hostbyname_done_cb,
+                           hr);
+        hr = create_hostbyname_request(r, srv_it->host, nport,
+                                       true /* is_balancer */);
         ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb,
                            hr);
         grpc_ares_ev_driver_start(r->ev_driver);
@@ -454,13 +453,11 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
     }
   }
   gpr_ref_init(&r->pending_queries, 1);
-  if (grpc_ipv6_loopback_available()) {
-    hr = create_hostbyname_request(r, host, strhtons(port),
-                                   false /* is_balancer */);
-    ares_gethostbyname(*channel, hr->host, AF_INET6, on_hostbyname_done_cb, hr);
-  }
-  hr = create_hostbyname_request(r, host, strhtons(port),
-                                 false /* is_balancer */);
+  grpc_ares_hostbyname_request *hr;
+  uint16_t nport = strhtons(port);
+  hr = create_hostbyname_request(r, host, nport, false /* is_balancer */);
+  ares_gethostbyname(*channel, hr->host, AF_INET6, on_hostbyname_done_cb, hr);
+  hr = create_hostbyname_request(r, host, nport, false /* is_balancer */);
   ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb, hr);
   if (check_grpclb) {
     /* Query the SRV record */
