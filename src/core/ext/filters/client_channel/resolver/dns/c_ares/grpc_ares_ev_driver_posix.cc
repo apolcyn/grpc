@@ -35,6 +35,18 @@
 #include "src/core/lib/iomgr/iomgr_internal.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 
+typedef struct fd_node fd_node;
+
+typedef struct fd_node_vtable {
+  void (*destroy_inner_endpoint)(fd_node*);
+  void (*shutdown_inner_endpoint)(fd_node*);
+  ares_socket_t (*get_inner_endpoint)(fd_node*);
+  bool (*is_inner_endpoint_still_readable)(fd_node*);
+  void (*attach_inner_endpoint)(fd_node*, ares_socket_t, const char*);
+  void (*schedule_notify_on_read)(fd_node*);
+  void (*schedule_notify_on_write)(fd_node*);
+} fd_node_vtable;
+
 typedef struct fd_node {
   /** the owner of this fd node */
   grpc_ares_ev_driver* ev_driver;
@@ -49,21 +61,118 @@ typedef struct fd_node {
 
   /** mutex guarding the rest of the state */
   gpr_mu mu;
-  /** the grpc_fd owned by this fd node */
-  grpc_fd* fd;
   /** if the readable closure has been registered */
   bool readable_registered;
   /** if the writable closure has been registered */
   bool writable_registered;
   /** if the fd is being shut down */
   bool shutting_down;
+  const fd_node_vtable *vtable;
 } fd_node;
+
+void grpc_ares_fd_node_destroy_inner_endpoint(fd_node* fdn) {
+  fdn->vtable->destroy_inner_endpoint(fdn);
+}
+
+void grpc_ares_fd_node_shutdown_inner_endpoint(fd_node* fdn) {
+  fdn->vtable->shutdown_inner_endpoint(fdn);
+}
+
+ares_socket_t grpc_ares_fd_node_get_inner_endpoint(fd_node *fdn) {
+  return fdn->vtable->get_inner_endpoint(fdn);
+}
+
+bool grpc_ares_fd_node_is_inner_endpoint_still_readable(fd_node *fdn) {
+  return fdn->vtable->is_inner_endpoint_still_readable(fdn);
+}
+
+void grpc_ares_fd_node_attach_inner_endpoint(fd_node *fdn, ares_socket_t as, const char* name) {
+  fdn->vtable->attach_inner_endpoint(fdn, as, name);
+}
+
+void grpc_ares_fd_node_schedule_notify_on_read(fd_node *fdn) {
+  fdn->vtable->schedule_notify_on_read(fdn);
+}
+
+void grpc_ares_fd_node_schedule_notify_on_write(fd_node *fdn) {
+  fdn->vtable->schedule_notify_on_write(fdn);
+}
+
+typedef struct fd_node_posix {
+  fd_node base;
+  grpc_pollset_set *pollset_set;
+  grpc_fd* fd;
+} fd_node_posix;
+
+void grpc_ares_fd_node_destroy_inner_endpoint_posix(fd_node* fdn) {
+  /* c-ares library has closed the fd inside grpc_fd. This fd may be picked up
+     immediately by another thread, and should not be closed by the following
+     grpc_fd_orphan. */
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  grpc_fd_orphan(fdn_posix->fd, nullptr, nullptr, true /* already_closed */,
+                 "c-ares query finished");
+}
+
+void grpc_ares_fd_node_shutdown_inner_endpoint_posix(fd_node* fdn) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  grpc_fd_shutdown(
+      fdn_posix->fd, GRPC_ERROR_CREATE_FROM_STATIC_STRING("c-ares fd shutdown"));
+}
+
+ares_socket_t grpc_ares_fd_node_get_inner_endpoint_posix(fd_node *fdn) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  return grpc_fd_wrapped_fd(fdn_posix->fd);
+}
+
+bool grpc_ares_fd_node_is_inner_endpoint_still_readable_posix(fd_node *fdn) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  const int fd = grpc_fd_wrapped_fd(fdn_posix->fd);
+  size_t bytes_available = 0;
+  return ioctl(fd, FIONREAD, &bytes_available) == 0 && bytes_available > 0;
+}
+
+void grpc_ares_fd_node_attach_inner_endpoint_posix(fd_node *fdn, ares_socket_t as, const char* name) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  fdn_posix->fd = grpc_fd_create(as, name);
+}
+
+void grpc_ares_fd_node_schedule_notify_on_read_posix(fd_node *fdn) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fdn_posix->fd));
+  grpc_fd_notify_on_read(fdn_posix->fd, &fdn->read_closure);
+}
+
+void grpc_ares_fd_node_schedule_notify_on_write_posix(fd_node *fdn) {
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fdn_posix->fd));
+  grpc_fd_notify_on_write(fdn_posix->fd, &fdn->write_closure);
+}
+
+static const fd_node_vtable fd_node_posix_vtable = {
+  grpc_ares_fd_node_destroy_inner_endpoint_posix,
+  grpc_ares_fd_node_shutdown_inner_endpoint_posix,
+  grpc_ares_fd_node_get_inner_endpoint_posix,
+  grpc_ares_fd_node_is_inner_endpoint_still_readable_posix,
+  grpc_ares_fd_node_attach_inner_endpoint_posix,
+  grpc_ares_fd_node_schedule_notify_on_read_posix,
+  grpc_ares_fd_node_schedule_notify_on_write_posix,
+};
+
+void fd_node_posix_init(fd_node_posix *fdn, grpc_fd *fd) {
+  fdn->fd = fd;
+  fdn->base.vtable = &fd_node_posix_vtable;
+}
+
+typedef struct grpc_ares_ev_driver grpc_ares_ev_driver;
+
+typedef struct grpc_ares_ev_driver_vtable {
+  void (*attach_pollset_set)(grpc_ares_ev_driver*, grpc_pollset_set *pollset_set);
+  void (*add_inner_endpoint_to_pollset_set)(grpc_ares_ev_driver*, fd_node *fdn);
+} grpc_ares_ev_driver_vtable;
 
 struct grpc_ares_ev_driver {
   /** the ares_channel owned by this event driver */
   ares_channel channel;
-  /** pollset set for driving the IO events of the channel */
-  grpc_pollset_set* pollset_set;
   /** refcount of the event driver */
   gpr_refcount refs;
 
@@ -75,7 +184,42 @@ struct grpc_ares_ev_driver {
   bool working;
   /** is this event driver being shut down */
   bool shutting_down;
+  const grpc_ares_ev_driver_vtable *vtable;
 };
+
+void grpc_ares_ev_driver_attach_pollset_set(grpc_ares_ev_driver *ev_driver, grpc_pollset_set *pollset_set) {
+  ev_driver->vtable->attach_pollset_set(ev_driver, pollset_set);
+}
+
+void grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set(grpc_ares_ev_driver *ev_driver, fd_node *fdn) {
+  ev_driver->vtable->add_inner_endpoint_to_pollset_set(ev_driver, fdn);
+}
+
+typedef struct grpc_ares_ev_driver_posix {
+  grpc_ares_ev_driver base;
+  /** pollset set for driving the IO events of the channel */
+  grpc_pollset_set* pollset_set;
+} grpc_ares_ev_driver_posix;
+
+void grpc_ares_ev_driver_attach_pollset_set_posix(grpc_ares_ev_driver *ev_driver, grpc_pollset_set *pollset_set) {
+  grpc_ares_ev_driver_posix *ev_driver_posix = reinterpret_cast<grpc_ares_ev_driver_posix*>(ev_driver);
+  ev_driver_posix->pollset_set = pollset_set;
+}
+
+void grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set_posix(grpc_ares_ev_driver *ev_driver, fd_node *fdn) {
+  grpc_ares_ev_driver_posix *ev_driver_posix = reinterpret_cast<grpc_ares_ev_driver_posix*>(ev_driver);
+  fd_node_posix *fdn_posix = reinterpret_cast<fd_node_posix*>(fdn);
+  grpc_pollset_set_add_fd(ev_driver_posix->pollset_set, fdn_posix->fd);
+}
+
+static const grpc_ares_ev_driver_vtable ev_driver_posix_vtable = {
+  grpc_ares_ev_driver_attach_pollset_set_posix,
+  grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set,
+};
+
+void grpc_ares_ev_driver_posix_init(grpc_ares_ev_driver_posix *ev_driver_posix) {
+  ev_driver_posix->base.vtable = &ev_driver_posix_vtable;
+}
 
 static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver);
 
@@ -98,15 +242,11 @@ static void grpc_ares_ev_driver_unref(grpc_ares_ev_driver* ev_driver) {
 }
 
 static void fd_node_destroy(fd_node* fdn) {
-  gpr_log(GPR_DEBUG, "delete fd: %d", grpc_fd_wrapped_fd(fdn->fd));
+// GET THIS BACL  gpr_log(GPR_DEBUG, "delete fd: %d", grpc_fd_wrapped_fd(fdn->fd));
   GPR_ASSERT(!fdn->readable_registered);
   GPR_ASSERT(!fdn->writable_registered);
   gpr_mu_destroy(&fdn->mu);
-  /* c-ares library has closed the fd inside grpc_fd. This fd may be picked up
-     immediately by another thread, and should not be closed by the following
-     grpc_fd_orphan. */
-  grpc_fd_orphan(fdn->fd, nullptr, nullptr, true /* already_closed */,
-                 "c-ares query finished");
+  grpc_ares_fd_node_destroy_inner_endpoint(fdn);
   gpr_free(fdn);
 }
 
@@ -117,8 +257,7 @@ static void fd_node_shutdown(fd_node* fdn) {
     gpr_mu_unlock(&fdn->mu);
     fd_node_destroy(fdn);
   } else {
-    grpc_fd_shutdown(
-        fdn->fd, GRPC_ERROR_CREATE_FROM_STATIC_STRING("c-ares fd shutdown"));
+    grpc_ares_fd_node_shutdown_inner_endpoint(fdn);
     gpr_mu_unlock(&fdn->mu);
   }
 }
@@ -140,7 +279,7 @@ grpc_error* grpc_ares_ev_driver_create(grpc_ares_ev_driver** ev_driver,
   }
   gpr_mu_init(&(*ev_driver)->mu);
   gpr_ref_init(&(*ev_driver)->refs, 1);
-  (*ev_driver)->pollset_set = pollset_set;
+  grpc_ares_ev_driver_attach_pollset_set(*ev_driver, pollset_set);
   (*ev_driver)->fds = nullptr;
   (*ev_driver)->working = false;
   (*ev_driver)->shutting_down = false;
@@ -164,8 +303,7 @@ void grpc_ares_ev_driver_shutdown(grpc_ares_ev_driver* ev_driver) {
   ev_driver->shutting_down = true;
   fd_node* fn = ev_driver->fds;
   while (fn != nullptr) {
-    grpc_fd_shutdown(fn->fd, GRPC_ERROR_CREATE_FROM_STATIC_STRING(
-                                 "grpc_ares_ev_driver_shutdown"));
+    grpc_ares_fd_node_shutdown_inner_endpoint(fn);
     fn = fn->next;
   }
   gpr_mu_unlock(&ev_driver->mu);
@@ -173,12 +311,12 @@ void grpc_ares_ev_driver_shutdown(grpc_ares_ev_driver* ev_driver) {
 
 // Search fd in the fd_node list head. This is an O(n) search, the max possible
 // value of n is ARES_GETSOCK_MAXNUM (16). n is typically 1 - 2 in our tests.
-static fd_node* pop_fd_node(fd_node** head, int fd) {
+static fd_node* pop_fd_node(fd_node** head, ares_socket_t as) {
   fd_node dummy_head;
   dummy_head.next = *head;
   fd_node* node = &dummy_head;
   while (node->next != nullptr) {
-    if (grpc_fd_wrapped_fd(node->next->fd) == fd) {
+    if (grpc_ares_fd_node_get_inner_endpoint(node->next) == as) {
       fd_node* ret = node->next;
       node->next = node->next->next;
       *head = dummy_head.next;
@@ -189,18 +327,10 @@ static fd_node* pop_fd_node(fd_node** head, int fd) {
   return nullptr;
 }
 
-/* Check if \a fd is still readable */
-static bool grpc_ares_is_fd_still_readable(grpc_ares_ev_driver* ev_driver,
-                                           int fd) {
-  size_t bytes_available = 0;
-  return ioctl(fd, FIONREAD, &bytes_available) == 0 && bytes_available > 0;
-}
-
 static void on_readable_cb(void* arg, grpc_error* error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   grpc_ares_ev_driver* ev_driver = fdn->ev_driver;
   gpr_mu_lock(&fdn->mu);
-  const int fd = grpc_fd_wrapped_fd(fdn->fd);
   fdn->readable_registered = false;
   if (fdn->shutting_down && !fdn->writable_registered) {
     gpr_mu_unlock(&fdn->mu);
@@ -210,11 +340,11 @@ static void on_readable_cb(void* arg, grpc_error* error) {
   }
   gpr_mu_unlock(&fdn->mu);
 
-  gpr_log(GPR_DEBUG, "readable on %d", fd);
+// GET THIS THERE  gpr_log(GPR_DEBUG, "readable on %d", fd);
   if (error == GRPC_ERROR_NONE) {
     do {
-      ares_process_fd(ev_driver->channel, fd, ARES_SOCKET_BAD);
-    } while (grpc_ares_is_fd_still_readable(ev_driver, fd));
+      ares_process_fd(ev_driver->channel, grpc_ares_fd_node_get_inner_endpoint(fdn), ARES_SOCKET_BAD);
+    } while (grpc_ares_fd_node_is_inner_endpoint_still_readable(fdn));
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or
     // timed out. The pending lookups made on this ev_driver will be cancelled
@@ -234,7 +364,6 @@ static void on_writable_cb(void* arg, grpc_error* error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   grpc_ares_ev_driver* ev_driver = fdn->ev_driver;
   gpr_mu_lock(&fdn->mu);
-  const int fd = grpc_fd_wrapped_fd(fdn->fd);
   fdn->writable_registered = false;
   if (fdn->shutting_down && !fdn->readable_registered) {
     gpr_mu_unlock(&fdn->mu);
@@ -244,9 +373,9 @@ static void on_writable_cb(void* arg, grpc_error* error) {
   }
   gpr_mu_unlock(&fdn->mu);
 
-  gpr_log(GPR_DEBUG, "writable on %d", fd);
+// GET THIS THERE  gpr_log(GPR_DEBUG, "writable on %d", fd);
   if (error == GRPC_ERROR_NONE) {
-    ares_process_fd(ev_driver->channel, ARES_SOCKET_BAD, fd);
+    ares_process_fd(ev_driver->channel, ARES_SOCKET_BAD, grpc_ares_fd_node_get_inner_endpoint(fdn));
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or
     // timed out. The pending lookups made on this ev_driver will be cancelled
@@ -284,7 +413,7 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
           gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR, i);
           fdn = static_cast<fd_node*>(gpr_malloc(sizeof(fd_node)));
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
-          fdn->fd = grpc_fd_create(socks[i], fd_name);
+          grpc_ares_fd_node_attach_inner_endpoint(fdn, socks[i], fd_name);
           fdn->ev_driver = ev_driver;
           fdn->readable_registered = false;
           fdn->writable_registered = false;
@@ -294,7 +423,7 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
                             grpc_schedule_on_exec_ctx);
           GRPC_CLOSURE_INIT(&fdn->write_closure, on_writable_cb, fdn,
                             grpc_schedule_on_exec_ctx);
-          grpc_pollset_set_add_fd(ev_driver->pollset_set, fdn->fd);
+          grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set(ev_driver, fdn);
           gpr_free(fd_name);
         }
         fdn->next = new_list;
@@ -305,18 +434,15 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
         if (ARES_GETSOCK_READABLE(socks_bitmask, i) &&
             !fdn->readable_registered) {
           grpc_ares_ev_driver_ref(ev_driver);
-          gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fdn->fd));
-          grpc_fd_notify_on_read(fdn->fd, &fdn->read_closure);
+          grpc_ares_fd_node_schedule_notify_on_read(fdn);
           fdn->readable_registered = true;
         }
         // Register write_closure if the socket is writable and write_closure
         // has not been registered with this socket.
         if (ARES_GETSOCK_WRITABLE(socks_bitmask, i) &&
             !fdn->writable_registered) {
-          gpr_log(GPR_DEBUG, "notify write on: %d",
-                  grpc_fd_wrapped_fd(fdn->fd));
           grpc_ares_ev_driver_ref(ev_driver);
-          grpc_fd_notify_on_write(fdn->fd, &fdn->write_closure);
+          grpc_ares_fd_node_schedule_notify_on_write(fdn);
           fdn->writable_registered = true;
         }
         gpr_mu_unlock(&fdn->mu);
