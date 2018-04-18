@@ -733,5 +733,13 @@ int main(int argc, char** argv) {
   grpc_init();
   auto result = RUN_ALL_TESTS();
   grpc_shutdown();
+  // Test nested inits and shutdowns.
+  grpc_init();
+  grpc_init();
+  grpc_shutdown();
+  grpc_shutdown();
+  // Test sequential inits and shutdowns.
+  grpc_init();
+  grpc_shutdown();
   return result;
 }

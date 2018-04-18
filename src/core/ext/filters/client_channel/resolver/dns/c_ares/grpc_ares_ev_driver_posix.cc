@@ -158,8 +158,7 @@ static const fd_node_vtable fd_node_posix_vtable = {
   grpc_ares_fd_node_schedule_notify_on_write_posix,
 };
 
-void fd_node_posix_init(fd_node_posix *fdn, grpc_fd *fd) {
-  fdn->fd = fd;
+void fd_node_posix_init(fd_node_posix *fdn) {
   fdn->base.vtable = &fd_node_posix_vtable;
 }
 
@@ -188,7 +187,9 @@ struct grpc_ares_ev_driver {
 };
 
 void grpc_ares_ev_driver_attach_pollset_set(grpc_ares_ev_driver *ev_driver, grpc_pollset_set *pollset_set) {
+  gpr_log(GPR_DEBUG, "CALL VTABLE NOW");
   ev_driver->vtable->attach_pollset_set(ev_driver, pollset_set);
+  gpr_log(GPR_DEBUG, "DONE CALLING VTABLE NOW");
 }
 
 void grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set(grpc_ares_ev_driver *ev_driver, fd_node *fdn) {
@@ -202,8 +203,11 @@ typedef struct grpc_ares_ev_driver_posix {
 } grpc_ares_ev_driver_posix;
 
 void grpc_ares_ev_driver_attach_pollset_set_posix(grpc_ares_ev_driver *ev_driver, grpc_pollset_set *pollset_set) {
+  gpr_log(GPR_DEBUG, "MADE IT HERE");
   grpc_ares_ev_driver_posix *ev_driver_posix = reinterpret_cast<grpc_ares_ev_driver_posix*>(ev_driver);
+  gpr_log(GPR_DEBUG, "MADE IT HERE 2");
   ev_driver_posix->pollset_set = pollset_set;
+  gpr_log(GPR_DEBUG, "MADE IT HERE 3");
 }
 
 void grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set_posix(grpc_ares_ev_driver *ev_driver, fd_node *fdn) {
@@ -214,7 +218,7 @@ void grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set_posix(grpc_ares_ev_dr
 
 static const grpc_ares_ev_driver_vtable ev_driver_posix_vtable = {
   grpc_ares_ev_driver_attach_pollset_set_posix,
-  grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set,
+  grpc_ares_ev_driver_add_inner_endpoint_to_pollset_set_posix,
 };
 
 void grpc_ares_ev_driver_posix_init(grpc_ares_ev_driver_posix *ev_driver_posix) {
@@ -265,7 +269,8 @@ static void fd_node_shutdown(fd_node* fdn) {
 grpc_error* grpc_ares_ev_driver_create(grpc_ares_ev_driver** ev_driver,
                                        grpc_pollset_set* pollset_set) {
   *ev_driver = static_cast<grpc_ares_ev_driver*>(
-      gpr_malloc(sizeof(grpc_ares_ev_driver)));
+      gpr_zalloc(sizeof(grpc_ares_ev_driver_posix)));
+  grpc_ares_ev_driver_posix_init(reinterpret_cast<grpc_ares_ev_driver_posix*>(*ev_driver));
   int status = ares_init(&(*ev_driver)->channel);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create");
   if (status != ARES_SUCCESS) {
@@ -411,7 +416,8 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
         if (fdn == nullptr) {
           char* fd_name;
           gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR, i);
-          fdn = static_cast<fd_node*>(gpr_malloc(sizeof(fd_node)));
+          fdn = static_cast<fd_node*>(gpr_zalloc(sizeof(fd_node_posix)));
+          fd_node_posix_init(reinterpret_cast<fd_node_posix*>(fdn));
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
           grpc_ares_fd_node_attach_inner_endpoint(fdn, socks[i], fd_name);
           fdn->ev_driver = ev_driver;

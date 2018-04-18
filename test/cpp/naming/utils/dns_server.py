@@ -127,7 +127,7 @@ def main():
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
-  signal.alarm(2 * 60)
+  # signal.alarm(2 * 60)
   start_local_dns_server(args)
 
 if __name__ == '__main__':
