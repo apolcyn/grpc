@@ -722,7 +722,7 @@ TEST(AddressSortingTest, TestStableSortV4CompatAndSiteLocalAddresses) {
 }
 
 int main(int argc, char** argv) {
-  const char* resolver = gpr_getenv("GRPC_DNS_RESOLVER");
+  char* resolver = gpr_getenv("GRPC_DNS_RESOLVER");
   if (resolver == nullptr || strlen(resolver) == 0) {
     gpr_setenv("GRPC_DNS_RESOLVER", "ares");
   } else if (strcmp("ares", resolver)) {
