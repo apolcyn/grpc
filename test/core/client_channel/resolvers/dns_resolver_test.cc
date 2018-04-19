@@ -23,9 +23,9 @@
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
 #include "src/core/lib/gpr/env.h"
+#include "src/core/lib/gpr/string.h"
 #include "src/core/lib/iomgr/combiner.h"
 #include "test/core/util/test_config.h"
-#include "src/core/lib/gpr/string.h"
 
 static grpc_combiner* g_combiner;
 

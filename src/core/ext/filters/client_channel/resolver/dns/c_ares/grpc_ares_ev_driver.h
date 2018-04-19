@@ -22,8 +22,9 @@
 #include <grpc/support/port_platform.h>
 
 #include <ares.h>
-#include "src/core/lib/iomgr/pollset_set.h"
 #include "src/core/lib/gprpp/abstract.h"
+#include "src/core/lib/gprpp/inlined_vector.h"
+#include "src/core/lib/iomgr/pollset_set.h"
 
 namespace grpc_core {
 
@@ -37,7 +38,8 @@ class FdNode {
   virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
   virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
   virtual bool IsInnerEndpointStillReadable() GRPC_ABSTRACT;
-  virtual void AttachInnerEndpoint(const ares_socket_t&, const char*) GRPC_ABSTRACT;
+  virtual void AttachInnerEndpoint(const ares_socket_t&,
+                                   const char*) GRPC_ABSTRACT;
   virtual void ScheduleNotifyOnRead() GRPC_ABSTRACT;
   virtual void ScheduleNotifyOnWrite() GRPC_ABSTRACT;
   void MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx);
@@ -47,8 +49,6 @@ class FdNode {
   static void OnWriteable(void* arg, grpc_error* error);
   void OnReadableInner(grpc_error* error);
   void OnWriteableInner(grpc_error* error);
-  void SetNext(FdNode* other);
-  FdNode* GetNext();
 
  protected:
   /** a closure wrapping on_readable_cb, which should be invoked when the
@@ -61,8 +61,6 @@ class FdNode {
  private:
   /** the owner of this fd node */
   AresEvDriver* ev_driver_;
-  /** next fd node in the list */
-  FdNode* next_;
   /** mutex guarding the rest of the state */
   gpr_mu mu_;
   /** if the readable closure has been registered */
@@ -86,14 +84,15 @@ class AresEvDriver {
   ares_channel GetChannel();
   ares_channel* GetChannelPointer();
   void NotifyOnEvent();
-   /* Creates a new grpc_ares_ev_driver. Returns GRPC_ERROR_NONE if \a ev_driver is
-      created successfully. */
-  static grpc_error* Create(AresEvDriver** ev_driver, grpc_pollset_set* pollset_set);
+  /* Creates a new grpc_ares_ev_driver. Returns GRPC_ERROR_NONE if \a ev_driver
+     is created successfully. */
+  static grpc_error* Create(AresEvDriver** ev_driver,
+                            grpc_pollset_set* pollset_set);
 
  private:
   void NotifyOnEventLocked();
-  FdNode* PopFdNode(ares_socket_t as);
-  FdNode* fds_;
+  int LookupFdNodeIndex(ares_socket_t as);
+  InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>* fds_;
   ares_channel channel_;
   gpr_mu mu_;
   gpr_refcount refs_;

@@ -480,7 +480,8 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
     gpr_free(config_name);
   }
   /* TODO(zyc): Handle CNAME records here. */
-  gpr_log(GPR_DEBUG, "r->ev_driver->Start(). ev_driver:%" PRIdPTR, (uintptr_t)r->ev_driver);
+  gpr_log(GPR_DEBUG, "r->ev_driver->Start(). ev_driver:%" PRIdPTR,
+          (uintptr_t)r->ev_driver);
   r->ev_driver->Start();
   grpc_ares_request_unref(r);
   gpr_free(host);

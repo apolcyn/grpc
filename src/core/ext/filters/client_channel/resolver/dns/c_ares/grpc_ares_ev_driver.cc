@@ -22,8 +22,8 @@
 #if GRPC_ARES == 1 && defined(GRPC_POSIX_SOCKET)
 
 #include <ares.h>
-#include <sys/ioctl.h>
 #include <memory.h>
+#include <sys/ioctl.h>
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h"
 
@@ -42,9 +42,9 @@ namespace grpc_core {
 
 // Dummy construct
 FdNode::FdNode() {
-  gpr_log(GPR_DEBUG, "entering FdNode PLAIN constructor. this:%" PRIdPTR, (uintptr_t)this);
+  gpr_log(GPR_DEBUG, "entering FdNode PLAIN constructor. this:%" PRIdPTR,
+          (uintptr_t)this);
   ev_driver_ = (AresEvDriver*)0xdeadbeef;
-  next_ = nullptr;
   memset(&mu_, 0, sizeof(mu_));
   readable_registered_ = false;
   writable_registered_ = false;
@@ -53,9 +53,10 @@ FdNode::FdNode() {
   memset(&write_closure_, 0, sizeof(read_closure_));
 }
 FdNode::FdNode(AresEvDriver* ev_driver) {
-  gpr_log(GPR_DEBUG, "entering FdNode constructor. ev_driver:%" PRIdPTR ". this:%" PRIdPTR, (uintptr_t)ev_driver, (uintptr_t)this);
+  gpr_log(GPR_DEBUG,
+          "entering FdNode constructor. ev_driver:%" PRIdPTR ". this:%" PRIdPTR,
+          (uintptr_t)ev_driver, (uintptr_t)this);
   ev_driver_ = ev_driver;
-  next_ = nullptr;
   gpr_mu_init(&mu_);
   readable_registered_ = false;
   writable_registered_ = false;
@@ -71,7 +72,9 @@ void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
   // Register read_closure if the socket is readable and read_closure has
   // not been registered with this socket.
   if (ARES_GETSOCK_READABLE(socks_bitmask, idx) && !readable_registered_) {
-    gpr_log(GPR_DEBUG, "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR, (uintptr_t)this, (uintptr_t)ev_driver_);
+    gpr_log(GPR_DEBUG,
+            "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
+            (uintptr_t)this, (uintptr_t)ev_driver_);
     ev_driver_->Ref();
     ScheduleNotifyOnRead();
     readable_registered_ = true;
@@ -79,7 +82,9 @@ void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
   // Register write_closure if the socket is writable and write_closure
   // has not been registered with this socket.
   if (ARES_GETSOCK_WRITABLE(socks_bitmask, idx) && !writable_registered_) {
-    gpr_log(GPR_DEBUG, "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR, (uintptr_t)this, (uintptr_t)ev_driver_);
+    gpr_log(GPR_DEBUG,
+            "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
+            (uintptr_t)this, (uintptr_t)ev_driver_);
     ev_driver_->Ref();
     ScheduleNotifyOnWrite();
     writable_registered_ = true;
@@ -176,10 +181,6 @@ void FdNode::OnWriteableInner(grpc_error* error) {
   ev_driver_->Unref();
 }
 
-void FdNode::SetNext(FdNode* other) { next_ = other; }
-
-FdNode* FdNode::GetNext() { return next_; }
-
 AresEvDriver::AresEvDriver() {
   gpr_log(GPR_DEBUG, "entering AresEvDriver constructor");
   gpr_mu_init(&mu_);
@@ -229,10 +230,8 @@ void AresEvDriver::Destroy() {
 void AresEvDriver::Shutdown() {
   gpr_mu_lock(&mu_);
   shutting_down_ = true;
-  FdNode* fn = fds_;
-  while (fn != nullptr) {
-    fn->ShutdownInnerEndpoint();
-    fn = fn->GetNext();
+  for (size_t i = 0; i < fds_->size(); i++) {
+    (*fds_)[i]->ShutdownInnerEndpoint();
   }
   gpr_mu_unlock(&mu_);
 }
@@ -247,41 +246,46 @@ void AresEvDriver::NotifyOnEvent() {
 }
 
 void AresEvDriver::NotifyOnEventLocked() {
-  FdNode* new_list = nullptr;
+  InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>* new_list =
+      grpc_core::New<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>();
   if (!shutting_down_) {
     ares_socket_t socks[ARES_GETSOCK_MAXNUM];
     int socks_bitmask = ares_getsock(channel_, socks, ARES_GETSOCK_MAXNUM);
     for (size_t i = 0; i < ARES_GETSOCK_MAXNUM; i++) {
       if (ARES_GETSOCK_READABLE(socks_bitmask, i) ||
           ARES_GETSOCK_WRITABLE(socks_bitmask, i)) {
-        FdNode* fdn = PopFdNode(socks[i]);
+        int existing_index = LookupFdNodeIndex(socks[i]);
         // Create a new fd_node if sock[i] is not in the fd_node list.
-        if (fdn == nullptr) {
+        if (existing_index == -1) {
           char* fd_name;
           gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR, i);
-          fdn = CreateFdNode();
+          auto fdn = CreateFdNode();
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
           fdn->AttachInnerEndpoint(socks[i], fd_name);
           AddInnerEndpointToPollsetSet(fdn);
           gpr_free(fd_name);
+          new_list->push_back(fdn);
+        } else {
+          new_list->push_back((*fds_)[existing_index]);
+          (*fds_)[existing_index] = nullptr;
         }
-        fdn->SetNext(new_list);
-        new_list = fdn;
-        fdn->MaybeRegisterForReadsAndWrites(socks_bitmask, i);
+        (*new_list)[new_list->size() - 1]->MaybeRegisterForReadsAndWrites(
+            socks_bitmask, i);
       }
     }
   }
   // Any remaining fds in ev_driver->fds were not returned by ares_getsock()
   // and are therefore no longer in use, so they can be shut down and removed
   // from the list.
-  while (fds_ != nullptr) {
-    FdNode* cur = fds_;
-    fds_ = fds_->GetNext();
-    cur->Shutdown();
+  for (size_t i = 0; i < fds_->size(); i++) {
+    if ((*fds_)[i] != nullptr) {
+      (*fds_)[i]->Shutdown();
+    }
   }
+  Delete(fds_);
   fds_ = new_list;
   // If the ev driver has no working fd, all the tasks are done.
-  if (new_list == nullptr) {
+  if (new_list->size() == 0) {
     working_ = false;
     gpr_log(GPR_DEBUG, "ev driver stop working");
   }
@@ -290,20 +294,13 @@ void AresEvDriver::NotifyOnEventLocked() {
 // Search fd in the fd_node list head. This is an O(n) search, the max
 // possible value of n is ARES_GETSOCK_MAXNUM (16). n is typically 1 - 2 in
 // our tests.
-FdNode* AresEvDriver::PopFdNode(ares_socket_t as) {
-  FdNode dummy_head;
-  dummy_head.SetNext(fds_);
-  FdNode* node = &dummy_head;
-  while (node->GetNext() != nullptr) {
-    if (node->GetNext()->GetInnerEndpoint() == as) {
-      FdNode* ret = node->GetNext();
-      node->SetNext(node->GetNext()->GetNext());
-      fds_ = dummy_head.GetNext();
-      return ret;
+int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
+  for (size_t i = 0; i < fds_->size(); i++) {
+    if ((*fds_)[i]->GetInnerEndpoint() == as) {
+      return i;
     }
-    node = node->GetNext();
   }
-  return nullptr;
+  return -1;
 }
 
 }  // namespace grpc_core
