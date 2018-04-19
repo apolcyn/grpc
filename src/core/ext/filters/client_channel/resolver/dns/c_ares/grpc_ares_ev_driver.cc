@@ -103,16 +103,20 @@ void FdNode::Shutdown(FdNode* fdn) {
 
 void FdNode::OnReadable(void* arg, grpc_error* error) {
   FdNode* fdn = reinterpret_cast<FdNode*>(arg);
+  AresEvDriver* ev_driver = fdn->ev_driver_;
   if (!fdn->OnReadableInner(error)) {
     FdNode::Destroy(fdn);
   }
+  ev_driver->Unref();
 }
 
 void FdNode::OnWriteable(void* arg, grpc_error* error) {
   FdNode* fdn = reinterpret_cast<FdNode*>(arg);
+  AresEvDriver* ev_driver = fdn->ev_driver_;
   if (!fdn->OnWriteableInner(error)) {
     FdNode::Destroy(fdn);
   }
+  ev_driver->Unref();
 }
 
 bool FdNode::OnReadableInner(grpc_error* error) {
@@ -120,7 +124,6 @@ bool FdNode::OnReadableInner(grpc_error* error) {
   readable_registered_ = false;
   if (shutting_down_ && !writable_registered_) {
     gpr_mu_unlock(&mu_);
-    ev_driver_->Unref();
     return false;
   }
   gpr_mu_unlock(&mu_);
@@ -141,7 +144,6 @@ bool FdNode::OnReadableInner(grpc_error* error) {
     ares_cancel(ev_driver_->GetChannel());
   }
   ev_driver_->NotifyOnEvent();
-  ev_driver_->Unref();
   return true;
 }
 
@@ -150,7 +152,6 @@ bool FdNode::OnWriteableInner(grpc_error* error) {
   writable_registered_ = false;
   if (shutting_down_ && !readable_registered_) {
     gpr_mu_unlock(&mu_);
-    ev_driver_->Unref();
     return false;
   }
   gpr_mu_unlock(&mu_);
@@ -169,7 +170,6 @@ bool FdNode::OnWriteableInner(grpc_error* error) {
     ares_cancel(ev_driver_->GetChannel());
   }
   ev_driver_->NotifyOnEvent();
-  ev_driver_->Unref();
   return true;
 }
 
@@ -177,7 +177,8 @@ AresEvDriver::AresEvDriver() {
   gpr_log(GPR_DEBUG, "entering AresEvDriver constructor");
   gpr_mu_init(&mu_);
   gpr_ref_init(&refs_, 1);
-  fds_ = nullptr;
+  fds_ = UniquePtr<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>(
+      grpc_core::New<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>());
   working_ = false;
   shutting_down_ = false;
 }
@@ -200,10 +201,10 @@ void AresEvDriver::Unref() {
   gpr_log(GPR_DEBUG, "Unref ev_driver %" PRIuPTR, (uintptr_t)this);
   if (gpr_unref(&refs_)) {
     gpr_log(GPR_DEBUG, "destroy ev_driver %" PRIuPTR, (uintptr_t)this);
-    GPR_ASSERT(fds_ == nullptr);
+    GPR_ASSERT(fds_->size() == 0);
     gpr_mu_destroy(&mu_);
     ares_destroy(channel_);
-    // TODO: delete fix
+    Delete(this);
   }
 }
 
@@ -272,12 +273,12 @@ void AresEvDriver::NotifyOnEventLocked() {
       FdNode::Shutdown((*fds_)[i]);
     }
   }
-  fds_ = std::move(new_list);
   // If the ev driver has no working fd, all the tasks are done.
-  if (new_list->size() == 0) {
+  if (fds_->size() == 0) {
     working_ = false;
     gpr_log(GPR_DEBUG, "ev driver stop working");
   }
+  fds_ = std::move(new_list);
 }
 
 // Search fd in the fd_node list head. This is an O(n) search, the max
@@ -305,7 +306,8 @@ grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                  ares_strerror(status));
     grpc_error* err = GRPC_ERROR_CREATE_FROM_COPIED_STRING(err_msg);
     gpr_free(err_msg);
-    // TODO: delete *ev_driver;
+    Delete(*ev_driver);
+    *ev_driver = nullptr;
     return err;
   }
   return GRPC_ERROR_NONE;

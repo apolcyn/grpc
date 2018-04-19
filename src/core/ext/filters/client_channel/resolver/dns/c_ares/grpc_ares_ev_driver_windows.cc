@@ -42,7 +42,8 @@ class AresEvDriverWindows;
 
 class FdNodeWindows final : public FdNode {
  public:
-  FdNodeWindows(AresEvDriver* ev_driver, grpc_winsocket* winsocket) : FdNode(ev_driver) {
+  FdNodeWindows(AresEvDriver* ev_driver, grpc_winsocket* winsocket)
+      : FdNode(ev_driver) {
     winsocket_ = winsocket;
   }
 
@@ -55,12 +56,15 @@ class FdNodeWindows final : public FdNode {
     grpc_winsocket_shutdown(fn->grpc_winsocket);
   }
 
-  ares_socket_t GetInnerEndpoint() override { return grpc_winsocket_wrapped_socket(winsocket_); }
+  ares_socket_t GetInnerEndpoint() override {
+    return grpc_winsocket_wrapped_socket(winsocket_);
+  }
 
   bool IsInnerEndpointStillReadable() override {
     SOCKET winsocket = grpc_winsocket_wrapped_socket(winsocket_);
     size_t bytes_available = 0;
-    return WSAIoctl(winsocket, FIONREAD, &bytes_available) == 0 && bytes_available > 0;
+    return WSAIoctl(winsocket, FIONREAD, &bytes_available) == 0 &&
+           bytes_available > 0;
   }
 
   void ScheduleNotifyOnRead() override {
@@ -76,8 +80,7 @@ class FdNodeWindows final : public FdNode {
 
 class AresEvDriverWindows final : public AresEvDriver {
  public:
-  AresEvDriverWindows() : AresEvDriver() {
-  }
+  AresEvDriverWindows() : AresEvDriver() {}
 
   ~AresEvDriverWindows() {
     gpr_log(GPR_DEBUG, "AresEvDriverWindows destructor called");
