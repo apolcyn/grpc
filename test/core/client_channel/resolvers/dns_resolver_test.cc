@@ -25,6 +25,7 @@
 #include "src/core/lib/gpr/env.h"
 #include "src/core/lib/iomgr/combiner.h"
 #include "test/core/util/test_config.h"
+#include "src/core/lib/gpr/string.h"
 
 static grpc_combiner* g_combiner;
 
@@ -73,13 +74,13 @@ int main(int argc, char** argv) {
   test_succeeds(dns, "dns:10.2.1.1");
   test_succeeds(dns, "dns:10.2.1.1:1234");
   test_succeeds(dns, "ipv4:www.google.com");
-  if (grpc_resolve_address == grpc_resolve_address_ares) {
+  char* resolver_env = gpr_getenv("GRPC_DNS_RESOLVER");
+  if (resolver_env != nullptr && gpr_stricmp(resolver_env, "ares") == 0) {
     test_succeeds(dns, "ipv4://8.8.8.8/8.8.8.8:8888");
   } else {
-    gpr_log(GPR_DEBUG, "dns resolver:%s", gpr_getenv("GRPC_DNS_RESOLVER"));
-    gpr_log(GPR_DEBUG, "grpc_resolver_address:%" PRIdPTR ".grpc_resolve_address_ares:%" PRIdPTR, (uintptr_t)grpc_resolve_address, (uintptr_t)grpc_resolve_address_ares);
     test_fails(dns, "ipv4://8.8.8.8/8.8.8.8:8888");
   }
+  gpr_free(resolver_env);
 
   {
     grpc_core::ExecCtx exec_ctx;
