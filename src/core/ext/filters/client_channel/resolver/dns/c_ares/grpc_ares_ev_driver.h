@@ -32,23 +32,12 @@ class AresEvDriver;
 
 class FdNode {
  public:
-  explicit FdNode(AresEvDriver*);
-  explicit FdNode();
-  virtual void DestroyInnerEndpoint() GRPC_ABSTRACT;
-  virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
-  virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
-  virtual bool IsInnerEndpointStillReadable() GRPC_ABSTRACT;
-  virtual void AttachInnerEndpoint(const ares_socket_t&,
-                                   const char*) GRPC_ABSTRACT;
-  virtual void ScheduleNotifyOnRead() GRPC_ABSTRACT;
-  virtual void ScheduleNotifyOnWrite() GRPC_ABSTRACT;
+  explicit FdNode(AresEvDriver* ev_driver);
   void MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx);
-  void Destroy();
-  void Shutdown();
-  static void OnReadable(void* arg, grpc_error* error);
-  static void OnWriteable(void* arg, grpc_error* error);
-  void OnReadableInner(grpc_error* error);
-  void OnWriteableInner(grpc_error* error);
+  virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
+  virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
+  static void Shutdown(FdNode*);
+  static void Destroy(FdNode*);
 
  protected:
   /** a closure wrapping on_readable_cb, which should be invoked when the
@@ -59,6 +48,14 @@ class FdNode {
   grpc_closure write_closure_;
 
  private:
+  virtual void ScheduleNotifyOnRead() GRPC_ABSTRACT;
+  virtual void ScheduleNotifyOnWrite() GRPC_ABSTRACT;
+  bool OnReadableInner(grpc_error* error);
+  bool OnWriteableInner(grpc_error* error);
+  virtual void DestroyInnerEndpoint() GRPC_ABSTRACT;
+  virtual bool IsInnerEndpointStillReadable() GRPC_ABSTRACT;
+  static void OnReadable(void* arg, grpc_error* error);
+  static void OnWriteable(void* arg, grpc_error* error);
   /** the owner of this fd node */
   AresEvDriver* ev_driver_;
   /** mutex guarding the rest of the state */
@@ -74,8 +71,6 @@ class FdNode {
 class AresEvDriver {
  public:
   explicit AresEvDriver();
-  virtual void AddInnerEndpointToPollsetSet(FdNode* fdn) GRPC_ABSTRACT;
-  virtual FdNode* CreateFdNode() GRPC_ABSTRACT;
   void Start();
   void Ref();
   void Unref();
@@ -84,15 +79,17 @@ class AresEvDriver {
   ares_channel GetChannel();
   ares_channel* GetChannelPointer();
   void NotifyOnEvent();
-  /* Creates a new grpc_ares_ev_driver. Returns GRPC_ERROR_NONE if \a ev_driver
-     is created successfully. */
-  static grpc_error* Create(AresEvDriver** ev_driver,
-                            grpc_pollset_set* pollset_set);
+  /* CreateAndInitalize returns a new grpc_ares_ev_driver. Returns
+     GRPC_ERROR_NONE if \a ev_driver is created successfully. */
+  static grpc_error* CreateAndInitialize(AresEvDriver** ev_driver,
+                                         grpc_pollset_set* pollset_set);
 
  private:
+  static AresEvDriver* Create(grpc_pollset_set* pollset_set);
+  virtual FdNode* CreateFdNode(ares_socket_t, const char*) GRPC_ABSTRACT;
   void NotifyOnEventLocked();
   int LookupFdNodeIndex(ares_socket_t as);
-  InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>* fds_;
+  UniquePtr<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>> fds_;
   ares_channel channel_;
   gpr_mu mu_;
   gpr_refcount refs_;

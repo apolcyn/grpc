@@ -402,7 +402,8 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
   }
 
   grpc_core::AresEvDriver* ev_driver;
-  error = grpc_core::AresEvDriver::Create(&ev_driver, interested_parties);
+  error = grpc_core::AresEvDriver::CreateAndInitialize(&ev_driver,
+                                                       interested_parties);
   if (error != GRPC_ERROR_NONE) goto error_cleanup;
 
   r = static_cast<grpc_ares_request*>(gpr_zalloc(sizeof(grpc_ares_request)));

@@ -40,18 +40,6 @@
 
 namespace grpc_core {
 
-// Dummy construct
-FdNode::FdNode() {
-  gpr_log(GPR_DEBUG, "entering FdNode PLAIN constructor. this:%" PRIdPTR,
-          (uintptr_t)this);
-  ev_driver_ = (AresEvDriver*)0xdeadbeef;
-  memset(&mu_, 0, sizeof(mu_));
-  readable_registered_ = false;
-  writable_registered_ = false;
-  shutting_down_ = false;
-  memset(&read_closure_, 0, sizeof(read_closure_));
-  memset(&write_closure_, 0, sizeof(read_closure_));
-}
 FdNode::FdNode(AresEvDriver* ev_driver) {
   gpr_log(GPR_DEBUG,
           "entering FdNode constructor. ev_driver:%" PRIdPTR ". this:%" PRIdPTR,
@@ -92,45 +80,48 @@ void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
   gpr_mu_unlock(&mu_);
 }
 
-void FdNode::Destroy() {
-  // gpr_log(GPR_DEBUG, "delete fd: %d", grpc_fd_wrapped_fd(fdn->fd));
-  GPR_ASSERT(!readable_registered_);
-  GPR_ASSERT(!writable_registered_);
-  gpr_mu_destroy(&mu_);
-  DestroyInnerEndpoint();
-  // TODO: delete fix
+void FdNode::Destroy(FdNode* fdn) {
+  //  gpr_log(GPR_DEBUG, "delete fd: %d", grpc_fd_wrapped_fd(fdn->fd));
+  GPR_ASSERT(!fdn->readable_registered_);
+  GPR_ASSERT(!fdn->writable_registered_);
+  gpr_mu_destroy(&fdn->mu_);
+  fdn->DestroyInnerEndpoint();
+  Delete(fdn);
 }
 
-void FdNode::Shutdown() {
-  gpr_mu_lock(&mu_);
-  shutting_down_ = true;
-  if (!readable_registered_ && !writable_registered_) {
-    gpr_mu_unlock(&mu_);
-    Destroy();
+void FdNode::Shutdown(FdNode* fdn) {
+  gpr_mu_lock(&fdn->mu_);
+  fdn->shutting_down_ = true;
+  if (!fdn->readable_registered_ && !fdn->writable_registered_) {
+    gpr_mu_unlock(&fdn->mu_);
+    FdNode::Destroy(fdn);
   } else {
-    ShutdownInnerEndpoint();
-    gpr_mu_unlock(&mu_);
+    fdn->ShutdownInnerEndpoint();
+    gpr_mu_unlock(&fdn->mu_);
   }
 }
 
 void FdNode::OnReadable(void* arg, grpc_error* error) {
   FdNode* fdn = reinterpret_cast<FdNode*>(arg);
-  fdn->OnReadableInner(error);
+  if (!fdn->OnReadableInner(error)) {
+    FdNode::Destroy(fdn);
+  }
 }
 
 void FdNode::OnWriteable(void* arg, grpc_error* error) {
   FdNode* fdn = reinterpret_cast<FdNode*>(arg);
-  fdn->OnWriteableInner(error);
+  if (!fdn->OnWriteableInner(error)) {
+    FdNode::Destroy(fdn);
+  }
 }
 
-void FdNode::OnReadableInner(grpc_error* error) {
+bool FdNode::OnReadableInner(grpc_error* error) {
   gpr_mu_lock(&mu_);
   readable_registered_ = false;
   if (shutting_down_ && !writable_registered_) {
     gpr_mu_unlock(&mu_);
     ev_driver_->Unref();
-    Destroy();
-    return;
+    return false;
   }
   gpr_mu_unlock(&mu_);
 
@@ -151,16 +142,16 @@ void FdNode::OnReadableInner(grpc_error* error) {
   }
   ev_driver_->NotifyOnEvent();
   ev_driver_->Unref();
+  return true;
 }
 
-void FdNode::OnWriteableInner(grpc_error* error) {
+bool FdNode::OnWriteableInner(grpc_error* error) {
   gpr_mu_lock(&mu_);
   writable_registered_ = false;
   if (shutting_down_ && !readable_registered_) {
     gpr_mu_unlock(&mu_);
     ev_driver_->Unref();
-    Destroy();
-    return;
+    return false;
   }
   gpr_mu_unlock(&mu_);
 
@@ -179,6 +170,7 @@ void FdNode::OnWriteableInner(grpc_error* error) {
   }
   ev_driver_->NotifyOnEvent();
   ev_driver_->Unref();
+  return true;
 }
 
 AresEvDriver::AresEvDriver() {
@@ -246,8 +238,8 @@ void AresEvDriver::NotifyOnEvent() {
 }
 
 void AresEvDriver::NotifyOnEventLocked() {
-  InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>* new_list =
-      grpc_core::New<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>();
+  UniquePtr<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>> new_list(
+      grpc_core::New<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>());
   if (!shutting_down_) {
     ares_socket_t socks[ARES_GETSOCK_MAXNUM];
     int socks_bitmask = ares_getsock(channel_, socks, ARES_GETSOCK_MAXNUM);
@@ -257,12 +249,10 @@ void AresEvDriver::NotifyOnEventLocked() {
         int existing_index = LookupFdNodeIndex(socks[i]);
         // Create a new fd_node if sock[i] is not in the fd_node list.
         if (existing_index == -1) {
+          gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
           char* fd_name;
           gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR, i);
-          auto fdn = CreateFdNode();
-          gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
-          fdn->AttachInnerEndpoint(socks[i], fd_name);
-          AddInnerEndpointToPollsetSet(fdn);
+          auto fdn = CreateFdNode(socks[i], fd_name);
           gpr_free(fd_name);
           new_list->push_back(fdn);
         } else {
@@ -279,11 +269,10 @@ void AresEvDriver::NotifyOnEventLocked() {
   // from the list.
   for (size_t i = 0; i < fds_->size(); i++) {
     if ((*fds_)[i] != nullptr) {
-      (*fds_)[i]->Shutdown();
+      FdNode::Shutdown((*fds_)[i]);
     }
   }
-  Delete(fds_);
-  fds_ = new_list;
+  fds_ = std::move(new_list);
   // If the ev driver has no working fd, all the tasks are done.
   if (new_list->size() == 0) {
     working_ = false;
@@ -301,6 +290,25 @@ int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
     }
   }
   return -1;
+}
+
+grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
+                                              grpc_pollset_set* pollset_set) {
+  *ev_driver = AresEvDriver::Create(pollset_set);
+  gpr_ref_init(&(*ev_driver)->refs_, 1);
+  int status = ares_init(&(*ev_driver)->channel_);
+  gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
+          (uintptr_t)*ev_driver);
+  if (status != ARES_SUCCESS) {
+    char* err_msg;
+    gpr_asprintf(&err_msg, "Failed to init ares channel. C-ares error: %s",
+                 ares_strerror(status));
+    grpc_error* err = GRPC_ERROR_CREATE_FROM_COPIED_STRING(err_msg);
+    gpr_free(err_msg);
+    // TODO: delete *ev_driver;
+    return err;
+  }
+  return GRPC_ERROR_NONE;
 }
 
 }  // namespace grpc_core

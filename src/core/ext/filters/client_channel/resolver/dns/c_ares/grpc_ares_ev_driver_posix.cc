@@ -42,11 +42,11 @@ class AresEvDriverPosix;
 
 class FdNodePosix final : public FdNode {
  public:
-  FdNodePosix(AresEvDriver* ev_driver) : FdNode(ev_driver) {
-    pollset_set_ = nullptr;
-    fd_ = nullptr;
+  FdNodePosix(AresEvDriver* ev_driver, grpc_fd* fd) : FdNode(ev_driver) {
+    fd_ = fd;
   }
 
+ private:
   void DestroyInnerEndpoint() override {
     /* c-ares library has closed the fd inside grpc_fd. This fd may be picked up
        immediately by another thread, and should not be closed by the following
@@ -68,9 +68,6 @@ class FdNodePosix final : public FdNode {
     return ioctl(fd, FIONREAD, &bytes_available) == 0 && bytes_available > 0;
   }
 
-  void AttachInnerEndpoint(const ares_socket_t& as, const char* name) override {
-    fd_ = grpc_fd_create(as, name);
-  }
   void ScheduleNotifyOnRead() override {
     gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fd_));
     grpc_fd_notify_on_read(fd_, &read_closure_);
@@ -80,10 +77,7 @@ class FdNodePosix final : public FdNode {
     grpc_fd_notify_on_write(fd_, &write_closure_);
   }
 
-  grpc_fd* GetGrpcFd() { return fd_; }
-
  private:
-  grpc_pollset_set* pollset_set_;
   grpc_fd* fd_;
 };
 
@@ -92,36 +86,23 @@ class AresEvDriverPosix final : public AresEvDriver {
   AresEvDriverPosix(grpc_pollset_set* pollset_set) : AresEvDriver() {
     pollset_set_ = pollset_set;
   }
+
   ~AresEvDriverPosix() {
     gpr_log(GPR_DEBUG, "AresEvDriverPosix destructor called");
   }
-  void AddInnerEndpointToPollsetSet(FdNode* fdn) override {
-    grpc_pollset_set_add_fd(pollset_set_,
-                            reinterpret_cast<FdNodePosix*>(fdn)->GetGrpcFd());
-  }
-  FdNode* CreateFdNode() override { return grpc_core::New<FdNodePosix>(this); }
 
  private:
+  FdNode* CreateFdNode(ares_socket_t as, const char* name) override {
+    grpc_fd* fd = grpc_fd_create(as, name);
+    grpc_pollset_set_add_fd(pollset_set_, fd);
+    return grpc_core::New<FdNodePosix>(this, fd);
+  }
+
   grpc_pollset_set* pollset_set_;
 };
 
-grpc_error* AresEvDriver::Create(AresEvDriver** ev_driver,
-                                 grpc_pollset_set* pollset_set) {
-  *ev_driver = grpc_core::New<AresEvDriverPosix>(pollset_set);
-  gpr_ref_init(&(*ev_driver)->refs_, 1);
-  int status = ares_init(&(*ev_driver)->channel_);
-  gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
-          (uintptr_t)*ev_driver);
-  if (status != ARES_SUCCESS) {
-    char* err_msg;
-    gpr_asprintf(&err_msg, "Failed to init ares channel. C-ares error: %s",
-                 ares_strerror(status));
-    grpc_error* err = GRPC_ERROR_CREATE_FROM_COPIED_STRING(err_msg);
-    gpr_free(err_msg);
-    // TODO: delete *ev_driver;
-    return err;
-  }
-  return GRPC_ERROR_NONE;
+AresEvDriver* AresEvDriver::Create(grpc_pollset_set* pollset_set) {
+  return grpc_core::New<AresEvDriverPosix>(pollset_set);
 }
 
 }  // namespace grpc_core
