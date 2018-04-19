@@ -42,8 +42,8 @@ class AresEvDriverWindows;
 
 class FdNodeWindows final : public FdNode {
  public:
-  FdNodeWindows(AresEvDriver* ev_driver, grpc_winsocket* winsocket)
-      : FdNode(ev_driver) {
+  FdNodeWindows(grpc_winsocket* winsocket)
+      : FdNode() {
     winsocket_ = winsocket;
   }
 
@@ -92,7 +92,7 @@ class AresEvDriverWindows final : public AresEvDriver {
     // Note that we don't add the socket to a pollset because this
     // c-ares resolver doesn't use one on windows, and instead we
     // rely on our own busyloop.
-    return grpc_core::New<FdNodeWindows>(this, fd);
+    return grpc_core::New<FdNodeWindows>(fd);
   }
 };
 

@@ -42,7 +42,7 @@ class AresEvDriverPosix;
 
 class FdNodePosix final : public FdNode {
  public:
-  FdNodePosix(AresEvDriver* ev_driver, grpc_fd* fd) : FdNode(ev_driver) {
+  FdNodePosix(grpc_fd* fd) : FdNode() {
     fd_ = fd;
   }
 
@@ -95,7 +95,7 @@ class AresEvDriverPosix final : public AresEvDriver {
   FdNode* CreateFdNode(ares_socket_t as, const char* name) override {
     grpc_fd* fd = grpc_fd_create(as, name);
     grpc_pollset_set_add_fd(pollset_set_, fd);
-    return grpc_core::New<FdNodePosix>(this, fd);
+    return grpc_core::New<FdNodePosix>(fd);
   }
 
   grpc_pollset_set* pollset_set_;

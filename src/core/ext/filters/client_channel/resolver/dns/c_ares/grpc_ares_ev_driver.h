@@ -33,8 +33,8 @@ class AresEvDriver;
 
 class FdNode {
  public:
-  explicit FdNode(AresEvDriver* ev_driver);
-  void MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx);
+  explicit FdNode();
+  void MaybeRegisterForReadsAndWrites(AresEvDriver*, int socks_bitmask, size_t idx);
   virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
   virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
   static void Shutdown(FdNode*);
@@ -51,14 +51,12 @@ class FdNode {
  private:
   virtual void RegisterForOnReadable() GRPC_ABSTRACT;
   virtual void RegisterForOnWriteable() GRPC_ABSTRACT;
-  bool OnReadableInner(grpc_error* error);
-  bool OnWriteableInner(grpc_error* error);
+  bool OnReadableInner(RefCountedPtr<AresEvDriver>, grpc_error* error);
+  bool OnWriteableInner(RefCountedPtr<AresEvDriver>, grpc_error* error);
   virtual void DestroyInnerEndpoint() GRPC_ABSTRACT;
   virtual bool IsInnerEndpointStillReadable() GRPC_ABSTRACT;
   static void OnReadable(void* arg, grpc_error* error);
   static void OnWriteable(void* arg, grpc_error* error);
-  /** the owner of this fd node */
-  AresEvDriver* ev_driver_;
   /** mutex guarding the rest of the state */
   gpr_mu mu_;
   /** if the readable closure has been registered */
