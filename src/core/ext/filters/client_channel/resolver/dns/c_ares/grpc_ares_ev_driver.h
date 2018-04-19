@@ -23,31 +23,88 @@
 
 #include <ares.h>
 #include "src/core/lib/iomgr/pollset_set.h"
+#include "src/core/lib/gprpp/abstract.h"
 
-typedef struct grpc_ares_ev_driver grpc_ares_ev_driver;
+namespace grpc_core {
 
-/* Start \a ev_driver. It will keep working until all IO on its ares_channel is
-   done, or grpc_ares_ev_driver_destroy() is called. It may notify the callbacks
-   bound to its ares_channel when necessary. */
-void grpc_ares_ev_driver_start(grpc_ares_ev_driver* ev_driver);
+class AresEvDriver;
 
-/* Returns the ares_channel owned by \a ev_driver. To bind a c-ares query to
-   \a ev_driver, use the ares_channel owned by \a ev_driver as the arg of the
-   query. */
-ares_channel* grpc_ares_ev_driver_get_channel(grpc_ares_ev_driver* ev_driver);
+class FdNode {
+ public:
+  explicit FdNode(AresEvDriver*);
+  explicit FdNode();
+  virtual void DestroyInnerEndpoint() GRPC_ABSTRACT;
+  virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
+  virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
+  virtual bool IsInnerEndpointStillReadable() GRPC_ABSTRACT;
+  virtual void AttachInnerEndpoint(const ares_socket_t&, const char*) GRPC_ABSTRACT;
+  virtual void ScheduleNotifyOnRead() GRPC_ABSTRACT;
+  virtual void ScheduleNotifyOnWrite() GRPC_ABSTRACT;
+  void MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx);
+  void Destroy();
+  void Shutdown();
+  static void OnReadable(void* arg, grpc_error* error);
+  static void OnWriteable(void* arg, grpc_error* error);
+  void OnReadableInner(grpc_error* error);
+  void OnWriteableInner(grpc_error* error);
+  void SetNext(FdNode* other);
+  FdNode* GetNext();
 
-/* Creates a new grpc_ares_ev_driver. Returns GRPC_ERROR_NONE if \a ev_driver is
-   created successfully. */
-grpc_error* grpc_ares_ev_driver_create(grpc_ares_ev_driver** ev_driver,
+ protected:
+  /** a closure wrapping on_readable_cb, which should be invoked when the
+      grpc_fd in this node becomes readable. */
+  grpc_closure read_closure_;
+  /** a closure wrapping on_writable_cb, which should be invoked when the
+      grpc_fd in this node becomes writable. */
+  grpc_closure write_closure_;
+
+ private:
+  /** the owner of this fd node */
+  AresEvDriver* ev_driver_;
+  /** next fd node in the list */
+  FdNode* next_;
+  /** mutex guarding the rest of the state */
+  gpr_mu mu_;
+  /** if the readable closure has been registered */
+  bool readable_registered_;
+  /** if the writable closure has been registered */
+  bool writable_registered_;
+  /** if the fd is being shut down */
+  bool shutting_down_;
+};
+
+class AresEvDriver {
+ public:
+  explicit AresEvDriver();
+  virtual void AddInnerEndpointToPollsetSet(FdNode* fdn) GRPC_ABSTRACT;
+  virtual FdNode* CreateFdNode() GRPC_ABSTRACT;
+  void Start();
+  void Ref();
+  void Unref();
+  void Destroy();
+  void Shutdown();
+  ares_channel GetChannel();
+  ares_channel* GetChannelPointer();
+  void NotifyOnEvent();
+   /* Creates a new grpc_ares_ev_driver. Returns GRPC_ERROR_NONE if \a ev_driver is
+      created successfully. */
+  static grpc_error* Create(AresEvDriver** ev_driver, grpc_pollset_set* pollset_set);
+
+ private:
+  void NotifyOnEventLocked();
+  FdNode* PopFdNode(ares_socket_t as);
+  FdNode* fds_;
+  ares_channel channel_;
+  gpr_mu mu_;
+  gpr_refcount refs_;
+  bool working_;
+  bool shutting_down_;
+};
+
+}  // namespace grpc_core
+
+grpc_error* grpc_ares_ev_driver_create(grpc_core::AresEvDriver** ev_driver,
                                        grpc_pollset_set* pollset_set);
-
-/* Destroys \a ev_driver asynchronously. Pending lookups made on \a ev_driver
-   will be cancelled and their on_done callbacks will be invoked with a status
-   of ARES_ECANCELLED. */
-void grpc_ares_ev_driver_destroy(grpc_ares_ev_driver* ev_driver);
-
-/* Shutdown all the grpc_fds used by \a ev_driver */
-void grpc_ares_ev_driver_shutdown(grpc_ares_ev_driver* ev_driver);
 
 #endif /* GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_RESOLVER_DNS_C_ARES_GRPC_ARES_EV_DRIVER_H \
         */

@@ -61,7 +61,7 @@ struct grpc_ares_request {
   /** the pointer to receive the service config in JSON */
   char** service_config_json_out;
   /** the evernt driver used by this request */
-  grpc_ares_ev_driver* ev_driver;
+  grpc_core::AresEvDriver* ev_driver;
   /** number of ongoing queries */
   gpr_refcount pending_queries;
 
@@ -156,7 +156,7 @@ static void grpc_ares_request_unref(grpc_ares_request* r) {
     grpc_cares_wrapper_address_sorting_sort(*(r->lb_addrs_out));
     GRPC_CLOSURE_SCHED(r->on_done, r->error);
     gpr_mu_destroy(&r->mu);
-    grpc_ares_ev_driver_destroy(r->ev_driver);
+    r->ev_driver->Destroy();
     gpr_free(r);
   }
 }
@@ -274,7 +274,7 @@ static void on_srv_query_done_cb(void* arg, int status, int timeouts,
     struct ares_srv_reply* reply;
     const int parse_status = ares_parse_srv_reply(abuf, alen, &reply);
     if (parse_status == ARES_SUCCESS) {
-      ares_channel* channel = grpc_ares_ev_driver_get_channel(r->ev_driver);
+      ares_channel* channel = r->ev_driver->GetChannelPointer();
       for (struct ares_srv_reply* srv_it = reply; srv_it != nullptr;
            srv_it = srv_it->next) {
         if (grpc_ipv6_loopback_available()) {
@@ -287,7 +287,7 @@ static void on_srv_query_done_cb(void* arg, int status, int timeouts,
             r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
         ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb,
                            hr);
-        grpc_ares_ev_driver_start(r->ev_driver);
+        r->ev_driver->Start();
       }
     }
     if (reply != nullptr) {
@@ -401,19 +401,20 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
     port = gpr_strdup(default_port);
   }
 
-  grpc_ares_ev_driver* ev_driver;
-  error = grpc_ares_ev_driver_create(&ev_driver, interested_parties);
+  grpc_core::AresEvDriver* ev_driver;
+  error = grpc_core::AresEvDriver::Create(&ev_driver, interested_parties);
   if (error != GRPC_ERROR_NONE) goto error_cleanup;
 
   r = static_cast<grpc_ares_request*>(gpr_zalloc(sizeof(grpc_ares_request)));
   gpr_mu_init(&r->mu);
   r->ev_driver = ev_driver;
+  gpr_log(GPR_DEBUG, "r->ev_driver = %" PRIdPTR, (uintptr_t)r->ev_driver);
   r->on_done = on_done;
   r->lb_addrs_out = addrs;
   r->service_config_json_out = service_config_json;
   r->success = false;
   r->error = GRPC_ERROR_NONE;
-  channel = grpc_ares_ev_driver_get_channel(r->ev_driver);
+  channel = r->ev_driver->GetChannelPointer();
 
   // If dns_server is specified, use it.
   if (dns_server != nullptr) {
@@ -479,7 +480,8 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
     gpr_free(config_name);
   }
   /* TODO(zyc): Handle CNAME records here. */
-  grpc_ares_ev_driver_start(r->ev_driver);
+  gpr_log(GPR_DEBUG, "r->ev_driver->Start(). ev_driver:%" PRIdPTR, (uintptr_t)r->ev_driver);
+  r->ev_driver->Start();
   grpc_ares_request_unref(r);
   gpr_free(host);
   gpr_free(port);
@@ -500,7 +502,7 @@ grpc_ares_request* (*grpc_dns_lookup_ares)(
 
 void grpc_cancel_ares_request(grpc_ares_request* r) {
   if (grpc_dns_lookup_ares == grpc_dns_lookup_ares_impl) {
-    grpc_ares_ev_driver_shutdown(r->ev_driver);
+    r->ev_driver->Shutdown();
   }
 }
 

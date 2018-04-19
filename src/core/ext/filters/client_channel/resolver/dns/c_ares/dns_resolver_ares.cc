@@ -458,9 +458,11 @@ static grpc_address_resolver_vtable ares_resolver = {
 
 void grpc_resolver_dns_ares_init() {
   char* resolver_env = gpr_getenv("GRPC_DNS_RESOLVER");
+  gpr_log(GPR_DEBUG, "DNS ARES INIT");
   /* TODO(zyc): Turn on c-ares based resolver by default after the address
      sorter and the CNAME support are added. */
   if (resolver_env != nullptr && gpr_stricmp(resolver_env, "ares") == 0) {
+    gpr_log(GPR_DEBUG, "INIT ARES RESOLVER");
     address_sorting_init();
     grpc_error* error = grpc_ares_init();
     if (error != GRPC_ERROR_NONE) {

@@ -22,9 +22,9 @@
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
+#include "src/core/lib/gpr/env.h"
 #include "src/core/lib/iomgr/combiner.h"
 #include "test/core/util/test_config.h"
-#include "src/core/lib/gpr/env.h"
 
 static grpc_combiner* g_combiner;
 
@@ -76,6 +76,8 @@ int main(int argc, char** argv) {
   if (grpc_resolve_address == grpc_resolve_address_ares) {
     test_succeeds(dns, "ipv4://8.8.8.8/8.8.8.8:8888");
   } else {
+    gpr_log(GPR_DEBUG, "dns resolver:%s", gpr_getenv("GRPC_DNS_RESOLVER"));
+    gpr_log(GPR_DEBUG, "grpc_resolver_address:%" PRIdPTR ".grpc_resolve_address_ares:%" PRIdPTR, (uintptr_t)grpc_resolve_address, (uintptr_t)grpc_resolve_address_ares);
     test_fails(dns, "ipv4://8.8.8.8/8.8.8.8:8888");
   }
 
