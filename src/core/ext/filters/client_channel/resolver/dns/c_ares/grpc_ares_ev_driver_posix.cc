@@ -68,11 +68,11 @@ class FdNodePosix final : public FdNode {
     return ioctl(fd, FIONREAD, &bytes_available) == 0 && bytes_available > 0;
   }
 
-  void ScheduleNotifyOnRead() override {
+  void RegisterForOnReadable() override {
     gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fd_));
     grpc_fd_notify_on_read(fd_, &read_closure_);
   }
-  void ScheduleNotifyOnWrite() override {
+  void RegisterForOnWriteable() override {
     gpr_log(GPR_DEBUG, "notify read on: %d", grpc_fd_wrapped_fd(fd_));
     grpc_fd_notify_on_write(fd_, &write_closure_);
   }

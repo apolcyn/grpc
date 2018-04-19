@@ -24,6 +24,7 @@
 #include <ares.h>
 #include "src/core/lib/gprpp/abstract.h"
 #include "src/core/lib/gprpp/inlined_vector.h"
+#include "src/core/lib/gprpp/ref_counted.h"
 #include "src/core/lib/iomgr/pollset_set.h"
 
 namespace grpc_core {
@@ -48,8 +49,8 @@ class FdNode {
   grpc_closure write_closure_;
 
  private:
-  virtual void ScheduleNotifyOnRead() GRPC_ABSTRACT;
-  virtual void ScheduleNotifyOnWrite() GRPC_ABSTRACT;
+  virtual void RegisterForOnReadable() GRPC_ABSTRACT;
+  virtual void RegisterForOnWriteable() GRPC_ABSTRACT;
   bool OnReadableInner(grpc_error* error);
   bool OnWriteableInner(grpc_error* error);
   virtual void DestroyInnerEndpoint() GRPC_ABSTRACT;
@@ -68,12 +69,11 @@ class FdNode {
   bool shutting_down_;
 };
 
-class AresEvDriver {
+class AresEvDriver : public RefCountedWithTracing<AresEvDriver> {
  public:
   explicit AresEvDriver();
+  ~AresEvDriver();
   void Start();
-  void Ref();
-  void Unref();
   void Destroy();
   void Shutdown();
   ares_channel GetChannel();
@@ -92,7 +92,6 @@ class AresEvDriver {
   UniquePtr<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>> fds_;
   ares_channel channel_;
   gpr_mu mu_;
-  gpr_refcount refs_;
   bool working_;
   bool shutting_down_;
 };

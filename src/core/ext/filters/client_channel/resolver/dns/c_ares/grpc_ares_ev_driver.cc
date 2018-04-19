@@ -49,13 +49,15 @@ FdNode::FdNode(AresEvDriver* ev_driver) {
   readable_registered_ = false;
   writable_registered_ = false;
   shutting_down_ = false;
-  GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable, this,
-                    grpc_schedule_on_exec_ctx);
-  GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable, this,
-                    grpc_schedule_on_exec_ctx);
 }
 
-void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
+class FdNodeEventArg {
+  FdNodeEventArg(FdNode *fdn, RefCountedPtr<AresEvDriver> ev_driver) {};
+  FdNode* fdn_;
+  RefCountedPtr<AresEvDriver> ev_driver;
+}
+
+void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver *ev_driver, int socks_bitmask, size_t idx) {
   gpr_mu_lock(&mu_);
   // Register read_closure if the socket is readable and read_closure has
   // not been registered with this socket.
@@ -63,8 +65,10 @@ void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
     gpr_log(GPR_DEBUG,
             "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver_);
-    ev_driver_->Ref();
-    ScheduleNotifyOnRead();
+    auto on_readable_arg = grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
+    GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable, on_readable_arg,
+                      grpc_schedule_on_exec_ctx);
+    RegisterForOnReadable();
     readable_registered_ = true;
   }
   // Register write_closure if the socket is writable and write_closure
@@ -73,8 +77,10 @@ void FdNode::MaybeRegisterForReadsAndWrites(int socks_bitmask, size_t idx) {
     gpr_log(GPR_DEBUG,
             "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver_);
-    ev_driver_->Ref();
-    ScheduleNotifyOnWrite();
+    auto on_writeable_arg = grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
+    GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable, on_writeable_arg,
+                      grpc_schedule_on_exec_ctx);
+    RegisterForOnWriteable();
     writable_registered_ = true;
   }
   gpr_mu_unlock(&mu_);
@@ -173,14 +179,19 @@ bool FdNode::OnWriteableInner(grpc_error* error) {
   return true;
 }
 
-AresEvDriver::AresEvDriver() {
+AresEvDriver::AresEvDriver() : RefCountedWithTracing(nullptr) {
   gpr_log(GPR_DEBUG, "entering AresEvDriver constructor");
   gpr_mu_init(&mu_);
-  gpr_ref_init(&refs_, 1);
   fds_ = UniquePtr<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>(
       grpc_core::New<InlinedVector<FdNode*, ARES_GETSOCK_MAXNUM>>());
   working_ = false;
   shutting_down_ = false;
+}
+
+AresEvDriver::~AresEvDriver() {
+  GPR_ASSERT(fds_->size() == 0);
+  gpr_mu_destroy(&mu_);
+  ares_destroy(channel_);
 }
 
 void AresEvDriver::Start() {
@@ -192,21 +203,21 @@ void AresEvDriver::Start() {
   gpr_mu_unlock(&mu_);
 }
 
-void AresEvDriver::Ref() {
-  gpr_log(GPR_DEBUG, "Ref ev_driver %" PRIuPTR, (uintptr_t)this);
-  gpr_ref(&refs_);
-}
-
-void AresEvDriver::Unref() {
-  gpr_log(GPR_DEBUG, "Unref ev_driver %" PRIuPTR, (uintptr_t)this);
-  if (gpr_unref(&refs_)) {
-    gpr_log(GPR_DEBUG, "destroy ev_driver %" PRIuPTR, (uintptr_t)this);
-    GPR_ASSERT(fds_->size() == 0);
-    gpr_mu_destroy(&mu_);
-    ares_destroy(channel_);
-    Delete(this);
-  }
-}
+//    void AresEvDriver::Ref() {
+//      gpr_log(GPR_DEBUG, "Ref ev_driver %" PRIuPTR, (uintptr_t)this);
+//      gpr_ref(&refs_);
+//    }
+//    
+//    void AresEvDriver::Unref() {
+//      gpr_log(GPR_DEBUG, "Unref ev_driver %" PRIuPTR, (uintptr_t)this);
+//      if (gpr_unref(&refs_)) {
+//        gpr_log(GPR_DEBUG, "destroy ev_driver %" PRIuPTR, (uintptr_t)this);
+//        GPR_ASSERT(fds_->size() == 0);
+//        gpr_mu_destroy(&mu_);
+//        ares_destroy(channel_);
+//        Delete(this);
+//      }
+//    }
 
 void AresEvDriver::Destroy() {
   // It's not safe to shut down remaining fds here directly, becauses
@@ -296,7 +307,7 @@ int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
 grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                                               grpc_pollset_set* pollset_set) {
   *ev_driver = AresEvDriver::Create(pollset_set);
-  gpr_ref_init(&(*ev_driver)->refs_, 1);
+  // gpr_ref_init(&(*ev_driver)->refs_, 1);
   int status = ares_init(&(*ev_driver)->channel_);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
           (uintptr_t)*ev_driver);
