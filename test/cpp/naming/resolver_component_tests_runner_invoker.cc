@@ -52,17 +52,19 @@ DEFINE_string(grpc_test_directory_relative_to_test_srcdir,
 
 using grpc::SubProcess;
 
-//static volatile sig_atomic_t abort_wait_for_child = 0;
-//
-//static void sighandler(int sig) { abort_wait_for_child = 1; }
+#ifdef GRPC_POSIX_SOCKET
+static volatile sig_atomic_t abort_wait_for_child = 0;
 
-//static void register_sighandler() {
-//  struct sigaction act;
-//  memset(&act, 0, sizeof(act));
-//  act.sa_handler = sighandler;
-//  sigaction(SIGINT, &act, nullptr);
-//  sigaction(SIGTERM, &act, nullptr);
-//}
+static void sighandler(int sig) { abort_wait_for_child = 1; }
+
+static void register_sighandler() {
+  struct sigaction act;
+  memset(&act, 0, sizeof(act));
+  act.sa_handler = sighandler;
+  sigaction(SIGINT, &act, nullptr);
+  sigaction(SIGTERM, &act, nullptr);
+}
+#endif
 
 namespace {
 
@@ -118,29 +120,33 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_cv test_driver_cv;
   gpr_cv_init(&test_driver_cv);
   int test_driver_done = 0;
-//  register_sighandler();
+#ifdef GRPC_POSIX_SOCKET
+  register_sighandler();
+#endif
   std::thread sig_handling_thread(RunSigHandlingThread, test_driver,
                                   &test_driver_mu, &test_driver_cv,
                                   &test_driver_done);
+#ifdef GRPC_POSIX_SOCKET
   int status = test_driver->Join();
-//  if (WIFEXITED(status)) {
-//    if (WEXITSTATUS(status)) {
-//      gpr_log(GPR_INFO,
-//              "Resolver component test test-runner exited with code %d",
-//              WEXITSTATUS(status));
-//      abort();
-//    }
-//  } else if (WIFSIGNALED(status)) {
-//    gpr_log(GPR_INFO,
-//            "Resolver component test test-runner ended from signal %d",
-//            WTERMSIG(status));
-//    abort();
-//  } else {
-//    gpr_log(GPR_INFO,
-//            "Resolver component test test-runner ended with unknown status %d",
-//            status);
-//    abort();
-//  }
+  if (WIFEXITED(status)) {
+    if (WEXITSTATUS(status)) {
+      gpr_log(GPR_INFO,
+              "Resolver component test test-runner exited with code %d",
+              WEXITSTATUS(status));
+      abort();
+    }
+  } else if (WIFSIGNALED(status)) {
+    gpr_log(GPR_INFO,
+            "Resolver component test test-runner ended from signal %d",
+            WTERMSIG(status));
+    abort();
+  } else {
+    gpr_log(GPR_INFO,
+            "Resolver component test test-runner ended with unknown status %d",
+            status);
+    abort();
+  }
+#endif
   gpr_mu_lock(&test_driver_mu);
   test_driver_done = 1;
   gpr_cv_signal(&test_driver_cv);
