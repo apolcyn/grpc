@@ -21,8 +21,6 @@
 #if GRPC_ARES == 1 && defined(GPR_WINDOWS)
 
 #include <ares.h>
-#include <string.h>
-#include <sys/ioctl.h>
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h"
 

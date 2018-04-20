@@ -22,7 +22,6 @@
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/iomgr/sockaddr.h"
-#include "src/core/lib/iomgr/socket_utils_posix.h"
 
 #include <string.h>
 #include <sys/types.h>
@@ -277,16 +276,15 @@ static void on_srv_query_done_cb(void* arg, int status, int timeouts,
       ares_channel* channel = r->ev_driver->GetChannelPointer();
       for (struct ares_srv_reply* srv_it = reply; srv_it != nullptr;
            srv_it = srv_it->next) {
-        if (grpc_ipv6_loopback_available()) {
-          grpc_ares_hostbyname_request* hr = create_hostbyname_request(
-              r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
-          ares_gethostbyname(*channel, hr->host, AF_INET6,
-                             on_hostbyname_done_cb, hr);
-        }
-        grpc_ares_hostbyname_request* hr = create_hostbyname_request(
+        // TODO: query for ipv6 if ipv6 is available, in a portable way
+        grpc_ares_hostbyname_request* ipv6_hr = create_hostbyname_request(
             r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
-        ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb,
-                           hr);
+        ares_gethostbyname(*channel, ipv6_hr->host, AF_INET6,
+                           on_hostbyname_done_cb, ipv6_hr);
+        grpc_ares_hostbyname_request* ipv4_hr = create_hostbyname_request(
+            r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
+        ares_gethostbyname(*channel, ipv4_hr->host, AF_INET, on_hostbyname_done_cb,
+                           ipv4_hr);
         r->ev_driver->Start();
       }
     }
@@ -456,11 +454,10 @@ static grpc_ares_request* grpc_dns_lookup_ares_impl(
     }
   }
   gpr_ref_init(&r->pending_queries, 1);
-  if (grpc_ipv6_loopback_available()) {
-    hr = create_hostbyname_request(r, host, strhtons(port),
-                                   false /* is_balancer */);
-    ares_gethostbyname(*channel, hr->host, AF_INET6, on_hostbyname_done_cb, hr);
-  }
+  // TODO: ditto, don't always query ipv6 if possible.
+  hr = create_hostbyname_request(r, host, strhtons(port),
+                                 false /* is_balancer */);
+  ares_gethostbyname(*channel, hr->host, AF_INET6, on_hostbyname_done_cb, hr);
   hr = create_hostbyname_request(r, host, strhtons(port),
                                  false /* is_balancer */);
   ares_gethostbyname(*channel, hr->host, AF_INET, on_hostbyname_done_cb, hr);
