@@ -133,10 +133,10 @@ def flush_stdout():
   sys.stdout.flush()
   global num_timeouts_so_far
   num_timeouts_so_far += 1
-  if num_timeouts_so_far == 6:
+  if num_timeouts_so_far == 6 * 3:
     print('Process timeout reached. Exitting.')
     shutdown_process()
-  timer = threading.Timer(3, flush_stdout)
+  timer = threading.Timer(10, flush_stdout)
   timer.start()
 
 def main():
