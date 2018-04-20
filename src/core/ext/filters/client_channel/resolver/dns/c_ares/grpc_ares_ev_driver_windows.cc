@@ -30,9 +30,9 @@
 #include <grpc/support/time.h>
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/gpr/string.h"
-#include "src/core/lib/iomgr/ev_posix.h"
 #include "src/core/lib/iomgr/iomgr_internal.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
+#include "src/core/lib/iomgr/socket_windows.h"
 
 namespace grpc_core {
 
@@ -64,10 +64,10 @@ class FdNodeWindows final : public FdNode {
            bytes_available > 0;
   }
 
-  void ScheduleNotifyOnRead() override {
+  void RegisterForOnReadable() override {
     GRPC_CLOSURE_SCHED(&read_closure_, GRPC_ERROR_NONE);
   }
-  void ScheduleNotifyOnWrite() override {
+  void RegisterForOnWriteable() override {
     GRPC_CLOSURE_SCHED(&write_closure_, GRPC_ERROR_NONE);
   }
 
@@ -89,7 +89,7 @@ class AresEvDriverWindows final : public AresEvDriver {
     // Note that we don't add the socket to a pollset because this
     // c-ares resolver doesn't use one on windows, and instead we
     // rely on our own busyloop.
-    return grpc_core::New<FdNodeWindows>(fd);
+    return grpc_core::New<FdNodeWindows>(winsocket);
   }
 };
 
