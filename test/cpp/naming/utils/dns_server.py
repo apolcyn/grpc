@@ -21,6 +21,7 @@ import yaml
 import signal
 import os
 import threading
+import time
 
 import twisted
 import twisted.internet
@@ -34,6 +35,7 @@ import twisted.names.dns
 import twisted.names.server
 from twisted.names import client, server, common, authority, dns
 import argparse
+import platform
 
 _SERVER_HEALTH_CHECK_RECORD_NAME = 'health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp' # missing end '.' for twisted syntax
 _SERVER_HEALTH_CHECK_RECORD_DATA = '123.123.123.123'
@@ -110,34 +112,27 @@ def start_local_dns_server(args):
   twisted.internet.reactor.suggestThreadPoolSize(1)
   twisted.internet.reactor.run()
 
-def _quit_on_signal(signum, _frame):
-  print('Received SIGNAL %d. Quitting with exit code 0' % signum)
-  twisted.internet.reactor.stop()
-  sys.stdout.flush()
-  sys.exit(0)
-
-def quit_on_timeout():
-  twisted.internet.reactor.stop()
-  sys.stdout.flush()
-  sys.exit(1)
+force_timer_quit = False
 
 def shutdown_process():
   twisted.internet.reactor.stop()
   sys.stdout.flush()
-  sys.exit(1)
+  sys.exit(0)
 
-num_timeouts_so_far = 0
+def _quit_on_signal(signum, _frame):
+  global force_timer_quit
+  print('Received SIGNAL %d. Quitting with exit code 0' % signum)
+  shutdown_process()
 
 def flush_stdout():
-  print('flush_stdout alarm went off')
-  sys.stdout.flush()
-  global num_timeouts_so_far
-  num_timeouts_so_far += 1
-  if num_timeouts_so_far == 6 * 3:
-    print('Process timeout reached. Exitting.')
-    shutdown_process()
-  timer = threading.Timer(10, flush_stdout)
-  timer.start()
+  max_timeouts = 12 * 3
+  num_timeouts_so_far = 0
+  while num_timeouts_so_far < max_timeouts:
+    print('flush_stdout')
+    sys.stdout.flush()
+    time.sleep(1)
+  print('Process timeout reached, or cancelled. Exitting.')
+  shutdown_process()
 
 def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
@@ -147,12 +142,17 @@ def main():
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
   args = argp.parse_args()
-  #signal.signal(signal.SIGALRM, _quit_on_signal)
-  #signal.signal(signal.SIGTERM, _quit_on_signal)
-  #signal.signal(signal.SIGINT, _quit_on_signal)
+  if platform.system() != 'Windows':
+    signal.signal(signal.SIGTERM, _quit_on_signal)
+    signal.signal(signal.SIGINT, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
   # signal.alarm(2 * 60)
-  flush_stdout()
+  global output_flush_thread
+  output_flush_thread = threading.Thread(target=flush_stdout)
+  output_flush_thread.setDaemon(True)
+  output_flush_thread.start()
+  print('made it here')
+  sys.stdout.flush()
   start_local_dns_server(args)
 
 if __name__ == '__main__':

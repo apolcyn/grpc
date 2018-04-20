@@ -15,7 +15,7 @@
  * limitations under the License.
  *
  */
-
+#include <grpc/support/port_platform.h>
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
@@ -52,7 +52,7 @@ DEFINE_string(grpc_test_directory_relative_to_test_srcdir,
 
 using grpc::SubProcess;
 
-#ifdef GRPC_POSIX_SOCKET
+#ifndef GPR_WINDOWS
 static volatile sig_atomic_t abort_wait_for_child = 0;
 
 static void sighandler(int sig) { abort_wait_for_child = 1; }
@@ -78,6 +78,9 @@ void RunSigHandlingThread(SubProcess* test_driver, gpr_mu* test_driver_mu,
   while (true) {
     gpr_timespec now = gpr_now(GPR_CLOCK_MONOTONIC);
     if (gpr_time_cmp(now, overall_deadline) > 0) break;
+#ifndef GPR_WINDOWS
+    if (abort_wait_for_child) break;
+#endif
     gpr_mu_lock(test_driver_mu);
     if (*test_driver_done) {
       gpr_mu_unlock(test_driver_mu);
@@ -120,14 +123,15 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_cv test_driver_cv;
   gpr_cv_init(&test_driver_cv);
   int test_driver_done = 0;
-#ifdef GRPC_POSIX_SOCKET
+#ifndef GPR_WINDOWS
   register_sighandler();
 #endif
   std::thread sig_handling_thread(RunSigHandlingThread, test_driver,
                                   &test_driver_mu, &test_driver_cv,
                                   &test_driver_done);
-#ifdef GRPC_POSIX_SOCKET
   int status = test_driver->Join();
+  gpr_log(GPR_DEBUG, "test_driver process status: %d", status);
+#ifndef GPR_WINDOWS
   if (WIFEXITED(status)) {
     if (WEXITSTATUS(status)) {
       gpr_log(GPR_INFO,
