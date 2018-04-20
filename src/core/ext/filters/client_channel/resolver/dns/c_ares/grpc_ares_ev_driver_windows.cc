@@ -50,7 +50,7 @@ class FdNodeWindows final : public FdNode {
   }
 
   void ShutdownInnerEndpoint() override {
-    grpc_winsocket_shutdown(fn->grpc_winsocket);
+    grpc_winsocket_shutdown(winsocket_);
   }
 
   ares_socket_t GetInnerEndpoint() override {

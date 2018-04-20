@@ -463,7 +463,9 @@ void grpc_resolver_dns_ares_init() {
      sorter and the CNAME support are added. */
   if (resolver_env != nullptr && gpr_stricmp(resolver_env, "ares") == 0) {
     gpr_log(GPR_DEBUG, "INIT ARES RESOLVER");
+#ifdef GRPC_POSIX_SOCKET
     address_sorting_init();
+#endif
     grpc_error* error = grpc_ares_init();
     if (error != GRPC_ERROR_NONE) {
       GRPC_LOG_IF_ERROR("ares_library_init() failed", error);
@@ -481,7 +483,9 @@ void grpc_resolver_dns_ares_init() {
 void grpc_resolver_dns_ares_shutdown() {
   char* resolver_env = gpr_getenv("GRPC_DNS_RESOLVER");
   if (resolver_env != nullptr && gpr_stricmp(resolver_env, "ares") == 0) {
+#ifdef GRPC_POSIX_SOCKET
     address_sorting_shutdown();
+#endif
     grpc_ares_cleanup();
   }
   gpr_free(resolver_env);

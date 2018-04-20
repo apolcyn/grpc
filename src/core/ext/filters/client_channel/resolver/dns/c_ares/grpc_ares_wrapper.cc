@@ -152,7 +152,9 @@ static void grpc_ares_request_unref(grpc_ares_request* r) {
   /* If there are no pending queries, invoke on_done callback and destroy the
      request */
   if (gpr_unref(&r->pending_queries)) {
+#ifdef GRPC_POSIX_SOCKET
     grpc_cares_wrapper_address_sorting_sort(*(r->lb_addrs_out));
+#endif
     GRPC_CLOSURE_SCHED(r->on_done, r->error);
     gpr_mu_destroy(&r->mu);
     r->ev_driver->Destroy();
