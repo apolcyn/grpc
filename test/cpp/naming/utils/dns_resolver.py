@@ -31,7 +31,7 @@ def main():
   argp.add_argument('-t', '--timeout', default=1, type=int,
                     help=('Force process exit after this number of seconds.'))
   args = argp.parse_args()
-  signal.alarm(args.timeout)
+  #signal.alarm(args.timeout)
   def OnResolverResultAvailable(result):
     answers, authority, additional = result
     for a in answers:

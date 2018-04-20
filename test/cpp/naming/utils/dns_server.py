@@ -20,6 +20,7 @@ import sys
 import yaml
 import signal
 import os
+import threading
 
 import twisted
 import twisted.internet
@@ -115,6 +116,29 @@ def _quit_on_signal(signum, _frame):
   sys.stdout.flush()
   sys.exit(0)
 
+def quit_on_timeout():
+  twisted.internet.reactor.stop()
+  sys.stdout.flush()
+  sys.exit(1)
+
+def shutdown_process():
+  twisted.internet.reactor.stop()
+  sys.stdout.flush()
+  sys.exit(1)
+
+num_timeouts_so_far = 0
+
+def flush_stdout():
+  print('flush_stdout alarm went off')
+  sys.stdout.flush()
+  global num_timeouts_so_far
+  num_timeouts_so_far += 1
+  if num_timeouts_so_far == 6:
+    print('Process timeout reached. Exitting.')
+    shutdown_process()
+  timer = threading.Timer(3, flush_stdout)
+  timer.start()
+
 def main():
   argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
   argp.add_argument('-p', '--port', default=None, type=int,
@@ -123,11 +147,12 @@ def main():
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
   args = argp.parse_args()
-  signal.signal(signal.SIGALRM, _quit_on_signal)
-  signal.signal(signal.SIGTERM, _quit_on_signal)
-  signal.signal(signal.SIGINT, _quit_on_signal)
+  #signal.signal(signal.SIGALRM, _quit_on_signal)
+  #signal.signal(signal.SIGTERM, _quit_on_signal)
+  #signal.signal(signal.SIGINT, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
   # signal.alarm(2 * 60)
+  flush_stdout()
   start_local_dns_server(args)
 
 if __name__ == '__main__':
