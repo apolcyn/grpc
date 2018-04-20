@@ -63,7 +63,8 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver* ev_driver,
   if (ARES_GETSOCK_READABLE(socks_bitmask, idx) && !readable_registered_) {
     gpr_log(GPR_DEBUG,
             "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
-            (uintptr_t)this, (uintptr_t)ev_driver);
+            (uintptr_t)this, (uintptr_t)ev_driver); 
+    //GPR_ASSERT(!readable_registered_);
     auto on_readable_arg =
         grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable, on_readable_arg,
@@ -77,6 +78,7 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver* ev_driver,
     gpr_log(GPR_DEBUG,
             "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver);
+    //GPR_ASSERT(!writable_registered_);
     auto on_writeable_arg =
         grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable, on_writeable_arg,
@@ -109,17 +111,25 @@ void FdNode::Shutdown(FdNode* fdn) {
 }
 
 void FdNode::OnReadable(void* arg, grpc_error* error) {
-  UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
-  if (!event_arg->fdn->OnReadableInner(event_arg->ev_driver, error)) {
-    FdNode::Destroy(event_arg->fdn);
+  gpr_log(GPR_DEBUG, "FdNode OnReadable called");
+  {
+    UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
+    if (!event_arg->fdn->OnReadableInner(event_arg->ev_driver, error)) {
+      FdNode::Destroy(event_arg->fdn);
+    }
   }
+  gpr_log(GPR_DEBUG, "FdNode OnReadable done");
 }
 
 void FdNode::OnWriteable(void* arg, grpc_error* error) {
-  UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
-  if (!event_arg->fdn->OnWriteableInner(event_arg->ev_driver, error)) {
-    FdNode::Destroy(event_arg->fdn);
+  gpr_log(GPR_DEBUG, "FdNode OnWriteable called");
+  {
+    UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
+    if (!event_arg->fdn->OnWriteableInner(event_arg->ev_driver, error)) {
+      FdNode::Destroy(event_arg->fdn);
+    }
   }
+  gpr_log(GPR_DEBUG, "FdNode OnWriteable done");
 }
 
 bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver,
@@ -135,8 +145,10 @@ bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver,
   // GET THIS THERE  gpr_log(GPR_DEBUG, "readable on %d", fd);
   if (error == GRPC_ERROR_NONE) {
     do {
+      gpr_log(GPR_DEBUG, "Now ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR, (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
       ares_process_fd(ev_driver->GetChannel(), GetInnerEndpoint(),
                       ARES_SOCKET_BAD);
+      gpr_log(GPR_DEBUG, "Done ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR, (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
     } while (IsInnerEndpointStillReadable());
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or

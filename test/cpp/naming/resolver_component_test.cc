@@ -182,6 +182,7 @@ gpr_timespec NSecondDeadline(int seconds) {
 
 void PollPollsetUntilRequestDone(ArgsStruct* args) {
   gpr_timespec deadline = NSecondDeadline(10);
+  gpr_log(GPR_DEBUG, "now poll pollset until request done");
   while (true) {
     bool done = gpr_atm_acq_load(&args->done_atm) != 0;
     if (done) {
@@ -195,13 +196,16 @@ void PollPollsetUntilRequestDone(ArgsStruct* args) {
     grpc_pollset_worker* worker = nullptr;
     grpc_core::ExecCtx exec_ctx;
     gpr_mu_lock(args->mu);
+    gpr_log(GPR_DEBUG, "now call pollset work");
     GRPC_LOG_IF_ERROR("pollset_work",
                       grpc_pollset_work(args->pollset, &worker,
                                         grpc_timespec_to_millis_round_up(
                                             NSecondDeadline(1))));
+    gpr_log(GPR_DEBUG, "done calling pollset work");
     gpr_mu_unlock(args->mu);
   }
   gpr_event_set(&args->ev, (void*)1);
+  gpr_log(GPR_DEBUG, "done poll pollset until request done");
 }
 
 void CheckServiceConfigResultLocked(grpc_channel_args* channel_args,
@@ -262,13 +266,19 @@ void CheckResolverResultLocked(void* argsp, grpc_error* err) {
   }
   EXPECT_THAT(args->expected_addrs, UnorderedElementsAreArray(found_lb_addrs));
   CheckServiceConfigResultLocked(channel_args, args);
+  gpr_log(GPR_DEBUG, "done checking service config result locked");
   if (args->expected_service_config_string == "") {
     CheckLBPolicyResultLocked(channel_args, args);
+    gpr_log(GPR_DEBUG, "done checking lb policy result locked");
   }
   gpr_atm_rel_store(&args->done_atm, 1);
+  gpr_log(GPR_DEBUG, "now lock mu to kick pollset");
   gpr_mu_lock(args->mu);
+  gpr_log(GPR_DEBUG, "now kick pollset");
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
+  gpr_log(GPR_DEBUG, "done kick pollset");
   gpr_mu_unlock(args->mu);
+  gpr_log(GPR_DEBUG, "done lock mu to kick pollset");
 }
 
 TEST(ResolverComponentTest, TestResolvesRelevantRecords) {
@@ -292,9 +302,13 @@ TEST(ResolverComponentTest, TestResolvesRelevantRecords) {
   GRPC_CLOSURE_INIT(&on_resolver_result_changed, CheckResolverResultLocked,
                     (void*)&args, grpc_combiner_scheduler(args.lock));
   resolver->NextLocked(&args.channel_args, &on_resolver_result_changed);
+  gpr_log(GPR_DEBUG, "now flush exec ctx");
   grpc_core::ExecCtx::Get()->Flush();
+  gpr_log(GPR_DEBUG, "done flush exec ctx");
   PollPollsetUntilRequestDone(&args);
+  gpr_log(GPR_DEBUG, "now args finish");
   ArgsFinish(&args);
+  gpr_log(GPR_DEBUG, "done args finish");
 }
 
 }  // namespace

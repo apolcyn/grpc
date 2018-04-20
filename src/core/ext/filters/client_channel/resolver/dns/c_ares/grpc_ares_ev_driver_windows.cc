@@ -47,10 +47,15 @@ class FdNodeWindows final : public FdNode {
  private:
   void DestroyInnerEndpoint() override {
     // NOOP for windows
+    gpr_log(GPR_DEBUG, "now destroy  winsocket");
+    grpc_winsocket_destroy(winsocket_);
+    gpr_log(GPR_DEBUG, "done destroy  winsocket");
   }
 
   void ShutdownInnerEndpoint() override {
+    gpr_log(GPR_DEBUG, "now shutdown winsocket");
     grpc_winsocket_shutdown(winsocket_);
+    gpr_log(GPR_DEBUG, "done shutdown winsocket");
   }
 
   ares_socket_t GetInnerEndpoint() override {
@@ -58,18 +63,23 @@ class FdNodeWindows final : public FdNode {
   }
 
   bool IsInnerEndpointStillReadable() override {
-    SOCKET winsocket = grpc_winsocket_wrapped_socket(winsocket_);
-    size_t bytes_available = 0;
     return false;
+    //SOCKET winsocket = grpc_winsocket_wrapped_socket(winsocket_);
+    //size_t bytes_available = 0;
+    //return false;
     // TODO: fill this in... WSAIoctl(winsocket, FIONREAD, &bytes_available) == 0 &&
     //       bytes_available > 0;
   }
 
   void RegisterForOnReadable() override {
+    gpr_log(GPR_DEBUG, "now register for on readable");
     GRPC_CLOSURE_SCHED(&read_closure_, GRPC_ERROR_NONE);
+    gpr_log(GPR_DEBUG, "done register for on readable");
   }
   void RegisterForOnWriteable() override {
+    gpr_log(GPR_DEBUG, "now register for on writeable");
     GRPC_CLOSURE_SCHED(&write_closure_, GRPC_ERROR_NONE);
+    gpr_log(GPR_DEBUG, "done register for on writeable");
   }
 
  private:
