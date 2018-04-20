@@ -42,8 +42,7 @@ class AresEvDriverWindows;
 
 class FdNodeWindows final : public FdNode {
  public:
-  FdNodeWindows(grpc_winsocket* winsocket)
-      : FdNode() {
+  FdNodeWindows(grpc_winsocket* winsocket) : FdNode() {
     winsocket_ = winsocket;
   }
 

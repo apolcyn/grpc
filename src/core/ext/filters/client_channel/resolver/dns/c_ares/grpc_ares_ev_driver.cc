@@ -34,6 +34,7 @@
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/gpr/string.h"
+#include "src/core/lib/gprpp/memory.h"
 #include "src/core/lib/iomgr/ev_posix.h"
 #include "src/core/lib/iomgr/iomgr_internal.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
@@ -41,22 +42,23 @@
 namespace grpc_core {
 
 FdNode::FdNode() {
-  gpr_log(GPR_DEBUG,
-          "entering FdNode constructor. this:%" PRIdPTR, (uintptr_t)this);
+  gpr_log(GPR_DEBUG, "entering FdNode constructor. this:%" PRIdPTR,
+          (uintptr_t)this);
   gpr_mu_init(&mu_);
   readable_registered_ = false;
   writable_registered_ = false;
   shutting_down_ = false;
 }
 
-class FdNodeEventArg {
- public:
-  FdNodeEventArg(FdNode *fdn, RefCountedPtr<AresEvDriver> ev_driver) : fdn_(fdn), ev_driver_(ev_driver) {};
-  FdNode* fdn_;
-  RefCountedPtr<AresEvDriver> ev_driver_;
+struct FdNodeEventArg {
+  FdNodeEventArg(FdNode* fdn, RefCountedPtr<AresEvDriver> ev_driver)
+      : fdn(fdn), ev_driver(ev_driver){};
+  FdNode* fdn;
+  RefCountedPtr<AresEvDriver> ev_driver;
 };
 
-void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver *ev_driver, int socks_bitmask, size_t idx) {
+void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver* ev_driver,
+                                            int socks_bitmask, size_t idx) {
   gpr_mu_lock(&mu_);
   // Register read_closure if the socket is readable and read_closure has
   // not been registered with this socket.
@@ -64,7 +66,8 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver *ev_driver, int socks_b
     gpr_log(GPR_DEBUG,
             "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver);
-    auto on_readable_arg = grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
+    auto on_readable_arg =
+        grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable, on_readable_arg,
                       grpc_schedule_on_exec_ctx);
     RegisterForOnReadable();
@@ -76,7 +79,8 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver *ev_driver, int socks_b
     gpr_log(GPR_DEBUG,
             "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver);
-    auto on_writeable_arg = grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
+    auto on_writeable_arg =
+        grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable, on_writeable_arg,
                       grpc_schedule_on_exec_ctx);
     RegisterForOnWriteable();
@@ -107,22 +111,21 @@ void FdNode::Shutdown(FdNode* fdn) {
 }
 
 void FdNode::OnReadable(void* arg, grpc_error* error) {
-  FdNodeEventArg* on_readable_arg = reinterpret_cast<FdNodeEventArg*>(arg);
-  FdNode* fdn = on_readable_arg->fdn_;
-  if (!fdn->OnReadableInner(std::move(on_readable_arg->ev_driver_), error)) {
-    FdNode::Destroy(fdn);
+  UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
+  if (!event_arg->fdn->OnReadableInner(event_arg->ev_driver, error)) {
+    FdNode::Destroy(event_arg->fdn);
   }
 }
 
 void FdNode::OnWriteable(void* arg, grpc_error* error) {
-  FdNodeEventArg* on_writeable_arg = reinterpret_cast<FdNodeEventArg*>(arg);
-  FdNode *fdn = on_writeable_arg->fdn_;
-  if (!fdn->OnWriteableInner(std::move(on_writeable_arg->ev_driver_), error)) {
-    FdNode::Destroy(fdn);
+  UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
+  if (!event_arg->fdn->OnWriteableInner(event_arg->ev_driver, error)) {
+    FdNode::Destroy(event_arg->fdn);
   }
 }
 
-bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver, grpc_error* error) {
+bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver,
+                             grpc_error* error) {
   gpr_mu_lock(&mu_);
   readable_registered_ = false;
   if (shutting_down_ && !writable_registered_) {
@@ -150,7 +153,8 @@ bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver, grpc_error* 
   return true;
 }
 
-bool FdNode::OnWriteableInner(RefCountedPtr<AresEvDriver> ev_driver, grpc_error* error) {
+bool FdNode::OnWriteableInner(RefCountedPtr<AresEvDriver> ev_driver,
+                              grpc_error* error) {
   gpr_mu_lock(&mu_);
   writable_registered_ = false;
   if (shutting_down_ && !readable_registered_) {
@@ -199,22 +203,6 @@ void AresEvDriver::Start() {
   }
   gpr_mu_unlock(&mu_);
 }
-
-//    void AresEvDriver::Ref() {
-//      gpr_log(GPR_DEBUG, "Ref ev_driver %" PRIuPTR, (uintptr_t)this);
-//      gpr_ref(&refs_);
-//    }
-//    
-//    void AresEvDriver::Unref() {
-//      gpr_log(GPR_DEBUG, "Unref ev_driver %" PRIuPTR, (uintptr_t)this);
-//      if (gpr_unref(&refs_)) {
-//        gpr_log(GPR_DEBUG, "destroy ev_driver %" PRIuPTR, (uintptr_t)this);
-//        GPR_ASSERT(fds_->size() == 0);
-//        gpr_mu_destroy(&mu_);
-//        ares_destroy(channel_);
-//        Delete(this);
-//      }
-//    }
 
 void AresEvDriver::Destroy() {
   // It's not safe to shut down remaining fds here directly, becauses
@@ -294,7 +282,7 @@ void AresEvDriver::NotifyOnEventLocked() {
 // our tests.
 int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
   for (size_t i = 0; i < fds_->size(); i++) {
-    if ((*fds_)[i]->GetInnerEndpoint() == as) {
+    if ((*fds_)[i] != nullptr && (*fds_)[i]->GetInnerEndpoint() == as) {
       return i;
     }
   }

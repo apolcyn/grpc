@@ -34,7 +34,8 @@ class AresEvDriver;
 class FdNode {
  public:
   explicit FdNode();
-  void MaybeRegisterForReadsAndWrites(AresEvDriver*, int socks_bitmask, size_t idx);
+  void MaybeRegisterForReadsAndWrites(AresEvDriver*, int socks_bitmask,
+                                      size_t idx);
   virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
   virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
   static void Shutdown(FdNode*);

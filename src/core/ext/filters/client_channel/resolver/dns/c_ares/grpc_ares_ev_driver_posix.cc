@@ -42,9 +42,7 @@ class AresEvDriverPosix;
 
 class FdNodePosix final : public FdNode {
  public:
-  FdNodePosix(grpc_fd* fd) : FdNode() {
-    fd_ = fd;
-  }
+  FdNodePosix(grpc_fd* fd) : FdNode() { fd_ = fd; }
 
  private:
   void DestroyInnerEndpoint() override {
