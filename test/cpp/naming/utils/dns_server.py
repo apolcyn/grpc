@@ -142,9 +142,8 @@ def main():
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
   args = argp.parse_args()
-  if platform.system() != 'Windows':
-    signal.signal(signal.SIGTERM, _quit_on_signal)
-    signal.signal(signal.SIGINT, _quit_on_signal)
+  signal.signal(signal.SIGTERM, _quit_on_signal)
+  signal.signal(signal.SIGINT, _quit_on_signal)
   # Prevent zombies. Tests that use this server are short-lived.
   # signal.alarm(2 * 60)
   global output_flush_thread

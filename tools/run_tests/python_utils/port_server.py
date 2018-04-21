@@ -204,3 +204,4 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 ThreadedHTTPServer(('', args.port), Handler).serve_forever()
+time.sleep(10)
