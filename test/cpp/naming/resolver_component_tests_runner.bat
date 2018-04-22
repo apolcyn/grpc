@@ -15,9 +15,53 @@
 @rem This file is auto-generated
 
 @rem TODO: need this? cd /d %~dp0\..\..\..
-set FLAGS_test_bin_path=".\cmake\build\Debug\resolver_component_test.exe"
-set FLAGS_dns_server_port=15353
+
+set FLAGS_test_bin_path="UNSET ARG"
+set FLAGS_dns_server_bin_path="UNSET ARG"
+set FLAGS_records_config_path="UNSET ARG"
+set FLAGS_dns_server_port="UNSET ARG"
+set FLAGS_dns_resolver_bin_path="UNSET ARG"
+set FLAGS_tcp_connect_bin_path="UNSET ARG"
+if "%1" == "--test_bin_path" (
+  set FLAGS_test_bin_path=%2
+)
+shift
+shift
+if "%1" == "--dns_server_bin_path" (
+  set FLAGS_dns_server_bin_path=%2
+)
+shift
+shift
+if "%1" == "--records_config_path" (
+  set FLAGS_records_config_path=%2
+)
+shift
+shift
+if "%1" == "--dns_server_port" (
+  set FLAGS_dns_server_port=%2
+)
+shift
+shift
+if "%1" == "--dns_resolver_bin_path" (
+  set FLAGS_dns_resolver_bin_path=%2
+)
+shift
+shift
+if "%1" == "--tcp_connect_bin_path" (
+  set FLAGS_tcp_connect_bin_path=%2
+)
+shift
+shift
+
 set $Env:GRPC_DNS_RESOLVER='ares'
+set $Env:GRPC_VERBOSITY='DEBUG'
+
+DNS_SERVER_CMD=python test/cpp/naming/utils/run_process_in_background.py ^
+  %FLAGS_dns_server_bin_path ^
+  -p %FLAGS_dns_server_port ^
+  -r %FLAGS_records_config_path
+echo %DNS_SERVER_CMD%
+exit 0
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^
