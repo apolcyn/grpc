@@ -58,7 +58,7 @@ set GRPC_DNS_RESOLVER=ares
 set PYTHON=C:\Python27\python.exe
 
 for /f "tokens=1 delims=" %%f in (
-'%PYTHON% test\cpp\naming\utils\create_tempfile.py'
+'%PYTHON% -c "import tempfile; print(tempfile.mktemp())"'
 ) do set DNS_SERVER_LAUNCHER_OUTPUT=%%f
 
 %PYTHON% test\cpp\naming\utils\run_process_in_background.py ^
@@ -77,6 +77,7 @@ for /f "tokens=2 delims= " %%p in (
 ) do set DNS_SERVER_LOG=%%p
 
 @rem Wait until the DNS server is up and running
+setlocal ENABLEDELAYEDEXPANSION
 set DNS_SERVER_STATUS=unkown
 for /l %%i in (1, 1, 10) do (
   echo "Health check: attempt to connect to DNS server over TCP."
@@ -84,29 +85,30 @@ for /l %%i in (1, 1, 10) do (
     -s 127.0.0.1 ^
     -p %FLAGS_dns_server_port% ^
     -t 1
-  if %ERRORLEVEL% == 0 (
+  if !ERRORLEVEL! == 0 (
     echo "Health check: attempt to make an A-record query to DNS server."
     %PYTHON% %FLAGS_dns_resolver_bin_path% ^
       -n health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp ^
       -s 127.0.0.1 ^
       -p %FLAGS_dns_server_port% | findstr 123.123.123.123
-    if %ERRORLEVEL% == 0 (
-      echo "DNS server is up! Successfully reached over UDP and TCP."
+    if !ERRORLEVEL! == 0 (
+      echo "DNS server is up. Successfully reached it over UDP and TCP."
       set DNS_SERVER_STATUS=alive
       goto dns_server_health_check_done
     )
   )
+  %PYTHON% -c "import time; time.sleep(0.2)"
 )
 :dns_server_health_check_done
-
 if NOT "%DNS_SERVER_STATUS%" == "alive" (
-  taskkill /pid /f %DNS_SERVER_PID% 
-  echo "Failed to connect to DNS server. Skipping tests."
-  echo "======= DNS server log: ============="
+  taskkill /pid %DNS_SERVER_PID% /f
+  echo "Failed to connect to DNS server. Skipping tests, exitting 1."
+  echo "======= DNS server log, %DNS_SERVER_LOG%: ============="
   type %DNS_SERVER_LOG%
-  echo "======= end DNS server log =========="
+  echo "======= end DNS server log ============================"
   exit 1
 )
+endlocal
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^

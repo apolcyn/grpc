@@ -124,7 +124,7 @@ def _quit_on_signal(signum, _frame):
 def flush_stdout_loop():
   num_timeouts_so_far = 0
   sleep_time = 1
-  max_timeouts = 10
+  max_timeouts = 60 * 2
   while num_timeouts_so_far < max_timeouts:
     sys.stdout.flush()
     time.sleep(sleep_time)
@@ -145,8 +145,6 @@ def main():
   output_flush_thread = threading.Thread(target=flush_stdout_loop)
   output_flush_thread.setDaemon(True)
   output_flush_thread.start()
-  print('made it here')
-  sys.stdout.flush()
   start_local_dns_server(args)
 
 if __name__ == '__main__':
