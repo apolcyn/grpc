@@ -14,7 +14,7 @@
 @rem
 @rem This file is auto-generated
 
-setlocal
+setlocal ENABLEDELAYEDEXPANSION
 @echo off
 
 set FLAGS_test_bin_path="BAD UNSET ARG"
@@ -77,7 +77,6 @@ for /f "tokens=2 delims= " %%p in (
 ) do set DNS_SERVER_LOG=%%p
 
 @rem Wait until the DNS server is up and running
-setlocal ENABLEDELAYEDEXPANSION
 set DNS_SERVER_STATUS=unkown
 for /l %%i in (1, 1, 10) do (
   echo "Health check: attempt to connect to DNS server over TCP."
@@ -108,7 +107,6 @@ if NOT "%DNS_SERVER_STATUS%" == "alive" (
   echo "======= end DNS server log ============================"
   exit 1
 )
-endlocal
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^
