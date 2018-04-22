@@ -53,8 +53,8 @@ if "%1" == "--tcp_connect_bin_path" (
 shift
 shift
 
-set $Env:GRPC_DNS_RESOLVER='ares'
-set $Env:GRPC_VERBOSITY='DEBUG'
+set GRPC_DNS_RESOLVER=ares
+set GRPC_VERBOSITY=DEBUG
 
 for /f "tokens=1 delims=" %%f in (
 'c:\Python27\python.exe test\cpp\naming\utils\create_tempfile.py'
@@ -63,13 +63,15 @@ for /f "tokens=1 delims=" %%f in (
 C:\Python27\python.exe test\cpp\naming\utils\run_process_in_background.py ^
   C:\Python27\python.exe ^
   test\cpp\naming\utils\dns_server.py ^
-  -p 15353 ^
+  -p %FLAGS_dns_server_port% ^
   -r test\cpp\naming\resolver_test_record_groups.yaml ^
   > %TEMPFILE_FOR_DNS_SERVER_PID%
 
 for /f "tokens=1 delims=" %%p in (
   'type %TEMPFILE_FOR_DNS_SERVER_PID%'
 ) do set DNS_SERVER_PID=%%p
+
+timeout 1
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^
