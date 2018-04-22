@@ -14,14 +14,17 @@
 @rem
 @rem This file is auto-generated
 
-@rem TODO: need this? cd /d %~dp0\..\..\..
+setlocal
+@echo off
 
-set FLAGS_test_bin_path="UNSET ARG"
-set FLAGS_dns_server_bin_path="UNSET ARG"
-set FLAGS_records_config_path="UNSET ARG"
-set FLAGS_dns_server_port="UNSET ARG"
-set FLAGS_dns_resolver_bin_path="UNSET ARG"
-set FLAGS_tcp_connect_bin_path="UNSET ARG"
+set FLAGS_test_bin_path="BAD UNSET ARG"
+set FLAGS_dns_server_bin_path="BAD UNSET ARG"
+set FLAGS_records_config_path="BAD UNSET ARG"
+set FLAGS_dns_server_port="BAD UNSET ARG"
+set FLAGS_dns_resolver_bin_path="BAD UNSET ARG"
+set FLAGS_tcp_connect_bin_path="BAD UNSET ARG"
+
+@rem Parse the command args provided by resolver_component_tests_runner_invoker
 if "%1" == "--test_bin_path" (
   set FLAGS_test_bin_path=%2
 )
@@ -50,28 +53,60 @@ shift
 if "%1" == "--tcp_connect_bin_path" (
   set FLAGS_tcp_connect_bin_path=%2
 )
-shift
-shift
 
 set GRPC_DNS_RESOLVER=ares
-set GRPC_VERBOSITY=DEBUG
+set PYTHON=C:\Python27\python.exe
 
 for /f "tokens=1 delims=" %%f in (
-'c:\Python27\python.exe test\cpp\naming\utils\create_tempfile.py'
-) do set TEMPFILE_FOR_DNS_SERVER_PID=%%f
+'%PYTHON% test\cpp\naming\utils\create_tempfile.py'
+) do set DNS_SERVER_LAUNCHER_OUTPUT=%%f
 
-C:\Python27\python.exe test\cpp\naming\utils\run_process_in_background.py ^
-  C:\Python27\python.exe ^
+%PYTHON% test\cpp\naming\utils\run_process_in_background.py ^
+  %PYTHON% ^
   test\cpp\naming\utils\dns_server.py ^
   -p %FLAGS_dns_server_port% ^
   -r test\cpp\naming\resolver_test_record_groups.yaml ^
-  > %TEMPFILE_FOR_DNS_SERVER_PID%
+  > %DNS_SERVER_LAUNCHER_OUTPUT%
 
-for /f "tokens=1 delims=" %%p in (
-  'type %TEMPFILE_FOR_DNS_SERVER_PID%'
+for /f "tokens=1 delims= " %%p in (
+  'type %DNS_SERVER_LAUNCHER_OUTPUT%'
 ) do set DNS_SERVER_PID=%%p
 
-timeout 1
+for /f "tokens=2 delims= " %%p in (
+  'type %DNS_SERVER_LAUNCHER_OUTPUT%'
+) do set DNS_SERVER_LOG=%%p
+
+@rem Wait until the DNS server is up and running
+set DNS_SERVER_STATUS=unkown
+for /l %%i in (1, 1, 10) do (
+  echo "Health check: attempt to connect to DNS server over TCP."
+  %PYTHON% %FLAGS_tcp_connect_bin_path% ^
+    -s 127.0.0.1 ^
+    -p %FLAGS_dns_server_port% ^
+    -t 1
+  if %ERRORLEVEL% == 0 (
+    echo "Health check: attempt to make an A-record query to DNS server."
+    %PYTHON% %FLAGS_dns_resolver_bin_path% ^
+      -n health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp ^
+      -s 127.0.0.1 ^
+      -p %FLAGS_dns_server_port% | findstr 123.123.123.123
+    if %ERRORLEVEL% == 0 (
+      echo "DNS server is up! Successfully reached over UDP and TCP."
+      set DNS_SERVER_STATUS=alive
+      goto dns_server_health_check_done
+    )
+  )
+)
+:dns_server_health_check_done
+
+if NOT "%DNS_SERVER_STATUS%" == "alive" (
+  taskkill /pid /f %DNS_SERVER_PID% 
+  echo "Failed to connect to DNS server. Skipping tests."
+  echo "======= DNS server log: ============="
+  type %DNS_SERVER_LOG%
+  echo "======= end DNS server log =========="
+  exit 1
+)
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^
@@ -172,3 +207,5 @@ timeout 1
   --local_dns_server_address="127.0.0.1:%FLAGS_dns_server_port%"
 
 taskkill /pid %DNS_SERVER_PID% /f
+
+endlocal

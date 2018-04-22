@@ -24,7 +24,7 @@ import twisted.internet.reactor as reactor
 
 def exit_after_timeout(timeout):
   time.sleep(timeout)
-  print('Time limit reached. Exitting 1')
+  print('Time limit reached. Forcing exit')
   reactor.stop()
 
 def main():

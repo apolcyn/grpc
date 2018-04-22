@@ -21,8 +21,12 @@ import threading
 import time
 import sys
 
+connect_success = False
+
 def try_connect(args):
   socket.create_connection([args.server_host, args.server_port])
+  global connect_success
+  connect_success = True
 
 def main():
   argp = argparse.ArgumentParser(description='Open a TCP handshake to a server')
@@ -37,7 +41,8 @@ def main():
   t.setDaemon(True)
   t.start()
   t.join(timeout=args.timeout)
-  if t.isAlive():
+  time.sleep(args.timeout)
+  if t.isAlive() or not connect_success:
     sys.exit(1)
 
 if __name__ == '__main__':
