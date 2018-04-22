@@ -112,26 +112,24 @@ def start_local_dns_server(args):
   twisted.internet.reactor.suggestThreadPoolSize(1)
   twisted.internet.reactor.run()
 
-force_timer_quit = False
-
 def shutdown_process():
   twisted.internet.reactor.stop()
   sys.stdout.flush()
   sys.exit(0)
 
 def _quit_on_signal(signum, _frame):
-  global force_timer_quit
   print('Received SIGNAL %d. Quitting with exit code 0' % signum)
   shutdown_process()
 
-def flush_stdout():
-  max_timeouts = 12 * 3
+def flush_stdout_loop():
   num_timeouts_so_far = 0
+  sleep_time = 1
+  max_timeouts = 60 * 2
   while num_timeouts_so_far < max_timeouts:
-    print('flush_stdout')
     sys.stdout.flush()
-    time.sleep(1)
-  print('Process timeout reached, or cancelled. Exitting.')
+    time.sleep(sleep_time)
+    num_timeouts_so_far += 1
+  print('Process timeout reached, or cancelled. Exitting 0.')
   shutdown_process()
 
 def main():
@@ -144,10 +142,7 @@ def main():
   args = argp.parse_args()
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)
-  # Prevent zombies. Tests that use this server are short-lived.
-  # signal.alarm(2 * 60)
-  global output_flush_thread
-  output_flush_thread = threading.Thread(target=flush_stdout)
+  output_flush_thread = threading.Thread(target=flush_stdout_loop)
   output_flush_thread.setDaemon(True)
   output_flush_thread.start()
   print('made it here')
