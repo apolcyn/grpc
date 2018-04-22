@@ -56,12 +56,20 @@ shift
 set $Env:GRPC_DNS_RESOLVER='ares'
 set $Env:GRPC_VERBOSITY='DEBUG'
 
-DNS_SERVER_CMD=python test/cpp/naming/utils/run_process_in_background.py ^
-  %FLAGS_dns_server_bin_path ^
-  -p %FLAGS_dns_server_port ^
-  -r %FLAGS_records_config_path
-echo %DNS_SERVER_CMD%
-exit 0
+for /f "tokens=1 delims=" %%f in (
+'c:\Python27\python.exe test\cpp\naming\utils\create_tempfile.py'
+) do set TEMPFILE_FOR_DNS_SERVER_PID=%%f
+
+C:\Python27\python.exe test\cpp\naming\utils\run_process_in_background.py ^
+  C:\Python27\python.exe ^
+  test\cpp\naming\utils\dns_server.py ^
+  -p 15353 ^
+  -r test\cpp\naming\resolver_test_record_groups.yaml ^
+  > %TEMPFILE_FOR_DNS_SERVER_PID%
+
+for /f "tokens=1 delims=" %%p in (
+  'type %TEMPFILE_FOR_DNS_SERVER_PID%'
+) do set DNS_SERVER_PID=%%p
 
 %FLAGS_test_bin_path% ^
   --target_name="no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp." ^
@@ -161,4 +169,4 @@ exit 0
   --expected_lb_policy="" ^
   --local_dns_server_address="127.0.0.1:%FLAGS_dns_server_port%"
 
-
+taskkill /pid %DNS_SERVER_PID% /f

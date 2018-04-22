@@ -124,7 +124,7 @@ def _quit_on_signal(signum, _frame):
 def flush_stdout_loop():
   num_timeouts_so_far = 0
   sleep_time = 1
-  max_timeouts = 60 * 2
+  max_timeouts = 10
   while num_timeouts_so_far < max_timeouts:
     sys.stdout.flush()
     time.sleep(sleep_time)

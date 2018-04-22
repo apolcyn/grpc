@@ -193,12 +193,21 @@ int main(int argc, char** argv) {
     std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
     // Invoke the .sh and .py scripts directly where they are in source code.
     grpc::testing::InvokeResolverComponentTestsRunner(
+#ifdef GPR_WINDOWS
+        "test\\cpp\\naming\\resolver_component_tests_runner.bat",
+        bin_dir + "\\" + FLAGS_test_bin_name + ".exe",
+        "test\\cpp\\naming\\utils\\dns_server.py",
+        "test\\cpp\\naming\\resolver_test_record_groups.yaml",
+        "test\\cpp\\naming\\utils\\dns_resolver.py",
+        "test\\cpp\\naming\\utils\\tcp_connect.py");
+#else
         "test/cpp/naming/resolver_component_tests_runner.sh",
         bin_dir + "/" + FLAGS_test_bin_name,
         "test/cpp/naming/utils/dns_server.py",
         "test/cpp/naming/resolver_test_record_groups.yaml",
         "test/cpp/naming/utils/dns_resolver.py",
         "test/cpp/naming/utils/tcp_connect.py");
+#endif
   }
   grpc_shutdown();
   return 0;

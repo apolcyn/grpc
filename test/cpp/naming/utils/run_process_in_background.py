@@ -1,5 +1,5 @@
 import sys
 import subprocess
 
-b = subprocess.Popen(sys.argv[1:])
-print(b.pid)
+with open('dns_server_log.log', 'w') as log:
+  print(subprocess.Popen(sys.argv[1:], stdin=subprocess.PIPE, stdout=log, stderr=log).pid)
