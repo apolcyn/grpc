@@ -14,42 +14,9 @@
 @rem
 @rem This file is auto-generated
 
-echo %*
-set FLAGS_test_bin_path="BAD UNSET ARG"
-set FLAGS_dns_server_bin_path="BAD UNSET ARG"
-set FLAGS_records_config_path="BAD UNSET ARG"
-set FLAGS_dns_server_port="BAD UNSET ARG"
-set FLAGS_dns_resolver_bin_path="BAD UNSET ARG"
-set FLAGS_tcp_connect_bin_path="BAD UNSET ARG"
-if "%1" == "--test_bin_path" (
-  set FLAGS_test_bin_path=%2
-)
-shift
-shift
-if "%1" == "--dns_server_bin_path" (
-  set FLAGS_dns_server_bin_path=%2
-)
-shift
-shift
-if "%1" == "--records_config_path" (
-  set FLAGS_records_config_path=%2
-)
-shift
-shift
-if "%1" == "--dns_server_port" (
-  set FLAGS_dns_server_port=%2
-)
-shift
-shift
-if "%1" == "--dns_resolver_bin_path" (
-  set FLAGS_dns_resolver_bin_path=%2
-)
-shift
-shift
-if "%1" == "--tcp_connect_bin_path" (
-  set FLAGS_tcp_connect_bin_path=%2
-)
-
+@rem TODO: need this? cd /d %~dp0\..\..\..
+set FLAGS_test_bin_path=".\cmake\build\Debug\resolver_component_test.exe"
+set FLAGS_dns_server_port=15353
 set $Env:GRPC_DNS_RESOLVER='ares'
 
 %FLAGS_test_bin_path% ^

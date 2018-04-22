@@ -175,7 +175,7 @@ def main():
               'gtest': False,
               'run': True,
               'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
-              'platforms': ['linux', 'posix', 'mac'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
               'deps': [
                   'grpc++_test_util',
                   'grpc_test_util',
@@ -188,28 +188,6 @@ def main():
               'args': [
                   '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
                   '--running_under_bazel=false',
-              ],
-          } for unsecure_build_config_suffix in ['_unsecure', '']
-      ] + [
-          {
-              'name': 'resolver_component_tests_runner_invoker_windows' + unsecure_build_config_suffix,
-              'build': 'test',
-              'language': 'c++',
-              'gtest': False,
-              'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc'],
-              'platforms': ['windows'],
-              'deps': [
-                  'grpc++_test_util',
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'grpc++',
-                  'grpc',
-                  'gpr',
-                  'grpc++_test_config',
-              ],
-              'args': [
-                  '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ] + [

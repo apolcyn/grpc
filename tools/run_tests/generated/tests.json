@@ -5467,7 +5467,8 @@
     "ci_platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "cpu_cost": 1.0, 
     "exclude_configs": [], 
@@ -5479,7 +5480,8 @@
     "platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "uses_polling": true
   }, 
@@ -5492,7 +5494,8 @@
     "ci_platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "cpu_cost": 1.0, 
     "exclude_configs": [], 
@@ -5504,46 +5507,7 @@
     "platforms": [
       "linux", 
       "mac", 
-      "posix"
-    ], 
-    "uses_polling": true
-  }, 
-  {
-    "args": [
-      "--test_bin_name=resolver_component_test_unsecure"
-    ], 
-    "benchmark": false, 
-    "ci_platforms": [
-      "windows"
-    ], 
-    "cpu_cost": 1.0, 
-    "exclude_configs": [], 
-    "exclude_iomgrs": [], 
-    "flaky": false, 
-    "gtest": false, 
-    "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_windows_unsecure", 
-    "platforms": [
-      "windows"
-    ], 
-    "uses_polling": true
-  }, 
-  {
-    "args": [
-      "--test_bin_name=resolver_component_test"
-    ], 
-    "benchmark": false, 
-    "ci_platforms": [
-      "windows"
-    ], 
-    "cpu_cost": 1.0, 
-    "exclude_configs": [], 
-    "exclude_iomgrs": [], 
-    "flaky": false, 
-    "gtest": false, 
-    "language": "c++", 
-    "name": "resolver_component_tests_runner_invoker_windows", 
-    "platforms": [
+      "posix", 
       "windows"
     ], 
     "uses_polling": true

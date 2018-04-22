@@ -1322,8 +1322,6 @@ resolver_component_test_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_test_un
 resolver_component_test: $(BINDIR)/$(CONFIG)/resolver_component_test
 resolver_component_tests_runner_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure
 resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
-resolver_component_tests_runner_invoker_windows_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure
-resolver_component_tests_runner_invoker_windows: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows
 address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure
 address_sorting_test: $(BINDIR)/$(CONFIG)/address_sorting_test
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
@@ -1755,8 +1753,6 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
-  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure \
-  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
 
@@ -1878,8 +1874,6 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
-  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure \
-  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
 
@@ -2355,10 +2349,6 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure || ( echo test resolver_component_tests_runner_invoker_unsecure failed ; exit 1 )
 	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker"
 	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker || ( echo test resolver_component_tests_runner_invoker failed ; exit 1 )
-	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_windows_unsecure"
-	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure || ( echo test resolver_component_tests_runner_invoker_windows_unsecure failed ; exit 1 )
-	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_windows"
-	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows || ( echo test resolver_component_tests_runner_invoker_windows failed ; exit 1 )
 	$(E) "[RUN]     Testing address_sorting_test_unsecure"
 	$(Q) $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure || ( echo test address_sorting_test_unsecure failed ; exit 1 )
 	$(E) "[RUN]     Testing address_sorting_test"
@@ -23226,92 +23216,6 @@ deps_resolver_component_tests_runner_invoker: $(RESOLVER_COMPONENT_TESTS_RUNNER_
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS:.o=.dep)
-endif
-endif
-
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_SRC = \
-    test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc \
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure: openssl_dep_error
-
-else
-
-
-
-
-ifeq ($(NO_PROTOBUF),true)
-
-# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure: protobuf_dep_error
-
-else
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows_unsecure
-
-endif
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker_windows.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-
-deps_resolver_component_tests_runner_invoker_windows_unsecure: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_UNSECURE_OBJS:.o=.dep)
-endif
-endif
-
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_SRC = \
-    test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc \
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows: openssl_dep_error
-
-else
-
-
-
-
-ifeq ($(NO_PROTOBUF),true)
-
-# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows: protobuf_dep_error
-
-else
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_windows
-
-endif
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker_windows.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-
-deps_resolver_component_tests_runner_invoker_windows: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_WINDOWS_OBJS:.o=.dep)
 endif
 endif
 
