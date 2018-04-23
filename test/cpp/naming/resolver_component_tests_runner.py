@@ -1,17 +1,17 @@
 # Copyright 2015 gRPC authors.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# 
+#
 # This file is auto-generated
 
 import argparse
@@ -21,6 +21,10 @@ import tempfile
 import os
 import time
 import signal
+
+# This script is meant to running the resolver component tests on
+# windows. It's functionally the same as resolver_component_tests_runner.sh
+# but is able to run on windows.
 
 
 argp = argparse.ArgumentParser(description='Run c-ares resolver tests')
@@ -49,14 +53,14 @@ if cur_resolver and cur_resolver != 'ares':
 os.environ.update({'GRPC_DNS_RESOLVER': 'ares'})
 
 WIN_PYTHON = os.path.join('C:\\', 'Python27', 'python.exe')
-# s = subprocess.Popen([WIN_PYTHON, '-c', 'test_runner_log("hello from sub")'])
-# s.communicate()
-# sys.exit(s.returncode)
 
 def wait_until_dns_server_is_up(args, dns_server_subprocess):
   for i in range(0, 10):
     test_runner_log('Health check: attempt to connect to DNS server over TCP.')
-
+    # TODO(apolcyn): The resolver_component_tests_runner.sh script for mac
+    # and linux c-ares tests is functionally the same as this script, and the
+    # mac and linux tests should be ported to use this script. At that point,
+    # these subprocess calls can become in-process.
     tcp_connect_subprocess = subprocess.Popen([
         WIN_PYTHON,
         args.tcp_connect_bin_path,
@@ -123,8 +127,52 @@ current_test_subprocess = subprocess.Popen([
   args.test_bin_path,
   '--target_name', 'no-srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp.',
   '--expected_addrs', '5.5.5.5:443,False',
-  '--expected_chosen_service_config', "",
-  '--expected_lb_policy', "",
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv4-single-target.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:1234,True',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv4-multi-target.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.5:1234,True;1.2.3.6:1234,True;1.2.3.7:1234,True',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv6-single-target.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '[2607:f8b0:400a:801::1001]:1234,True',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv6-multi-target.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1003]:1234,True;[2607:f8b0:400a:801::1004]:1234,True',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
   '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
 current_test_subprocess.communicate()
 if current_test_subprocess.returncode != 0:
@@ -134,15 +182,105 @@ current_test_subprocess = subprocess.Popen([
   args.test_bin_path,
   '--target_name', 'srv-ipv4-simple-service-config.resolver-tests-version-4.grpctestingexp.',
   '--expected_addrs', '1.2.3.4:1234,True',
-  '--expected_chosen_service_config', "{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"SimpleService\",\"waitForReady\":true}]}]}",
+  '--expected_chosen_service_config', '{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"SimpleService\",\"waitForReady\":true}]}]}',
   '--expected_lb_policy', 'round_robin',
   '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
 current_test_subprocess.communicate()
 if current_test_subprocess.returncode != 0:
   num_test_failures += 1
 
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-no-srv-simple-service-config.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"NoSrvSimpleService\",\"waitForReady\":true}]}]}',
+  '--expected_lb_policy', 'round_robin',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-no-config-for-cpp.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-cpp-config-has-zero-percentage.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-second-language-is-cpp.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"CppService\",\"waitForReady\":true}]}]}',
+  '--expected_lb_policy', 'round_robin',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-config-with-percentages.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"AlwaysPickedService\",\"waitForReady\":true}]}]}',
+  '--expected_lb_policy', 'round_robin',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv4-target-has-backend-and-balancer.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:1234,True;1.2.3.4:443,False',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'srv-ipv6-target-has-backend-and-balancer.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '[2607:f8b0:400a:801::1002]:1234,True;[2607:f8b0:400a:801::1002]:443,False',
+  '--expected_chosen_service_config', '',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--target_name', 'ipv4-config-causing-fallback-to-tcp.resolver-tests-version-4.grpctestingexp.',
+  '--expected_addrs', '1.2.3.4:443,False',
+  '--expected_chosen_service_config', '{\"loadBalancingPolicy\":\"round_robin\",\"methodConfig\":[{\"name\":[{\"method\":\"Foo\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTwo\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooThree\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooFour\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooFive\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooSix\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooSeven\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooEight\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooNine\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTen\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooEleven\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTwelve\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTwelve\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTwelve\",\"service\":\"SimpleService\",\"waitForReady\":true}]},{\"name\":[{\"method\":\"FooTwelve\",\"service\":\"SimpleService\",\"waitForReady\":true}]}]}',
+  '--expected_lb_policy', '',
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
+  num_test_failures += 1
+
+
 test_runner_log('now kill DNS server')
 os.kill(dns_server_subprocess.pid, signal.SIGTERM)
 dns_server_subprocess.communicate()
 test_runner_log('%d tests failed.' % num_test_failures)
 sys.exit(num_test_failures)
+
