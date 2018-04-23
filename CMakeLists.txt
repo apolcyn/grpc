@@ -15399,6 +15399,8 @@ if (gRPC_BUILD_TESTS)
 
 add_executable(resolver_component_tests_runner_invoker_unsecure
   test/cpp/naming/resolver_component_tests_runner_invoker.cc
+  test/cpp/naming/resolver_component_tests_runner_invoker_posix.cc
+  test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )
@@ -15439,6 +15441,8 @@ if (gRPC_BUILD_TESTS)
 
 add_executable(resolver_component_tests_runner_invoker
   test/cpp/naming/resolver_component_tests_runner_invoker.cc
+  test/cpp/naming/resolver_component_tests_runner_invoker_posix.cc
+  test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc
   third_party/googletest/googletest/src/gtest-all.cc
   third_party/googletest/googlemock/src/gmock-all.cc
 )

@@ -166,7 +166,10 @@ def main():
               'language': 'c++',
               'gtest': False,
               'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
+              'headers': ['test/cpp/naming/resolver_component_tests_runner_invoker.h'],
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc',
+                      'test/cpp/naming/resolver_component_tests_runner_invoker_posix.cc',
+                      'test/cpp/naming/resolver_component_tests_runner_invoker_windows.cc'],
               'platforms': ['linux', 'posix', 'mac', 'windows'],
               'deps': [
                   'grpc++_test_util',
