@@ -85,7 +85,7 @@ $FLAGS_test_bin_path \\
 
   --expected_addrs='${test['expected_addrs']}' \\
 
-  --expected_chosen_service_config="${test['expected_chosen_service_config']}" \\
+  --expected_chosen_service_config='${test['expected_chosen_service_config']}' \\
 
   --expected_lb_policy='${test['expected_lb_policy']}' \\
 

@@ -114,14 +114,6 @@ def _gce_dns_zone_id(resolver_component_data):
   dns_name = resolver_component_data['resolver_tests_common_zone_name']
   return dns_name.replace('.', '-') + 'zone-id'
 
-def _escapify_service_config(full_service_config_str):
-  out = ""
-  for c in full_service_config_str:
-    if c == '"':
-      out += "\\"
-    out += c
-  return out
-
 def _resolver_test_cases(resolver_component_data, records_to_skip):
   out = []
   for test_case in resolver_component_data['resolver_component_tests']:
@@ -131,7 +123,7 @@ def _resolver_test_cases(resolver_component_data, records_to_skip):
       'target_name': _append_zone_name(test_case['record_to_resolve'],
                                        resolver_component_data['resolver_tests_common_zone_name']),
       'expected_addrs': _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
-      'expected_chosen_service_config': _escapify_service_config(test_case['expected_chosen_service_config'] or ''),
+      'expected_chosen_service_config': (test_case['expected_chosen_service_config'] or ''),
       'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
     })
   return out
