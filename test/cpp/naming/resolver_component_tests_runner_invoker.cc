@@ -15,10 +15,10 @@
  * limitations under the License.
  *
  */
-#include <grpc/support/port_platform.h>
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
+#include <grpc/support/port_platform.h>
 #include <grpc/support/string_util.h>
 #include <signal.h>
 #include <string.h>
@@ -62,7 +62,8 @@ namespace {
 const int kTestTimeoutSeconds = 10;
 
 void RunSigHandlingThread(SubProcess* test_driver, gpr_mu* test_driver_mu,
-                          gpr_cv* test_driver_cv, int* test_driver_done, int *test_driver_interrupted) {
+                          gpr_cv* test_driver_cv, int* test_driver_done,
+                          int* test_driver_interrupted) {
   gpr_timespec overall_deadline =
       gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
                    gpr_time_from_seconds(kTestTimeoutSeconds, GPR_TIMESPAN));
@@ -145,7 +146,8 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_cv_destroy(&test_driver_cv);
 }
 
-std::string ResolverComponentTestsPathJoin(std::vector<std::string> path_elements) {
+std::string ResolverComponentTestsPathJoin(
+    std::vector<std::string> path_elements) {
   std::string output = path_elements[0];
   for (size_t i = 1; i < path_elements.size(); i++) {
     if (kResolverComponentTestsWindows) {
@@ -188,14 +190,25 @@ int main(int argc, char** argv) {
   } else {
     // Get the current binary's directory relative to repo root to invoke the
     // correct build config (asan/tsan/dbg, etc.).
-    std::string const  bin_dir = my_bin.substr(0, my_bin.rfind(grpc::testing::kResolverComponentTestsWindows ? "\\" : "/"));
+    std::string const bin_dir = my_bin.substr(
+        0, my_bin.rfind(grpc::testing::kResolverComponentTestsWindows ? "\\"
+                                                                      : "/"));
     grpc::testing::InvokeResolverComponentTestsRunner(
-        grpc::testing::ResolverComponentTestsPathJoin({"test", "cpp", "naming", grpc::testing::kResolverComponentTestsWindows ? "resolver_component_tests_runner.py" : "resolver_component_tests_runner.sh"}),
-        grpc::testing::ResolverComponentTestsPathJoin({bin_dir, FLAGS_test_bin_name}),
-        grpc::testing::ResolverComponentTestsPathJoin({"test", "cpp", "naming", "utils", "dns_server.py"}),
-        grpc::testing::ResolverComponentTestsPathJoin({"test", "cpp", "naming", "resolver_test_record_groups.yaml"}),
-        grpc::testing::ResolverComponentTestsPathJoin({"test", "cpp", "naming", "utils", "dns_resolver.py"}),
-        grpc::testing::ResolverComponentTestsPathJoin({"test", "cpp", "naming", "utils", "tcp_connect.py"}));
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {"test", "cpp", "naming",
+             grpc::testing::kResolverComponentTestsWindows
+                 ? "resolver_component_tests_runner.py"
+                 : "resolver_component_tests_runner.sh"}),
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {bin_dir, FLAGS_test_bin_name}),
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {"test", "cpp", "naming", "utils", "dns_server.py"}),
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {"test", "cpp", "naming", "resolver_test_record_groups.yaml"}),
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {"test", "cpp", "naming", "utils", "dns_resolver.py"}),
+        grpc::testing::ResolverComponentTestsPathJoin(
+            {"test", "cpp", "naming", "utils", "tcp_connect.py"}));
   }
   grpc_shutdown();
   return 0;

@@ -63,8 +63,8 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver* ev_driver,
   if (ARES_GETSOCK_READABLE(socks_bitmask, idx) && !readable_registered_) {
     gpr_log(GPR_DEBUG,
             "Socket readable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
-            (uintptr_t)this, (uintptr_t)ev_driver); 
-    //GPR_ASSERT(!readable_registered_);
+            (uintptr_t)this, (uintptr_t)ev_driver);
+    // GPR_ASSERT(!readable_registered_);
     auto on_readable_arg =
         grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable, on_readable_arg,
@@ -78,7 +78,7 @@ void FdNode::MaybeRegisterForReadsAndWrites(AresEvDriver* ev_driver,
     gpr_log(GPR_DEBUG,
             "Socket writeable. this:%" PRIdPTR ". ref ev_driver:%" PRIdPTR,
             (uintptr_t)this, (uintptr_t)ev_driver);
-    //GPR_ASSERT(!writable_registered_);
+    // GPR_ASSERT(!writable_registered_);
     auto on_writeable_arg =
         grpc_core::New<FdNodeEventArg>(this, ev_driver->Ref());
     GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable, on_writeable_arg,
@@ -145,10 +145,14 @@ bool FdNode::OnReadableInner(RefCountedPtr<AresEvDriver> ev_driver,
   // GET THIS THERE  gpr_log(GPR_DEBUG, "readable on %d", fd);
   if (error == GRPC_ERROR_NONE) {
     do {
-      gpr_log(GPR_DEBUG, "Now ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR, (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
+      gpr_log(GPR_DEBUG,
+              "Now ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR,
+              (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
       ares_process_fd(ev_driver->GetChannel(), GetInnerEndpoint(),
                       ARES_SOCKET_BAD);
-      gpr_log(GPR_DEBUG, "Done ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR, (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
+      gpr_log(GPR_DEBUG,
+              "Done ares_process_fd. this: %" PRIdPTR ". exec_ctx:%" PRIdPTR,
+              (uintptr_t)this, (uintptr_t)grpc_core::ExecCtx::Get());
     } while (IsInnerEndpointStillReadable());
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or

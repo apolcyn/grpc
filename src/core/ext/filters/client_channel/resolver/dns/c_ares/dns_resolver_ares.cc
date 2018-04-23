@@ -142,8 +142,7 @@ AresDnsResolver::AresDnsResolver(const ResolverArgs& args)
   const grpc_arg* arg = grpc_channel_args_find(
       channel_args_, GRPC_ARG_SERVICE_CONFIG_DISABLE_RESOLUTION);
   grpc_integer_options integer_options = {false, false, true};
-  request_service_config_ = !grpc_channel_arg_get_integer(
-      arg, integer_options);
+  request_service_config_ = !grpc_channel_arg_get_integer(arg, integer_options);
   arg = grpc_channel_args_find(channel_args_,
                                GRPC_ARG_DNS_MIN_TIME_BETWEEN_RESOLUTIONS_MS);
   min_time_between_resolutions_ =

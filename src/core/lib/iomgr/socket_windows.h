@@ -109,7 +109,7 @@ void grpc_socket_become_ready(grpc_winsocket* winsocket,
                               grpc_winsocket_callback_info* ci);
 
 /* Retreive the windows socket wrapped inside the grpc_winsocket object */
-SOCKET grpc_winsocket_wrapped_socket(grpc_winsocket *socket);
+SOCKET grpc_winsocket_wrapped_socket(grpc_winsocket* socket);
 
 #endif
 

@@ -51,7 +51,7 @@ grpc_winsocket* grpc_winsocket_create(SOCKET socket, const char* name) {
   return r;
 }
 
-SOCKET grpc_winsocket_wrapped_socket(grpc_winsocket *socket) {
+SOCKET grpc_winsocket_wrapped_socket(grpc_winsocket* socket) {
   return socket->socket;
 }
 

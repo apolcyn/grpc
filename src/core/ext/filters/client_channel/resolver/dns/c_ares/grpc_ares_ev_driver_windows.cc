@@ -64,10 +64,11 @@ class FdNodeWindows final : public FdNode {
 
   bool IsInnerEndpointStillReadable() override {
     return false;
-    //SOCKET winsocket = grpc_winsocket_wrapped_socket(winsocket_);
-    //size_t bytes_available = 0;
-    //return false;
-    // TODO: fill this in... WSAIoctl(winsocket, FIONREAD, &bytes_available) == 0 &&
+    // SOCKET winsocket = grpc_winsocket_wrapped_socket(winsocket_);
+    // size_t bytes_available = 0;
+    // return false;
+    // TODO: fill this in... WSAIoctl(winsocket, FIONREAD, &bytes_available) ==
+    // 0 &&
     //       bytes_available > 0;
   }
 

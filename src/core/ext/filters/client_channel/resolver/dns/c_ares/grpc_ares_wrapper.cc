@@ -284,8 +284,8 @@ static void on_srv_query_done_cb(void* arg, int status, int timeouts,
                            on_hostbyname_done_cb, ipv6_hr);
         grpc_ares_hostbyname_request* ipv4_hr = create_hostbyname_request(
             r, srv_it->host, htons(srv_it->port), true /* is_balancer */);
-        ares_gethostbyname(*channel, ipv4_hr->host, AF_INET, on_hostbyname_done_cb,
-                           ipv4_hr);
+        ares_gethostbyname(*channel, ipv4_hr->host, AF_INET,
+                           on_hostbyname_done_cb, ipv4_hr);
         r->ev_driver->Start();
       }
     }
