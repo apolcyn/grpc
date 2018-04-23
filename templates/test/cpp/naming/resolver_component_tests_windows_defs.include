@@ -14,7 +14,7 @@
 #
 # This file is auto-generated
 
-# This script is meant to running the resolver component tests on
+# This script is meant to run the resolver component tests on
 # windows. It's functionally the same as resolver_component_tests_runner.sh
 # but is able to run on windows.
 
@@ -67,7 +67,8 @@ def wait_until_dns_server_is_up(args, dns_server_subprocess):
         str(1)])
     tcp_connect_subprocess.communicate()
     if tcp_connect_subprocess.returncode == 0:
-      test_runner_log('Health check: attempt to make an A-record query to DNS server.')
+      test_runner_log(('Health check: attempt to make an A-record '
+                       'query to DNS server.'))
       dns_resolver_subprocess = subprocess.Popen([
           WIN_PYTHON,
           args.dns_resolver_bin_path,
@@ -78,14 +79,17 @@ def wait_until_dns_server_is_up(args, dns_server_subprocess):
           '--server_port',
           str(args.dns_server_port)], stdout=subprocess.PIPE)
       dns_resolver_stdout, _ = dns_resolver_subprocess.communicate()
-      if dns_resolver_subprocess.returncode == 0 and '123.123.123.123' in dns_resolver_stdout:
-        test_runner_log('DNS server is up! Successfully reached it over UDP and TCP.')
+      if dns_resolver_subprocess.returncode == 0:
+        if '123.123.123.123' in dns_resolver_stdout:
+          test_runner_log(('DNS server is up! '
+	                   'Successfully reached it over UDP and TCP.'))
         return
     time.sleep(0.2)
   dns_server_subprocess.kill()
   dns_server_subprocess.wait()
   dns_server_stdout, dns_server_stderr = dns_server_subprocess.communicate()
-  test_runner_log('Failed to reach DNS server over TCP and/or UDP. Exitting without running tests.')
+  test_runner_log(('Failed to reach DNS server over TCP and/or UDP. '
+                   'Exitting without running tests.'))
   test_runner_log('======= DNS server stdout =============')
   dns_server_subprocess.stdout
   test_runner_log('======= end DNS server stdout =========')
@@ -96,7 +100,7 @@ def wait_until_dns_server_is_up(args, dns_server_subprocess):
 
 dns_server_subprocess = subprocess.Popen([
     WIN_PYTHON,
-    os.path.join('test', 'cpp', 'naming', 'utils', 'dns_server.py'),
+    args.dns_server_bin_path,
     '--port',
     str(args.dns_server_port),
     '--records_config_path',
