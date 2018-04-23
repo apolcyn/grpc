@@ -20,7 +20,6 @@ import subprocess
 import tempfile
 import os
 import time
-import signal
 
 # This script is meant to running the resolver component tests on
 # windows. It's functionally the same as resolver_component_tests_runner.sh
@@ -87,7 +86,8 @@ def wait_until_dns_server_is_up(args, dns_server_subprocess):
         test_runner_log('DNS server is up! Successfully reached it over UDP and TCP.')
         return
     time.sleep(0.2)
-  os.kill(dns_server_subprocess.pid, signal.SIGTERM)
+  dns_server_subprocess.kill()
+  dns_server_subprocess.wait()
   dns_server_stdout, dns_server_stderr = dns_server_subprocess.communicate()
   test_runner_log('Failed to reach DNS server over TCP and/or UDP. Exitting without running tests.')
   test_runner_log('======= DNS server stdout =============')
@@ -107,19 +107,6 @@ dns_server_subprocess = subprocess.Popen([
     args.records_config_path],
     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 current_test_subprocess = None
-
-def _quit_on_signal(signum, _frame):
-  test_runner_log('Received SIGNAL %d. Quitting with exit code 0' % signum)
-  global dns_server_subprocess
-  global current_test_subprocess
-  os.kill(dns_server_subprocess.pid, signal.SIGTERM)
-  if current_test_subprocess:
-    os.kill(current_test_subprocess.pid, signal.SIGTERM)
-  os.exit(1)
-
-signal.signal(signal.SIGTERM, _quit_on_signal)
-signal.signal(signal.SIGINT, _quit_on_signal)
-signal.signal(signal.SIGBREAK, _quit_on_signal)
 wait_until_dns_server_is_up(args, dns_server_subprocess)
 num_test_failures = 0
 
@@ -279,8 +266,8 @@ if current_test_subprocess.returncode != 0:
 
 
 test_runner_log('now kill DNS server')
-os.kill(dns_server_subprocess.pid, signal.SIGTERM)
-dns_server_subprocess.communicate()
+dns_server_subprocess.kill()
+dns_server_subprocess.wait()
 test_runner_log('%d tests failed.' % num_test_failures)
 sys.exit(num_test_failures)
 
