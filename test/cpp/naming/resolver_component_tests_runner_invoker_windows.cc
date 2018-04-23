@@ -36,7 +36,7 @@ void ResolverComponentTestsRegisterSigHandler(void (*sighandler)(int)) {
   signal(SIGINT, sighandler);
 }
 
-void CheckResolverComponentTestsRunnerExitStatus(int status) {
+void CheckResolverComponentTestRunnerExitStatus(int status) {
   if (status != 0) {
     gpr_log(GPR_INFO, "Resolver component tests runner exited with code %d",
             status);

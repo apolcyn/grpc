@@ -45,6 +45,7 @@ gpr_subprocess* gpr_subprocess_create(int argc, const char** argv) {
   PROCESS_INFORMATION pi;
 
   char* args = gpr_strjoin_sep(argv, (size_t)argc, " ", NULL);
+  gpr_log(GPR_INFO, "args: %s", args);
   TCHAR* args_tchar;
 
   args_tchar = gpr_char_to_tchar(args);
@@ -55,7 +56,8 @@ gpr_subprocess* gpr_subprocess_create(int argc, const char** argv) {
   memset(&pi, 0, sizeof(pi));
 
   if (!CreateProcess(NULL, args_tchar, NULL, NULL, FALSE,
-                     CREATE_NEW_PROCESS_GROUP, NULL, NULL, &si, &pi)) {
+	     CREATE_NEW_PROCESS_GROUP, NULL, NULL, &si, &pi)) {
+    gpr_log(GPR_ERROR, "Failed to create subprocess.");
     gpr_free(args_tchar);
     return NULL;
   }

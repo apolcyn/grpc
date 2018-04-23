@@ -112,7 +112,7 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
       "--tcp_connect_bin_path=" + tcp_connect_bin_path,
   };
   if (kResolverComponentTestsWindows) {
-    driver_args.insert(driver_args.begin(), 0, "C:\\Python27\\python.exe");
+    driver_args.insert(driver_args.begin(), "C:\\Python27\\python.exe");
   }
   SubProcess* test_driver = new SubProcess(driver_args);
   gpr_mu test_driver_mu;
@@ -157,6 +157,7 @@ std::string ResolverComponentTestsPathJoin(
     }
     output.append(path_elements[i]);
   }
+  gpr_log(GPR_INFO, "joined path: %s", output.c_str());
   return output;
 }
 
