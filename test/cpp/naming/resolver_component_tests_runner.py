@@ -14,16 +14,16 @@
 #
 # This file is auto-generated
 
+# This script is meant to running the resolver component tests on
+# windows. It's functionally the same as resolver_component_tests_runner.sh
+# but is able to run on windows.
+
 import argparse
 import sys
 import subprocess
 import tempfile
 import os
 import time
-
-# This script is meant to running the resolver component tests on
-# windows. It's functionally the same as resolver_component_tests_runner.sh
-# but is able to run on windows.
 
 
 argp = argparse.ArgumentParser(description='Run c-ares resolver tests')
@@ -56,10 +56,6 @@ WIN_PYTHON = os.path.join('C:\\', 'Python27', 'python.exe')
 def wait_until_dns_server_is_up(args, dns_server_subprocess):
   for i in range(0, 10):
     test_runner_log('Health check: attempt to connect to DNS server over TCP.')
-    # TODO(apolcyn): The resolver_component_tests_runner.sh script for mac
-    # and linux c-ares tests is functionally the same as this script, and the
-    # mac and linux tests should be ported to use this script. At that point,
-    # these subprocess calls can become in-process.
     tcp_connect_subprocess = subprocess.Popen([
         WIN_PYTHON,
         args.tcp_connect_bin_path,
