@@ -68,10 +68,10 @@ static void register_sighandler() {
 
 namespace {
 
-const int kTestTimeoutSeconds = 30;
+const int kTestTimeoutSeconds = 10;
 
 void RunSigHandlingThread(SubProcess* test_driver, gpr_mu* test_driver_mu,
-                          gpr_cv* test_driver_cv, int* test_driver_done) {
+                          gpr_cv* test_driver_cv, int* test_driver_done, int *test_driver_interrupted) {
   gpr_timespec overall_deadline =
       gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
                    gpr_time_from_seconds(kTestTimeoutSeconds, GPR_TIMESPAN));
@@ -94,7 +94,10 @@ void RunSigHandlingThread(SubProcess* test_driver, gpr_mu* test_driver_mu,
   gpr_log(GPR_DEBUG,
           "Test timeout reached or received signal. Interrupting test driver "
           "child process.");
+  gpr_mu_lock(test_driver_mu);
   test_driver->Interrupt();
+  *test_driver_interrupted = 1;
+  gpr_mu_unlock(test_driver_mu);
   return;
 }
 }  // namespace
@@ -112,7 +115,8 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   int dns_server_port = grpc_pick_unused_port_or_die();
 
   SubProcess* test_driver =
-      new SubProcess({test_runner_bin_path, "--test_bin_path=" + test_bin_path,
+      new SubProcess({"C:\\Python27\\python.exe", test_runner_bin_path,
+		      "--test_bin_path=" + test_bin_path,
                       "--dns_server_bin_path=" + dns_server_bin_path,
                       "--records_config_path=" + records_config_path,
                       "--dns_server_port=" + std::to_string(dns_server_port),
@@ -123,15 +127,29 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_cv test_driver_cv;
   gpr_cv_init(&test_driver_cv);
   int test_driver_done = 0;
+  int test_driver_interrupted = 0;
 #ifndef GPR_WINDOWS
   register_sighandler();
 #endif
   std::thread sig_handling_thread(RunSigHandlingThread, test_driver,
                                   &test_driver_mu, &test_driver_cv,
-                                  &test_driver_done);
+                                  &test_driver_done, &test_driver_interrupted);
   int status = test_driver->Join();
-  gpr_log(GPR_DEBUG, "test_driver process status: %d", status);
-#ifndef GPR_WINDOWS
+#ifdef GPR_WINDOWS
+  if (status != 0) {
+    gpr_log(GPR_INFO, "Resolver component tests runner exited with code %d", status);
+    abort();
+  }
+  gpr_mu_lock(&test_driver_mu);
+  // TODO(apolcyn): we need to explicitly check if we interrupted the
+  // process because under windows, gpr_subprocess_join returns zero
+  // if we called gpr_subprocess_interrupt() on it. Should that be changed?
+  if (test_driver_interrupted) {
+    gpr_log(GPR_INFO, "Resolver component tests runner was interrupted");
+    abort();
+  }
+  gpr_mu_unlock(&test_driver_mu);
+#else
   if (WIFEXITED(status)) {
     if (WEXITSTATUS(status)) {
       gpr_log(GPR_INFO,
@@ -193,7 +211,7 @@ int main(int argc, char** argv) {
 #ifdef GPR_WINDOWS
     std::string const bin_dir = my_bin.substr(0, my_bin.rfind('\\'));
     grpc::testing::InvokeResolverComponentTestsRunner(
-        "test\\cpp\\naming\\resolver_component_tests_runner.bat",
+        "test\\cpp\\naming\\resolver_component_tests_runner.py",
         bin_dir + "\\" + FLAGS_test_bin_name,
         "test\\cpp\\naming\\utils\\dns_server.py",
         "test\\cpp\\naming\\resolver_test_record_groups.yaml",
