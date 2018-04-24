@@ -645,12 +645,8 @@ add_dependencies(buildtests_cxx transport_security_common_api_test)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx writes_per_rpc_test)
 endif()
-if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx resolver_component_test_unsecure)
-endif()
-if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx resolver_component_test)
-endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx resolver_component_tests_runner_invoker_unsecure)
 endif()
@@ -663,9 +659,13 @@ endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx address_sorting_test)
 endif()
+<<<<<<< HEAD
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx cancel_ares_query_test)
 endif()
+=======
+add_dependencies(buildtests_cxx cancel_during_ares_query_test)
+>>>>>>> 8891c7cb25... c-ares on windows
 
 add_custom_target(buildtests
   DEPENDS buildtests_c buildtests_cxx)
@@ -1208,7 +1208,9 @@ add_library(grpc
   src/core/ext/filters/client_channel/lb_policy/pick_first/pick_first.cc
   src/core/ext/filters/client_channel/lb_policy/round_robin/round_robin.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc
+  src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc
+  src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_windows.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper_fallback.cc
   src/core/ext/filters/client_channel/resolver/dns/native/dns_resolver.cc
@@ -2494,7 +2496,9 @@ add_library(grpc_unsecure
   src/core/ext/transport/inproc/inproc_plugin.cc
   src/core/ext/transport/inproc/inproc_transport.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc
+  src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc
+  src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_windows.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc
   src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper_fallback.cc
   src/core/ext/filters/client_channel/resolver/dns/native/dns_resolver.cc
@@ -15596,7 +15600,6 @@ target_link_libraries(inproc_nosec_test
 
 endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
-if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
 add_executable(resolver_component_test_unsecure
   test/cpp/naming/resolver_component_test.cc
@@ -15635,10 +15638,8 @@ target_link_libraries(resolver_component_test_unsecure
   ${_gRPC_GFLAGS_LIBRARIES}
 )
 
-endif()
 endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
-if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
 add_executable(resolver_component_test
   test/cpp/naming/resolver_component_test.cc
@@ -15677,7 +15678,6 @@ target_link_libraries(resolver_component_test
   ${_gRPC_GFLAGS_LIBRARIES}
 )
 
-endif()
 endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
@@ -15915,6 +15915,46 @@ target_link_libraries(alts_credentials_fuzzer_one_entry
   grpc
   gpr_test_util
   gpr
+)
+
+endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_TESTS)
+
+add_executable(cancel_during_ares_query_test
+  test/cpp/naming/cancel_during_ares_query_test.cc
+  third_party/googletest/googletest/src/gtest-all.cc
+  third_party/googletest/googlemock/src/gmock-all.cc
+)
+
+
+target_include_directories(cancel_during_ares_query_test
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${_gRPC_SSL_INCLUDE_DIR}
+  PRIVATE ${_gRPC_PROTOBUF_INCLUDE_DIR}
+  PRIVATE ${_gRPC_ZLIB_INCLUDE_DIR}
+  PRIVATE ${_gRPC_BENCHMARK_INCLUDE_DIR}
+  PRIVATE ${_gRPC_CARES_INCLUDE_DIR}
+  PRIVATE ${_gRPC_GFLAGS_INCLUDE_DIR}
+  PRIVATE ${_gRPC_ADDRESS_SORTING_INCLUDE_DIR}
+  PRIVATE third_party/googletest/googletest/include
+  PRIVATE third_party/googletest/googletest
+  PRIVATE third_party/googletest/googlemock/include
+  PRIVATE third_party/googletest/googlemock
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(cancel_during_ares_query_test
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc++_test_util
+  grpc_test_util
+  gpr_test_util
+  grpc++
+  grpc
+  gpr
+  grpc++_test_config
+  ${_gRPC_GFLAGS_LIBRARIES}
 )
 
 endif (gRPC_BUILD_TESTS)

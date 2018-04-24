@@ -63,11 +63,14 @@ grpc_iocp_work_status grpc_iocp_work(grpc_millis deadline) {
   grpc_winsocket* socket;
   grpc_winsocket_callback_info* info;
   GRPC_STATS_INC_SYSCALL_POLL();
+  gpr_log(GPR_DEBUG, "In iocp work: block to get Get queued completion status");
   success =
       GetQueuedCompletionStatus(g_iocp, &bytes, &completion_key, &overlapped,
                                 deadline_to_millis_timeout(deadline));
+  gpr_log(GPR_DEBUG, "In iocp work: block to get done blocking to get queued completion status");
   grpc_core::ExecCtx::Get()->InvalidateNow();
   if (success == 0 && overlapped == NULL) {
+    gpr_log(GPR_DEBUG, "In iocp work: TIMEOUT");
     return GRPC_IOCP_WORK_TIMEOUT;
   }
   GPR_ASSERT(completion_key && overlapped);

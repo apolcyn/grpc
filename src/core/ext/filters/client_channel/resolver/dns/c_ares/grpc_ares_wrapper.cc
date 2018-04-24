@@ -22,7 +22,6 @@
 
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/iomgr/sockaddr.h"
-#include "src/core/lib/iomgr/socket_utils_posix.h"
 
 #include <string.h>
 #include <sys/types.h>
@@ -61,7 +60,7 @@ struct grpc_ares_request {
   /** the pointer to receive the service config in JSON */
   char** service_config_json_out;
   /** the evernt driver used by this request */
-  grpc_ares_ev_driver* ev_driver;
+  grpc_core::AresEvDriver* ev_driver;
   /** number of ongoing queries */
   gpr_refcount pending_queries;
 
@@ -152,9 +151,12 @@ static void grpc_ares_request_unref_locked(grpc_ares_request* r) {
   /* If there are no pending queries, invoke on_done callback and destroy the
      request */
   if (gpr_unref(&r->pending_queries)) {
-    grpc_lb_addresses* lb_addrs = *(r->lb_addrs_out);
-    if (lb_addrs != nullptr) {
-      grpc_cares_wrapper_address_sorting_sort(lb_addrs);
+    // TODO: make this unconditional once address_sorting works on all platforms
+    if (address_sorting_enabled_for_current_platform()) {
+      grpc_lb_addresses* lb_addrs = *(r->lb_addrs_out);
+      if (lb_addrs != nullptr) {
+        grpc_cares_wrapper_address_sorting_sort(lb_addrs);
+      }
     }
     GRPC_CLOSURE_SCHED(r->on_done, r->error);
     grpc_ares_ev_driver_destroy_locked(r->ev_driver);
@@ -211,7 +213,7 @@ static void on_hostbyname_done_locked(void* arg, int status, int timeouts,
           memset(&addr, 0, addr_len);
           memcpy(&addr.sin6_addr, hostent->h_addr_list[i - prev_naddr],
                  sizeof(struct in6_addr));
-          addr.sin6_family = static_cast<sa_family_t>(hostent->h_addrtype);
+          addr.sin6_family = static_cast<unsigned char>(hostent->h_addrtype);
           addr.sin6_port = hr->port;
           grpc_lb_addresses_set_address(
               *lb_addresses, i, &addr, addr_len,
@@ -232,7 +234,7 @@ static void on_hostbyname_done_locked(void* arg, int status, int timeouts,
           memset(&addr, 0, addr_len);
           memcpy(&addr.sin_addr, hostent->h_addr_list[i - prev_naddr],
                  sizeof(struct in_addr));
-          addr.sin_family = static_cast<sa_family_t>(hostent->h_addrtype);
+          addr.sin_family = static_cast<unsigned char>(hostent->h_addrtype);
           addr.sin_port = hr->port;
           grpc_lb_addresses_set_address(
               *lb_addresses, i, &addr, addr_len,
@@ -412,7 +414,6 @@ static grpc_ares_request* grpc_dns_lookup_ares_locked_impl(
   r->success = false;
   r->error = GRPC_ERROR_NONE;
   channel = grpc_ares_ev_driver_get_channel_locked(r->ev_driver);
-
   // If dns_server is specified, use it.
   if (dns_server != nullptr) {
     gpr_log(GPR_INFO, "Using DNS server %s", dns_server);

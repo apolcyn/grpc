@@ -127,7 +127,7 @@ def flush_stdout_loop():
     sys.stdout.flush()
     time.sleep(sleep_time)
     num_timeouts_so_far += 1
-  print('Process timeout reached, or cancelled. Exitting 0.')
+  print('Process timeout reached, or cancelled. Raising SIGTERM.')
   os.kill(os.getpid(), signal.SIGTERM)
 
 def main():

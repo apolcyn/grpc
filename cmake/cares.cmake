@@ -23,6 +23,8 @@ if("${gRPC_CARES_PROVIDER}" STREQUAL "module")
   if(TARGET c-ares)
     set(_gRPC_CARES_LIBRARIES c-ares)
     set(_gRPC_CARES_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/cares/cares" "${CMAKE_CURRENT_BINARY_DIR}/third_party/cares/cares")
+    set(_gRPC_CARES_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/cares/config_windows" "${_gRPC_CARES_INCLUDE_DIR}")
+    add_definitions(-DHAVE_CONFIG_H)
   endif()
 
   if(gRPC_INSTALL)

@@ -1316,8 +1316,12 @@ resolver_component_tests_runner_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_c
 resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
 address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure
 address_sorting_test: $(BINDIR)/$(CONFIG)/address_sorting_test
+<<<<<<< HEAD
 cancel_ares_query_test: $(BINDIR)/$(CONFIG)/cancel_ares_query_test
 alts_credentials_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/alts_credentials_fuzzer_one_entry
+=======
+cancel_during_ares_query_test: $(BINDIR)/$(CONFIG)/cancel_during_ares_query_test
+>>>>>>> 8891c7cb25... c-ares on windows
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1754,7 +1758,11 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
+<<<<<<< HEAD
   $(BINDIR)/$(CONFIG)/cancel_ares_query_test \
+=======
+  $(BINDIR)/$(CONFIG)/cancel_during_ares_query_test \
+>>>>>>> 8891c7cb25... c-ares on windows
 
 else
 buildtests_cxx: privatelibs_cxx \
@@ -1879,7 +1887,11 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
+<<<<<<< HEAD
   $(BINDIR)/$(CONFIG)/cancel_ares_query_test \
+=======
+  $(BINDIR)/$(CONFIG)/cancel_during_ares_query_test \
+>>>>>>> 8891c7cb25... c-ares on windows
 
 endif
 
@@ -2365,8 +2377,13 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure || ( echo test address_sorting_test_unsecure failed ; exit 1 )
 	$(E) "[RUN]     Testing address_sorting_test"
 	$(Q) $(BINDIR)/$(CONFIG)/address_sorting_test || ( echo test address_sorting_test failed ; exit 1 )
+<<<<<<< HEAD
 	$(E) "[RUN]     Testing cancel_ares_query_test"
 	$(Q) $(BINDIR)/$(CONFIG)/cancel_ares_query_test || ( echo test cancel_ares_query_test failed ; exit 1 )
+=======
+	$(E) "[RUN]     Testing cancel_during_ares_query_test"
+	$(Q) $(BINDIR)/$(CONFIG)/cancel_during_ares_query_test || ( echo test cancel_during_ares_query_test failed ; exit 1 )
+>>>>>>> 8891c7cb25... c-ares on windows
 
 
 flaky_test_cxx: buildtests_cxx
@@ -3590,7 +3607,9 @@ LIBGRPC_SRC = \
     src/core/ext/filters/client_channel/lb_policy/pick_first/pick_first.cc \
     src/core/ext/filters/client_channel/lb_policy/round_robin/round_robin.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_windows.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper_fallback.cc \
     src/core/ext/filters/client_channel/resolver/dns/native/dns_resolver.cc \
@@ -4846,7 +4865,9 @@ LIBGRPC_UNSECURE_SRC = \
     src/core/ext/transport/inproc/inproc_plugin.cc \
     src/core/ext/transport/inproc/inproc_transport.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc \
+    src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_windows.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc \
     src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper_fallback.cc \
     src/core/ext/filters/client_channel/resolver/dns/native/dns_resolver.cc \
@@ -23694,15 +23715,26 @@ endif
 endif
 
 
+<<<<<<< HEAD
 CANCEL_ARES_QUERY_TEST_SRC = \
     test/cpp/naming/cancel_ares_query_test.cc \
 
 CANCEL_ARES_QUERY_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(CANCEL_ARES_QUERY_TEST_SRC))))
+=======
+CANCEL_DURING_ARES_QUERY_TEST_SRC = \
+    test/cpp/naming/cancel_during_ares_query_test.cc \
+
+CANCEL_DURING_ARES_QUERY_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(CANCEL_DURING_ARES_QUERY_TEST_SRC))))
+>>>>>>> 8891c7cb25... c-ares on windows
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
+<<<<<<< HEAD
 $(BINDIR)/$(CONFIG)/cancel_ares_query_test: openssl_dep_error
+=======
+$(BINDIR)/$(CONFIG)/cancel_during_ares_query_test: openssl_dep_error
+>>>>>>> 8891c7cb25... c-ares on windows
 
 else
 
@@ -23713,6 +23745,7 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
 
+<<<<<<< HEAD
 $(BINDIR)/$(CONFIG)/cancel_ares_query_test: protobuf_dep_error
 
 else
@@ -23721,11 +23754,22 @@ $(BINDIR)/$(CONFIG)/cancel_ares_query_test: $(PROTOBUF_DEP) $(CANCEL_ARES_QUERY_
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
 	$(Q) $(LDXX) $(LDFLAGS) $(CANCEL_ARES_QUERY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/cancel_ares_query_test
+=======
+$(BINDIR)/$(CONFIG)/cancel_during_ares_query_test: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/cancel_during_ares_query_test: $(PROTOBUF_DEP) $(CANCEL_DURING_ARES_QUERY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(CANCEL_DURING_ARES_QUERY_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/cancel_during_ares_query_test
+>>>>>>> 8891c7cb25... c-ares on windows
 
 endif
 
 endif
 
+<<<<<<< HEAD
 $(OBJDIR)/$(CONFIG)/test/cpp/naming/cancel_ares_query_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
 deps_cancel_ares_query_test: $(CANCEL_ARES_QUERY_TEST_OBJS:.o=.dep)
@@ -23768,6 +23812,15 @@ deps_alts_credentials_fuzzer_one_entry: $(ALTS_CREDENTIALS_FUZZER_ONE_ENTRY_OBJS
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(ALTS_CREDENTIALS_FUZZER_ONE_ENTRY_OBJS:.o=.dep)
+=======
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/cancel_during_ares_query_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_cancel_during_ares_query_test: $(CANCEL_DURING_ARES_QUERY_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(CANCEL_DURING_ARES_QUERY_TEST_OBJS:.o=.dep)
+>>>>>>> 8891c7cb25... c-ares on windows
 endif
 endif
 

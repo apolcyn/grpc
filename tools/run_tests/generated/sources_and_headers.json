@@ -6554,6 +6554,7 @@
     "headers": [], 
     "is_filegroup": false, 
     "language": "c++", 
+<<<<<<< HEAD
     "name": "cancel_ares_query_test", 
     "src": [
       "test/cpp/naming/cancel_ares_query_test.cc"
@@ -6575,6 +6576,11 @@
     "src": [
       "test/core/security/alts_credentials_fuzzer.cc", 
       "test/core/util/one_corpus_entry_fuzzer.cc"
+=======
+    "name": "cancel_during_ares_query_test", 
+    "src": [
+      "test/cpp/naming/cancel_during_ares_query_test.cc"
+>>>>>>> 8891c7cb25... c-ares on windows
     ], 
     "third_party": false, 
     "type": "target"
@@ -10136,8 +10142,10 @@
     "name": "grpc_resolver_dns_ares", 
     "src": [
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/dns_resolver_ares.cc", 
+      "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.cc", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_posix.cc", 
+      "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver_windows.cc", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.cc", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h", 
       "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper_fallback.cc"

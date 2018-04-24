@@ -94,7 +94,6 @@ static void grpc_ares_ev_driver_unref(grpc_ares_ev_driver* ev_driver) {
     ares_destroy(ev_driver->channel);
     gpr_free(ev_driver);
   }
-}
 
 static void fd_node_destroy_locked(fd_node* fdn) {
   gpr_log(GPR_DEBUG, "delete fd: %d", grpc_fd_wrapped_fd(fdn->fd));
@@ -317,5 +316,7 @@ void grpc_ares_ev_driver_start_locked(grpc_ares_ev_driver* ev_driver) {
     grpc_ares_notify_on_event_locked(ev_driver);
   }
 }
+
+}  // namespace grpc_core
 
 #endif /* GRPC_ARES == 1 && defined(GRPC_POSIX_SOCKET_ARES_EV_DRIVER) */

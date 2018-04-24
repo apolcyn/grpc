@@ -96,6 +96,7 @@ void grpc_free_port_using_server(int port) {
   gpr_mu_lock(pr.mu);
   while (!pr.done) {
     grpc_pollset_worker* worker = nullptr;
+    gpr_log(GPR_DEBUG, "pollset work again");
     if (!GRPC_LOG_IF_ERROR(
             "pollset_work",
             grpc_pollset_work(
@@ -230,6 +231,7 @@ int grpc_pick_port_using_server(void) {
     gpr_mu_lock(pr.mu);
     while (pr.port == -1) {
       grpc_pollset_worker* worker = nullptr;
+      gpr_log(GPR_DEBUG, "pollset work again FROM pick port");
       if (!GRPC_LOG_IF_ERROR(
               "pollset_work",
               grpc_pollset_work(

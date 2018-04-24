@@ -275,6 +275,7 @@ class Job(object):
             cmdline = ['time', '-p'] + cmdline
         else:
             measure_cpu_costs = False
+        message('INFO', 'Starting job with cmdline: %s' % ' '.join(cmdline))
         try_start = lambda: subprocess.Popen(args=cmdline,
                                              stderr=subprocess.STDOUT,
                                              stdout=self._tempfile,

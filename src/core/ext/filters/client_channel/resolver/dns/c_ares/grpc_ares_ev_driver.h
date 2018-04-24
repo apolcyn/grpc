@@ -22,9 +22,13 @@
 #include <grpc/support/port_platform.h>
 
 #include <ares.h>
+#include "src/core/lib/gprpp/abstract.h"
+#include "src/core/lib/gprpp/inlined_vector.h"
+#include "src/core/lib/gprpp/orphanable.h"
+#include "src/core/lib/gprpp/ref_counted.h"
 #include "src/core/lib/iomgr/pollset_set.h"
 
-typedef struct grpc_ares_ev_driver grpc_ares_ev_driver;
+namespace grpc_core {
 
 /* Start \a ev_driver. It will keep working until all IO on its ares_channel is
    done, or grpc_ares_ev_driver_destroy() is called. It may notify the callbacks
@@ -50,6 +54,21 @@ void grpc_ares_ev_driver_destroy_locked(grpc_ares_ev_driver* ev_driver);
 
 /* Shutdown all the grpc_fds used by \a ev_driver */
 void grpc_ares_ev_driver_shutdown_locked(grpc_ares_ev_driver* ev_driver);
+
+class GrpcPolledFd {
+  virtual void RegisterForOnReadableLocked() GRPC_ABSTRACT;
+  virtual void RegisterForOnWriteableLocked() GRPC_ABSTRACT;
+  virtual bool IsFdStillReadableLocked() GRPC_ABSTRACT;
+  void ShutdownLocked() GRPC_ABSTRACT;
+  ares_socket_t GetInnerEndpointLocked() GRPC_ABSTRACT;
+};
+
+class GrpcPolledFdFactory {
+  virtual *GrpcPolledFd CreateGrpcPolledFdLocked(grpc_closure* read_closure, grpc_closure* write_closure, ares_socket_t as) ABSTRACT;
+  virtual void ConfigureChannelLocked(ares_channel channel) ABSTRACT;
+};
+
+}  // namespace grpc_core
 
 #endif /* GRPC_CORE_EXT_FILTERS_CLIENT_CHANNEL_RESOLVER_DNS_C_ARES_GRPC_ARES_EV_DRIVER_H \
         */
