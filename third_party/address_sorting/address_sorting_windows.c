@@ -38,13 +38,14 @@
  * this was written.
  */
 
-#ifndef _WIN32_WINNT
-#error "Compiled without _WIN32_WINNT
-#endif
-//#include <windows.h>
 #include "address_sorting_internal.h"
 
 #if defined(ADDRESS_SORTING_WINDOWS)
+
+#ifndef _WIN32_WINNT
+#error "Compiled without _WIN32_WINNT"
+#endif
+//#include <windows.h>
 
 #include <stdlib.h>
 

@@ -24,10 +24,13 @@
 #include <grpc/support/time.h>
 #include <string.h>
 
-// #include <arpa/inet.h>
+#ifndef GPR_WINDOWS
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#endif
+
 #include <gflags/gflags.h>
 #include <gmock/gmock.h>
-// #include <sys/socket.h>
 #include <sys/types.h>
 #include <vector>
 
