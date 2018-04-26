@@ -683,6 +683,9 @@ target_include_directories(address_sorting
 
 target_link_libraries(address_sorting
   ${_gRPC_ALLTARGETS_LIBRARIES}
+  ${_gRPC_BASELIB_LIBRARIES}
+  wsock32
+  ws2_32
 )
 
 

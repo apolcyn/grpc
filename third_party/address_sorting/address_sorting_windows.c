@@ -38,6 +38,10 @@
  * this was written.
  */
 
+#ifndef _WIN32_WINNT
+#error "Compiled without _WIN32_WINNT
+#endif
+//#include <windows.h>
 #include "address_sorting_internal.h"
 
 #if defined(ADDRESS_SORTING_WINDOWS)
@@ -52,7 +56,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <unistd.h>
+
+//#include <ws2def.h>
 
 static bool windows_source_addr_factory_get_source_addr(
     address_sorting_source_addr_factory* factory,
@@ -60,21 +65,20 @@ static bool windows_source_addr_factory_get_source_addr(
     address_sorting_address* source_addr) {
   bool source_addr_exists = false;
   // Android sets SOCK_CLOEXEC. Don't set this here for portability.
-  int s = socket(((struct sockaddr*)dest_addr)->sa_family, SOCK_DGRAM, 0);
-  if (s != -1) {
-    if (connect(s, (const struct sockaddr*)&dest_addr->addr,
-                (socklen_t)dest_addr->len) != -1) {
+  SOCKET s = socket(((struct sockaddr*)dest_addr)->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+  if (s != INVALID_SOCKET) {
+    if (connect(s, (struct sockaddr*)dest_addr, dest_addr->len)) {
       address_sorting_address found_source_addr;
       memset(&found_source_addr, 0, sizeof(found_source_addr));
       found_source_addr.len = sizeof(found_source_addr.addr);
       if (getsockname(s, (struct sockaddr*)&found_source_addr.addr,
-                      (socklen_t*)&found_source_addr.len) != -1) {
+                      (socklen_t*)&found_source_addr.len) != SOCKET_ERROR) {
         source_addr_exists = true;
         *source_addr = found_source_addr;
       }
     }
   }
-  close(s);
+  closesocket(s);
   return source_addr_exists;
 }
 
