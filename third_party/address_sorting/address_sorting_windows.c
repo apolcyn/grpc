@@ -42,23 +42,12 @@
 
 #if defined(ADDRESS_SORTING_WINDOWS)
 
-#ifndef _WIN32_WINNT
-#error "Compiled without _WIN32_WINNT"
-#endif
-//#include <windows.h>
-
 #include <stdlib.h>
-
-/* TODO : Add address sorting functionality to work on windows. */
-
-#include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-
-//#include <ws2def.h>
 
 static bool windows_source_addr_factory_get_source_addr(
     address_sorting_source_addr_factory* factory,
@@ -102,7 +91,5 @@ address_sorting_create_source_addr_factory_for_current_platform() {
   factory->vtable = &windows_source_addr_factory_vtable;
   return factory;
 }
-
-bool address_sorting_enabled_for_current_platform() { return true; }
 
 #endif  // defined(ADDRESS_SORTING_WINDOWS)

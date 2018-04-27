@@ -161,12 +161,9 @@ static void grpc_ares_request_unref(grpc_ares_request* r) {
   /* If there are no pending queries, invoke on_done callback and destroy the
      request */
   if (gpr_unref(&r->pending_queries)) {
-    // TODO: make this unconditional once address_sorting works on all platforms
-    if (address_sorting_enabled_for_current_platform()) {
-      grpc_lb_addresses* lb_addrs = *(r->lb_addrs_out);
-      if (lb_addrs != nullptr) {
-        grpc_cares_wrapper_address_sorting_sort(lb_addrs);
-      }
+    grpc_lb_addresses* lb_addrs = *(r->lb_addrs_out);
+    if (lb_addrs != nullptr) {
+      grpc_cares_wrapper_address_sorting_sort(lb_addrs);
     }
     GRPC_CLOSURE_SCHED(r->on_done, r->error);
     gpr_mu_destroy(&r->mu);
