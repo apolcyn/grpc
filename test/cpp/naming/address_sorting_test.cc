@@ -454,14 +454,17 @@ TEST(
     TestUsesDestinationWithHigherPrecedenceWithCatchAllAndAndV4MappedAddresses) {
   bool ipv4_supported = true;
   bool ipv6_supported = true;
+  // Use embedded ipv4 addresses with leading 1's instead of zero's to be
+  // compatible with inet_ntop implementations that can display such embedded
+  // ipv4 addresses with leading zero's as e.g. "::ffff:0:2", as on windows.
   OverrideAddressSortingSourceAddrFactory(
       ipv4_supported, ipv6_supported,
       {
-          {"[::ffff:0.0.0.2]:443", {"[::ffff:0.0.0.3]:0", AF_INET6}},
+          {"[::ffff:1.1.1.2]:443", {"[::ffff:1.1.1.3]:0", AF_INET6}},
           {"[1234::2]:443", {"[1234::3]:0", AF_INET6}},
       });
   grpc_lb_addresses* lb_addrs = BuildLbAddrInputs({
-      {"[::ffff:0.0.0.2]:443", AF_INET6},
+      {"[::ffff:1.1.1.2]:443", AF_INET6},
       {"[1234::2]:443", AF_INET6},
   });
   grpc_cares_wrapper_test_only_address_sorting_sort(lb_addrs);
@@ -469,7 +472,7 @@ TEST(
                                     // ::ffff:0:2 should match the v4-mapped
                                     // precedence entry and be deprioritized.
                                     "[1234::2]:443",
-                                    "[::ffff:0.0.0.2]:443",
+                                    "[::ffff:1.1.1.2]:443",
                                 });
 }
 
