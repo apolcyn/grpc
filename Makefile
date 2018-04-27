@@ -1324,6 +1324,7 @@ resolver_component_tests_runner_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_c
 resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
 address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure
 address_sorting_test: $(BINDIR)/$(CONFIG)/address_sorting_test
+end2end_address_sorting_test: $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1570,6 +1571,7 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test \
   $(BINDIR)/$(CONFIG)/h2_uds_nosec_test \
   $(BINDIR)/$(CONFIG)/inproc_nosec_test \
+  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test \
   $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry \
@@ -2145,6 +2147,8 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/window_overflow_bad_client_test || ( echo test window_overflow_bad_client_test failed ; exit 1 )
 	$(E) "[RUN]     Testing bad_ssl_cert_test"
 	$(Q) $(BINDIR)/$(CONFIG)/bad_ssl_cert_test || ( echo test bad_ssl_cert_test failed ; exit 1 )
+	$(E) "[RUN]     Testing end2end_address_sorting_test"
+	$(Q) $(BINDIR)/$(CONFIG)/end2end_address_sorting_test || ( echo test end2end_address_sorting_test failed ; exit 1 )
 
 
 flaky_test_c: buildtests_c
@@ -23346,6 +23350,38 @@ deps_address_sorting_test: $(ADDRESS_SORTING_TEST_OBJS:.o=.dep)
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(ADDRESS_SORTING_TEST_OBJS:.o=.dep)
+endif
+endif
+
+
+END2END_ADDRESS_SORTING_TEST_SRC = \
+    test/cpp/naming/end2end_address_sorting_test.cc \
+
+END2END_ADDRESS_SORTING_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(END2END_ADDRESS_SORTING_TEST_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: openssl_dep_error
+
+else
+
+
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LD) $(LDFLAGS) $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/end2end_address_sorting_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_end2end_address_sorting_test: $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
 endif
 endif
 

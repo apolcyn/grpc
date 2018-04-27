@@ -201,6 +201,24 @@ def main():
                   'grpc++_test_config',
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
+      ] + [
+          {
+              'name': 'end2end_address_sorting_test',
+              'build': 'test',
+              'language': 'c',
+              'run': True,
+              'src': ['test/cpp/naming/end2end_address_sorting_test.cc'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          }
       ]
   }
 

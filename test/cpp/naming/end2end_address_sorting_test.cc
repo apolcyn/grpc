@@ -28,21 +28,14 @@
 #include <grpc/support/time.h>
 #include "src/core/lib/debug/stats.h"
 #include "src/core/lib/gpr/string.h"
+#include "include/grpc/support/string_util.h"
 #include "test/core/end2end/cq_verifier.h"
+#include "src/core/lib/gpr/host_port.h"
+#include "test/core/util/port.h"
+#include "test/core/util/test_config.h"
+#include "test/core/util/cmdline.h"
 
 static void* tag(intptr_t t) { return (void*)t; }
-
-static grpc_end2end_test_fixture begin_test(grpc_end2end_test_config config,
-                                            const char* test_name,
-                                            grpc_channel_args* client_args,
-                                            grpc_channel_args* server_args) {
-  grpc_end2end_test_fixture f;
-  gpr_log(GPR_INFO, "Running test: %s/%s", test_name, config.name);
-  f = config.create_fixture(client_args, server_args);
-  config.init_server(&f, server_args);
-  config.init_client(&f, client_args);
-  return f;
-}
 
 static gpr_timespec n_seconds_from_now(int n) {
   return grpc_timeout_seconds_to_deadline(n);
@@ -59,31 +52,50 @@ static void drain_cq(grpc_completion_queue* cq) {
   } while (ev.type != GRPC_QUEUE_SHUTDOWN);
 }
 
-static void shutdown_server(grpc_end2end_test_fixture* f) {
-  if (!f->server) return;
-  grpc_server_shutdown_and_notify(f->server, f->shutdown_cq, tag(1000));
-  GPR_ASSERT(grpc_completion_queue_pluck(f->shutdown_cq, tag(1000),
+static void shutdown_server(grpc_server *server) {
+  grpc_completion_queue* shutdown_cq = grpc_completion_queue_create_for_pluck(nullptr);
+  grpc_server_shutdown_and_notify(server, shutdown_cq, tag(1000));
+  GPR_ASSERT(grpc_completion_queue_pluck(shutdown_cq, tag(1000),
                                          grpc_timeout_seconds_to_deadline(5),
                                          nullptr)
                  .type == GRPC_OP_COMPLETE);
-  grpc_server_destroy(f->server);
-  f->server = nullptr;
+  grpc_server_destroy(server);
+  grpc_completion_queue_shutdown(shutdown_cq);
+  grpc_completion_queue_destroy(shutdown_cq);
 }
 
-static void shutdown_client(grpc_end2end_test_fixture* f) {
-  if (!f->client) return;
-  grpc_channel_destroy(f->client);
-  f->client = nullptr;
+static void shutdown_client(grpc_channel* client) {
+  grpc_channel_destroy(client);
 }
 
-static void end_test(grpc_end2end_test_fixture* f) {
+static void end_test(grpc_channel *client, grpc_server *server, grpc_completion_queue *cq) {
+  shutdown_server(server);
+  shutdown_client(client);
+
+  grpc_completion_queue_shutdown(cq);
+  drain_cq(cq);
+  grpc_completion_queue_destroy(cq);
 }
 
-static void simple_request_body(grpc_end2end_test_config config,
-                                grpc_end2end_test_fixture f) {
+static void simple_request_body(const char* dns_server_port) {
   grpc_call* c;
   grpc_call* s;
-  cq_verifier* cqv = cq_verifier_create(f.cq);
+
+  int port = grpc_pick_unused_port_or_die();
+  char* localaddr = nullptr;
+  gpr_join_host_port(&localaddr, "localhost", port);
+
+  char* client_target = nullptr;
+  GPR_ASSERT(gpr_asprintf(&client_target, "dns://127.0.0.1:%s/server.test.com:%d", dns_server_port, port));
+  grpc_channel* client =
+      grpc_insecure_channel_create(client_target, /* client_args */nullptr, nullptr);
+  grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
+  cq_verifier* cqv = cq_verifier_create(cq);
+  grpc_server *server = grpc_server_create(nullptr /* server_args */, nullptr);
+  grpc_server_register_completion_queue(server, cq, nullptr);
+  GPR_ASSERT(grpc_server_add_insecure_http2_port(server, localaddr));
+  grpc_server_start(server);
+
   grpc_op ops[6];
   grpc_op* op;
   grpc_metadata_array initial_metadata_recv;
@@ -96,15 +108,9 @@ static void simple_request_body(grpc_end2end_test_config config,
   grpc_slice details;
   int was_cancelled = 2;
   char* peer;
-  grpc_stats_data* before =
-      static_cast<grpc_stats_data*>(gpr_malloc(sizeof(grpc_stats_data)));
-  grpc_stats_data* after =
-      static_cast<grpc_stats_data*>(gpr_malloc(sizeof(grpc_stats_data)));
-
-  grpc_stats_collect(before);
 
   gpr_timespec deadline = five_seconds_from_now();
-  c = grpc_channel_create_call(f.client, nullptr, GRPC_PROPAGATE_DEFAULTS, f.cq,
+  c = grpc_channel_create_call(client, nullptr, GRPC_PROPAGATE_DEFAULTS, cq,
                                grpc_slice_from_static_string("/foo"), nullptr,
                                deadline, nullptr);
   GPR_ASSERT(c);
@@ -148,8 +154,8 @@ static void simple_request_body(grpc_end2end_test_config config,
   GPR_ASSERT(GRPC_CALL_OK == error);
 
   error =
-      grpc_server_request_call(f.server, &s, &call_details,
-                               &request_metadata_recv, f.cq, f.cq, tag(101));
+      grpc_server_request_call(server, &s, &call_details,
+                               &request_metadata_recv, cq, cq, tag(101));
   GPR_ASSERT(GRPC_CALL_OK == error);
   CQ_EXPECT_COMPLETION(cqv, tag(101), 1);
   cq_verify(cqv);
@@ -217,54 +223,21 @@ static void simple_request_body(grpc_end2end_test_config config,
   grpc_call_unref(s);
 
   cq_verifier_destroy(cqv);
-
-  grpc_stats_collect(after);
-
-  char* stats = grpc_stats_data_as_json(after);
-  gpr_log(GPR_DEBUG, "%s", stats);
-  gpr_free(stats);
-
-  int expected_calls = 1;
-  if (config.feature_mask & FEATURE_MASK_SUPPORTS_REQUEST_PROXYING) {
-    expected_calls *= 2;
-  }
-  GPR_ASSERT(after->counters[GRPC_STATS_COUNTER_CLIENT_CALLS_CREATED] -
-                 before->counters[GRPC_STATS_COUNTER_CLIENT_CALLS_CREATED] ==
-             expected_calls);
-  GPR_ASSERT(after->counters[GRPC_STATS_COUNTER_SERVER_CALLS_CREATED] -
-                 before->counters[GRPC_STATS_COUNTER_SERVER_CALLS_CREATED] ==
-             expected_calls);
-  gpr_free(before);
-  gpr_free(after);
+  end_test(client, server, cq);
 }
 
-static void test_invoke_simple_request(grpc_end2end_test_config config) {
-  grpc_end2end_test_fixture f;
+int main(int argc, char** argv) {
+  grpc_test_init(argc, argv);
 
-  f = begin_test(config, "test_invoke_simple_request", nullptr, nullptr);
-  simple_request_body(config, f);
-  end_test(&f);
-  config.tear_down_data(&f);
+  gpr_cmdline *cl;
+  cl = gpr_cmdline_create("My cool tool");
+  const char* dns_server_port = nullptr;
+  gpr_cmdline_add_string(cl, "dns_server_port", "Port that local fake DNS server for testing is listening on.", &dns_server_port);
+  gpr_cmdline_parse(cl, argc, argv);
+  gpr_cmdline_destroy(cl);
+  gpr_log(GPR_INFO, "DNS server port: %s", dns_server_port);
+
+  grpc_init();
+  simple_request_body(dns_server_port);
+  grpc_shutdown();
 }
-
-static void test_invoke_10_simple_requests(grpc_end2end_test_config config) {
-  int i;
-  grpc_end2end_test_fixture f =
-      begin_test(config, "test_invoke_10_simple_requests", nullptr, nullptr);
-  for (i = 0; i < 10; i++) {
-    simple_request_body(config, f);
-    gpr_log(GPR_INFO, "Running test: Passed simple request %d", i);
-  }
-  end_test(&f);
-  config.tear_down_data(&f);
-}
-
-void simple_request(grpc_end2end_test_config config) {
-  int i;
-  for (i = 0; i < 10; i++) {
-    test_invoke_simple_request(config);
-  }
-  test_invoke_10_simple_requests(config);
-}
-
-void simple_request_pre_init(void) {}

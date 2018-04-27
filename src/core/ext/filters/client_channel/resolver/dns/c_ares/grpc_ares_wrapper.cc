@@ -253,8 +253,8 @@ static void on_hostbyname_done_cb(void* arg, int status, int timeouts,
     }
   } else if (!r->success) {
     char* error_msg;
-    gpr_asprintf(&error_msg, "C-ares status is not ARES_SUCCESS: %s",
-                 ares_strerror(status));
+    gpr_asprintf(&error_msg, "C-ares status is not ARES_SUCCESS: %s. hr->host: %s",
+                 ares_strerror(status), hr->host);
     grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(error_msg);
     gpr_free(error_msg);
     if (r->error == GRPC_ERROR_NONE) {
