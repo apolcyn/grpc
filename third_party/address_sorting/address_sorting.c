@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdio.h>
 
 // Scope values increase with increase in scope.
 static const int kIPv6AddrScopeLinkLocal = 1;
@@ -139,12 +140,15 @@ address_sorting_family address_sorting_abstract_get_family(
   }
 }
 
-void print_addr(char* addr, int len) {
+void print_addr(char* addr, size_t len) {
 	printf("PRINT ADDR:\n");
-	for (int i = 0; i < len; i++) {
-		printf("%x", addr[i]);
-	}
-	printf("DONE PRINT ADDR:\n");
+        char buf[32];
+        const char *out = inet_ntop(AF_INET6, (char*)&((struct sockaddr_in6*)addr)->sin6_addr, buf, 16);
+        if (out == NULL) {
+          fprintf(stderr, "FAILED TO CONVERT\n");
+        }
+        printf("%s\n", out);
+	printf("\nDONE PRINT ADDR:\n");
 }
 
 void log_val(int val, const address_sorting_address* resolved_addr) {
@@ -328,8 +332,18 @@ static int rfc_6724_compare(const void* a, const void* b) {
     return out;
   }
   if ((out = compare_source_dest_labels_match(first, second))) {
+    printf("source dest labels match mismatch\n");
+    printf("First addr source_addr:");
+    print_addr((char*)&first->source_addr, first->source_addr.len);
+    printf("First addr dest addr:");
+    print_addr((char*)&first->dest_addr, first->dest_addr.len);
+    printf("Second addr source_addr:");
+    print_addr((char*)&second->source_addr, second->source_addr.len);
+    printf("Second addr dest addr:");
+    print_addr((char*)&second->dest_addr, second->dest_addr.len);
     return out;
   }
+  printf("both source and dest labels matching matches\n");
   // TODO: Implement rule 3; avoid deprecated addresses.
   // TODO: Implement rule 4; avoid temporary addresses.
   if ((out = compare_dest_precedence(first, second))) {
