@@ -100,10 +100,10 @@ static void grpc_ares_request_ref(grpc_ares_request* r) {
 }
 
 void print_the_addr(char* addr, int len) {
+	char buf[32];
+	const char* out = inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, buf, 16);
 	printf("PRINT ADDR:\n");
-	for (int i = 0; i < len; i++) {
-		printf("%x", addr[i]);
-	}
+	printf("%s\n", out);
 	printf("DONE PRINT ADDR:\n");
 }
 
