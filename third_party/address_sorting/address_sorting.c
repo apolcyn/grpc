@@ -141,18 +141,16 @@ address_sorting_family address_sorting_abstract_get_family(
 }
 
 void print_addr(char* addr, size_t len) {
-	printf("PRINT ADDR:\n");
         char buf[32];
         const char *out = inet_ntop(AF_INET6, (char*)&((struct sockaddr_in6*)addr)->sin6_addr, buf, 16);
         if (out == NULL) {
           fprintf(stderr, "FAILED TO CONVERT\n");
         }
         printf("%s\n", out);
-	printf("\nDONE PRINT ADDR:\n");
 }
 
 void log_val(int val, const address_sorting_address* resolved_addr) {
-	printf("get_label_value. return: %d\n", val);
+	printf("get_label_value. return: %d for", val);
 	print_addr((char*)&resolved_addr->addr, resolved_addr->len);
 	return;
 }
@@ -273,19 +271,34 @@ static int compare_source_dest_scope_matches(
 static int compare_source_dest_labels_match(
     const address_sorting_sortable* first,
     const address_sorting_sortable* second) {
+  printf("compare_source_dest_labels_match:\n ");
+  printf("    first: ");
+  print_addr((char*)&first->dest_addr, first->dest_addr.len);
+  printf("    second: ");
+  print_addr((char*)&second->dest_addr, second->dest_addr.len);
   int first_label_matches = 0;
   if (get_label_value(&first->dest_addr) ==
       get_label_value(&first->source_addr)) {
     first_label_matches = 1;
+    printf("first label matches\n");
+  } else {
+    printf("first label NO matches\n");
   }
   int second_label_matches = 0;
   if (get_label_value(&second->dest_addr) ==
       get_label_value(&second->source_addr)) {
     second_label_matches = 1;
+    printf("second label matches\n");
+  } else {
+    printf("second label NO matches\n");
   }
   if (first_label_matches != second_label_matches) {
-    return first_label_matches ? -1 : 1;
+    printf("first_label_matches? - %d\n", first_label_matches);
+    int out = (first_label_matches ? 1 : 1);
+    printf("compare_source_dest_labels_match - out: %d\n", out);
+    return out;
   }
+  printf("first_label_matches == second_label_matches\n");
   return 0;
 }
 
@@ -341,6 +354,7 @@ static int rfc_6724_compare(const void* a, const void* b) {
     print_addr((char*)&second->source_addr, second->source_addr.len);
     printf("Second addr dest addr:");
     print_addr((char*)&second->dest_addr, second->dest_addr.len);
+    printf("rfc 6724 compare returning: %d\n", out);
     return out;
   }
   printf("both source and dest labels matching matches\n");
