@@ -130,6 +130,18 @@ def _resolver_test_cases(resolver_component_data, records_to_skip):
     })
   return out
 
+def _resolver_test_cases(resolver_component_data, records_to_skip):
+  out = []
+  for test_case in resolver_component_data['resolver_component_tests']:
+    if test_case['record_to_resolve'] in records_to_skip:
+      continue
+    target_name = _append_zone_name(test_case['record_to_resolve'],
+                                    resolver_component_data['resolver_tests_common_zone_name'])
+    out.append({
+      'test_title': 'address_sorting_end2end',
+    })
+  return out
+
 def main():
   resolver_component_data = ''
   with open('test/cpp/naming/resolver_test_record_groups.yaml') as f:

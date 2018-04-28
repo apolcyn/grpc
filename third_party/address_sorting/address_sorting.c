@@ -225,12 +225,12 @@ static int compare_source_addr_exists(const address_sorting_sortable* first,
 static int compare_source_dest_scope_matches(
     const address_sorting_sortable* first,
     const address_sorting_sortable* second) {
-  int first_src_dst_scope_matches = 0;
+  bool first_src_dst_scope_matches = 0;
   if (sockaddr_get_scope(&first->dest_addr) ==
       sockaddr_get_scope(&first->source_addr)) {
     first_src_dst_scope_matches = 1;
   }
-  int second_src_dst_scope_matches = 0;
+  bool second_src_dst_scope_matches = 0;
   if (sockaddr_get_scope(&second->dest_addr) ==
       sockaddr_get_scope(&second->source_addr)) {
     second_src_dst_scope_matches = 1;
@@ -244,12 +244,12 @@ static int compare_source_dest_scope_matches(
 static int compare_source_dest_labels_match(
     const address_sorting_sortable* first,
     const address_sorting_sortable* second) {
-  int first_label_matches = 0;
+  bool first_label_matches = 0;
   if (get_label_value(&first->dest_addr) ==
       get_label_value(&first->source_addr)) {
     first_label_matches = 1;
   }
-  int second_label_matches = 0;
+  bool second_label_matches = 0;
   if (get_label_value(&second->dest_addr) ==
       get_label_value(&second->source_addr)) {
     second_label_matches = 1;
