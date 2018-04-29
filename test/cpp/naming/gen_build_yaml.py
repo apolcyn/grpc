@@ -142,6 +142,13 @@ def _resolver_test_cases(resolver_component_data, records_to_skip):
     })
   return out
 
+def _end2end_address_sorting_test_cases():
+  return [
+      {
+          'test_title': 'end2end_address_sorting',
+      }
+  ]
+
 def main():
   resolver_component_data = ''
   with open('test/cpp/naming/resolver_test_record_groups.yaml') as f:
@@ -152,6 +159,7 @@ def main():
       'resolver_gce_integration_tests_zone_id': _gce_dns_zone_id(resolver_component_data),
       'all_integration_test_records': _gcloud_uploadable_form(resolver_component_data['resolver_component_tests'],
                                                               resolver_component_data['resolver_tests_common_zone_name']),
+      'end2end_address_sorting_test_cases': _end2end_address_sorting_test_cases(),
       'resolver_gce_integration_test_cases': _resolver_test_cases(resolver_component_data, _TARGET_RECORDS_TO_SKIP_AGAINST_GCE),
       'resolver_component_test_cases': _resolver_test_cases(resolver_component_data, []),
       'targets': [
@@ -231,6 +239,30 @@ def main():
                   'grpc',
                   'gpr',
                   'grpc++_test_config',
+              ],
+          }
+      ] + [
+          {
+              'name': 'end2end_address_sorting_tests_runner_invoker',
+              'build': 'test',
+              'language': 'c++',
+              'gtest': False,
+              'run': True,
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
+              'platforms': ['linux', 'posix', 'mac'],
+              'deps': [
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+              'args': [
+                  '--test_bin_name=end2end_address_sorting_test',
+                  '--test_runner_name=end2end_address_sorting_test_runner.py',
+                  '--running_under_bazel=false',
               ],
           }
       ]

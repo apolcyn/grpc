@@ -77,16 +77,17 @@ static void end_test(grpc_channel *client, grpc_server *server, grpc_completion_
   grpc_completion_queue_destroy(cq);
 }
 
-static void simple_request_body(const char* dns_server_port) {
+static void simple_request_body(const char* local_dns_server_address) {
   grpc_call* c;
   grpc_call* s;
 
   int port = grpc_pick_unused_port_or_die();
   char* localaddr = nullptr;
-  gpr_join_host_port(&localaddr, "localhost", port);
+  // Broken-on-ipv4-only
+  gpr_join_host_port(&localaddr, "::1", port);
 
   char* client_target = nullptr;
-  GPR_ASSERT(gpr_asprintf(&client_target, "dns://127.0.0.1:%s/server.test.com:%d", dns_server_port, port));
+  GPR_ASSERT(gpr_asprintf(&client_target, "dns://%s/server.end2end_address_sorting_test.com:%d", local_dns_server_address, port));
   grpc_channel* client =
       grpc_insecure_channel_create(client_target, /* client_args */nullptr, nullptr);
   grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
@@ -231,13 +232,13 @@ int main(int argc, char** argv) {
 
   gpr_cmdline *cl;
   cl = gpr_cmdline_create("My cool tool");
-  const char* dns_server_port = nullptr;
-  gpr_cmdline_add_string(cl, "dns_server_port", "Port that local fake DNS server for testing is listening on.", &dns_server_port);
+  const char* local_dns_server_address = nullptr;
+  gpr_cmdline_add_string(cl, "local_dns_server_address", "IP-port of local DNS server.", &local_dns_server_address);
   gpr_cmdline_parse(cl, argc, argv);
   gpr_cmdline_destroy(cl);
-  gpr_log(GPR_INFO, "DNS server port: %s", dns_server_port);
+  gpr_log(GPR_INFO, "Local DNS server address: %s", local_dns_server_address);
 
   grpc_init();
-  simple_request_body(dns_server_port);
+  simple_request_body(local_dns_server_address);
   grpc_shutdown();
 }
