@@ -1325,7 +1325,7 @@ resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_
 address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure
 address_sorting_test: $(BINDIR)/$(CONFIG)/address_sorting_test
 end2end_address_sorting_test: $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
-end2end_address_sorting_tests_runner_invoker: $(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker
+resolver_component_tests_runner_invoker_c_test: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1573,6 +1573,7 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/h2_uds_nosec_test \
   $(BINDIR)/$(CONFIG)/inproc_nosec_test \
   $(BINDIR)/$(CONFIG)/end2end_address_sorting_test \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test \
   $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry \
@@ -1758,7 +1759,6 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
-  $(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker \
 
 else
 buildtests_cxx: privatelibs_cxx \
@@ -1880,7 +1880,6 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
-  $(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker \
 
 endif
 
@@ -2152,6 +2151,8 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/bad_ssl_cert_test || ( echo test bad_ssl_cert_test failed ; exit 1 )
 	$(E) "[RUN]     Testing end2end_address_sorting_test"
 	$(Q) $(BINDIR)/$(CONFIG)/end2end_address_sorting_test || ( echo test end2end_address_sorting_test failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_c_test"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test || ( echo test resolver_component_tests_runner_invoker_c_test failed ; exit 1 )
 
 
 flaky_test_c: buildtests_c
@@ -2360,8 +2361,6 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure || ( echo test address_sorting_test_unsecure failed ; exit 1 )
 	$(E) "[RUN]     Testing address_sorting_test"
 	$(Q) $(BINDIR)/$(CONFIG)/address_sorting_test || ( echo test address_sorting_test failed ; exit 1 )
-	$(E) "[RUN]     Testing end2end_address_sorting_tests_runner_invoker"
-	$(Q) $(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker || ( echo test end2end_address_sorting_tests_runner_invoker failed ; exit 1 )
 
 
 flaky_test_cxx: buildtests_cxx
@@ -23391,45 +23390,34 @@ endif
 endif
 
 
-END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_SRC = \
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_SRC = \
     test/cpp/naming/resolver_component_tests_runner_invoker.cc \
 
-END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_SRC))))
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker: openssl_dep_error
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test: openssl_dep_error
 
 else
 
 
 
-
-ifeq ($(NO_PROTOBUF),true)
-
-# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
-
-$(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker: protobuf_dep_error
-
-else
-
-$(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker: $(PROTOBUF_DEP) $(END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/end2end_address_sorting_tests_runner_invoker
+	$(Q) $(LD) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test
 
 endif
 
-endif
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
 
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-
-deps_end2end_address_sorting_tests_runner_invoker: $(END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_OBJS:.o=.dep)
+deps_resolver_component_tests_runner_invoker_c_test: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(END2END_ADDRESS_SORTING_TESTS_RUNNER_INVOKER_OBJS:.o=.dep)
+-include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS:.o=.dep)
 endif
 endif
 

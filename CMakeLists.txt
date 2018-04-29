@@ -457,6 +457,9 @@ add_dependencies(buildtests_c inproc_nosec_test)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_c end2end_address_sorting_test)
 endif()
+if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
+add_dependencies(buildtests_c resolver_component_tests_runner_invoker_c_test)
+endif()
 add_dependencies(buildtests_c api_fuzzer_one_entry)
 add_dependencies(buildtests_c client_fuzzer_one_entry)
 add_dependencies(buildtests_c hpack_parser_fuzzer_test_one_entry)
@@ -655,9 +658,6 @@ add_dependencies(buildtests_cxx address_sorting_test_unsecure)
 endif()
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 add_dependencies(buildtests_cxx address_sorting_test)
-endif()
-if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
-add_dependencies(buildtests_cxx end2end_address_sorting_tests_runner_invoker)
 endif()
 
 add_custom_target(buildtests
@@ -15657,14 +15657,12 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX OR _gRPC_PLATFORM_MAC OR _gRPC_PLATFORM_POSIX)
 
-add_executable(end2end_address_sorting_tests_runner_invoker
+add_executable(resolver_component_tests_runner_invoker_c_test
   test/cpp/naming/resolver_component_tests_runner_invoker.cc
-  third_party/googletest/googletest/src/gtest-all.cc
-  third_party/googletest/googlemock/src/gmock-all.cc
 )
 
 
-target_include_directories(end2end_address_sorting_tests_runner_invoker
+target_include_directories(resolver_component_tests_runner_invoker_c_test
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${_gRPC_SSL_INCLUDE_DIR}
@@ -15674,24 +15672,13 @@ target_include_directories(end2end_address_sorting_tests_runner_invoker
   PRIVATE ${_gRPC_CARES_INCLUDE_DIR}
   PRIVATE ${_gRPC_GFLAGS_INCLUDE_DIR}
   PRIVATE ${_gRPC_ADDRESS_SORTING_INCLUDE_DIR}
-  PRIVATE third_party/googletest/googletest/include
-  PRIVATE third_party/googletest/googletest
-  PRIVATE third_party/googletest/googlemock/include
-  PRIVATE third_party/googletest/googlemock
-  PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(end2end_address_sorting_tests_runner_invoker
-  ${_gRPC_PROTOBUF_LIBRARIES}
+target_link_libraries(resolver_component_tests_runner_invoker_c_test
   ${_gRPC_ALLTARGETS_LIBRARIES}
-  grpc++_test_util
   grpc_test_util
   gpr_test_util
-  grpc++
-  grpc
   gpr
-  grpc++_test_config
-  ${_gRPC_GFLAGS_LIBRARIES}
 )
 
 endif()

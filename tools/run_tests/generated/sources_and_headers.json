@@ -6440,16 +6440,12 @@
     "deps": [
       "gpr", 
       "gpr_test_util", 
-      "grpc", 
-      "grpc++", 
-      "grpc++_test_config", 
-      "grpc++_test_util", 
       "grpc_test_util"
     ], 
     "headers": [], 
     "is_filegroup": false, 
-    "language": "c++", 
-    "name": "end2end_address_sorting_tests_runner_invoker", 
+    "language": "c", 
+    "name": "resolver_component_tests_runner_invoker_c_test", 
     "src": [
       "test/cpp/naming/resolver_component_tests_runner_invoker.cc"
     ], 

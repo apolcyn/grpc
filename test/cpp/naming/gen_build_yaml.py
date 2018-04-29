@@ -243,21 +243,17 @@ def main():
           }
       ] + [
           {
-              'name': 'end2end_address_sorting_tests_runner_invoker',
+              'name': 'resolver_component_tests_runner_invoker_c_test',
               'build': 'test',
-              'language': 'c++',
+              'language': 'c',
               'gtest': False,
               'run': True,
               'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
               'platforms': ['linux', 'posix', 'mac'],
               'deps': [
-                  'grpc++_test_util',
                   'grpc_test_util',
                   'gpr_test_util',
-                  'grpc++',
-                  'grpc',
                   'gpr',
-                  'grpc++_test_config',
               ],
               'args': [
                   '--test_bin_name=end2end_address_sorting_test',

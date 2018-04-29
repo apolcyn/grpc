@@ -5591,8 +5591,8 @@
     "exclude_iomgrs": [], 
     "flaky": false, 
     "gtest": false, 
-    "language": "c++", 
-    "name": "end2end_address_sorting_tests_runner_invoker", 
+    "language": "c", 
+    "name": "resolver_component_tests_runner_invoker_c_test", 
     "platforms": [
       "linux", 
       "mac", 
