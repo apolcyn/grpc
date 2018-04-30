@@ -230,7 +230,7 @@ def main():
               'language': 'c',
               'run': True,
               'src': ['test/cpp/naming/end2end_address_sorting_test.cc'],
-              'platforms': ['linux', 'posix', 'mac'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
               'deps': [
                   'grpc++_test_util',
                   'grpc_test_util',
@@ -249,7 +249,7 @@ def main():
               'gtest': False,
               'run': True,
               'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
-              'platforms': ['linux', 'posix', 'mac'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
               'deps': [
                   'grpc_test_util',
                   'gpr_test_util',

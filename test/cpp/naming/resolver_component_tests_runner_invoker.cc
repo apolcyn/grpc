@@ -139,18 +139,21 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   int dns_server_port = grpc_pick_unused_port_or_die();
 
   char* test_driver_argv[7];
-  int num_args = 0;
-  test_driver_argv[num_args++] = strdup(test_runner_bin_path.c_str());
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--test_bin_path=%s", test_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--dns_server_bin_path=%s", dns_server_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--records_config_path=%s", records_config_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--dns_server_port=%s", std::to_string(dns_server_port).c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--dns_resolver_bin_path=%s", dns_resolver_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[num_args++], "--tcp_connect_bin_path=%s", tcp_connect_bin_path.c_str()));
-  for (int i = 0; i < num_args; i++) {
+  int test_driver_argc = 0;
+#ifdef GPR_WINDOWS
+  test_driver_argv[test_driver_argc++] = "C:\\Python\\python.exe";
+#endif
+  test_driver_argv[test_driver_argc++] = strdup(test_runner_bin_path.c_str());
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--test_bin_path=%s", test_bin_path.c_str()));
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_server_bin_path=%s", dns_server_bin_path.c_str()));
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--records_config_path=%s", records_config_path.c_str()));
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_server_port=%s", std::to_string(dns_server_port).c_str()));
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_resolver_bin_path=%s", dns_resolver_bin_path.c_str()));
+  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--tcp_connect_bin_path=%s", tcp_connect_bin_path.c_str()));
+  for (int i = 0; i < test_driver_argc; i++) {
     gpr_log(GPR_DEBUG, "test_driver_arg[%d]: %s", i, test_driver_argv[i]);
   }
-  gpr_subprocess* test_driver = gpr_subprocess_create(num_args, (const char**)test_driver_argv);
+  gpr_subprocess* test_driver = gpr_subprocess_create(test_driver_argc, (const char**)test_driver_argv);
   gpr_mu test_driver_mu;
   gpr_mu_init(&test_driver_mu);
   gpr_cv test_driver_cv;
@@ -185,7 +188,7 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_subprocess_destroy(test_driver);
   gpr_mu_destroy(&test_driver_mu);
   gpr_cv_destroy(&test_driver_cv);
-  for (int i = 0; i < num_args; i++) {
+  for (int i = 0; i < test_driver_argc; i++) {
     gpr_free(test_driver_argv[i]);
   }
 }
