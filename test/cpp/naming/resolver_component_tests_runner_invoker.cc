@@ -22,60 +22,55 @@
 #include <grpc/support/string_util.h>
 #include <signal.h>
 #include <string.h>
-//#include <unistd.h>
+#include <unistd.h>
 
-#include "test/core/util/cmdline.h"
+#include <gflags/gflags.h>
 #include <string>
-#include "src/core/lib/gprpp/thd.h"
-#include "src/core/lib/gprpp/inlined_vector.h"
+#include <thread>
+#include <vector>
 
+#include "test/cpp/util/subprocess.h"
+#include "test/cpp/util/test_config.h"
 
-#include "test/core/util/subprocess.h"
 #include "src/core/lib/gpr/env.h"
 #include "test/core/util/port.h"
-#include "test/core/util/test_config.h"
 
-#ifdef GPR_WINDOWS
-#define PSEP "\\"
-#else
-#define PSEP "/"
-#endif
+DEFINE_bool(
+    running_under_bazel, false,
+    "True if this test is running under bazel. "
+    "False indicates that this test is running under run_tests.py. "
+    "Child process test binaries are located differently based on this flag. ");
+
+DEFINE_string(test_bin_name, "",
+              "Name, without the preceding path, of the test binary");
+
+DEFINE_string(grpc_test_directory_relative_to_test_srcdir,
+              "/com_github_grpc_grpc",
+              "This flag only applies if runner_under_bazel is true. This "
+              "flag is ignored if runner_under_bazel is false. "
+              "Directory of the <repo-root>/test directory relative to bazel's "
+              "TEST_SRCDIR environment variable");
+
+using grpc::SubProcess;
 
 static volatile sig_atomic_t abort_wait_for_child = 0;
 
 static void sighandler(int sig) { abort_wait_for_child = 1; }
 
 static void register_sighandler() {
-#ifdef GPR_WINDOWS
-  signal(SIGINT, sighandler);
-#else
   struct sigaction act;
   memset(&act, 0, sizeof(act));
   act.sa_handler = sighandler;
   sigaction(SIGINT, &act, nullptr);
   sigaction(SIGTERM, &act, nullptr);
-#endif
 }
 
 namespace {
 
 const int kTestTimeoutSeconds = 60 * 2;
 
-struct SigHandlingThreadArgs {
-  gpr_subprocess *test_driver;
-  gpr_mu* test_driver_mu;
-  gpr_cv* test_driver_cv;
-  bool* test_driver_done;
-  bool *test_driver_interrupted;
-};
-
-void RunSigHandlingThread(void *args) {
-  SigHandlingThreadArgs *sig_args = reinterpret_cast<SigHandlingThreadArgs*>(args);
-  gpr_subprocess *test_driver = sig_args->test_driver;
-  gpr_mu* test_driver_mu = sig_args->test_driver_mu;
-  gpr_cv* test_driver_cv = sig_args->test_driver_cv;
-  bool *test_driver_done = sig_args->test_driver_done;
-  bool *test_driver_interrupted = sig_args->test_driver_interrupted;
+void RunSigHandlingThread(SubProcess* test_driver, gpr_mu* test_driver_mu,
+                          gpr_cv* test_driver_cv, int* test_driver_done) {
   gpr_timespec overall_deadline =
       gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
                    gpr_time_from_seconds(kTestTimeoutSeconds, GPR_TIMESPAN));
@@ -95,20 +90,40 @@ void RunSigHandlingThread(void *args) {
   gpr_log(GPR_DEBUG,
           "Test timeout reached or received signal. Interrupting test driver "
           "child process.");
-  gpr_mu_lock(test_driver_mu);
-  gpr_subprocess_interrupt(test_driver);
-  *test_driver_interrupted = true;
-  gpr_mu_unlock(test_driver_mu);
+  test_driver->Interrupt();
   return;
 }
+}  // namespace
 
-void CheckTestRunnerExitStatus(int status) {
-#ifdef GPR_WINDOWS
-  if (status != 0) {
-    gpr_log(GPR_INFO, "Resolver component test test-runner exitted with status: %d", status);
-    abort();
-  }
-#else
+namespace grpc {
+
+namespace testing {
+
+void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
+                                        std::string test_bin_path,
+                                        std::string dns_server_bin_path,
+                                        std::string records_config_path,
+                                        std::string dns_resolver_bin_path,
+                                        std::string tcp_connect_bin_path) {
+  int dns_server_port = grpc_pick_unused_port_or_die();
+
+  SubProcess* test_driver =
+      new SubProcess({test_runner_bin_path, "--test_bin_path=" + test_bin_path,
+                      "--dns_server_bin_path=" + dns_server_bin_path,
+                      "--records_config_path=" + records_config_path,
+                      "--dns_server_port=" + std::to_string(dns_server_port),
+                      "--dns_resolver_bin_path=" + dns_resolver_bin_path,
+                      "--tcp_connect_bin_path=" + tcp_connect_bin_path});
+  gpr_mu test_driver_mu;
+  gpr_mu_init(&test_driver_mu);
+  gpr_cv test_driver_cv;
+  gpr_cv_init(&test_driver_cv);
+  int test_driver_done = 0;
+  register_sighandler();
+  std::thread sig_handling_thread(RunSigHandlingThread, test_driver,
+                                  &test_driver_mu, &test_driver_cv,
+                                  &test_driver_done);
+  int status = test_driver->Join();
   if (WIFEXITED(status)) {
     if (WEXITSTATUS(status)) {
       gpr_log(GPR_INFO,
@@ -127,80 +142,14 @@ void CheckTestRunnerExitStatus(int status) {
             status);
     abort();
   }
-#endif
-}
-
-}  // namespace
-
-namespace grpc {
-
-namespace testing {
-
-void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
-                                        std::string test_bin_path,
-                                        std::string dns_server_bin_path,
-                                        std::string records_config_path,
-                                        std::string dns_resolver_bin_path,
-                                        std::string tcp_connect_bin_path) {
-  int dns_server_port = grpc_pick_unused_port_or_die();
-
-  char* test_driver_argv[7];
-  int test_driver_argc = 0;
-#ifdef GPR_WINDOWS
-  test_driver_argv[test_driver_argc++] = "C:\\Python27\\python.exe";
-#endif
-  test_driver_argv[test_driver_argc++] = strdup(test_runner_bin_path.c_str());
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--test_bin_path=%s", test_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_server_bin_path=%s", dns_server_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--records_config_path=%s", records_config_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_server_port=%s", std::to_string(dns_server_port).c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--dns_resolver_bin_path=%s", dns_resolver_bin_path.c_str()));
-  GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--tcp_connect_bin_path=%s", tcp_connect_bin_path.c_str()));
-  for (int i = 0; i < test_driver_argc; i++) {
-    gpr_log(GPR_DEBUG, "test_driver_arg[%d]: %s", i, test_driver_argv[i]);
-  }
-  gpr_subprocess* test_driver = gpr_subprocess_create(test_driver_argc, (const char**)test_driver_argv);
-  if (test_driver == nullptr) {
-    gpr_log(GPR_DEBUG, "Failed to create subprocess.");
-    abort();
-  }
-  gpr_mu test_driver_mu;
-  gpr_mu_init(&test_driver_mu);
-  gpr_cv test_driver_cv;
-  gpr_cv_init(&test_driver_cv);
-  bool test_driver_done = false;
-  bool test_driver_interrupted = false;
-  register_sighandler();
-  SigHandlingThreadArgs sig_handling_thread_args;
-  sig_handling_thread_args.test_driver = test_driver;
-  sig_handling_thread_args.test_driver_mu = &test_driver_mu;
-  sig_handling_thread_args.test_driver_cv = &test_driver_cv;
-  sig_handling_thread_args.test_driver_done = &test_driver_done;
-  sig_handling_thread_args.test_driver_interrupted = &test_driver_interrupted;
-  grpc_core::Thread sig_handling_thread("signal handling threading",
-                                        RunSigHandlingThread,
-                                        &sig_handling_thread_args);
-  sig_handling_thread.Start();
-  int status = gpr_subprocess_join(test_driver);
-  gpr_mu_lock(&test_driver_mu);
-  if (test_driver_interrupted) {
-    gpr_log(GPR_INFO,
-            "Resolver component test test-runner interrupted");
-    abort();
-  }
-  gpr_mu_unlock(&test_driver_mu);
-  CheckTestRunnerExitStatus(status);
   gpr_mu_lock(&test_driver_mu);
   test_driver_done = 1;
   gpr_cv_signal(&test_driver_cv);
   gpr_mu_unlock(&test_driver_mu);
-  sig_handling_thread.Join();
-  gpr_subprocess_destroy(test_driver);
+  sig_handling_thread.join();
+  delete test_driver;
   gpr_mu_destroy(&test_driver_mu);
   gpr_cv_destroy(&test_driver_cv);
-  for (int i = 0; i < test_driver_argc; i++) {
-    gpr_free(test_driver_argv[i]);
-  }
 }
 
 }  // namespace testing
@@ -208,68 +157,39 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
 }  // namespace grpc
 
 int main(int argc, char** argv) {
-  grpc_test_init(argc, argv);
-  gpr_cmdline *cl = gpr_cmdline_create("My cool tool");
-  int running_under_bazel = 0;
-  gpr_cmdline_add_int(cl, "running_under_bazel",
-    "True if this test is running under bazel. "
-    "False indicates that this test is running under run_tests.py. "
-    "Child process test binaries are located differently based on this flag. ",
-    &running_under_bazel);
-  const char* test_bin_name = nullptr;
-  gpr_cmdline_add_string(cl, "test_bin_name",
-    "Name, without the preceding path, of the test binary",
-    &test_bin_name);
-  const char* test_runner_name = nullptr;
-  gpr_cmdline_add_string(cl, "test_runner_name",
-    "Name, without the preceding path, of the test runner python script",
-    &test_runner_name);
-  const char* records_config_name = nullptr;
-  gpr_cmdline_add_string(cl, "records_config_name",
-     "Name, without the preceding path, of the yaml file that configures the DNS records that the local DNS server should serve.",
-     &records_config_name);
-  const char* grpc_test_directory_relative_to_test_srcdir = "/com_github_grpc_grpc";
-  gpr_cmdline_add_string(cl, "grpc_test_directory_relative_to_test_srcdir",
-     "This flag only applies if runner_under_bazel is true. This "
-     "flag is ignored if runner_under_bazel is false. "
-     "Directory of the <repo-root>/test directory relative to bazel's "
-     "TEST_SRCDIR environment variable",
-     &grpc_test_directory_relative_to_test_srcdir);
-  gpr_cmdline_parse(cl, argc, argv);
-  gpr_cmdline_destroy(cl);
-
+  grpc::testing::InitTest(&argc, &argv, true);
   grpc_init();
-  GPR_ASSERT(strlen(test_bin_name) > 0);
+  GPR_ASSERT(FLAGS_test_bin_name != "");
   std::string my_bin = argv[0];
-  if (running_under_bazel) {
-    GPR_ASSERT(strlen(grpc_test_directory_relative_to_test_srcdir) > 0);
+  if (FLAGS_running_under_bazel) {
+    GPR_ASSERT(FLAGS_grpc_test_directory_relative_to_test_srcdir != "");
     // Use bazel's TEST_SRCDIR environment variable to locate the "test data"
     // binaries.
     char* test_srcdir = gpr_getenv("TEST_SRCDIR");
     std::string const bin_dir =
-        std::string(test_srcdir) + std::string(grpc_test_directory_relative_to_test_srcdir) +
+        test_srcdir + FLAGS_grpc_test_directory_relative_to_test_srcdir +
         std::string("/test/cpp/naming");
     // Invoke bazel's executeable links to the .sh and .py scripts (don't use
     // the .sh and .py suffixes) to make
     // sure that we're using bazel's test environment.
     grpc::testing::InvokeResolverComponentTestsRunner(
-        std::string(bin_dir) + std::string(test_runner_name),
-        std::string(bin_dir) + "/" + std::string(test_bin_name), std::string(bin_dir) + "/utils/dns_server",
-        std::string(bin_dir) + std::string(records_config_name),
-        std::string(bin_dir) + "/utils/dns_resolver", std::string(bin_dir) + "/utils/tcp_connect");
+        bin_dir + "/resolver_component_tests_runner",
+        bin_dir + "/" + FLAGS_test_bin_name, bin_dir + "/utils/dns_server",
+        bin_dir + "/resolver_test_record_groups.yaml",
+        bin_dir + "/utils/dns_resolver", bin_dir + "/utils/tcp_connect");
     gpr_free(test_srcdir);
   } else {
     // Get the current binary's directory relative to repo root to invoke the
     // correct build config (asan/tsan/dbg, etc.).
-    std::string const bin_dir = my_bin.substr(0, my_bin.rfind(PSEP));
+    std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
     // Invoke the .sh and .py scripts directly where they are in source code.
     grpc::testing::InvokeResolverComponentTestsRunner(
-        "test" PSEP "cpp" PSEP "naming" PSEP + std::string(test_runner_name),
-        std::string(bin_dir) + std::string(PSEP) + std::string(test_bin_name),
-        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "dns_server.py",
-        "test" PSEP "cpp" PSEP "naming" PSEP + std::string(records_config_name),
-        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "dns_resolver.py",
-        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "tcp_connect.py");
+        "test/cpp/naming/resolver_component_tests_runner.py",
+        bin_dir + "/" + FLAGS_test_bin_name,
+        "test/cpp/naming/utils/dns_server.py",
+        "test/cpp/naming/resolver_test_record_groups.yaml",
+        "test/cpp/naming/utils/dns_resolver.py",
+        "test/cpp/naming/utils/tcp_connect.py");
   }
   grpc_shutdown();
   return 0;
