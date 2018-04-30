@@ -40,11 +40,15 @@ static volatile sig_atomic_t abort_wait_for_child = 0;
 static void sighandler(int sig) { abort_wait_for_child = 1; }
 
 static void register_sighandler() {
+#ifdef GPR_WINDOWS
+  signal(SIGINT, sighandler);
+#else
   struct sigaction act;
   memset(&act, 0, sizeof(act));
   act.sa_handler = sighandler;
   sigaction(SIGINT, &act, nullptr);
   sigaction(SIGTERM, &act, nullptr);
+#endif
 }
 
 namespace {
@@ -55,7 +59,8 @@ struct SigHandlingThreadArgs {
   gpr_subprocess *test_driver;
   gpr_mu* test_driver_mu;
   gpr_cv* test_driver_cv;
-  int* test_driver_done;
+  bool* test_driver_done;
+  bool *test_driver_interrupted;
 };
 
 void RunSigHandlingThread(void *args) {
@@ -63,7 +68,8 @@ void RunSigHandlingThread(void *args) {
   gpr_subprocess *test_driver = sig_args->test_driver;
   gpr_mu* test_driver_mu = sig_args->test_driver_mu;
   gpr_cv* test_driver_cv = sig_args->test_driver_cv;
-  int *test_driver_done = sig_args->test_driver_done;
+  bool *test_driver_done = sig_args->test_driver_done;
+  bool *test_driver_interrupted = sig_args->test_driver_interrupted;
   gpr_timespec overall_deadline =
       gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
                    gpr_time_from_seconds(kTestTimeoutSeconds, GPR_TIMESPAN));
@@ -83,9 +89,41 @@ void RunSigHandlingThread(void *args) {
   gpr_log(GPR_DEBUG,
           "Test timeout reached or received signal. Interrupting test driver "
           "child process.");
+  gpr_mu_lock(test_driver_mu);
   gpr_subprocess_interrupt(test_driver);
+  *test_driver_interrupted = true;
+  gpr_mu_unlock(test_driver_mu);
   return;
 }
+
+void CheckTestRunnerExitStatus(int status) {
+#ifdef GPR_WINDOWS
+  if (status != 0) {
+    gpr_log(GPR_INFO, "Resolver component test test-runner exitted with status: %d", status);
+    abort();
+  }
+#else
+  if (WIFEXITED(status)) {
+    if (WEXITSTATUS(status)) {
+      gpr_log(GPR_INFO,
+              "Resolver component test test-runner exited with code %d",
+              WEXITSTATUS(status));
+      abort();
+    }
+  } else if (WIFSIGNALED(status)) {
+    gpr_log(GPR_INFO,
+            "Resolver component test test-runner ended from signal %d",
+            WTERMSIG(status));
+    abort();
+  } else {
+    gpr_log(GPR_INFO,
+            "Resolver component test test-runner ended with unknown status %d",
+            status);
+    abort();
+  }
+#endif
+}
+
 }  // namespace
 
 namespace grpc {
@@ -117,36 +155,28 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   gpr_mu_init(&test_driver_mu);
   gpr_cv test_driver_cv;
   gpr_cv_init(&test_driver_cv);
-  int test_driver_done = 0;
+  bool test_driver_done = false;
+  bool test_driver_interrupted = false;
   register_sighandler();
   SigHandlingThreadArgs sig_handling_thread_args;
   sig_handling_thread_args.test_driver = test_driver;
   sig_handling_thread_args.test_driver_mu = &test_driver_mu;
   sig_handling_thread_args.test_driver_cv = &test_driver_cv;
   sig_handling_thread_args.test_driver_done = &test_driver_done;
+  sig_handling_thread_args.test_driver_interrupted = &test_driver_interrupted;
   grpc_core::Thread sig_handling_thread("signal handling threading",
                                         RunSigHandlingThread,
                                         &sig_handling_thread_args);
   sig_handling_thread.Start();
   int status = gpr_subprocess_join(test_driver);
-  if (WIFEXITED(status)) {
-    if (WEXITSTATUS(status)) {
-      gpr_log(GPR_INFO,
-              "Resolver component test test-runner exited with code %d",
-              WEXITSTATUS(status));
-      abort();
-    }
-  } else if (WIFSIGNALED(status)) {
+  gpr_mu_lock(&test_driver_mu);
+  if (test_driver_interrupted) {
     gpr_log(GPR_INFO,
-            "Resolver component test test-runner ended from signal %d",
-            WTERMSIG(status));
-    abort();
-  } else {
-    gpr_log(GPR_INFO,
-            "Resolver component test test-runner ended with unknown status %d",
-            status);
+            "Resolver component test test-runner interrupted");
     abort();
   }
+  gpr_mu_unlock(&test_driver_mu);
+  CheckTestRunnerExitStatus(status);
   gpr_mu_lock(&test_driver_mu);
   test_driver_done = 1;
   gpr_cv_signal(&test_driver_cv);
