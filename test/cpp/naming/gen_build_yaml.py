@@ -119,14 +119,23 @@ def _resolver_test_cases(resolver_component_data, records_to_skip):
   for test_case in resolver_component_data['resolver_component_tests']:
     if test_case['record_to_resolve'] in records_to_skip:
       continue
+    target_name = _append_zone_name(test_case['record_to_resolve'],
+                                    resolver_component_data['resolver_tests_common_zone_name'])
     out.append({
-      'target_name': _append_zone_name(test_case['record_to_resolve'],
-                                       resolver_component_data['resolver_tests_common_zone_name']),
+      'test_title': target_name,
+      'target_name': target_name,
       'expected_addrs': _build_expected_addrs_cmd_arg(test_case['expected_addrs']),
       'expected_chosen_service_config': (test_case['expected_chosen_service_config'] or ''),
       'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
     })
   return out
+
+def _end2end_address_sorting_test_cases():
+  return [
+      {
+          'test_title': 'end2end_address_sorting',
+      }
+  ]
 
 def main():
   resolver_component_data = ''
@@ -144,6 +153,7 @@ def main():
       'resolver_gce_integration_tests_zone_id': _gce_dns_zone_id(resolver_component_data),
       'all_integration_test_records': _gcloud_uploadable_form(resolver_component_data['resolver_component_tests'],
                                                               resolver_component_data['resolver_tests_common_zone_name']),
+      'end2end_address_sorting_test_cases': _end2end_address_sorting_test_cases(),
       'resolver_gce_integration_test_cases': _resolver_test_cases(resolver_component_data, _TARGET_RECORDS_TO_SKIP_AGAINST_GCE),
       'resolver_component_test_cases': _resolver_test_cases(resolver_component_data, []),
       'targets': [
@@ -207,6 +217,44 @@ def main():
                   'grpc++_test_config',
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
+      ] + [
+          {
+              'name': 'end2end_address_sorting_test',
+              'build': 'test',
+              'language': 'c',
+              'run': True,
+              'src': ['test/cpp/naming/end2end_address_sorting_test.cc'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
+              'deps': [
+                  'grpc++_test_util',
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'grpc++',
+                  'grpc',
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          }
+      ] + [
+          {
+              'name': 'resolver_component_tests_runner_invoker_c_test',
+              'build': 'test',
+              'language': 'c',
+              'gtest': False,
+              'run': True,
+              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
+              'deps': [
+                  'grpc_test_util',
+                  'gpr_test_util',
+                  'gpr',
+              ],
+              'args': [
+                  '--test_bin_name=end2end_address_sorting_test',
+                  '--test_runner_name=end2end_address_sorting_test_runner.py',
+                  '--running_under_bazel=false',
+              ],
+          }
       ]
   }
 

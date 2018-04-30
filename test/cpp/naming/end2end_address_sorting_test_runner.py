@@ -1,4 +1,4 @@
-<%def name="resolver_component_tests(tests)">#!/usr/bin/env python
+#!/usr/bin/env python
 # Copyright 2015 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,33 +118,15 @@ wait_until_dns_server_is_up(args,
                             dns_server_subprocess_output)
 num_test_failures = 0
 
-% for test in tests:
-test_runner_log('Run test: %s' % '${test['test_title']}')\
-
-current_test_subprocess = subprocess.Popen([\
-
-  args.test_bin_path,\
-
-  % for k in test.keys():
-\
-    % if k != 'test_title':
-\
-  '--${k}', '${test[k]}',\
-
-    % endif
-\
-  % endfor
-  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port\
-
-])\
-
-current_test_subprocess.communicate()\
-
-if current_test_subprocess.returncode != 0:\
-
+test_runner_log('Run test: %s' % 'end2end_address_sorting')
+current_test_subprocess = subprocess.Popen([
+  args.test_bin_path,
+  '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port
+])
+current_test_subprocess.communicate()
+if current_test_subprocess.returncode != 0:
   num_test_failures += 1
 
-% endfor
 def run_one_off_tests():
   num_one_off_test_failures = 0
   test_runner_log('Test: we can reach the DNS server but nothing resolves')
@@ -166,4 +148,4 @@ test_runner_log('now kill DNS server')
 dns_server_subprocess.kill()
 dns_server_subprocess.wait()
 test_runner_log('%d tests failed.' % num_test_failures)
-sys.exit(num_test_failures)</%def>
+sys.exit(num_test_failures)

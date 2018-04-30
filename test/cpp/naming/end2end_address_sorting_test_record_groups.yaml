@@ -1,0 +1,6 @@
+resolver_tests_common_zone_name: end2end_address_sorting_test.com.
+resolver_component_tests:
+- records:
+    server:
+    - {TTL: '2100', data: '100::1234', type: AAAA}
+    - {TTL: '2100', data: '::1', type: AAAA}
