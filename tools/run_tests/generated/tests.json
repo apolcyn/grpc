@@ -5558,7 +5558,8 @@
     "ci_platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "cpu_cost": 1.0, 
     "exclude_configs": [], 
@@ -5570,7 +5571,8 @@
     "platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "uses_polling": true
   }, 
@@ -5584,7 +5586,8 @@
     "ci_platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "cpu_cost": 1.0, 
     "exclude_configs": [], 
@@ -5596,7 +5599,8 @@
     "platforms": [
       "linux", 
       "mac", 
-      "posix"
+      "posix", 
+      "windows"
     ], 
     "uses_polling": true
   }, 
