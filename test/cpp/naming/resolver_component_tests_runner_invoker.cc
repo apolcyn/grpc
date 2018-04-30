@@ -22,7 +22,7 @@
 #include <grpc/support/string_util.h>
 #include <signal.h>
 #include <string.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 #include "test/core/util/cmdline.h"
 #include <string>
@@ -34,6 +34,12 @@
 #include "src/core/lib/gpr/env.h"
 #include "test/core/util/port.h"
 #include "test/core/util/test_config.h"
+
+#ifdef GPR_WINDOWS
+#define PSEP "\\"
+#else
+#define PSEP "/"
+#endif
 
 static volatile sig_atomic_t abort_wait_for_child = 0;
 
@@ -141,7 +147,7 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
   char* test_driver_argv[7];
   int test_driver_argc = 0;
 #ifdef GPR_WINDOWS
-  test_driver_argv[test_driver_argc++] = "C:\\Python\\python.exe";
+  test_driver_argv[test_driver_argc++] = "C:\\Python27\\python.exe";
 #endif
   test_driver_argv[test_driver_argc++] = strdup(test_runner_bin_path.c_str());
   GPR_ASSERT(gpr_asprintf(&test_driver_argv[test_driver_argc++], "--test_bin_path=%s", test_bin_path.c_str()));
@@ -154,6 +160,10 @@ void InvokeResolverComponentTestsRunner(std::string test_runner_bin_path,
     gpr_log(GPR_DEBUG, "test_driver_arg[%d]: %s", i, test_driver_argv[i]);
   }
   gpr_subprocess* test_driver = gpr_subprocess_create(test_driver_argc, (const char**)test_driver_argv);
+  if (test_driver == nullptr) {
+    gpr_log(GPR_DEBUG, "Failed to create subprocess.");
+    abort();
+  }
   gpr_mu test_driver_mu;
   gpr_mu_init(&test_driver_mu);
   gpr_cv test_driver_cv;
@@ -251,15 +261,15 @@ int main(int argc, char** argv) {
   } else {
     // Get the current binary's directory relative to repo root to invoke the
     // correct build config (asan/tsan/dbg, etc.).
-    std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
+    std::string const bin_dir = my_bin.substr(0, my_bin.rfind(PSEP));
     // Invoke the .sh and .py scripts directly where they are in source code.
     grpc::testing::InvokeResolverComponentTestsRunner(
-        "test/cpp/naming/" + std::string(test_runner_name),
-        std::string(bin_dir) + "/" + std::string(test_bin_name),
-        "test/cpp/naming/utils/dns_server.py",
-        "test/cpp/naming/" + std::string(records_config_name),
-        "test/cpp/naming/utils/dns_resolver.py",
-        "test/cpp/naming/utils/tcp_connect.py");
+        "test" PSEP "cpp" PSEP "naming" PSEP + std::string(test_runner_name),
+        std::string(bin_dir) + std::string(PSEP) + std::string(test_bin_name),
+        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "dns_server.py",
+        "test" PSEP "cpp" PSEP "naming" PSEP + std::string(records_config_name),
+        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "dns_resolver.py",
+        "test" PSEP "cpp" PSEP "naming" PSEP "utils" PSEP "tcp_connect.py");
   }
   grpc_shutdown();
   return 0;
