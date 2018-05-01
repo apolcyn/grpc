@@ -5462,7 +5462,7 @@
     "args": [
       "--test_bin_name=resolver_component_test_unsecure", 
       "--test_runner_name=resolver_component_tests_runner.py", 
-      "--records_config_name=resolver_component_test_record_groups.yaml", 
+      "--records_config_name=resolver_test_record_groups.yaml", 
       "--running_under_bazel=false"
     ], 
     "benchmark": false, 
@@ -5516,7 +5516,7 @@
     "args": [
       "--test_bin_name=resolver_component_test", 
       "--test_runner_name=resolver_component_tests_runner.py", 
-      "--records_config_name=resolver_component_test_record_groups.yaml", 
+      "--records_config_name=resolver_test_record_groups.yaml", 
       "--running_under_bazel=false"
     ], 
     "benchmark": false, 

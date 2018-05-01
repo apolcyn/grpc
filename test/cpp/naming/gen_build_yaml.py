@@ -233,7 +233,7 @@ def main():
           ] for test_config in [
                   ('resolver_component_test',
                    'resolver_component_tests_runner.py',
-                   'resolver_component_test_record_groups.yaml'),
+                   'resolver_test_record_groups.yaml'),
                   ('end2end_address_sorting_test',
                    'end2end_address_sorting_test_runner.py',
                    'end2end_address_sorting_test_record_groups.yaml')
