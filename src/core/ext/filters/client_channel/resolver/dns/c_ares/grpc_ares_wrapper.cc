@@ -99,14 +99,6 @@ static void grpc_ares_request_ref(grpc_ares_request* r) {
   gpr_ref(&r->pending_queries);
 }
 
-void print_the_addr(char* addr, int len) {
-	char buf[32];
-	const char* out = inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, buf, 16);
-	printf("PRINT ADDR:\n");
-	printf("%s\n", out);
-	printf("DONE PRINT ADDR:\n");
-}
-
 static void log_address_sorting_list(grpc_lb_addresses* lb_addrs,
                                      const char* input_output_str) {
   for (size_t i = 0; i < lb_addrs->num_addresses; i++) {
@@ -115,7 +107,6 @@ static void log_address_sorting_list(grpc_lb_addresses* lb_addrs,
                                 true)) {
       gpr_log(GPR_DEBUG, "c-ares address sorting: %s[%" PRIuPTR "]=%s",
               input_output_str, i, addr_str);
-      print_the_addr((char*)&lb_addrs->addresses[i].address.addr, lb_addrs->addresses[i].address.len);
       gpr_free(addr_str);
     } else {
       gpr_log(GPR_DEBUG,

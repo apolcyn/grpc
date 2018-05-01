@@ -5461,6 +5461,35 @@
   {
     "args": [
       "--test_bin_name=resolver_component_test_unsecure", 
+      "--test_runner_name=resolver_component_tests_runner.py", 
+      "--records_config_name=resolver_component_test_record_groups.yaml", 
+      "--running_under_bazel=false"
+    ], 
+    "benchmark": false, 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "resolver_component_tests_runner_invoker_unsecure", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "uses_polling": true
+  }, 
+  {
+    "args": [
+      "--test_bin_name=end2end_address_sorting_test_unsecure", 
+      "--test_runner_name=end2end_address_sorting_test_runner.py", 
+      "--records_config_name=end2end_address_sorting_test_record_groups.yaml", 
       "--running_under_bazel=false"
     ], 
     "benchmark": false, 
@@ -5486,6 +5515,35 @@
   {
     "args": [
       "--test_bin_name=resolver_component_test", 
+      "--test_runner_name=resolver_component_tests_runner.py", 
+      "--records_config_name=resolver_component_test_record_groups.yaml", 
+      "--running_under_bazel=false"
+    ], 
+    "benchmark": false, 
+    "ci_platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "cpu_cost": 1.0, 
+    "exclude_configs": [], 
+    "exclude_iomgrs": [], 
+    "flaky": false, 
+    "gtest": false, 
+    "language": "c++", 
+    "name": "resolver_component_tests_runner_invoker", 
+    "platforms": [
+      "linux", 
+      "mac", 
+      "posix"
+    ], 
+    "uses_polling": true
+  }, 
+  {
+    "args": [
+      "--test_bin_name=end2end_address_sorting_test", 
+      "--test_runner_name=end2end_address_sorting_test_runner.py", 
+      "--records_config_name=end2end_address_sorting_test_record_groups.yaml", 
       "--running_under_bazel=false"
     ], 
     "benchmark": false, 
@@ -5548,58 +5606,6 @@
     "gtest": true, 
     "language": "c++", 
     "name": "address_sorting_test", 
-    "platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ], 
-    "uses_polling": true
-  }, 
-  {
-    "args": [], 
-    "benchmark": false, 
-    "ci_platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ], 
-    "cpu_cost": 1.0, 
-    "exclude_configs": [], 
-    "exclude_iomgrs": [], 
-    "flaky": false, 
-    "gtest": false, 
-    "language": "c", 
-    "name": "end2end_address_sorting_test", 
-    "platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ], 
-    "uses_polling": true
-  }, 
-  {
-    "args": [
-      "--test_bin_name=end2end_address_sorting_test", 
-      "--test_runner_name=end2end_address_sorting_test_runner.py", 
-      "--running_under_bazel=false"
-    ], 
-    "benchmark": false, 
-    "ci_platforms": [
-      "linux", 
-      "mac", 
-      "posix", 
-      "windows"
-    ], 
-    "cpu_cost": 1.0, 
-    "exclude_configs": [], 
-    "exclude_iomgrs": [], 
-    "flaky": false, 
-    "gtest": false, 
-    "language": "c", 
-    "name": "resolver_component_tests_runner_invoker_c_test", 
     "platforms": [
       "linux", 
       "mac", 

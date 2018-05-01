@@ -127,23 +127,7 @@ current_test_subprocess.communicate()
 if current_test_subprocess.returncode != 0:
   num_test_failures += 1
 
-def run_one_off_tests():
-  num_one_off_test_failures = 0
-  test_runner_log('Test: we can reach the DNS server but nothing resolves')
-  current_test_subprocess = subprocess.Popen([
-    args.test_bin_path,
-    '--target_name', 'non-existant-name.test.com',
-    '--expected_addrs', '',
-    '--expected_chosen_service_config', '',
-    '--expected_lb_policy', '',
-    '--local_dns_server_address', '127.0.0.1:%d' % args.dns_server_port,
-    '--expect_failure', 'true'])
-  current_test_subprocess.communicate()
-  if current_test_subprocess.returncode != 0:
-    num_one_off_test_failures += 1
-  return num_one_off_test_failures
 
-num_test_failures += run_one_off_tests()
 test_runner_log('now kill DNS server')
 dns_server_subprocess.kill()
 dns_server_subprocess.wait()

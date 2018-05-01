@@ -1320,12 +1320,14 @@ h2_uds_nosec_test: $(BINDIR)/$(CONFIG)/h2_uds_nosec_test
 inproc_nosec_test: $(BINDIR)/$(CONFIG)/inproc_nosec_test
 resolver_component_test_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure
 resolver_component_test: $(BINDIR)/$(CONFIG)/resolver_component_test
+end2end_address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure
+end2end_address_sorting_test: $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
 resolver_component_tests_runner_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure
+resolver_component_tests_runner_invoker_unsecure: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure
+resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
 resolver_component_tests_runner_invoker: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
 address_sorting_test_unsecure: $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure
 address_sorting_test: $(BINDIR)/$(CONFIG)/address_sorting_test
-end2end_address_sorting_test: $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
-resolver_component_tests_runner_invoker_c_test: $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test
 api_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry
 client_fuzzer_one_entry: $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry
 hpack_parser_fuzzer_test_one_entry: $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry
@@ -1572,8 +1574,6 @@ buildtests_c: privatelibs_c \
   $(BINDIR)/$(CONFIG)/h2_sockpair_1byte_nosec_test \
   $(BINDIR)/$(CONFIG)/h2_uds_nosec_test \
   $(BINDIR)/$(CONFIG)/inproc_nosec_test \
-  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test \
-  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test \
   $(BINDIR)/$(CONFIG)/api_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/client_fuzzer_one_entry \
   $(BINDIR)/$(CONFIG)/hpack_parser_fuzzer_test_one_entry \
@@ -1755,7 +1755,11 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/boringssl_ssl_test \
   $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
+  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure \
+  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
@@ -1876,7 +1880,11 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/writes_per_rpc_test \
   $(BINDIR)/$(CONFIG)/resolver_component_test_unsecure \
   $(BINDIR)/$(CONFIG)/resolver_component_test \
+  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure \
+  $(BINDIR)/$(CONFIG)/end2end_address_sorting_test \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure \
+  $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker \
   $(BINDIR)/$(CONFIG)/address_sorting_test_unsecure \
   $(BINDIR)/$(CONFIG)/address_sorting_test \
@@ -2149,10 +2157,6 @@ test_c: buildtests_c
 	$(Q) $(BINDIR)/$(CONFIG)/window_overflow_bad_client_test || ( echo test window_overflow_bad_client_test failed ; exit 1 )
 	$(E) "[RUN]     Testing bad_ssl_cert_test"
 	$(Q) $(BINDIR)/$(CONFIG)/bad_ssl_cert_test || ( echo test bad_ssl_cert_test failed ; exit 1 )
-	$(E) "[RUN]     Testing end2end_address_sorting_test"
-	$(Q) $(BINDIR)/$(CONFIG)/end2end_address_sorting_test || ( echo test end2end_address_sorting_test failed ; exit 1 )
-	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_c_test"
-	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test || ( echo test resolver_component_tests_runner_invoker_c_test failed ; exit 1 )
 
 
 flaky_test_c: buildtests_c
@@ -2355,6 +2359,10 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/writes_per_rpc_test || ( echo test writes_per_rpc_test failed ; exit 1 )
 	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_unsecure"
 	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure || ( echo test resolver_component_tests_runner_invoker_unsecure failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker_unsecure"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure || ( echo test resolver_component_tests_runner_invoker_unsecure failed ; exit 1 )
+	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker"
+	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker || ( echo test resolver_component_tests_runner_invoker failed ; exit 1 )
 	$(E) "[RUN]     Testing resolver_component_tests_runner_invoker"
 	$(Q) $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker || ( echo test resolver_component_tests_runner_invoker failed ; exit 1 )
 	$(E) "[RUN]     Testing address_sorting_test_unsecure"
@@ -23190,6 +23198,92 @@ endif
 endif
 
 
+END2END_ADDRESS_SORTING_TEST_UNSECURE_SRC = \
+    test/cpp/naming/end2end_address_sorting_test.cc \
+
+END2END_ADDRESS_SORTING_TEST_UNSECURE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(END2END_ADDRESS_SORTING_TEST_UNSECURE_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure: $(PROTOBUF_DEP) $(END2END_ADDRESS_SORTING_TEST_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(END2END_ADDRESS_SORTING_TEST_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/end2end_address_sorting_test_unsecure
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/end2end_address_sorting_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++_unsecure.a $(LIBDIR)/$(CONFIG)/libgrpc_unsecure.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_end2end_address_sorting_test_unsecure: $(END2END_ADDRESS_SORTING_TEST_UNSECURE_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(END2END_ADDRESS_SORTING_TEST_UNSECURE_OBJS:.o=.dep)
+endif
+endif
+
+
+END2END_ADDRESS_SORTING_TEST_SRC = \
+    test/cpp/naming/end2end_address_sorting_test.cc \
+
+END2END_ADDRESS_SORTING_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(END2END_ADDRESS_SORTING_TEST_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: $(PROTOBUF_DEP) $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/end2end_address_sorting_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_end2end_address_sorting_test: $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
+endif
+endif
+
+
 RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_SRC = \
     test/cpp/naming/resolver_component_tests_runner_invoker.cc \
 
@@ -23229,6 +23323,92 @@ deps_resolver_component_tests_runner_invoker_unsecure: $(RESOLVER_COMPONENT_TEST
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_SRC = \
+    test/cpp/naming/resolver_component_tests_runner_invoker.cc \
+
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_unsecure
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_tests_runner_invoker_unsecure: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_UNSECURE_OBJS:.o=.dep)
+endif
+endif
+
+
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_SRC = \
+    test/cpp/naming/resolver_component_tests_runner_invoker.cc \
+
+RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_SRC))))
+ifeq ($(NO_SECURE),true)
+
+# You can't build secure targets if you don't have OpenSSL.
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker: openssl_dep_error
+
+else
+
+
+
+
+ifeq ($(NO_PROTOBUF),true)
+
+# You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker: protobuf_dep_error
+
+else
+
+$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker: $(PROTOBUF_DEP) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+	$(E) "[LD]      Linking $@"
+	$(Q) mkdir -p `dirname $@`
+	$(Q) $(LDXX) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker
+
+endif
+
+endif
+
+$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+
+deps_resolver_component_tests_runner_invoker: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS:.o=.dep)
+
+ifneq ($(NO_SECURE),true)
+ifneq ($(NO_DEPS),true)
+-include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_OBJS:.o=.dep)
 endif
 endif
 
@@ -23358,70 +23538,6 @@ deps_address_sorting_test: $(ADDRESS_SORTING_TEST_OBJS:.o=.dep)
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
 -include $(ADDRESS_SORTING_TEST_OBJS:.o=.dep)
-endif
-endif
-
-
-END2END_ADDRESS_SORTING_TEST_SRC = \
-    test/cpp/naming/end2end_address_sorting_test.cc \
-
-END2END_ADDRESS_SORTING_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(END2END_ADDRESS_SORTING_TEST_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: openssl_dep_error
-
-else
-
-
-
-$(BINDIR)/$(CONFIG)/end2end_address_sorting_test: $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LD) $(LDFLAGS) $(END2END_ADDRESS_SORTING_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/end2end_address_sorting_test
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/end2end_address_sorting_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
-
-deps_end2end_address_sorting_test: $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(END2END_ADDRESS_SORTING_TEST_OBJS:.o=.dep)
-endif
-endif
-
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_SRC = \
-    test/cpp/naming/resolver_component_tests_runner_invoker.cc \
-
-RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_SRC))))
-ifeq ($(NO_SECURE),true)
-
-# You can't build secure targets if you don't have OpenSSL.
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test: openssl_dep_error
-
-else
-
-
-
-$(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-	$(E) "[LD]      Linking $@"
-	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LD) $(LDFLAGS) $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LDLIBS) $(LDLIBS_SECURE) -o $(BINDIR)/$(CONFIG)/resolver_component_tests_runner_invoker_c_test
-
-endif
-
-$(OBJDIR)/$(CONFIG)/test/cpp/naming/resolver_component_tests_runner_invoker.o:  $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgpr_test_util.a $(LIBDIR)/$(CONFIG)/libgpr.a
-
-deps_resolver_component_tests_runner_invoker_c_test: $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS:.o=.dep)
-
-ifneq ($(NO_SECURE),true)
-ifneq ($(NO_DEPS),true)
--include $(RESOLVER_COMPONENT_TESTS_RUNNER_INVOKER_C_TEST_OBJS:.o=.dep)
 endif
 endif
 

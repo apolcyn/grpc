@@ -128,6 +128,16 @@ def _resolver_test_cases(resolver_component_data, records_to_skip):
       'expected_chosen_service_config': (test_case['expected_chosen_service_config'] or ''),
       'expected_lb_policy': (test_case['expected_lb_policy'] or ''),
     })
+  # Add one-off test
+  non_existant_target_name = 'non-existant-name.test.com'
+  out.append({
+    'test_title': non_existant_target_name,
+    'target_name': non_existant_target_name,
+    'expected_addrs': '',
+    'expected_chosen_service_config': '',
+    'expected_lb_policy': '',
+    'expect_failure': 'true',
+  })
   return out
 
 def _end2end_address_sorting_test_cases():
@@ -177,6 +187,24 @@ def main():
           } for unsecure_build_config_suffix in ['_unsecure', '']
       ] + [
           {
+              'name': 'end2end_address_sorting_test%s' % unsecure_build_config_suffix,
+              'build': 'test',
+              'language': 'c++',
+              'run': False,
+              'src': ['test/cpp/naming/end2end_address_sorting_test.cc'],
+              'platforms': ['linux', 'posix', 'mac', 'windows'],
+              'deps': [
+                  'grpc++_test_util' + unsecure_build_config_suffix,
+                  'grpc_test_util' + unsecure_build_config_suffix,
+                  'gpr_test_util',
+                  'grpc++' + unsecure_build_config_suffix,
+                  'grpc' + unsecure_build_config_suffix,
+                  'gpr',
+                  'grpc++_test_config',
+              ],
+          } for  unsecure_build_config_suffix in ['_unsecure', '']
+      ] + [
+          {
               'name': 'resolver_component_tests_runner_invoker' + unsecure_build_config_suffix,
               'build': 'test',
               'language': 'c++',
@@ -194,10 +222,22 @@ def main():
                   'grpc++_test_config',
               ],
               'args': [
-                  '--test_bin_name=resolver_component_test%s' % unsecure_build_config_suffix,
+                  '--test_bin_name=%s%s' % (test_config[0], unsecure_build_config_suffix),
+                  '--test_runner_name=%s' % (test_config[1]),
+                  '--records_config_name=%s' % (test_config[2]),
                   '--running_under_bazel=false',
               ],
-          } for unsecure_build_config_suffix in ['_unsecure', '']
+          } for unsecure_build_config_suffix in [
+              '_unsecure',
+              ''
+          ] for test_config in [
+                  ('resolver_component_test',
+                   'resolver_component_tests_runner.py',
+                   'resolver_component_test_record_groups.yaml'),
+                  ('end2end_address_sorting_test',
+                   'end2end_address_sorting_test_runner.py',
+                   'end2end_address_sorting_test_record_groups.yaml')
+          ]
       ] + [
           {
               'name': 'address_sorting_test' + unsecure_build_config_suffix,
@@ -217,44 +257,6 @@ def main():
                   'grpc++_test_config',
               ],
           } for unsecure_build_config_suffix in ['_unsecure', '']
-      ] + [
-          {
-              'name': 'end2end_address_sorting_test',
-              'build': 'test',
-              'language': 'c',
-              'run': True,
-              'src': ['test/cpp/naming/end2end_address_sorting_test.cc'],
-              'platforms': ['linux', 'posix', 'mac', 'windows'],
-              'deps': [
-                  'grpc++_test_util',
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'grpc++',
-                  'grpc',
-                  'gpr',
-                  'grpc++_test_config',
-              ],
-          }
-      ] + [
-          {
-              'name': 'resolver_component_tests_runner_invoker_c_test',
-              'build': 'test',
-              'language': 'c',
-              'gtest': False,
-              'run': True,
-              'src': ['test/cpp/naming/resolver_component_tests_runner_invoker.cc'],
-              'platforms': ['linux', 'posix', 'mac', 'windows'],
-              'deps': [
-                  'grpc_test_util',
-                  'gpr_test_util',
-                  'gpr',
-              ],
-              'args': [
-                  '--test_bin_name=end2end_address_sorting_test',
-                  '--test_runner_name=end2end_address_sorting_test_runner.py',
-                  '--running_under_bazel=false',
-              ],
-          }
       ]
   }
 

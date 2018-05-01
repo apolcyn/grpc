@@ -51,6 +51,12 @@ DEFINE_string(grpc_test_directory_relative_to_test_srcdir,
               "Directory of the <repo-root>/test directory relative to bazel's "
               "TEST_SRCDIR environment variable");
 
+DEFINE_string(test_runner_name, "",
+              "Name, without the preceding path, of the test runner python script");
+
+DEFINE_string(records_config_name, "",
+              "Name, without the preceding path, of the test runner python script");
+
 using grpc::SubProcess;
 
 static volatile sig_atomic_t abort_wait_for_child = 0;
@@ -173,9 +179,9 @@ int main(int argc, char** argv) {
     // the .sh and .py suffixes) to make
     // sure that we're using bazel's test environment.
     grpc::testing::InvokeResolverComponentTestsRunner(
-        bin_dir + "/resolver_component_tests_runner",
+        bin_dir + FLAGS_test_runner_name,
         bin_dir + "/" + FLAGS_test_bin_name, bin_dir + "/utils/dns_server",
-        bin_dir + "/resolver_test_record_groups.yaml",
+        bin_dir + FLAGS_records_config_name,
         bin_dir + "/utils/dns_resolver", bin_dir + "/utils/tcp_connect");
     gpr_free(test_srcdir);
   } else {
@@ -184,10 +190,10 @@ int main(int argc, char** argv) {
     std::string const bin_dir = my_bin.substr(0, my_bin.rfind('/'));
     // Invoke the .sh and .py scripts directly where they are in source code.
     grpc::testing::InvokeResolverComponentTestsRunner(
-        "test/cpp/naming/resolver_component_tests_runner.py",
+        "test/cpp/naming/" + FLAGS_test_runner_name,
         bin_dir + "/" + FLAGS_test_bin_name,
         "test/cpp/naming/utils/dns_server.py",
-        "test/cpp/naming/resolver_test_record_groups.yaml",
+        "test/cpp/naming/" + FLAGS_records_config_name,
         "test/cpp/naming/utils/dns_resolver.py",
         "test/cpp/naming/utils/tcp_connect.py");
   }
