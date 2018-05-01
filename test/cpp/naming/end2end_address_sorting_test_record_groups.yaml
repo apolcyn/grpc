@@ -3,4 +3,6 @@ resolver_component_tests:
 - records:
     server:
     - {TTL: '2100', data: '100::1234', type: AAAA}
+    - {TTL: '2100', data: '100::5432', type: AAAA}
     - {TTL: '2100', data: '::1', type: AAAA}
+    - {TTL: '2100', data: '100::5432', type: AAAA}

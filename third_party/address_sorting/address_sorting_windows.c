@@ -65,15 +65,14 @@ static bool windows_source_addr_factory_get_source_addr(
     const address_sorting_address* dest_addr,
     address_sorting_address* source_addr) {
   bool source_addr_exists = false;
-  // Android sets SOCK_CLOEXEC. Don't set this here for portability.
-  SOCKET s = socket(((struct sockaddr*)dest_addr)->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+  SOCKET s = socket(((struct sockaddr_in6*)dest_addr)->sin6_family, SOCK_DGRAM, IPPROTO_UDP);
   if (s != INVALID_SOCKET) {
-    if (connect(s, (struct sockaddr*)dest_addr, dest_addr->len)) {
+    if (connect(s, (struct sockaddr*)dest_addr, dest_addr->len) == 0) {
       address_sorting_address found_source_addr;
       memset(&found_source_addr, 0, sizeof(found_source_addr));
       found_source_addr.len = sizeof(found_source_addr.addr);
       if (getsockname(s, (struct sockaddr*)&found_source_addr.addr,
-                      (socklen_t*)&found_source_addr.len) != SOCKET_ERROR) {
+                      (socklen_t*)&found_source_addr.len) == 0) {
         source_addr_exists = true;
         *source_addr = found_source_addr;
       }
