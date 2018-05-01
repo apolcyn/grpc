@@ -39,11 +39,12 @@
 
 namespace grpc_core {
 
-FdNode::FdNode() : InternallyRefCounted() {
+FdNode::FdNode(ares_socket_t as) : InternallyRefCounted() {
   gpr_mu_init(&mu_);
   readable_registered_ = false;
   writable_registered_ = false;
   shutting_down_ = false;
+  ares_socket_ = as;
 }
 
 FdNode::~FdNode() {
@@ -51,6 +52,19 @@ FdNode::~FdNode() {
   GPR_ASSERT(!writable_registered_);
   GPR_ASSERT(shutting_down_);
   gpr_mu_destroy(&mu_);
+}
+
+ares_socket_t FdNode::GetInnerEndpoint() { return ares_socket_; }
+
+void FdNode::Shutdown() {
+  gpr_mu_lock(&mu_);
+  if (!shutting_down_) {
+    shutting_down_ = true;
+    gpr_log(GPR_DEBUG, "shutdown ares_socket: %" PRIdPTR,
+            (uintptr_t)ares_socket_);
+    ShutdownInnerEndpointLocked();
+  }
+  gpr_mu_unlock(&mu_);
 }
 
 struct FdNodeEventArg {
@@ -85,13 +99,6 @@ void FdNode::MaybeRegisterForReadsAndWrites(
   gpr_mu_unlock(&mu_);
 }
 
-void FdNode::Shutdown() {
-  gpr_mu_lock(&mu_);
-  shutting_down_ = true;
-  gpr_mu_unlock(&mu_);
-  ShutdownInnerEndpoint();
-}
-
 void FdNode::OnReadable(void* arg, grpc_error* error) {
   UniquePtr<FdNodeEventArg> event_arg(reinterpret_cast<FdNodeEventArg*>(arg));
   event_arg->fdn->OnReadableInner(event_arg->ev_driver.get(), error);
@@ -103,19 +110,13 @@ void FdNode::OnWriteable(void* arg, grpc_error* error) {
 }
 
 void FdNode::OnReadableInner(AresEvDriver* ev_driver, grpc_error* error) {
+  gpr_log(GPR_DEBUG, "readable on %" PRIdPTR, (uintptr_t)ares_socket_);
   gpr_mu_lock(&mu_);
   readable_registered_ = false;
-  if (shutting_down_ && !writable_registered_) {
-    gpr_mu_unlock(&mu_);
-    return;
-  }
   gpr_mu_unlock(&mu_);
-
-  gpr_log(GPR_DEBUG, "readable on %" PRIdPTR, (uintptr_t)GetInnerEndpoint());
   if (error == GRPC_ERROR_NONE) {
     do {
-      ares_process_fd(ev_driver->GetChannel(), GetInnerEndpoint(),
-                      ARES_SOCKET_BAD);
+      ares_process_fd(ev_driver->GetChannel(), ares_socket_, ARES_SOCKET_BAD);
     } while (ShouldRepeatReadForAresProcessFd());
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or
@@ -130,18 +131,12 @@ void FdNode::OnReadableInner(AresEvDriver* ev_driver, grpc_error* error) {
 }
 
 void FdNode::OnWriteableInner(AresEvDriver* ev_driver, grpc_error* error) {
+  gpr_log(GPR_DEBUG, "writable on %" PRIdPTR, (uintptr_t)ares_socket_);
   gpr_mu_lock(&mu_);
   writable_registered_ = false;
-  if (shutting_down_ && !readable_registered_) {
-    gpr_mu_unlock(&mu_);
-    return;
-  }
   gpr_mu_unlock(&mu_);
-
-  gpr_log(GPR_DEBUG, "writable on %" PRIdPTR, (uintptr_t)GetInnerEndpoint());
   if (error == GRPC_ERROR_NONE) {
-    ares_process_fd(ev_driver->GetChannel(), ARES_SOCKET_BAD,
-                    GetInnerEndpoint());
+    ares_process_fd(ev_driver->GetChannel(), ARES_SOCKET_BAD, ares_socket_);
   } else {
     // If error is not GRPC_ERROR_NONE, it means the fd has been shutdown or
     // timed out. The pending lookups made on this ev_driver will be cancelled
@@ -193,7 +188,7 @@ void AresEvDriver::Shutdown() {
   gpr_mu_lock(&mu_);
   shutting_down_ = true;
   for (size_t i = 0; i < fds_->size(); i++) {
-    (*fds_)[i]->ShutdownInnerEndpoint();
+    (*fds_)[i]->Shutdown();
   }
   gpr_mu_unlock(&mu_);
 }
@@ -263,7 +258,15 @@ int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
 grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                                               grpc_pollset_set* pollset_set) {
   *ev_driver = AresEvDriver::Create(pollset_set);
-  int status = ares_init(&(*ev_driver)->channel_);
+  ares_options opts;
+  memset(&opts, 0, sizeof(ares_options));
+  /* c-ares closes fd's internally by default. But this makes it hard to
+   * avoid calling 'shutdown' or 'close' on an already-closed socket
+   * when using the fd with a grpc poller. So make ourselves
+   * responsible for closing fd's. */
+  opts.flags |= ARES_FLAG_STAYOPEN;
+  int status =
+      ares_init_options(&(*ev_driver)->channel_, &opts, ARES_OPT_FLAGS);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
           (uintptr_t)*ev_driver);
   if (status != ARES_SUCCESS) {

@@ -42,23 +42,17 @@ class AresEvDriverPosix;
 
 class FdNodePosix final : public FdNode {
  public:
-  FdNodePosix(grpc_fd* fd) : FdNode() { fd_ = fd; }
+  FdNodePosix(grpc_fd* fd, ares_socket_t as) : FdNode(as) { fd_ = fd; }
   ~FdNodePosix() {
-    gpr_log(GPR_DEBUG, "delete fd: %" PRIdPTR, (uintptr_t)GetInnerEndpoint());
-    /* c-ares library has closed the fd inside grpc_fd. This fd may be picked up
-       immediately by another thread, and should not be closed by the following
-       grpc_fd_orphan. */
-    grpc_fd_orphan(fd_, nullptr, nullptr, true /* already_closed */,
+    grpc_fd_orphan(fd_, nullptr, nullptr, false /* already_closed */,
                    "c-ares query finished");
   }
 
  private:
-  void ShutdownInnerEndpoint() override {
-    grpc_fd_shutdown(
-        fd_, GRPC_ERROR_CREATE_FROM_STATIC_STRING("c-ares fd shutdown"));
+  void ShutdownInnerEndpointLocked() override {
+    grpc_fd_shutdown(fd_, GRPC_ERROR_CREATE_FROM_STATIC_STRING(
+                              "grpc_ares_ev_driver_shutdown"));
   }
-
-  ares_socket_t GetInnerEndpoint() override { return grpc_fd_wrapped_fd(fd_); }
 
   bool ShouldRepeatReadForAresProcessFd() override {
     const int fd = grpc_fd_wrapped_fd(fd_);
@@ -89,7 +83,7 @@ class AresEvDriverPosix final : public AresEvDriver {
   FdNode* CreateFdNode(ares_socket_t as, const char* name) override {
     grpc_fd* fd = grpc_fd_create(as, name);
     grpc_pollset_set_add_fd(pollset_set_, fd);
-    return grpc_core::New<FdNodePosix>(fd);
+    return grpc_core::New<FdNodePosix>(fd, as);
   }
   grpc_pollset_set* pollset_set_;
 };

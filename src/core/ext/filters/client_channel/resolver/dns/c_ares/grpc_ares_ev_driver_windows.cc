@@ -40,27 +40,40 @@ class AresEvDriverWindows;
 
 class FdNodeWindows final : public FdNode {
  public:
-  FdNodeWindows(grpc_winsocket* winsocket) : FdNode() {
+  FdNodeWindows(grpc_winsocket* winsocket, ares_socket_t as) : FdNode(as) {
     winsocket_ = winsocket;
+    quit_busy_loop_ = false;
+    gpr_mu_init(&quit_busy_loop_mu_);
   }
   ~FdNodeWindows() {
-    gpr_log(GPR_DEBUG, "delete socket: %" PRIdPTR,
-            (uintptr_t)GetInnerEndpoint());
+    gpr_mu_destroy(&quit_busy_loop_mu_);
+    grpc_winsocket_shutdown(winsocket_);
     grpc_winsocket_destroy(winsocket_);
   }
 
-  void ShutdownInnerEndpoint() override { grpc_winsocket_shutdown(winsocket_); }
-
-  ares_socket_t GetInnerEndpoint() override {
-    return grpc_winsocket_wrapped_socket(winsocket_);
+ private:
+  void ShutdownInnerEndpointLocked() override {
+    gpr_mu_lock(&quit_busy_loop_mu_);
+    quit_busy_loop_ = true;
+    gpr_mu_unlock(&quit_busy_loop_mu_);
   }
 
   bool ShouldRepeatReadForAresProcessFd() override {
     // On windows, we are sure to get another chance
     // at ares_process_fd for anything that
     // ARES_GETSOCK_READABLE returns, because we are
-    // busylooping with GRPC_CLOSURE_SCHED.
+    // busy_looping with GRPC_CLOSURE_SCHED.
     return false;
+  }
+
+  grpc_error* MaybeQuitBusyLoop() {
+    grpc_error* error = GRPC_ERROR_NONE;
+    gpr_mu_lock(&quit_busy_loop_mu_);
+    if (quit_busy_loop_ == true) {
+      error = GRPC_ERROR_CREATE_FROM_STATIC_STRING("Resolver Shutdown");
+    }
+    gpr_mu_unlock(&quit_busy_loop_mu_);
+    return error;
   }
 
   void RegisterForOnReadable() override {
@@ -78,14 +91,16 @@ class FdNodeWindows final : public FdNode {
     // and writes. Since the license epoll_windows seems to be BSD, we
     // could drop its afd code in there. Or maybe I'll add a thread if push
     // comes to shove.
-    GRPC_CLOSURE_SCHED(&read_closure_, GRPC_ERROR_NONE);
+    GRPC_CLOSURE_SCHED(&read_closure_, MaybeQuitBusyLoop());
   }
   void RegisterForOnWriteable() override {
-    GRPC_CLOSURE_SCHED(&write_closure_, GRPC_ERROR_NONE);
+    GRPC_CLOSURE_SCHED(&write_closure_, MaybeQuitBusyLoop());
   }
 
  private:
   grpc_winsocket* winsocket_;
+  bool quit_busy_loop_;
+  gpr_mu quit_busy_loop_mu_;
 };
 
 class AresEvDriverWindows final : public AresEvDriver {
@@ -94,8 +109,8 @@ class AresEvDriverWindows final : public AresEvDriver {
 
  private:
   FdNode* CreateFdNode(ares_socket_t as, const char* name) override {
-    grpc_winsocket* winsocket = grpc_winsocket_create(as, name);
-    return grpc_core::New<FdNodeWindows>(winsocket);
+    grpc_winsocket* winsocket = grpc_winsocket_create((SOCKET)as, name);
+    return grpc_core::New<FdNodeWindows>(winsocket, as);
   }
 };
 

@@ -35,4 +35,23 @@ grpc_py_binary(
     testonly = True,
 )
 
+grpc_cc_test(
+    name = "cancel_during_ares_query_test",
+    srcs = [
+        "cancel_during_ares_query_test.cc",
+    ],
+    external_deps = [
+        "gmock",
+    ],
+    deps = [
+        "//test/cpp/util:test_util",
+        "//test/core/util:grpc_test_util",
+        "//test/core/util:gpr_test_util",
+        "//:grpc++",
+        "//:grpc",
+        "//:gpr",
+        "//test/cpp/util:test_config",
+    ],
+)
+
 generate_resolver_component_tests()

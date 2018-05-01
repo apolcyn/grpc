@@ -34,13 +34,12 @@ class AresEvDriver;
 
 class FdNode : public InternallyRefCounted<FdNode> {
  public:
-  explicit FdNode();
+  explicit FdNode(ares_socket_t);
   ~FdNode();
   void MaybeRegisterForReadsAndWrites(RefCountedPtr<AresEvDriver>,
                                       int socks_bitmask, size_t idx);
   void Shutdown();
-  virtual ares_socket_t GetInnerEndpoint() GRPC_ABSTRACT;
-  virtual void ShutdownInnerEndpoint() GRPC_ABSTRACT;
+  ares_socket_t GetInnerEndpoint();
 
  protected:
   /** a closure wrapping OnReadable, which should be invoked when the
@@ -51,6 +50,9 @@ class FdNode : public InternallyRefCounted<FdNode> {
   grpc_closure write_closure_;
 
  private:
+  // Called once and only once. Calling this is expected to cause
+  // any outstanding read/write callbacks to schedule with an error.
+  virtual void ShutdownInnerEndpointLocked() GRPC_ABSTRACT;
   static void OnReadable(void* arg, grpc_error* error);
   static void OnWriteable(void* arg, grpc_error* error);
   void OnReadableInner(AresEvDriver*, grpc_error* error);
@@ -64,8 +66,9 @@ class FdNode : public InternallyRefCounted<FdNode> {
   bool readable_registered_;
   /** if the writable closure has been registered */
   bool writable_registered_;
-  /** if the fd is being shut down */
+  /** if the fd id being shut down */
   bool shutting_down_;
+  ares_socket_t ares_socket_;
 };
 
 class AresEvDriver : public InternallyRefCounted<AresEvDriver> {
