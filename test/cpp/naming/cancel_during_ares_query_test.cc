@@ -40,6 +40,14 @@
 #include "test/core/util/port.h"
 #include "test/core/util/test_config.h"
 
+#ifdef GPR_WINDOWS
+#include "src/core/lib/iomgr/socket_windows.h"
+#define BAD_SOCKET_RETURN_VAL INVALID_SOCKET
+#else
+#include "src/core/lib/iomgr/sockaddr_posix.h"
+#define BAD_SOCKET_RETURN_VAL -1
+#endif
+
 namespace {
 
 void* Tag(intptr_t t) { return (void*)t; }
@@ -62,26 +70,67 @@ void EndTest(grpc_channel* client, grpc_completion_queue* cq) {
   grpc_completion_queue_destroy(cq);
 }
 
-void VerifyCq(void* arg) {
-  cq_verifier* cqv = reinterpret_cast<cq_verifier*>(arg);
+struct AttemptCallArgs {
+  grpc_op* op;
+  grpc_op* ops_base;
+  grpc_call* c;
+  cq_verifier* cqv;
+};
+
+void AttemptCall(void* arg) {
+  AttemptCallArgs* attempt_call_args = reinterpret_cast<AttemptCallArgs*>(arg);
+  grpc_op* ops_base = attempt_call_args->ops_base;
+  grpc_op* op = attempt_call_args->op;
+  grpc_call* c = attempt_call_args->c;
+  cq_verifier* cqv = attempt_call_args->cqv;
+  grpc_call_error error = grpc_call_start_batch(
+      c, ops_base, static_cast<size_t>(op - ops_base), Tag(1), nullptr);
+  EXPECT_EQ(GRPC_CALL_OK, error);
+  CQ_EXPECT_COMPLETION(cqv, Tag(1), 1);
   cq_verify(cqv);
 }
 
+class FakeNonResponsiveDNSServer {
+ public:
+  FakeNonResponsiveDNSServer(int port) {
+    socket_ = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (socket_ == BAD_SOCKET_RETURN_VAL) {
+      gpr_log(GPR_DEBUG, "Failed to create UDP ipv6 socket");
+      abort();
+    }
+    sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
+    inet_pton(AF_INET6, "::1", &addr.sin6_addr);
+    addr.sin6_port = port;
+    addr.sin6_family = AF_INET6;
+    if (bind(socket_, (const sockaddr*)&addr, sizeof(addr)) != 0) {
+      gpr_log(GPR_DEBUG, "Failed to bind UDP ipv6 socket to [::1]:%d", port);
+      abort();
+    }
+  }
+  ~FakeNonResponsiveDNSServer() { close(socket_); }
+#ifdef GPR_WINDOWS
+  SOCKET socket_;
+#else
+  int socket_;
+#endif
+};
+
 TEST(CancelDuringAresQuery,
      TestCancellationDuringAresDNSResolutionIsTimelyAndGraceful) {
+  int fake_dns_port = grpc_pick_unused_port_or_die();
+  FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
   grpc_call* c;
-  int fake_nonresponsive_dns_port = grpc_pick_unused_port_or_die();
   char* client_target = nullptr;
   GPR_ASSERT(gpr_asprintf(
       &client_target,
       "dns://[::1]:%d/dont-care-since-wont-be-resolved.test.com:1234",
-      fake_nonresponsive_dns_port));
+      fake_dns_port));
   grpc_channel* client = grpc_insecure_channel_create(
       client_target, /* client_args */ nullptr, nullptr);
   grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
   cq_verifier* cqv = cq_verifier_create(cq);
-
-  grpc_op ops[6];
+  grpc_op ops_base[6];
   grpc_op* op;
   grpc_metadata_array initial_metadata_recv;
   grpc_metadata_array trailing_metadata_recv;
@@ -89,9 +138,7 @@ TEST(CancelDuringAresQuery,
   grpc_call_details call_details;
   grpc_status_code status;
   const char* error_string;
-  grpc_call_error error;
   grpc_slice details;
-
   gpr_timespec deadline = FiveSecondsFromNow();
   c = grpc_channel_create_call(client, nullptr, GRPC_PROPAGATE_DEFAULTS, cq,
                                grpc_slice_from_static_string("/foo"), nullptr,
@@ -102,9 +149,9 @@ TEST(CancelDuringAresQuery,
   grpc_metadata_array_init(&request_metadata_recv);
   grpc_call_details_init(&call_details);
 
-  /* Set ops for client request */
-  memset(ops, 0, sizeof(ops));
-  op = ops;
+  // Set ops for client request
+  memset(ops_base, 0, sizeof(ops_base));
+  op = ops_base;
   op->op = GRPC_OP_SEND_INITIAL_METADATA;
   op->data.send_initial_metadata.count = 0;
   op->flags = 0;
@@ -127,12 +174,18 @@ TEST(CancelDuringAresQuery,
   op->flags = 0;
   op->reserved = nullptr;
   op++;
-  error = grpc_call_start_batch(c, ops, static_cast<size_t>(op - ops), Tag(1),
-                                nullptr);
-  GPR_ASSERT(GRPC_CALL_OK == error);
-  CQ_EXPECT_COMPLETION(cqv, Tag(1), 1);
-  grpc_core::Thread cq_verify_thd("cq verifier thread", VerifyCq, cqv);
-  cq_verify_thd.Start();
+  // Begin the call (call start batch and begin polling) in a background
+  // thread. Note that we need to call "start_batch" in the background
+  // thread and not this thread because on Windows, the DNS request runs
+  // during the "ExecCtx flush" of "start_batch".
+  AttemptCallArgs attempt_call_args;
+  attempt_call_args.op = op;
+  attempt_call_args.ops_base = ops_base;
+  attempt_call_args.c = c;
+  attempt_call_args.cqv = cqv;
+  grpc_core::Thread attempt_call_thread("attempt call thread", AttemptCall,
+                                        &attempt_call_args);
+  attempt_call_thread.Start();
   gpr_log(GPR_DEBUG,
           "Now that call is started and DNS resolution is being attempted, "
           "sleep for a bit before cancelling call.");
@@ -145,8 +198,7 @@ TEST(CancelDuringAresQuery,
   std::string cancelled_reason = "cancelled by test";
   grpc_call_cancel_with_status(c, GRPC_STATUS_CANCELLED,
                                cancelled_reason.c_str(), nullptr);
-  // grpc_call_cancel(c, nullptr);
-  cq_verify_thd.Join();
+  attempt_call_thread.Join();
   EXPECT_EQ(status, GRPC_STATUS_CANCELLED);
   EXPECT_EQ(gpr_slice_str_cmp(details, cancelled_reason.c_str()), 0);
 
