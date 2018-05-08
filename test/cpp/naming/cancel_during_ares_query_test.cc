@@ -100,9 +100,9 @@ class FakeNonResponsiveDNSServer {
     }
     sockaddr_in6 addr;
     memset(&addr, 0, sizeof(addr));
-    inet_pton(AF_INET6, "::1", &addr.sin6_addr);
-    addr.sin6_port = port;
     addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(port);
+    ((char*)&addr.sin6_addr)[15] = 1;
     if (bind(socket_, (const sockaddr*)&addr, sizeof(addr)) != 0) {
       gpr_log(GPR_DEBUG, "Failed to bind UDP ipv6 socket to [::1]:%d", port);
       abort();
