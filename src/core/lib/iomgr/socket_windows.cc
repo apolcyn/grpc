@@ -55,11 +55,7 @@ SOCKET grpc_winsocket_wrapped_socket(grpc_winsocket* socket) {
   return socket->socket;
 }
 
-/* Schedule a shutdown of the socket operations. Will call the pending
-   operations to abort them. We need to do that this way because of the
-   various callsites of that function, which happens to be in various
-   mutex hold states, and that'd be unsafe to call them directly. */
-void grpc_winsocket_shutdown(grpc_winsocket* winsocket) {
+void grpc_winsocket_shutdown_without_close(grpc_winsocket* winsocket) {
   /* Grab the function pointer for DisconnectEx for that specific socket.
      It may change depending on the interface. */
   int status;
@@ -87,6 +83,14 @@ void grpc_winsocket_shutdown(grpc_winsocket* winsocket) {
             utf8_message);
     gpr_free(utf8_message);
   }
+}
+
+/* Schedule a shutdown of the socket operations. Will call the pending
+   operations to abort them. We need to do that this way because of the
+   various callsites of that function, which happens to be in various
+   mutex hold states, and that'd be unsafe to call them directly. */
+void grpc_winsocket_shutdown(grpc_winsocket* winsocket) {
+  grpc_winsocket_shutdown_without_close(winsocket);
   closesocket(winsocket->socket);
 }
 

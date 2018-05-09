@@ -96,6 +96,8 @@ grpc_winsocket* grpc_winsocket_create(SOCKET socket, const char* name);
    operation to cancel them. */
 void grpc_winsocket_shutdown(grpc_winsocket* socket);
 
+void grpc_winsocket_shutdown_without_close(grpc_winsocket* winsocket);
+
 /* Destroy a socket. Should only be called if there's no pending operation. */
 void grpc_winsocket_destroy(grpc_winsocket* socket);
 

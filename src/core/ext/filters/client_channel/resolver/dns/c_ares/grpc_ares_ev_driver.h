@@ -85,12 +85,13 @@ class AresEvDriver : public InternallyRefCounted<AresEvDriver> {
      GRPC_ERROR_NONE if \a ev_driver is created successfully. */
   static grpc_error* CreateAndInitialize(AresEvDriver** ev_driver,
                                          grpc_pollset_set* pollset_set);
-
+  FdNode* LookupFdNode(ares_socket_t as);
  private:
   static AresEvDriver* Create(grpc_pollset_set* pollset_set);
+  virtual void MaybeOverrideSockFuncs(ares_channel chan) GRPC_ABSTRACT;
   virtual FdNode* CreateFdNode(ares_socket_t, const char*) GRPC_ABSTRACT;
   void NotifyOnEventLocked();
-  int LookupFdNodeIndex(ares_socket_t as);
+  int LookupFdNodeIndexLocked(ares_socket_t as);
   UniquePtr<InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>> fds_;
   ares_channel channel_;
   gpr_mu mu_;

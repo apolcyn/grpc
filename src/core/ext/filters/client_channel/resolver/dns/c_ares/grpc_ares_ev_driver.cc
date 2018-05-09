@@ -186,6 +186,7 @@ void AresEvDriver::Destroy() {
 
 void AresEvDriver::Shutdown() {
   gpr_mu_lock(&mu_);
+  gpr_log(GPR_DEBUG, "AresEvDriver::Shutdown is called");
   shutting_down_ = true;
   for (size_t i = 0; i < fds_->size(); i++) {
     (*fds_)[i]->Shutdown();
@@ -212,7 +213,7 @@ void AresEvDriver::NotifyOnEventLocked() {
     for (size_t i = 0; i < ARES_GETSOCK_MAXNUM; i++) {
       if (ARES_GETSOCK_READABLE(socks_bitmask, i) ||
           ARES_GETSOCK_WRITABLE(socks_bitmask, i)) {
-        int existing_index = LookupFdNodeIndex(socks[i]);
+        int existing_index = LookupFdNodeIndexLocked(socks[i]);
         // Create a new fd_node if sock[i] is not in the fd_node list.
         if (existing_index == -1) {
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
@@ -246,7 +247,7 @@ void AresEvDriver::NotifyOnEventLocked() {
   fds_ = std::move(new_list);
 }
 
-int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
+int AresEvDriver::LookupFdNodeIndexLocked(ares_socket_t as) {
   for (size_t i = 0; i < fds_->size(); i++) {
     if ((*fds_)[i] != nullptr && (*fds_)[i]->GetInnerEndpoint() == as) {
       return i;
@@ -255,18 +256,25 @@ int AresEvDriver::LookupFdNodeIndex(ares_socket_t as) {
   return -1;
 }
 
+FdNode* AresEvDriver::LookupFdNode(ares_socket_t as) {
+  gpr_mu_lock(&mu_);
+  int index = LookupFdNodeIndexLocked(as);
+  if (index == -1) {
+    return nullptr;
+  }
+  FdNode* out = (*fds_)[index].get();
+  gpr_mu_unlock(&mu_);
+  return out;
+}
+
+
 grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                                               grpc_pollset_set* pollset_set) {
   *ev_driver = AresEvDriver::Create(pollset_set);
-  ares_options opts;
   memset(&opts, 0, sizeof(ares_options));
-  /* c-ares closes fd's internally by default. But this makes it hard to
-   * avoid calling 'shutdown' or 'close' on an already-closed socket
-   * when using the fd with a grpc poller. So make ourselves
-   * responsible for closing fd's. */
-  opts.flags |= ARES_FLAG_STAYOPEN;
   int status =
-      ares_init_options(&(*ev_driver)->channel_, &opts, ARES_OPT_FLAGS);
+      ares_init(&(*ev_driver)->channel_, &opts);
+  (*ev_driver)->MaybeOverrideSockFuncs((*ev_driver)->channel_);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
           (uintptr_t)*ev_driver);
   if (status != ARES_SUCCESS) {

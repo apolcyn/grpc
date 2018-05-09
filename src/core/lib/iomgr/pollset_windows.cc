@@ -127,7 +127,9 @@ static grpc_error* pollset_work(grpc_pollset* pollset,
       pollset->is_iocp_worker = 1;
       g_active_poller = &worker;
       gpr_mu_unlock(&grpc_polling_mu);
+      gpr_log(GPR_DEBUG, "iocp work BEGIN");
       grpc_iocp_work(deadline);
+      gpr_log(GPR_DEBUG, "iocp work END");
       grpc_core::ExecCtx::Get()->Flush();
       gpr_mu_lock(&grpc_polling_mu);
       pollset->is_iocp_worker = 0;

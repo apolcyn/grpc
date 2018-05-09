@@ -42,6 +42,7 @@
 
 #ifdef GPR_WINDOWS
 #include "src/core/lib/iomgr/socket_windows.h"
+#include "src/core/lib/iomgr/sockaddr_windows.h"
 #define BAD_SOCKET_RETURN_VAL INVALID_SOCKET
 #else
 #include "src/core/lib/iomgr/sockaddr_posix.h"
@@ -119,6 +120,7 @@ class FakeNonResponsiveDNSServer {
 TEST(CancelDuringAresQuery,
      TestCancellationDuringAresDNSResolutionIsTimelyAndGraceful) {
   int fake_dns_port = grpc_pick_unused_port_or_die();
+  gpr_log(GPR_DEBUG, "Using port %d for fake non-responsive DNS server", fake_dns_port);
   FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
   grpc_call* c;
   char* client_target = nullptr;
@@ -201,7 +203,7 @@ TEST(CancelDuringAresQuery,
   attempt_call_thread.Join();
   EXPECT_EQ(status, GRPC_STATUS_CANCELLED);
   EXPECT_EQ(gpr_slice_str_cmp(details, cancelled_reason.c_str()), 0);
-
+  // cleanup resources used by the test
   grpc_slice_unref(details);
   gpr_free((void*)error_string);
   grpc_metadata_array_destroy(&initial_metadata_recv);
