@@ -109,13 +109,25 @@ class FakeNonResponsiveDNSServer {
       abort();
     }
   }
-  ~FakeNonResponsiveDNSServer() { close(socket_); }
+  ~FakeNonResponsiveDNSServer() { 
+#ifdef GPR_WINDOWS
+    closesocket(socket_);
+#else
+    close(socket_);
+#endif
+  }
 #ifdef GPR_WINDOWS
   SOCKET socket_;
 #else
   int socket_;
 #endif
 };
+
+TEST(CancelDuringAresQuery,
+     TestPortPickWorks) {
+  int fake_dns_port = grpc_pick_unused_port_or_die();
+  gpr_log(GPR_DEBUG, "Got port %d from port server", fake_dns_port);
+}
 
 TEST(CancelDuringAresQuery,
      TestCancellationDuringAresDNSResolutionIsTimelyAndGraceful) {

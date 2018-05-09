@@ -50,6 +50,7 @@ class FdNodeWindows final : public FdNode {
   }
   
   ~FdNodeWindows() {
+    gpr_log(GPR_DEBUG, "FD NODE WINDOWS DESTRUCTOR IS CALLED");
     grpc_winsocket_destroy(winsocket_);
     grpc_slice_unref(read_buf_);
   }

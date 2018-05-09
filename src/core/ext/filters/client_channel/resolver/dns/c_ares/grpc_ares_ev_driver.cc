@@ -218,7 +218,7 @@ void AresEvDriver::NotifyOnEventLocked() {
         if (existing_index == -1) {
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
           char* fd_name;
-          gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR, i);
+          gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR " socket:%" PRIuPTR, i, socks[i]);
           auto fdn = RefCountedPtr<FdNode>(CreateFdNode(socks[i], fd_name));
           gpr_free(fd_name);
           new_list->push_back(fdn);
@@ -240,7 +240,7 @@ void AresEvDriver::NotifyOnEventLocked() {
     }
   }
   // If the ev driver has no working fd, all the tasks are done.
-  if (fds_->size() == 0) {
+  if (new_list->size() == 0) {
     working_ = false;
     gpr_log(GPR_DEBUG, "ev driver stop working");
   }
@@ -271,9 +271,8 @@ FdNode* AresEvDriver::LookupFdNode(ares_socket_t as) {
 grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                                               grpc_pollset_set* pollset_set) {
   *ev_driver = AresEvDriver::Create(pollset_set);
-  memset(&opts, 0, sizeof(ares_options));
   int status =
-      ares_init(&(*ev_driver)->channel_, &opts);
+      ares_init(&(*ev_driver)->channel_);
   (*ev_driver)->MaybeOverrideSockFuncs((*ev_driver)->channel_);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
           (uintptr_t)*ev_driver);

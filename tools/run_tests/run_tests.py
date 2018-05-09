@@ -465,10 +465,11 @@ class CLanguage(object):
 
     def pre_build_steps(self):
         if self.platform == 'windows':
-            return [[
-                'tools\\run_tests\\helper_scripts\\pre_build_cmake.bat',
-                self._cmake_generator_option, self._cmake_arch_option
-            ]]
+            return []
+            #    return [[
+            #        'tools\\run_tests\\helper_scripts\\pre_build_cmake.bat',
+            #        self._cmake_generator_option, self._cmake_arch_option
+            #    ]]
         elif self._use_cmake:
             return [['tools/run_tests/helper_scripts/pre_build_cmake.sh']]
         else:
