@@ -39,8 +39,12 @@
 
 namespace grpc_core {
 
-// Should be enough to covery very large UDP, for TCP we can read again.
-int kOurMaxUdpResponseSize = 512;
+// Max UDP datagram size we can read.
+// This needs to be large enough to cover the largest UDP response
+// that both a server will send and that c-ares is willing to accept
+// (4K should be generous for that).
+// It's find for TCP responses to be larger than this.
+int kOurMaxUdpResponseSize = 540;
 
 class AresEvDriverWindows;
 
