@@ -85,6 +85,9 @@ class AresEvDriverPosix final : public AresEvDriver {
     grpc_pollset_set_add_fd(pollset_set_, fd);
     return grpc_core::New<FdNodePosix>(fd, as);
   }
+
+  void MaybeOverrideSockFuncs(ares_channel chan) override {}
+
   grpc_pollset_set* pollset_set_;
 };
 

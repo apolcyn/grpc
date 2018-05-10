@@ -216,7 +216,7 @@ void AresEvDriver::NotifyOnEventLocked() {
         if (existing_index == -1) {
           gpr_log(GPR_DEBUG, "new fd: %d", socks[i]);
           char* fd_name;
-          gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR " socket:%" PRIuPTR, i, socks[i]);
+          gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR " socket:%" PRIuPTR, i, (uintptr_t)socks[i]);
           auto fdn = RefCountedPtr<FdNode>(CreateFdNode(socks[i], fd_name));
           gpr_free(fd_name);
 	  fds_->push_back(fdn);
