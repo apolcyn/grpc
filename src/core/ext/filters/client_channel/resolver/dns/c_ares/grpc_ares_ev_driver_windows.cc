@@ -35,8 +35,12 @@
 #include "src/core/lib/iomgr/iomgr_internal.h"
 #include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/iomgr/socket_windows.h"
+#include "src/core/lib/iomgr/tcp_windows.h"
 
 namespace grpc_core {
+
+// Should be enough to covery very large UDP, for TCP we can read again.
+int kOurMaxUdpResponseSize = 4096;
 
 class AresEvDriverWindows;
 
@@ -53,6 +57,7 @@ class FdNodeWindows final : public FdNode {
     gpr_log(GPR_DEBUG, "FD NODE WINDOWS DESTRUCTOR IS CALLED");
     grpc_winsocket_destroy(winsocket_);
     grpc_slice_unref(read_buf_);
+    gpr_mu_destroy(&read_mu_);
   }
   
   static ares_ssize_t RecvFrom(ares_socket_t sock, void* data, size_t data_len, int flags, struct sockaddr* from, ares_socklen_t *from_len, void* user_data) {
@@ -60,8 +65,8 @@ class FdNodeWindows final : public FdNode {
     gpr_log(GPR_DEBUG, "custom_recvfrom called on socket %" PRIdPTR ". data_len: %" PRIdPTR, (uintptr_t)sock, data_len);
     FdNode *lookup_result = ev_driver->LookupFdNode(sock);
     if (lookup_result == nullptr) {
-      gpr_log(GPR_DEBUG, "socket %" PRIdPTR " not yet in driver's list");
-      WSASetLastError(EWOULDBLOCK);
+      gpr_log(GPR_DEBUG, "Unexpected: socket %" PRIdPTR " not yet in driver's list");
+      abort();
     }
     FdNodeWindows *fdn = reinterpret_cast<FdNodeWindows*>(lookup_result);
     return fdn->RecvFromInner(sock, data, data_len, flags, from, from_len, user_data);
@@ -77,9 +82,12 @@ class FdNodeWindows final : public FdNode {
         bytes_read++;
       }
       read_buf_ = grpc_slice_sub_no_ref(read_buf_, bytes_read, GRPC_SLICE_LENGTH(read_buf_));
-      GPR_ASSERT(*from_len < sizeof(recvfrom_source_addr_));
-      memcpy(from, &recvfrom_source_addr_, *from_len);
-      *from_len = recvfrom_source_addr_len_;
+      // c-ares sets from to NULL for TCP reads.
+      if (from != nullptr) {
+        GPR_ASSERT(*from_len <= recvfrom_source_addr_len_);
+        memcpy(from, &recvfrom_source_addr_, recvfrom_source_addr_len_);
+        *from_len = recvfrom_source_addr_len_;
+      }
       gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": bytes read: %" PRIdPTR, (uintptr_t)sock, bytes_read);
       gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": read_buf_ len now: %" PRIdPTR, (uintptr_t)sock, GRPC_SLICE_LENGTH(read_buf_));
     } else {
@@ -114,11 +122,22 @@ class FdNodeWindows final : public FdNode {
   }
 
   static ares_socket_t Socket(int af, int type, int protocol, void* user_data) {
-    return WSASocket(af, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    SOCKET s = WSASocket(af, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    // TODO: this is abuse of tcp_prepare_socket: socket is likely UDP
+    grpc_tcp_prepare_socket(s);
+    return s;
   }
 
   static int CloseSocket(ares_socket_t as, void* user_data) {
-    return closesocket((SOCKET)as);
+    AresEvDriver *ev_driver = reinterpret_cast<AresEvDriver*>(user_data);
+    FdNode *lookup_result = ev_driver->LookupFdNode(as);
+    if (lookup_result == nullptr) {
+      gpr_log(GPR_DEBUG, "Closing socket %" PRIdPTR " without having worked on it.");
+      return closesocket((SOCKET)as);
+    }
+    // Don't close the socket here if it ever made it into the driver's list.
+    // (it will be closed by ShutdownInnerEndpoint).
+    return 0;
   }
 
   static int Connect(ares_socket_t as, const struct sockaddr* target, ares_socklen_t target_len, void* user_data) {
@@ -127,7 +146,7 @@ class FdNodeWindows final : public FdNode {
   
   void ShutdownInnerEndpointLocked() override {
     gpr_log(GPR_DEBUG, "ShutdownInnerEndpointLocked is called.");
-    grpc_winsocket_shutdown_without_close(winsocket_);
+    grpc_winsocket_shutdown(winsocket_);
   }
 
 private:
@@ -141,7 +160,7 @@ private:
     WSABUF buffer;
     GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) == 0);
     grpc_slice_unref(read_buf_);
-    read_buf_ = GRPC_SLICE_MALLOC(8192);
+    read_buf_ = GRPC_SLICE_MALLOC(kOurMaxUdpResponseSize);
     buffer.buf= (char*)GRPC_SLICE_START_PTR(read_buf_);
     buffer.len = GRPC_SLICE_LENGTH(read_buf_);
     memset(&winsocket_->read_info.overlapped, 0, sizeof(OVERLAPPED));
@@ -179,6 +198,7 @@ private:
     if (error == GRPC_ERROR_NONE) {
       if (winsocket_->read_info.wsa_error != 0) {
         char* msg = gpr_format_message(winsocket_->read_info.wsa_error);
+        gpr_log(GPR_DEBUG, "c-ares on iocp readable. Error: %s. Code: %d", msg, winsocket_->read_info.wsa_error);
         error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
       } else {
         gpr_log(GPR_DEBUG, "iocp on readable inner called: bytes transfered: %d", winsocket_->read_info.bytes_transfered);
@@ -187,7 +207,7 @@ private:
       }
     }
     if (error != GRPC_ERROR_NONE) {
-      gpr_log(GPR_DEBUG, "iocpreadableinner error occurred");
+      gpr_log(GPR_DEBUG, "iocp readable inner error occurred");
       grpc_slice_unref(read_buf_);
       read_buf_ = grpc_empty_slice();
     }

@@ -151,6 +151,7 @@ void FdNode::OnWriteableInner(AresEvDriver* ev_driver, grpc_error* error) {
 
 AresEvDriver::AresEvDriver() : InternallyRefCounted() {
   gpr_mu_init(&mu_);
+  // TODO: make list size unbounded?
   fds_ = UniquePtr<InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>>(
       grpc_core::New<
           InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>>());
@@ -159,7 +160,6 @@ AresEvDriver::AresEvDriver() : InternallyRefCounted() {
 }
 
 AresEvDriver::~AresEvDriver() {
-  GPR_ASSERT(fds_->size() == 0);
   gpr_mu_destroy(&mu_);
   ares_destroy(channel_);
 }
@@ -204,9 +204,7 @@ void AresEvDriver::NotifyOnEvent() {
 }
 
 void AresEvDriver::NotifyOnEventLocked() {
-  UniquePtr<InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>> new_list(
-      grpc_core::New<
-          InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>>());
+  InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM> active;
   if (!shutting_down_) {
     ares_socket_t socks[ARES_GETSOCK_MAXNUM];
     int socks_bitmask = ares_getsock(channel_, socks, ARES_GETSOCK_MAXNUM);
@@ -221,30 +219,34 @@ void AresEvDriver::NotifyOnEventLocked() {
           gpr_asprintf(&fd_name, "ares_ev_driver-%" PRIuPTR " socket:%" PRIuPTR, i, socks[i]);
           auto fdn = RefCountedPtr<FdNode>(CreateFdNode(socks[i], fd_name));
           gpr_free(fd_name);
-          new_list->push_back(fdn);
+	  fds_->push_back(fdn);
+          active.push_back(fdn);
         } else {
-          new_list->push_back((*fds_)[existing_index]);
-          (*fds_)[existing_index] = nullptr;
+          active.push_back((*fds_)[existing_index]);
         }
-        (*new_list)[new_list->size() - 1]->MaybeRegisterForReadsAndWrites(
+        active[active.size() - 1]->MaybeRegisterForReadsAndWrites(
             Ref(), socks_bitmask, i);
       }
     }
   }
-  // Any remaining fds in ev_driver->fds were not returned by ares_getsock()
-  // and are therefore no longer in use, so they can be shut down and removed
-  // from the list.
   for (size_t i = 0; i < fds_->size(); i++) {
-    if ((*fds_)[i] != nullptr) {
+    bool still_active = false;
+    for (size_t k = 0; k < active.size(); k++) {
+      if ((*fds_)[i] == active[k]) {
+        still_active = true; 
+      }
+    }
+    if (!still_active) {
+      // Shut down the fd but keep it in the list; keep it
+      // recorded that this ev driver has worked on this fd.
       (*fds_)[i]->Shutdown();
     }
   }
   // If the ev driver has no working fd, all the tasks are done.
-  if (new_list->size() == 0) {
+  if (active.size() == 0) {
     working_ = false;
     gpr_log(GPR_DEBUG, "ev driver stop working");
   }
-  fds_ = std::move(new_list);
 }
 
 int AresEvDriver::LookupFdNodeIndexLocked(ares_socket_t as) {
