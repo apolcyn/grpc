@@ -40,7 +40,7 @@
 namespace grpc_core {
 
 // Should be enough to covery very large UDP, for TCP we can read again.
-int kOurMaxUdpResponseSize = 4096;
+int kOurMaxUdpResponseSize = 512;
 
 class AresEvDriverWindows;
 
@@ -199,7 +199,16 @@ private:
       if (winsocket_->read_info.wsa_error != 0) {
         char* msg = gpr_format_message(winsocket_->read_info.wsa_error);
         gpr_log(GPR_DEBUG, "c-ares on iocp readable. Error: %s. Code: %d", msg, winsocket_->read_info.wsa_error);
-        error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+        GRPC_ERROR_UNREF(error);
+        // WSAEMSGSIZE would be caused by more data arriving in the socket's buffer than we set
+        // out to read. This almost certainly means that the socket is TCP, whic means that data 
+        // hasn't been dropped by the socket's buffers. So let c-ares read what's available
+        // and then read the remainders later.
+        if (winsocket_->read_info.wsa_error == WSAEMSGSIZE) {
+          error = GRPC_ERROR_NONE;
+        } else {
+          error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+        }
       } else {
         gpr_log(GPR_DEBUG, "iocp on readable inner called: bytes transfered: %d", winsocket_->read_info.bytes_transfered);
         read_buf_ = grpc_slice_sub_no_ref(read_buf_, 0, winsocket_->read_info.bytes_transfered);
