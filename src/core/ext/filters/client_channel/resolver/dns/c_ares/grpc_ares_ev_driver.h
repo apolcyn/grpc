@@ -86,6 +86,8 @@ class AresEvDriver : public InternallyRefCounted<AresEvDriver> {
   static grpc_error* CreateAndInitialize(AresEvDriver** ev_driver,
                                          grpc_pollset_set* pollset_set);
   FdNode* LookupFdNode(ares_socket_t as);
+ protected:
+  gpr_mu mu_;
  private:
   static AresEvDriver* Create(grpc_pollset_set* pollset_set);
   virtual void MaybeOverrideSockFuncs(ares_channel chan) GRPC_ABSTRACT;
@@ -94,7 +96,6 @@ class AresEvDriver : public InternallyRefCounted<AresEvDriver> {
   int LookupFdNodeIndexLocked(ares_socket_t as);
   UniquePtr<InlinedVector<RefCountedPtr<FdNode>, ARES_GETSOCK_MAXNUM>> fds_;
   ares_channel channel_;
-  gpr_mu mu_;
   bool working_;
   bool shutting_down_;
 };

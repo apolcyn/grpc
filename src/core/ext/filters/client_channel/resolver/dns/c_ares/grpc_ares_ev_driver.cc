@@ -273,8 +273,11 @@ FdNode* AresEvDriver::LookupFdNode(ares_socket_t as) {
 grpc_error* AresEvDriver::CreateAndInitialize(AresEvDriver** ev_driver,
                                               grpc_pollset_set* pollset_set) {
   *ev_driver = AresEvDriver::Create(pollset_set);
+  ares_options opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.flags |= ARES_FLAG_STAYOPEN;
   int status =
-      ares_init(&(*ev_driver)->channel_);
+      ares_init_options(&(*ev_driver)->channel_, &opts, ARES_OPT_FLAGS);
   (*ev_driver)->MaybeOverrideSockFuncs((*ev_driver)->channel_);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create:%" PRIdPTR,
           (uintptr_t)*ev_driver);
