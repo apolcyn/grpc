@@ -84,7 +84,7 @@ void FdNode::MaybeRegisterForReadsAndWrites(
     GRPC_CLOSURE_INIT(&read_closure_, &FdNode::OnReadable,
                       grpc_core::New<FdNodeEventArg>(Ref(), ev_driver),
                       grpc_schedule_on_exec_ctx);
-    RegisterForOnReadable();
+    RegisterForOnReadableLocked();
     readable_registered_ = true;
   }
   // Register write_closure if the socket is writable and write_closure
@@ -93,7 +93,7 @@ void FdNode::MaybeRegisterForReadsAndWrites(
     GRPC_CLOSURE_INIT(&write_closure_, &FdNode::OnWriteable,
                       grpc_core::New<FdNodeEventArg>(Ref(), ev_driver),
                       grpc_schedule_on_exec_ctx);
-    RegisterForOnWriteable();
+    RegisterForOnWriteableLocked();
     writable_registered_ = true;
   }
   gpr_mu_unlock(&mu_);

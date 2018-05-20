@@ -306,8 +306,7 @@ private:
     return false;
   }
   
-  void RegisterForOnReadable() override {
-    gpr_mu_lock(&mu_);
+  void RegisterForOnReadableLocked() override {
     SOCKET wrapped_socket = grpc_winsocket_wrapped_socket(winsocket_);
     gpr_log(GPR_DEBUG, "notify read on %" PRIdPTR, (uintptr_t)wrapped_socket);
     switch(read_state_) {
@@ -337,7 +336,6 @@ private:
             char* msg = gpr_format_message(WSAGetLastError());
             grpc_error *error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
             GRPC_CLOSURE_SCHED(&on_readable_outer_, error);
-            gpr_mu_unlock(&mu_);
             return;
           }
         }
@@ -350,11 +348,9 @@ private:
       abort();
       break;
     }
-    gpr_mu_unlock(&mu_);
   }
   
-  void RegisterForOnWriteable() override {
-    gpr_mu_lock(&mu_);
+  void RegisterForOnWriteableLocked() override {
     SOCKET s = grpc_winsocket_wrapped_socket(winsocket_);
     gpr_log(GPR_DEBUG, "notify write on %" PRIdPTR, (uintptr_t)s);
     switch (write_state_) {
@@ -377,7 +373,6 @@ private:
       abort();
       break;
     }
-    gpr_mu_unlock(&mu_);
   }
   
   static void OnIocpReadable(void *arg, grpc_error *error) {

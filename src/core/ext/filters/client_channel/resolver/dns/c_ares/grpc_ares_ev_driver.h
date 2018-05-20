@@ -58,8 +58,8 @@ class FdNode : public InternallyRefCounted<FdNode> {
   static void OnWriteable(void* arg, grpc_error* error);
   void OnReadableInner(AresEvDriver*, grpc_error* error);
   void OnWriteableInner(AresEvDriver*, grpc_error* error);
-  virtual void RegisterForOnReadable() GRPC_ABSTRACT;
-  virtual void RegisterForOnWriteable() GRPC_ABSTRACT;
+  virtual void RegisterForOnReadableLocked() GRPC_ABSTRACT;
+  virtual void RegisterForOnWriteableLocked() GRPC_ABSTRACT;
   virtual bool ShouldRepeatReadForAresProcessFd() GRPC_ABSTRACT;
   /** if the readable closure has been registered */
   bool readable_registered_;
