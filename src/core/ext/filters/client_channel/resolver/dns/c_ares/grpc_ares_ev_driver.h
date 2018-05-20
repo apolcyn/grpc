@@ -48,7 +48,8 @@ class FdNode : public InternallyRefCounted<FdNode> {
   /** a closure wrapping OnWriteable, which should be invoked when the
       grpc_fd in this node becomes writable. */
   grpc_closure write_closure_;
-
+ protected:
+  gpr_mu mu_;
  private:
   // Called once and only once. Calling this is expected to cause
   // any outstanding read/write callbacks to schedule with an error.
@@ -60,8 +61,6 @@ class FdNode : public InternallyRefCounted<FdNode> {
   virtual void RegisterForOnReadable() GRPC_ABSTRACT;
   virtual void RegisterForOnWriteable() GRPC_ABSTRACT;
   virtual bool ShouldRepeatReadForAresProcessFd() GRPC_ABSTRACT;
-  /** mutex guarding the rest of the state */
-  gpr_mu mu_;
   /** if the readable closure has been registered */
   bool readable_registered_;
   /** if the writable closure has been registered */
@@ -86,9 +85,8 @@ class AresEvDriver : public InternallyRefCounted<AresEvDriver> {
   static grpc_error* CreateAndInitialize(AresEvDriver** ev_driver,
                                          grpc_pollset_set* pollset_set);
   FdNode* LookupFdNode(ares_socket_t as);
- protected:
-  gpr_mu mu_;
  private:
+  gpr_mu mu_;
   static AresEvDriver* Create(grpc_pollset_set* pollset_set);
   virtual void MaybeOverrideSockFuncs(ares_channel chan) GRPC_ABSTRACT;
   virtual FdNode* CreateFdNode(ares_socket_t, const char*) GRPC_ABSTRACT;

@@ -39,28 +39,30 @@
 
 namespace grpc_core {
 
+class FdNodeWindows;
+
 struct SockToNodeMapEntry {
-  ares_sock_t s;
+  ares_socket_t s;
   FdNodeWindows* node;
   SockToNodeMapEntry *next;
-}
+};
 
 class SockToNodeMap {
  public:
-  SockToNodeMap() : head_(nullptr), connect_started_(true) {
+  SockToNodeMap() : head_(nullptr) {
     gpr_mu_init(&mu_);
   }
   ~SockToNodeMap() {
     gpr_mu_lock(&mu_);
     while (head_ != nullptr) {
       SockToNodeMapEntry* to_delete = head_;
-      head_ = head->next;
+      head_ = head_->next;
       grpc_core::Delete(to_delete);
     }
     gpr_mu_unlock(&mu_);
     gpr_mu_destroy(&mu_);
   }
-  void Add(ares_sock_t s, FdNodeWindows* node) {
+  void Add(ares_socket_t s, FdNodeWindows* node) {
     gpr_mu_lock(&mu_);
     SockToNodeMapEntry* item = grpc_core::New<SockToNodeMapEntry>();
     item->s = s;
@@ -69,7 +71,7 @@ class SockToNodeMap {
     head_ = item;
     gpr_mu_unlock(&mu_);
   }
-  FdNodeWindows* LookupNode(ares_sock_t s) {
+  FdNodeWindows* LookupNode(ares_socket_t s) {
     gpr_mu_lock(&mu_);
     SockToNodeMapEntry *cur = head_;
     while (cur != nullptr) {
@@ -85,12 +87,12 @@ class SockToNodeMap {
 
   SockToNodeMapEntry* head_;
   gpr_mu mu_;
-}
+};
 
 // Max UDP datagram size we can read.
 // This needs to be large enough to cover the largest UDP response
 // that both a server will send and that c-ares is willing to accept
-// (4K should be generous for that).
+// (4K should be enough).
 // It's find for TCP responses to be larger than this.
 int kOurMaxUdpResponseSize = 540;
 
@@ -99,16 +101,13 @@ class AresEvDriverWindows;
 class FdNodeWindows final : public FdNode {
  public:
   enum ReadState {
-    NOT_READING,
-    REQUESTING_READ,
-    READING,
-    DONE_READING,
+    READ_EMPTY,
+    READ_DONE,
   };
   enum WriteState {
-    NOT_WRITING,
+    WRITE_EMPTY,
     REQUESTING_WRITE,
-    WRITING,
-    DONE_WRITING,
+    WRITE_DONE,
   };
 
   FdNodeWindows(grpc_winsocket* winsocket, ares_socket_t as) : FdNode(as) {
@@ -117,15 +116,15 @@ class FdNodeWindows final : public FdNode {
     GRPC_CLOSURE_INIT(&on_writeable_outer_, &FdNodeWindows::OnIocpWriteable, this, grpc_schedule_on_exec_ctx);
     read_buf_ = grpc_empty_slice();
     write_buf_ = grpc_empty_slice();
-    read_state_ = NOT_READING;
-    write_state_ = NOT_WRITING;
+    read_state_ = READ_EMPTY;
+    write_state_ = WRITE_EMPTY;
     socket_already_closed_ = false;
   }
   
   ~FdNodeWindows() {
     gpr_log(GPR_DEBUG, "FD NODE WINDOWS DESTRUCTOR IS CALLED");
     if (!socket_already_closed_) {
-      closesocket(grpc_winsocket_wrapped_socket(winsocket_);
+      closesocket(grpc_winsocket_wrapped_socket(winsocket_));
     }
     grpc_winsocket_destroy(winsocket_);
     grpc_slice_unref(read_buf_);
@@ -140,29 +139,22 @@ class FdNodeWindows final : public FdNode {
       gpr_log(GPR_DEBUG, "Unexpected: socket %" PRIdPTR " not in socket to node map");
       abort();
     }
-    return fdn->RecvFromInner(data, data_len, flags, from, from_len);
+    return lookup_result->RecvFromInner(data, data_len, flags, from, from_len);
   }
   
   ares_ssize_t RecvFromInner(void* data, size_t data_len, int flags, struct sockaddr* from, ares_socklen_t *from_len) {
     gpr_mu_lock(&mu_);
-    gpr_log(GPR_DEBUG, "notify read on %" PRIdPTR, (uintptr_t)wrapped_socket);
+    gpr_log(GPR_DEBUG, "notify read on %" PRIdPTR, (uintptr_t)grpc_winsocket_wrapped_socket(winsocket_));
+    ares_ssize_t bytes_read = 0;
     switch (read_state_) {
-    case NOT_READING:
-      GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) == 0);
-      grpc_slice_unref(read_buf_);
-      read_buf_ = GRPC_SLICE_MALLOC(data_len);
-      read_state_ = REQUESTING_READ;
+    case READ_EMPTY:
       bytes_read = -1;
       WSASetLastError(EWOULDBLOCK);
       break;
-    case REQUESTING_READ:
-    case READING:
-      bytes_read = -1;
-      WSASetLastError(EWOULDBLOCK);
-      break;
-    case DONE_READING:
+    case READ_DONE:
+      SOCKET sock = grpc_winsocket_wrapped_socket(winsocket_);
       GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) > 0);
-      gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": returning data length %" PRIdPTR, (uintptr_t)sock, GRPC_SLICE_LENGTH(read_buf_));
+      gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": available data length %" PRIdPTR, (uintptr_t)sock, GRPC_SLICE_LENGTH(read_buf_));
       for (size_t i = 0; i < data_len && i < GRPC_SLICE_LENGTH(read_buf_); i++) {
         ((char*)data)[i] = GRPC_SLICE_START_PTR(read_buf_)[i];
         bytes_read++;
@@ -176,7 +168,7 @@ class FdNodeWindows final : public FdNode {
       gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": bytes read: %" PRIdPTR, (uintptr_t)sock, bytes_read);
       gpr_log(GPR_DEBUG, "RecvFromInner for socket %" PRIdPTR ": read_buf_ len now: %" PRIdPTR, (uintptr_t)sock, GRPC_SLICE_LENGTH(read_buf_));
       if (GRPC_SLICE_LENGTH(read_buf_) == 0) {
-        read_state_ = NOT_READING;
+        read_state_ = READ_EMPTY;
       }
       break;
     }
@@ -187,7 +179,7 @@ class FdNodeWindows final : public FdNode {
   static ares_ssize_t SendV(ares_socket_t as, const struct iovec *iov, int iov_count, void *user_data) {
     gpr_log(GPR_DEBUG, "custom Sendv called on socket %" PRIdPTR ". iov_count: %" PRIdPTR, (uintptr_t)as, iov_count);
     SockToNodeMap *map = reinterpret_cast<SockToNodeMap*>(user_data);
-    FdNode *lookup_result = map->LookupNode(as);
+    FdNodeWindows *lookup_result = map->LookupNode(as);
     GPR_ASSERT(lookup_result != nullptr);
     return lookup_result->SendVInner(iov, iov_count);
   }
@@ -210,52 +202,55 @@ class FdNodeWindows final : public FdNode {
 
   int AresWrapperWSASendWriteBuf(LPWSAOVERLAPPED overlapped) {
     WSABUF buf;
-    buf.len = GRPC_SLICE_START_PTR(write_buf_);
-    buf.buffer = GRPC_SLICE_LENGTH(write_buf_);
-    LPDWORD bytes_sent = 0;
+    buf.len = GRPC_SLICE_LENGTH(write_buf_);
+    buf.buf = (char*)GRPC_SLICE_START_PTR(write_buf_);
+    DWORD bytes_sent = 0;
     DWORD flags = 0;
-    LPDWORD *bytes_sent_ptr = &bytes_sent;
+    LPDWORD bytes_sent_ptr = &bytes_sent;
     if (overlapped != nullptr)  {
-      bytes_sent_ptr = &bytes_sent;
+      bytes_sent_ptr = nullptr;
     }
-    WSASend(rpc_winsocket_wrapped_socket(winsocket_), &buf, 1, bytes_sent_ptr, flags, overlapped, nullptr);
-    return bytes_sent;
+    WSASend(grpc_winsocket_wrapped_socket(winsocket_), &buf, 1, bytes_sent_ptr, flags, overlapped, nullptr);
+    return (int)bytes_sent;
+  }
+
+  ares_ssize_t AresWrapperAttemptSendWriteBufSyncNonBlocking() {
+    ares_ssize_t total_sent;
+    total_sent = AresWrapperWSASendWriteBuf(nullptr);
+    write_buf_ = grpc_slice_sub_no_ref(write_buf_, total_sent, GRPC_SLICE_LENGTH(write_buf_));
+    if (GRPC_SLICE_LENGTH(write_buf_) > 0) {
+      write_state_ = REQUESTING_WRITE;
+      WSASetLastError(EWOULDBLOCK);
+    }
+    return total_sent;
   }
 
   ares_ssize_t SendVInner(const struct iovec *iov, int iov_count) {
     gpr_mu_lock(&mu_);
     ares_ssize_t total_sent = 0;
     switch (write_state_) {
-      case NOT_WRITING:
+      case WRITE_EMPTY:
         GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
         grpc_slice_unref(write_buf_);
         write_buf_ = FlattenIovec(iov, iov_count);
-        total_sent = AresWrappedWSASendWriteBuf(nullptr);
-        write_buf_ = grpc_slice_sub_no_ref(write_buf_, bytes_sent, GRPC_SLICE_LENGTH(write_buf_));
-        if (GRPC_SLICE_LENGTH(write_buf_) > 0) {
-          write_state_ = REQUESTING_WRITE;
-        }
+        total_sent = AresWrapperAttemptSendWriteBufSyncNonBlocking();
         break;
       case REQUESTING_WRITE:
-      case WRITING:
         WSASetLastError(EWOULDBLOCK);
         total_sent = -1;
         break;
       case WRITE_DONE:
         size_t cur = 0;
         grpc_slice desired = FlattenIovec(iov, iov_count);
+        GPR_ASSERT(GRPC_SLICE_LENGTH(desired) >= GRPC_SLICE_LENGTH(write_buf_));
         for (size_t i = 0; i < GRPC_SLICE_LENGTH(write_buf_); i++) {
           GPR_ASSERT(GRPC_SLICE_START_PTR(desired)[i] == GRPC_SLICE_START_PTR(write_buf_)[i]);
         }
-        GPR_ASSERT(GRPC_SLICE_LENGTH(desired) >= GRPC_SLICE_LENGTH(write_buf_));
         write_buf_ = grpc_slice_sub_no_ref(desired, GRPC_SLICE_LENGTH(write_buf_), GRPC_SLICE_LENGTH(desired));
-        int total_sent = AresWrapperWSASendWriteBuf(nullptr);
-        write_buf_ = grpc_slice_sub_no_ref(write_buf_, total_sent, GRPC_SLICE_LENGTH(write_buf_));
-        if (GRPC_SLICE_LENGTH(write_buf_) > 0) {
-          write_state_ = REQUESTING_WRITE;
-        }
+        total_sent = AresWrapperAttemptSendWriteBufSyncNonBlocking();
     }
     gpr_mu_unlock(&mu_);
+    return total_sent;
   }
 
   static ares_socket_t Socket(int af, int type, int protocol, void* user_data) {
@@ -264,35 +259,32 @@ class FdNodeWindows final : public FdNode {
     // TODO: this is abuse of tcp_prepare_socket (socket might be TCP but is likely UDP)
     grpc_tcp_prepare_socket(s);
     char* fd_name;
-    gpr_asprintf(&fd_name, "ares_ev_driver-socket:%" PRIuPTR, (uintptr_t)socks[i]);
+    gpr_asprintf(&fd_name, "ares_ev_driver-socket:%" PRIuPTR, (uintptr_t)s);
     grpc_winsocket* winsocket = grpc_winsocket_create(s, fd_name);
     gpr_free(fd_name);
-    map->Add(s, grpc_core::New<FdNodeWindows>(winsocket, s);
+    map->Add(s, grpc_core::New<FdNodeWindows>(winsocket, s));
     return s;
   }
 
   static int CloseSocket(ares_socket_t as, void* user_data) {
-    // Underyling socket is closed when either
-    // the FdNode is destructed, or if/when ShutdownInnerEndpointLockedIsCalled.
+    // Underyling socket is closed when either:
+    //   * if/when ShutdownInnerEndpointLockedIsCalled.
+    //   * the FdNode is destructed
     return 0;
   }
 
   static int Connect(ares_socket_t as, const struct sockaddr* target, ares_socklen_t target_len, void* user_data) {
     SockToNodeMap *map = reinterpret_cast<SockToNodeMap*>(user_data);
-    FdNodWindows *lookup_result = map->LookupNode(as);
+    FdNodeWindows *lookup_result = map->LookupNode(as);
     if (lookup_result == nullptr) {
       gpr_log(GPR_DEBUG, "attempt to connect unregistered socket %" PRIdPTR, as);
       abort();
     }
-    lookup_result->ConnectInner(target, target_len);
+    return lookup_result->ConnectInner(target, target_len);
   }
 
   int ConnectInner(const struct sockaddr* target, ares_socklen_t target_len) {
-    gpr_mu_lock(&mu_);
-    GPR_ASSERT(!lookup_result->connect_started);
-    lookup_result->connect_started = true;
     int out = WSAConnect(grpc_winsocket_wrapped_socket(winsocket_), target, target_len, nullptr, nullptr, nullptr, nullptr);
-    gpr_mu_unlock(&mu_);
     return out;
   }
   
@@ -304,41 +296,60 @@ class FdNodeWindows final : public FdNode {
 
 private:
   bool ShouldRepeatReadForAresProcessFd() override {
-    return GRPC_SLICE_LENGTH(read_buf_) > 0;
+    gpr_mu_lock(&mu_);
+    if (read_state_ == READ_DONE) {
+      GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) > 0);
+      gpr_mu_unlock(&mu_);
+      return true;
+    }
+    gpr_mu_unlock(&mu_);
+    return false;
   }
   
   void RegisterForOnReadable() override {
     gpr_mu_lock(&mu_);
     SOCKET wrapped_socket = grpc_winsocket_wrapped_socket(winsocket_);
     gpr_log(GPR_DEBUG, "notify read on %" PRIdPTR, (uintptr_t)wrapped_socket);
-    WSABUF buffer;
-    GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) == 0);
-    grpc_slice_unref(read_buf_);
-    read_buf_ = GRPC_SLICE_MALLOC(kOurMaxUdpResponseSize);
-    buffer.buf= (char*)GRPC_SLICE_START_PTR(read_buf_);
-    buffer.len = GRPC_SLICE_LENGTH(read_buf_);
-    memset(&winsocket_->read_info.overlapped, 0, sizeof(OVERLAPPED));
-    DWORD flags = 0;
-    memset(&recvfrom_source_addr_, 0, sizeof(recvfrom_source_addr_));
-    recvfrom_source_addr_len_ = sizeof(recvfrom_source_addr_);
-    if (WSARecvFrom(wrapped_socket,
-                    &buffer,
-		    1,
-		    nullptr,
-		    &flags,
-		    (sockaddr*)&recvfrom_source_addr_,
-		    &recvfrom_source_addr_len_,
-		    &winsocket_->read_info.overlapped,
-		    nullptr) != 0) {
-      if (WSAGetLastError() != ERROR_IO_PENDING) {
-        char* msg = gpr_format_message(WSAGetLastError());
-        grpc_error *error = GRPC_ERROR_FROM_COPIED_STRING(msg);
-        GRPC_CLOSURE_SCHED(&on_readable_outer_, msg);
-        gpr_mu_unlock(&mu_);
-        return;
+    switch(read_state_) {
+    case READ_EMPTY:
+      {
+        // no data ready and no pending read, so initiate one
+        WSABUF buffer;
+        GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) == 0);
+        grpc_slice_unref(read_buf_);
+        read_buf_ = GRPC_SLICE_MALLOC(kOurMaxUdpResponseSize);
+        buffer.buf= (char*)GRPC_SLICE_START_PTR(read_buf_);
+        buffer.len = GRPC_SLICE_LENGTH(read_buf_);
+        memset(&winsocket_->read_info.overlapped, 0, sizeof(OVERLAPPED));
+        DWORD flags = 0;
+        memset(&recvfrom_source_addr_, 0, sizeof(recvfrom_source_addr_));
+        recvfrom_source_addr_len_ = sizeof(recvfrom_source_addr_);
+        if (WSARecvFrom(wrapped_socket,
+                        &buffer,
+            	      1,
+            	      nullptr,
+            	      &flags,
+            	      (sockaddr*)&recvfrom_source_addr_,
+            	      &recvfrom_source_addr_len_,
+            	      &winsocket_->read_info.overlapped,
+            	      nullptr) != 0) {
+          if (WSAGetLastError() != ERROR_IO_PENDING) {
+            char* msg = gpr_format_message(WSAGetLastError());
+            grpc_error *error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+            GRPC_CLOSURE_SCHED(&on_readable_outer_, error);
+            gpr_mu_unlock(&mu_);
+            return;
+          }
+        }
+        grpc_socket_notify_on_read(winsocket_, &on_readable_outer_);
       }
+      break;
+    case READ_DONE:
+      // data is still available (wasn't all read on last ares_process)
+      gpr_log(GPR_ERROR, "invalid state");
+      abort();
+      break;
     }
-    grpc_socket_notify_on_read(winsocket_, &on_readable_outer_);
     gpr_mu_unlock(&mu_);
   }
   
@@ -346,24 +357,26 @@ private:
     gpr_mu_lock(&mu_);
     SOCKET s = grpc_winsocket_wrapped_socket(winsocket_);
     gpr_log(GPR_DEBUG, "notify write on %" PRIdPTR, (uintptr_t)s);
-    if (!connected_) {
-      LPFD_CONNECTEX ConnectEx;
-      GUID guid = WSAID_CONNECTEX;
-      DWORD ioctl_numbytes;
-      if (WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), ConnectEx, sizeof(ConnectEx),  &ioctl_numbytes, nullptr, nullptr) != 0) {
-        grpc_error *error = GRPC_ERROR_FROM_COPIED_STRING(gpr_format_msg(WSAGetLastError()));
-        GRPC_CLOSURE_SCHED(&on_writeable_outer_, error);
-      } else if (!ConnectEx(s, target, target_len, nullptr, 0, nullptr, &winsocket_->write_info.overlapped)) {
-        if (WSAGetLastError() != ERROR_IO_PENDING) {
-          grpc_error *error = GRPC_ERROR_FROM_COPIED_STRING(gpr_format_msg(WSAGetLastError()));
-          GRPC_CLOSURE_SCHED(&on_writeable_outer_, error);
-        }
-      }
-      gpr_mu_unlock(&mu_);
-      return;
+    switch (write_state_) {
+    case WRITE_EMPTY:
+      // Either:
+      //   * a previous non-blocking write attempt fully succeeded 
+      //   * no writes have been attempted so far
+      GRPC_CLOSURE_SCHED(&on_writeable_outer_, GRPC_ERROR_NONE);
+      break;
+    case REQUESTING_WRITE:
+      GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
+      // Initiate an async write of data from previous ares_process
+      gpr_log(GPR_DEBUG, "RegisterForOnWriteable socket: " PRIdPTR ".state: REQUESTING_WRITE", grpc_winsocket_wrapped_socket(winsocket_));
+      AresWrapperWSASendWriteBuf(&winsocket_->write_info.overlapped);
+      grpc_socket_notify_on_write(winsocket_, &on_writeable_outer_);
+      break;
+    case WRITE_DONE:
+      // A write finished but it wasn't fully consumed.
+      gpr_log(GPR_ERROR, "invalid state for socket: " PRIdPTR ": WRITE_DONE", grpc_winsocket_wrapped_socket(winsocket_));
+      abort();
+      break;
     }
-    GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
-    GRPC_CLOSURE_SCHED(&on_writeable_outer_, GRPC_ERROR_NONE);
     gpr_mu_unlock(&mu_);
   }
   
@@ -380,20 +393,23 @@ private:
         gpr_log(GPR_DEBUG, "c-ares on iocp readable. Error: %s. Code: %d", msg, winsocket_->read_info.wsa_error);
         GRPC_ERROR_UNREF(error);
         // WSAEMSGSIZE would be caused by more data arriving in the socket's buffer than we set
-        // out to read. This almost certainly means that the socket is TCP, whic means that data 
+        // out to read. This almost certainly means that the socket is TCP, and thus that data 
         // hasn't been dropped by the socket's buffers. So let c-ares read what's available
-        // and then read the remainders later.
+        // and then read the remainders later. Note that receiving a UDP response larger
+        // than kOurMaxUDPResponseSize is not handled by this code.
         if (winsocket_->read_info.wsa_error == WSAEMSGSIZE) {
           error = GRPC_ERROR_NONE;
         } else {
           error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
         }
-      } else {
-        gpr_log(GPR_DEBUG, "iocp on readable inner called: bytes transfered: %d", winsocket_->read_info.bytes_transfered);
-        read_buf_ = grpc_slice_sub_no_ref(read_buf_, 0, winsocket_->read_info.bytes_transfered);
-        gpr_log(GPR_DEBUG, "iocp on readable inner called: recvd buf len now: %d", GRPC_SLICE_LENGTH(read_buf_));
+        gpr_free(msg);
       }
     }
+    GPR_ASSERT(read_state_ == READ_EMPTY);
+    read_state_ = READ_DONE;
+    gpr_log(GPR_DEBUG, "iocp on readable inner called: bytes transfered: %d", winsocket_->read_info.bytes_transfered);
+    read_buf_ = grpc_slice_sub_no_ref(read_buf_, 0, winsocket_->read_info.bytes_transfered);
+    gpr_log(GPR_DEBUG, "iocp on readable inner called: recvd buf len now: %d", GRPC_SLICE_LENGTH(read_buf_));
     if (error != GRPC_ERROR_NONE) {
       gpr_log(GPR_DEBUG, "iocp readable inner error occurred");
       grpc_slice_unref(read_buf_);
@@ -416,11 +432,14 @@ private:
         gpr_log(GPR_DEBUG, "c-ares on iocp writeable. Error: %s. Code: %d", msg, winsocket_->write_info.wsa_error);
         GRPC_ERROR_UNREF(error);
         error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      } else {
-        connected_ = true;
       }
     }
-    GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
+    GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) > 0);
+    GPR_ASSERT(write_state_ == REQUESTING_WRITE);
+    write_state_ = WRITE_DONE;
+    gpr_log(GPR_DEBUG, "iocp on readable inner called: bytes transfered: %d", winsocket_->read_info.bytes_transfered);
+    write_buf_ = grpc_slice_sub_no_ref(write_buf_, 0, winsocket_->write_info.bytes_transfered);
+    gpr_log(GPR_DEBUG, "iocp on readable inner called: recvd buf len now: %d", GRPC_SLICE_LENGTH(read_buf_));
     if (error != GRPC_ERROR_NONE) {
       gpr_log(GPR_DEBUG, "iocp writeable inner error occurred");
     }
@@ -438,7 +457,6 @@ private:
   ReadState read_state_;
   WriteState write_state_;
   bool socket_already_closed_;
-  bool connect_started_;
 };
 
 struct ares_socket_functions custom_ares_sock_funcs = {
@@ -452,17 +470,17 @@ struct ares_socket_functions custom_ares_sock_funcs = {
 class AresEvDriverWindows final : public AresEvDriver {
  public:
   AresEvDriverWindows() : AresEvDriver(),
-    sock_to_node_map_(grpc_core::New<SockToNodeMap>()) {}
+    socket_to_node_map_(grpc_core::New<SockToNodeMap>()) {}
  private:
   FdNode* CreateFdNode(ares_socket_t as, const char* name) override {
-    FdNodeWindows* fdn = sock_to_node_map_.LookupNode(as);
+    FdNodeWindows* fdn = socket_to_node_map_->LookupNode(as);
     GPR_ASSERT(fdn != nullptr);
     return fdn;
   }
   void MaybeOverrideSockFuncs(ares_channel chan) override {
-    ares_set_socket_functions(chan, &custom_ares_sock_funcs, sock_to_node_map_.get());
+    ares_set_socket_functions(chan, &custom_ares_sock_funcs, socket_to_node_map_.get());
   }
-  UniquePtr<SockToNodeMap> sock_to_node_map_;
+  UniquePtr<SockToNodeMap> socket_to_node_map_;
 };
 
 AresEvDriver* AresEvDriver::Create(grpc_pollset_set* pollset_set) {
