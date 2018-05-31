@@ -427,9 +427,9 @@ static void fd_orphan(grpc_fd* fd, grpc_closure* on_done, int* release_fd,
                       const char* reason) {
   fd->on_done_closure = on_done;
   fd->released = release_fd != nullptr;
-  fd->released = true;
   if (release_fd != nullptr) {
     *release_fd = fd->fd;
+    fd->released = true;
   }
   gpr_mu_lock(&fd->mu);
   REF_BY(fd, 1, reason); /* remove active status, but keep referenced */
