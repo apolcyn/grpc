@@ -49,7 +49,10 @@ else
 fi
 
 # Choose random name for docker container
-CONTAINER_NAME="build_and_run_docker_$(uuidgen)"
+if [ "$CONTAINER_NAME" == "" ]
+then
+  CONTAINER_NAME="build_and_run_docker_$(uuidgen)"
+fi
 
 # Run command inside docker
 # TODO: use a proper array instead of $EXTRA_DOCKER_ARGS

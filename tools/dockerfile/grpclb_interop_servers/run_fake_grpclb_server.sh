@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2015 gRPC authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,26 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Builds Go interop server and client in a base image.
+set -ex
 
-FROM golang:latest
+if [[ "$USE_TLS" == "" ]]; then
+  USE_TLS='false'
+fi
+if [[ "$USE_ALTS" == "" ]]; then
+  USE_ALTS='false'
+fi
 
-# Using login shell removes Go from path, so we add it.
-RUN ln -s /usr/local/go/bin/go /usr/local/bin
-
-#====================
-# Python dependencies
-
-# Install dependencies
-
-RUN apt-get update && apt-get install -y \
-    python-all-dev \
-    python3-all-dev \
-    python-pip
-
-# Install Python packages from PyPI
-RUN pip install --upgrade pip==10.0.1
-RUN pip install virtualenv
-RUN pip install futures==2.2.0 enum34==1.0.4 protobuf==3.5.2.post1 six==1.10.0 twisted==17.5.0 pyyaml==3.12
-
-# Define the default command.
-CMD ["bash"]
+/go/bin/fake_grpclb \
+  --port="$PORT" \
+  --backend_port="$BACKEND_PORT" \
+  --use_tls="$USE_TLS" \
+  --use_alts="$USE_ALTS"
