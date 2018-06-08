@@ -46,30 +46,13 @@ class CXXLanguage:
 
     def __init__(self):
         self.client_cwd = None
-        self.server_cwd = None
-        self.http2_cwd = None
         self.safename = 'cxx'
 
     def client_cmd(self, args):
         return ['bins/opt/interop_client'] + args
 
-    def client_cmd_http2interop(self, args):
-        return ['bins/opt/http2_client'] + args
-
-    def cloud_to_prod_env(self):
-        return {}
-
-    def server_cmd(self, args):
-        return ['bins/opt/interop_server'] + args
-
     def global_env(self):
-        return {}
-
-    def unimplemented_test_cases(self):
-        return _SKIP_DATA_FRAME_PADDING
-
-    def unimplemented_test_cases_server(self):
-        return []
+        return {'GRPC_DNS_RESOLVER=ares'}
 
     def __str__(self):
         return 'c++'
@@ -79,32 +62,13 @@ class JavaLanguage:
 
     def __init__(self):
         self.client_cwd = '../grpc-java'
-        self.server_cwd = '../grpc-java'
-        self.http2_cwd = '../grpc-java'
         self.safename = str(self)
 
     def client_cmd(self, args):
         return ['./run-test-client.sh'] + args
 
-    def client_cmd_http2interop(self, args):
-        return [
-            './interop-testing/build/install/grpc-interop-testing/bin/http2-client'
-        ] + args
-
-    def cloud_to_prod_env(self):
-        return {}
-
-    def server_cmd(self, args):
-        return ['./run-test-server.sh'] + args
-
     def global_env(self):
-        return {}
-
-    def unimplemented_test_cases(self):
-        return []
-
-    def unimplemented_test_cases_server(self):
-        return _SKIP_COMPRESSION
+        return {'JAVA_OPTS=""'}
 
     def __str__(self):
         return 'java'
@@ -115,30 +79,13 @@ class GoLanguage:
     def __init__(self):
         # TODO: this relies on running inside docker
         self.client_cwd = '/go/src/google.golang.org/grpc/interop/client'
-        self.server_cwd = '/go/src/google.golang.org/grpc/interop/server'
-        self.http2_cwd = '/go/src/google.golang.org/grpc/interop/http2'
         self.safename = str(self)
 
     def client_cmd(self, args):
         return ['go', 'run', 'client.go'] + args
 
-    def client_cmd_http2interop(self, args):
-        return ['go', 'run', 'negative_http2_client.go'] + args
-
-    def cloud_to_prod_env(self):
-        return {}
-
-    def server_cmd(self, args):
-        return ['go', 'run', 'server.go'] + args
-
     def global_env(self):
         return {}
-
-    def unimplemented_test_cases(self):
-        return _SKIP_COMPRESSION
-
-    def unimplemented_test_cases_server(self):
-        return _SKIP_COMPRESSION
 
     def __str__(self):
         return 'go'
@@ -146,24 +93,9 @@ class GoLanguage:
 
 _LANGUAGES = {
     'c++': CXXLanguage(),
-    'go': GoLanguage(),
-    'java': JavaLanguage(),
+    #  'go': GoLanguage(),
+    #  'java': JavaLanguage(),
 }
-
-# languages supported as grpclb backend servers
-_SERVERS = [
-    'c++', 'java', 'go',
-]
-
-_TEST_CASES = [
-    'empty_unary',
-]
-
-#TODO: Add c++ when c++ ALTS interop client is ready.
-_LANGUAGES_FOR_ALTS_TEST_CASES = ['c++', 'java', 'go']
-
-#TODO: Add c++ when c++ ALTS interop server is ready.
-_SERVERS_FOR_ALTS_TEST_CASES = ['c++', 'java', 'go']
 
 _TRANSPORT_SECURITY_OPTIONS = ['tls', 'alts', 'insecure']
 
@@ -206,13 +138,12 @@ def _job_kill_handler(job):
     time.sleep(2)
 
 
-def lb_client_server_jobspec(language,
-                           test_case,
-                           fake_backend_port,
-                           fake_fallback_port,
-                           fake_grpclb_port,
-                           docker_image,
-                           transport_security='tls'):
+def lb_client_jobspec(language,
+                      fake_backend_port,
+                      fake_fallback_port,
+                      fake_grpclb_port,
+                      docker_image,
+                      transport_security='tls'):
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host_override=foo.test.google.fr',
@@ -227,32 +158,30 @@ def lb_client_server_jobspec(language,
     else:
         print('Invalid transport security option.')
         sys.exit(1)
-    client_test_case = test_case
-    cmdline = bash_cmdline(
-        language.client_cmd([
-            '--test_case=%s' % client_test_case,
-            '--server_host=%s' % server_host,
-            '--server_port=%s' % server_port
-        ])
+    within_docker_cmdline = bash_cmdline(
+        _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER + [
+            '--fake_backend_port=%s' % fake_backend_job,
+            '--fake_fallback_port=%s' % fake_fallback_port,
+            '--fake_grpclb_port=%s' % fake_grpclb_port,
+            '--client_cwd=%s' % language.client_cwd,
+        ] + [
+            '--'
+        ] + language.client_cmd()
     )
-    cwd = language.client_cwd
     environ = language.global_env()
     container_name = dockerjob.random_name(
         'lb_interop_client_%s' % language.safename)
-    cmdline = docker_run_cmdline(
-        cmdline,
+    docker_cmdline = docker_run_cmdline(
+        within_docker_cmdline,
         image=docker_image,
         environ=environ,
-        cwd=cwd,
-        docker_args=['--net=host',
+        cwd=_CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER_CWD,
+        docker_args=['--dns=127.0.0.1',
                      '--name=%s' % container_name])
-    cwd = None
     test_job = jobset.JobSpec(
-        cmdline=cmdline,
-        cwd=cwd,
+        cmdline=docker_cmdline,
         environ=environ,
-        shortname='cloud_to_cloud:%s:%s_server:%s' % (language, server_name,
-                                                      test_case),
+        shortname=('lb_interop_client:%s' % language),
         timeout_seconds=_TEST_TIMEOUT,
         kill_handler=_job_kill_handler)
     test_job.container_name = container_name
@@ -275,7 +204,7 @@ def server_jobspec(server_binary,
         sys.exit(1)
     cmdline = bash_cmdline(server_binary + server_cmd_args)
     container_name = dockerjob.random_name(
-        'lb_interop_server_%s' % server_binary)
+        'fake_lb_interop_server_%s' % server_binary)
     environ = language.global_env()
     docker_args = ['--name=%s' % container_name]
     docker_args += ['-p', str(_DEFAULT_SERVER_PORT)]
@@ -288,7 +217,7 @@ def server_jobspec(server_binary,
     server_job = jobset.JobSpec(
         cmdline=docker_cmdline,
         environ=environ,
-        shortname='lb_backend_interop_server_%s' % language,
+        shortname='fake_lb_interop_server_%s' % server_binary,
         timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
