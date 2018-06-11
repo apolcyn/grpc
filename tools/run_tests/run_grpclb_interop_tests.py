@@ -41,6 +41,10 @@ atexit.register(lambda: subprocess.call(['stty', 'echo']))
 ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(ROOT)
 
+_BACKEND_PORT = 8080
+_FALLBACK_PORT = 8081
+_GRPCLB_PORT = 8082
+
 
 class CXXLanguage:
 
@@ -291,7 +295,7 @@ if build_jobs:
 server_jobs = {}
 server_addresses = {}
 try:
-    # Start fake backend 
+    # Start fake backend, fallback, and grpclb server
     fake_backend_spec = server_jobspec(
         os.path.join(_GO_REPO_ROOT, 'interop', 'server', 'server')
         fake_backend_docker_image,
