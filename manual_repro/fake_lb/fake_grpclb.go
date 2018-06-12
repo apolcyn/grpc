@@ -1,4 +1,4 @@
-// Runs a fake grpclb server for tests
+// Runs a fake grpclb server for tests.
 package main
 
 import (
@@ -31,6 +31,16 @@ func (*loadBalancerServer) BalanceLoad(stream lbpb.LoadBalancer_BalanceLoadServe
 		return err
 	}
 	grpclog.Info("LoadBalancerRequest received.")
+	stream.Send(&messages.LoadBalanceResponse{
+		LoadBalanceResponseType: &messages.LoadBalanceResponse_InitialResponse{
+			InitialResponse: &messages.InitialLoadBalanceResponse{
+				ClientStatsReportInterval: &messages.Duration{
+					Seconds: 1,
+					Nanos:   0,
+				},
+			},
+		},
+	})
 	localhostIpv4Bytes := make([]byte, 4, 4)
 	binary.BigEndian.PutUint32(localhostIpv4Bytes, localhostIpv4)
 	res := &messages.LoadBalanceResponse{
