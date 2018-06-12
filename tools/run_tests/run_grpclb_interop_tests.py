@@ -46,6 +46,9 @@ _DEFAULT_SERVER_PORT = 8080
 _DNS_SCRIPTS = os.path.join(os.sep, 'var', 'local', 'dns_scripts')
 _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER = os.path.join(_DNS_SCRIPTS, 'run_client_with_dns_server.py')
 
+_GO_REPO_ROOT = os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc')
+
+_TEST_TIMEOUT = 30
 
 class CXXLanguage:
 
@@ -150,9 +153,7 @@ def lb_client_interop_jobspec(language,
                       transport_security='tls'):
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
-        '--server_host=server.test.com',
-        '--server_port=443',
-        '--server_host_override=foo.test.google.fr',
+        '--server_uri=dns:///server.google.internal:443',
         '--use_test_ca=true',
     ]
     if transport_security == 'tls':
@@ -166,11 +167,13 @@ def lb_client_interop_jobspec(language,
         sys.exit(1)
     client_args = ' '.join(language.client_cmd(interop_only_options))
     within_docker_cmdline = bash_cmdline(
-        _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER + [
-            '--fake_grpclb_port=%s' % fake_grpclb_port,
-            '--client_cwd=%s' % language.client_cwd,
-            '--client_args=%s' % client_args,
-            '--records_config_template_basename=records_config.yaml.template',
+        [os.path.join(_DNS_SCRIPTS, _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER)] + [
+            '--grpclb_port=%s' % fake_grpclb_port,
+            '--client_args=\"%s\"' % client_args,
+            '--records_config_template_path=%s' % os.path.join(_DNS_SCRIPTS, 'records_config.yaml.template'),
+            '--dns_server_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_server.py'),
+            '--dns_resolver_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_resolver.py'),
+            '--tcp_connect_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'tcp_connect.py'),
         ]
     )
     environ = language.global_env()
@@ -180,11 +183,12 @@ def lb_client_interop_jobspec(language,
         within_docker_cmdline,
         image=docker_image,
         environ=environ,
-        cwd=_DNS_SCRIPTS,
+        cwd=language.client_cwd,
         docker_args=['--dns=127.0.0.1',
                      '--net=host',
-                     '-v %s:%s:ro' % (os.path.join(os.cwd(), 'test', 'cpp', 'naming', 'utils'), _DNS_SCRIPTS),
+                     '-v', '%s:%s:ro' % (os.path.join(os.getcwd(), 'test', 'cpp', 'naming', 'utils'), _DNS_SCRIPTS),
                      '--name=%s' % container_name])
+    jobset.message('IDLE', 'docker_cmdline:\b|%s|' % ' '.join(docker_cmdline), do_newline=True)
     test_job = jobset.JobSpec(
         cmdline=docker_cmdline,
         environ=environ,
@@ -195,10 +199,10 @@ def lb_client_interop_jobspec(language,
     return test_job
 
 
-def interop_server_jobspec(transport_security='tls', server_name):
+def interop_server_jobspec(transport_security, shortname):
     """Create jobspec for running a server"""
     server_cmd_args = [
-            os.path.join(_GO_REPO_ROOT, 'interop', 'server', 'server'),
+            os.path.join(os.sep, 'go', 'bin', 'server'),
             '--port=%s' % _DEFAULT_SERVER_PORT
             ]
     if transport_security == 'tls':
@@ -210,39 +214,41 @@ def interop_server_jobspec(transport_security='tls', server_name):
     else:
         print('Invalid transport security option.')
         sys.exit(1)
-    cmdline = bash_cmdline(server_binary + server_cmd_args)
-    container_name = dockerjob.random_name(
-        'fake_lb_test_interop_server_%s' % server_binary)
-    return server_in_docker_jobspec(cmdline, docker_image='go_client', container_name)
+    cmdline = bash_cmdline(server_cmd_args)
+    container_name = dockerjob.random_name(shortname)
+    language = _LANGUAGES['go']
+    return server_in_docker_jobspec(cmdline, docker_image='go_client', container_name=container_name, environ=language.global_env(), shortname=shortname)
 
 
-def fake_grpclb_jobspec(fake_backend_port):
+def fake_grpclb_jobspec(fake_backend_port, shortname):
     server_cmd_args = [
-            os.path.join(_FAKE_GRPCLB_REPO_ROOT, 'fake_grpclb'),
+            os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'fake_grpclb', 'fake_grpclb'),
             '--port=%s' % _DEFAULT_SERVER_PORT,
             '--backend_port=%s' % fake_backend_port,
             '--debug_mode=true', # insecure
             ]
-    docker_image = 'fake_lb'
-    container_name = dockerjob.random_name('fake_grpclb_server')
-    return server_in_docker_jobspec(server_cmd_args, docker_image, container_name)
+    container_name = dockerjob.random_name(shortname)
+    environ = {
+            'GRPC_GO_LOG_VERBOSITY_LEVEL': '3',
+            'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO',
+            }
+    return server_in_docker_jobspec(server_cmd_args, docker_image='fake_lb', container_name=container_name, environ=environ, shortname=shortname)
 
 
-def server_in_docker_jobspec(cmdline, docker_image, container_name):
-    environ = language.global_env()
+def server_in_docker_jobspec(cmdline, docker_image, container_name, environ, shortname):
     docker_args = ['--name=%s' % container_name]
     docker_args += ['-p', str(_DEFAULT_SERVER_PORT)]
     docker_cmdline = docker_run_cmdline(
         cmdline,
         image=docker_image,
-        cwd=language.server_cwd,
         environ=environ,
         docker_args=docker_args)
     server_job = jobset.JobSpec(
         cmdline=docker_cmdline,
         environ=environ,
-        shortname='fake_lb_test_server_%s' % server_binary,
-        timeout_seconds=30 * 60)
+        shortname=shortname,
+        timeout_seconds=30 * 60,
+        verbose_success=True)
     server_job.container_name = container_name
     return server_job
 
@@ -252,13 +258,14 @@ def build_interop_image_jobspec(language):
     tag = 'grpc_interop_%s:%s' % (language.safename, uuid.uuid4())
     env = {
         'INTEROP_IMAGE': tag,
-        'BASE_NAME': 'grpc_lb_interop_%s' % language.safename
+        'BASE_NAME': 'grpc_interop_%s' % language.safename,
     }
     build_job = jobset.JobSpec(
         cmdline=['tools/run_tests/dockerize/build_interop_image.sh'],
         environ=env,
-        shortname='build_docker_%s' % (language),
-        timeout_seconds=30 * 60)
+        shortname='build_docker_%s' % language.safename,
+        timeout_seconds=30 * 60,
+        verbose_success=True)
     build_job.tag = tag
     return build_job
 
@@ -275,11 +282,23 @@ argp.add_argument('-j', '--jobs', default=multiprocessing.cpu_count(), type=int)
 argp.add_argument(
     '--transport_security',
     choices=_TRANSPORT_SECURITY_OPTIONS,
-    default='tls',
+    default='insecure',
     type=str,
     nargs='?',
     const=True,
     help='Which transport security mechanism to use.')
+argp.add_argument(
+    '--image_tag',
+    default=None,
+    type=str,
+    help='This is for iterative manual runs. Setting this skips the docker image build step and runs the client from the named image. Only supports running a one client language.')
+argp.add_argument(
+    '--save_images',
+    default=False,
+    type=bool,
+    nargs='?',
+    const=True,
+    help='This is for iterative manual runs. Skip docker image removal.')
 args = argp.parse_args()
 
 languages = _LANGUAGES.keys()
@@ -287,10 +306,14 @@ languages = _LANGUAGES.keys()
 docker_images = {}
 
 build_jobs = []
-for l in languages:
-    job = build_interop_image_jobspec(l)
-    docker_images[str(l)] = job.tag
-    build_jobs.append(job)
+for lang_name in _LANGUAGES.keys():
+    l = _LANGUAGES[lang_name]
+    if args.image_tag is None:
+        job = build_interop_image_jobspec(l)
+        build_jobs.append(job)
+        docker_images[str(l.safename)] = job.tag
+    else:
+        docker_images[str(l.safename)] = args.image_tag
 
 if build_jobs:
     jobset.message(
@@ -316,28 +339,35 @@ server_jobs = {}
 server_addresses = {}
 try:
     # Start fake backend, fallback, and grpclb server
+    fake_backend_shortname = 'fake_backend_server'
     fake_backend_spec = interop_server_jobspec(
-        args.transport_security, 'fake_backend_server')
+        args.transport_security, fake_backend_shortname)
     fake_backend_job = dockerjob.DockerJob(fake_backend_spec)
-    fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT))
+    server_jobs[fake_backend_shortname] = fake_backend_job
+    fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake fallback server
+    fake_fallback_shortname = 'fake_fallback_server'
     fake_fallback_spec = interop_server_jobspec(
-        args.transport_security, 'fake_fallback_server')
+        args.transport_security, fake_fallback_shortname)
     fake_fallback_job = dockerjob.DockerJob(fake_fallback_spec)
-    fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT))
+    server_jobs[fake_fallback_shortname] = fake_fallback_job
+    fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
+    print('sleep 3 seconds - HACK')
     # Start fake grpclb server
-    fake_grpclb_spec = server_in_docker_jobspec(fake_backend_port)
+    fake_grpclb_shortname = 'fake_grpclb_server'
+    fake_grpclb_spec = fake_grpclb_jobspec(fake_backend_port, fake_grpclb_shortname)
     fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
-    fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT))
+    server_jobs[fake_grpclb_shortname] = fake_grpclb_job
+    fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Run clients, with local DNS servers running in their docker containers
     print('sleep 3 seconds - HACK')
     time.sleep(3)
     jobs = []
-    for language in languages:
+    for lang_name in _LANGUAGES.keys():
         test_job = lb_client_interop_jobspec(
-            language,
+            _LANGUAGES[lang_name],
             fake_grpclb_port,
-            docker_image=docker_images.get(str(language)),
+            docker_image=docker_images.get(l.safename),
             transport_security=args.transport_security)
         jobs.append(test_job)
     print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
@@ -362,7 +392,8 @@ finally:
     for server, job in server_jobs.items():
         if not job.is_running():
             print('Server "%s" has exited prematurely.' % server)
-    dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)])
-    for image in six.itervalues(docker_images):
-        print('Removing docker image %s' % image)
-        dockerjob.remove_image(image)
+    dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=False)
+    if not args.save_images and args.image_tag is None:
+        for image in six.itervalues(docker_images):
+            print('Removing docker image %s' % image)
+            dockerjob.remove_image(image)

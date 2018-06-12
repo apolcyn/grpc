@@ -74,10 +74,10 @@ def wait_for_healthy(cid, shortname, timeout_seconds):
                     (shortname, cid))
 
 
-def finish_jobs(jobs):
+def finish_jobs(jobs, suppress_failure=True):
     """Kills given docker containers and waits for corresponding jobs to finish"""
     for job in jobs:
-        job.kill(suppress_failure=True)
+        job.kill(suppress_failure=suppress_failure)
 
     while any(job.is_running() for job in jobs):
         time.sleep(1)
