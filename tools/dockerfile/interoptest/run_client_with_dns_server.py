@@ -4,47 +4,102 @@ import os
 import tempfile
 import sys
 import time
+import signal
 
 argp = argparse.ArgumentParser(description='Local DNS Server for resolver tests')
 argp.add_argument('--client_args', required=True, type=str,
                   help='Client args.')
-argp.add_argument('--dns_server_args', required=True, type=str,
-                  help=('DNS server args'))
+argp.add_argument('--records_config_template_path', required=True, type=str,
+                  help=('DNS server records config template path'))
+argp.add_argument('--grpclb_port', required=True, type=int,
+                  help=('Port that grpclb server is listening on'))
 argp.add_argument('--output_dir', required=True, type=str,
                   help=('Output directory for logs'))
 args = argp.parse_args()
 
+def test_runner_log(msg):
+  sys.stderr.write('\n%s: %s\n' % (__file__, msg))
+
+_LOCAL_DNS_SERVER_DIR = os.path.join(os.sep, 'var', 'local', 'local_dns_server')
+
+def wait_until_dns_server_is_up(dns_server_subprocess,
+                                dns_server_subprocess_output):
+  for i in range(0, 30):
+    test_runner_log('Health check: attempt to connect to DNS server over TCP.')
+    tcp_connect_subprocess = subprocess.Popen([
+        os.path.join(_LOCAL_DNS_SERVER_DIR, 'tcp_connect.py'),
+        '--server_host', '127.0.0.1',
+        '--server_port', str(53),
+        '--timeout', str(1)])
+    tcp_connect_subprocess.communicate()
+    if tcp_connect_subprocess.returncode == 0:
+      test_runner_log(('Health check: attempt to make an A-record '
+                       'query to DNS server.'))
+      dns_resolver_subprocess = subprocess.Popen([
+          os.path.join(_LOCAL_DNS_SERVER_DIR, 'dns_resolver.py'),
+          '--qname', 'health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp',
+          '--server_host', '127.0.0.1',
+          '--server_port', str(53)],
+          stdout=subprocess.PIPE)
+      dns_resolver_stdout, _ = dns_resolver_subprocess.communicate()
+      if dns_resolver_subprocess.returncode == 0:
+        if '123.123.123.123' in dns_resolver_stdout:
+          test_runner_log(('DNS server is up! '
+                           'Successfully reached it over UDP and TCP.'))
+        return
+    time.sleep(0.1)
+  dns_server_subprocess.kill()
+  dns_server_subprocess.wait()
+  test_runner_log(('Failed to reach DNS server over TCP and/or UDP. '
+                   'Exitting without running tests.'))
+  test_runner_log('======= DNS server stdout '
+                  '(merged stdout and stderr) =============')
+  with open(dns_server_subprocess_output, 'r') as l:
+    test_runner_log(l.read())
+  test_runner_log('======= end DNS server output=========')
+  sys.exit(1)
+
+with open(args.records_config_template_path, 'r') as template:
+    records_config = template.read() % { 'grpclb_port': args.grpclb_port }
+
+sys.stderr.write('===== DNS server records config: =====\n')
+sys.stderr.write(records_config)
+sys.stderr.write('======================================\n')
+
+dns_server_invoke_args = os.path.join(os.sep, 'var', 'local', 'local_dns_server', 'dns_server.py')
+dns_server_subprocess_output = tempfile.mktemp(dir=args.output_dir)
+records_config_path = tempfile.mktemp()
+with open(records_config_path, 'w') as records_config_generated:
+    records_config_generated.write(records_config)
+# Start the DNS server subprocess
+with open(dns_server_subprocess_output, 'w') as l:
+  dns_server_subprocess = subprocess.Popen([
+      os.path.join(_LOCAL_DNS_SERVER_DIR, 'dns_server.py'),
+      '--port', str(53),
+      '--records_config_path', records_config_path],
+      stdin=subprocess.PIPE,
+      stdout=l,
+      stderr=l)
+
+def _quit_on_signal(signum, _frame):
+  test_runner_log('Received signal: %d' % signum)
+
+signal.signal(signal.SIGINT, _quit_on_signal)
+signal.signal(signal.SIGTERM, _quit_on_signal)
+
+wait_until_dns_server_is_up(
+        dns_server_subprocess,
+        dns_server_subprocess_output)
 
 # Start the fake grpclb server
-grpclb_invoke_args = [
-        os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'fake_grpclb', 'fake_grpclb'),
-    ] + args.grpclb_args.split(' ')
-sys.stderr.write('grpclb invocation:|%s|\n' % grpclb_invoke_args)
-grpclb_log_stdout = tempfile.mktemp(dir=args.output_dir)
-grpclb_log_stderr = tempfile.mktemp(dir=args.output_dir)
-with open(grpclb_log_stdout, 'w') as stdout_log:
-    with open(grpclb_log_stderr, 'w') as stderr_log:
-        subprocess.Popen(grpclb_invoke_args, stdout=stdout_log, stderr=stderr_log)
-# Start the fake backend
-backend_invoke_args = [
-        os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc', 'interop', 'server', 'server'),
-    ] + args.backend_args.split(' ')
-sys.stderr.write('backend invocation:|%s|\n' % backend_invoke_args)
-backend_log_stdout = tempfile.mktemp(dir=args.output_dir)
-backend_log_stderr = tempfile.mktemp(dir=args.output_dir)
-with open(backend_log_stderr  , 'w') as stdout_log:
-    with open(backend_log_stderr, 'w') as stderr_log:
-        subprocess.Popen(backend_invoke_args, stdout=stdout_log, stderr=stderr_log)
-# Start the fake fallback server
-fallback_invoke_args = [
-        os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc', 'interop', 'server', 'server'),
-    ] + args.fallback_args.split(' ')
-fallback_log_stdout = tempfile.mktemp(dir=args.output_dir)
-fallback_log_stderr = tempfile.mktemp(dir=args.output_dir)
-with open(fallback_log_stdout, 'w') as stdout_log:
-    with open(fallback_log_stderr, 'w') as stderr_log:
-        subprocess.Popen(fallback_invoke_args, stdout=stdout_log, stderr=stderr_log)
-sys.stderr.write('fallback invocation:|%s|\n' % fallback_invoke_args)
+client_invoke_args = [
+        os.path.join(os.sep, 'go', 'bin', 'client'),
+    ] + args.client_args.split(' ')
+sys.stderr.write('client invocation:|%s|\n' % client_invoke_args)
+p = subprocess.Popen(client_invoke_args, env={'GRPC_GO_LOG_VERBOSITY_LEVEL': '3', 'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO'})
+p.communicate()
 sys.stdout.flush()
 sys.stderr.flush()
-time.sleep(args.timeout)
+dns_server_subprocess.kill()
+dns_server_subprocess.wait()
+os.exit(p.returncode)

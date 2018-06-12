@@ -19,7 +19,8 @@ set -e
 # Clone just the grpc-go source code without any dependencies.
 # We are cloning from a local git repo that contains the right revision
 # to test instead of using "go get" to download from Github directly.
-git clone --recursive /var/local/jenkins/grpc-go src/google.golang.org/grpc
+git clone --recursive https://github.com/apolcyn/grpc-go.git src/google.golang.org/grpc
+(cd src/google.golang.org/grpc && git fetch origin grpclb_interop_client && git checkout origin/grpclb_interop_client)
 
 # Get all gRPC Go dependencies
 (cd src/google.golang.org/grpc && make deps && make testdeps)
