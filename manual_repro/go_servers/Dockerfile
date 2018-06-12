@@ -1,11 +1,7 @@
-FROM debian:stretch
+FROM golang:1.8
 
-RUN apt-get update && apt-get install procps -y && apt-get clean
+RUN apt-get update && apt-get install vim -y && apt-get clean
 
-# Install go.
-RUN GOPKG=go1.10.1.linux-amd64.tar.gz && \
-    curl -sL "https://dl.google.com/go/${GOPKG}" > "$GOPKG" && \
-    tar -C /usr/local -xzf "$GOPKG"
 RUN ln -s /usr/local/go/bin/go /usr/local/bin
 RUN mkdir -p /go/src/google.golang.org/grpc
 RUN git clone https://github.com/grpc/grpc-go.git /go/src/google.golang.org/grpc
@@ -25,6 +21,8 @@ RUN export GOPATH=/go && cd /go/src/google.golang.org/grpc && \
 RUN FAKE_GRPCLB_SHA1="$(sha1sum /go/src/google.golang.org/fake_grpclb/fake_grpclb.go | awk '{ print $1 }')" && \
     EXPECTED_SHA1=766ef8987f2d9093bf58e783b2fc19beb66a1e62 && \
     echo "$FAKE_GRPCLB_SHA1" | grep "$EXPECTED_SHA1"
+
+RUN apt-get install python2.7 -y
 
 # Define the default command.
 CMD ["bash"]
