@@ -337,6 +337,7 @@ if build_jobs:
 
 server_jobs = {}
 server_addresses = {}
+suppress_server_logs = True
 try:
     # Start fake backend, fallback, and grpclb server
     fake_backend_shortname = 'fake_backend_server'
@@ -376,6 +377,7 @@ try:
         newline_on_success=True,
         maxjobs=args.jobs)
     if num_failures:
+        suppress_server_logs = False
         jobset.message('FAILED', 'Some tests failed', do_newline=True)
     else:
         jobset.message('SUCCESS', 'All tests passed', do_newline=True)
@@ -387,12 +389,13 @@ try:
 except Exception as e:
     print('exception occurred:')
     traceback.print_exc(file=sys.stdout)
+    suppress_server_logs = False
 finally:
     # Check if servers are still running.
     for server, job in server_jobs.items():
         if not job.is_running():
             print('Server "%s" has exited prematurely.' % server)
-    dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=False)
+    dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=suppress_server_logs)
     if not args.save_images and args.image_tag is None:
         for image in six.itervalues(docker_images):
             print('Removing docker image %s' % image)
