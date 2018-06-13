@@ -93,7 +93,7 @@ class GoLanguage:
         return ['go', 'run', 'client.go'] + args
 
     def global_env(self):
-        return {}
+        return {'GRPC_GO_LOG_VERBOSITY_LEVEL': '3', 'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO'}
 
     def __str__(self):
         return 'go'
@@ -198,7 +198,8 @@ def lb_client_interop_jobspec(language,
         environ=environ,
         shortname=('lb_interop_client:%s' % language),
         timeout_seconds=_TEST_TIMEOUT,
-        kill_handler=_job_kill_handler)
+        kill_handler=_job_kill_handler,
+        verbose_success=True)
     test_job.container_name = container_name
     return test_job
 
