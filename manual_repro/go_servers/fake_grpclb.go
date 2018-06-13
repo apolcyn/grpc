@@ -19,7 +19,7 @@ const localhostIpv4 = 0x7f000001 // 127.0.0.1
 var (
 	port        = flag.Int("port", 10000, "The server port")
 	backendPort = flag.Int("backend_port", 20000, "The backend server port")
-	debugMode   = flag.Bool("debug_mode", false, "Run the server with insecure credentials")
+	use_tls     = flag.Bool("debug_mode", false, "Run the server with insecure credentials")
 )
 
 type loadBalancerServer struct{}

@@ -7,3 +7,5 @@ resolver_component_tests:
     - {TTL: '2100', data: 127.0.0.1, type: A}
     server:
     - {TTL: '2100', data: 127.0.0.1, type: A}
+    metadata:
+    - {TTL: '2100', data: 169.254.169.254, type: A}

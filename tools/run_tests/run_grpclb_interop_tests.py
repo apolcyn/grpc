@@ -105,8 +105,7 @@ _LANGUAGES = {
     #  'java': JavaLanguage(),
 }
 
-#_TRANSPORT_SECURITY_OPTIONS = ['tls', 'alts', 'insecure']
-_TRANSPORT_SECURITY_OPTIONS = ['insecure']
+_TRANSPORT_SECURITY_OPTIONS = ['alts', 'insecure']
 
 DOCKER_WORKDIR_ROOT = '/var/local/git/grpc'
 
@@ -147,6 +146,20 @@ def _job_kill_handler(job):
     time.sleep(2)
 
 
+def transport_security_to_args(transport_security):
+    args = []
+    if transport_security == 'tls':
+        args += ['--use_tls=true']
+    elif transport_security == 'alts':
+        args += ['--use_tls=false', '--use_alts=true']
+    elif transport_security == 'insecure':
+        args += ['--use_tls=false']
+    else:
+        print('Invalid transport security option.')
+        sys.exit(1)
+    return args
+
+
 def lb_client_interop_jobspec(language,
                       fake_grpclb_port,
                       docker_image,
@@ -155,16 +168,7 @@ def lb_client_interop_jobspec(language,
     interop_only_options = [
         '--server_uri=dns:///server.google.internal:443',
         '--use_test_ca=true',
-    ]
-    if transport_security == 'tls':
-        interop_only_options += ['--use_tls=true']
-    elif transport_security == 'alts':
-        interop_only_options += ['--use_tls=false', '--use_alts=true']
-    elif transport_security == 'insecure':
-        interop_only_options += ['--use_tls=false']
-    else:
-        print('Invalid transport security option.')
-        sys.exit(1)
+    ] + transport_security_to_args(transport_security)
     client_args = ' '.join(language.client_cmd(interop_only_options))
     within_docker_cmdline = bash_cmdline(
         [os.path.join(_DNS_SCRIPTS, _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER)] + [
@@ -204,35 +208,25 @@ def interop_server_jobspec(transport_security, shortname):
     server_cmd_args = [
             os.path.join(os.sep, 'go', 'bin', 'server'),
             '--port=%s' % _DEFAULT_SERVER_PORT
-            ]
-    if transport_security == 'tls':
-        server_cmd_args += ['--use_tls=true']
-    elif transport_security == 'alts':
-        server_cmd_args += ['--use_tls=false', '--use_alts=true']
-    elif transport_security == 'insecure':
-        server_cmd_args += ['--use_tls=false']
-    else:
-        print('Invalid transport security option.')
-        sys.exit(1)
+            ] + transport_security_to_args(transport_security)
     cmdline = bash_cmdline(server_cmd_args)
     container_name = dockerjob.random_name(shortname)
     language = _LANGUAGES['go']
     return server_in_docker_jobspec(cmdline, docker_image='go_client', container_name=container_name, environ=language.global_env(), shortname=shortname)
 
 
-def fake_grpclb_jobspec(fake_backend_port, shortname):
+def fake_grpclb_jobspec(transport_security, fake_backend_port, shortname):
     server_cmd_args = [
-            os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'fake_grpclb', 'fake_grpclb'),
+            os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc', 'interop', 'grpclb', 'fake_grpclb'),
             '--port=%s' % _DEFAULT_SERVER_PORT,
             '--backend_port=%s' % fake_backend_port,
-            '--debug_mode=true', # insecure
-            ]
+            ] + transport_security_to_args(transport_security)
     container_name = dockerjob.random_name(shortname)
     environ = {
             'GRPC_GO_LOG_VERBOSITY_LEVEL': '3',
             'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO',
             }
-    return server_in_docker_jobspec(server_cmd_args, docker_image='fake_lb', container_name=container_name, environ=environ, shortname=shortname)
+    return server_in_docker_jobspec(server_cmd_args, docker_image='go_servers', container_name=container_name, environ=environ, shortname=shortname)
 
 
 def server_in_docker_jobspec(cmdline, docker_image, container_name, environ, shortname):
@@ -356,7 +350,8 @@ try:
     print('sleep 3 seconds - HACK')
     # Start fake grpclb server
     fake_grpclb_shortname = 'fake_grpclb_server'
-    fake_grpclb_spec = fake_grpclb_jobspec(fake_backend_port, fake_grpclb_shortname)
+    fake_grpclb_spec = fake_grpclb_jobspec(
+        args.transport_security, fake_backend_port, fake_grpclb_shortname)
     fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
     server_jobs[fake_grpclb_shortname] = fake_grpclb_job
     fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
