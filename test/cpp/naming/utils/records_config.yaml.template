@@ -1,4 +1,4 @@
-resolver_tests_common_zone_name: google.internal.
+resolver_tests_common_zone_name: test.google.fr.
 resolver_component_tests:
 - records:
     _grpclb._tcp.server:

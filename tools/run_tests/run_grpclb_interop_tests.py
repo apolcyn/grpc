@@ -105,7 +105,7 @@ _LANGUAGES = {
     #  'java': JavaLanguage(),
 }
 
-_TRANSPORT_SECURITY_OPTIONS = ['alts', 'insecure']
+_TRANSPORT_SECURITY_OPTIONS = ['tls', 'alts', 'insecure']
 
 DOCKER_WORKDIR_ROOT = '/var/local/git/grpc'
 
@@ -166,7 +166,7 @@ def lb_client_interop_jobspec(language,
                       transport_security='tls'):
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
-        '--server_uri=dns:///server.google.internal:443',
+        '--server_uri=dns:///server.test.google.fr:443',
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
     client_args = ' '.join(language.client_cmd(interop_only_options))
