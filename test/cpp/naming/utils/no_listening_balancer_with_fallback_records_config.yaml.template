@@ -1,8 +1,12 @@
 resolver_tests_common_zone_name: test.google.fr.
+# Set the balancer port in the SRV record to bogus
+# port number of '0', for which no balancer will
+# be listening on. The client should fall back to
+# the fallback server.
 resolver_component_tests:
 - records:
     _grpclb._tcp.server:
-    - {TTL: '2100', data: 0 0 %(grpclb_port)d balancer, type: SRV}
+    - {TTL: '2100', data: 0 0 80 balancer, type: SRV}
     balancer:
     - {TTL: '2100', data: 127.0.0.1, type: A}
     server:

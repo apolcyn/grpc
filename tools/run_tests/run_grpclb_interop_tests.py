@@ -46,8 +46,6 @@ _DEFAULT_SERVER_PORT = 8080
 _DNS_SCRIPTS = os.path.join(os.sep, 'var', 'local', 'dns_scripts')
 _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER = os.path.join(_DNS_SCRIPTS, 'run_client_with_dns_server.py')
 
-_GO_REPO_ROOT = os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc')
-
 _TEST_TIMEOUT = 30
 
 class CXXLanguage:
@@ -98,11 +96,29 @@ class GoLanguage:
     def __str__(self):
         return 'go'
 
+# Override certain client or server args depending on the test case.
+class TestCaseConfig:
+
+    def __init__(self, use_bogus_fallback_port):
+        self.use_bogus_fallback_port = use_bogus_fallback_port
+
+# Test cases are defined by the DNS records that are served to the client.
+_TEST_CASES = [
+        ('balancer_and_fallback_records_config',
+            TestCaseConfig(use_bogus_fallback_port=True)),
+        ('balancer_without_fallback_records_config',
+            TestCaseConfig(use_bogus_fallback_port=True)),
+        ('srv_without_balancer_with_fallback_records_config',
+            TestCaseConfig(use_bogus_fallback_port=False)),
+        ('no_listening_balancer_with_fallback_records_config',
+            TestCaseConfig(use_bogus_fallback_port=False)),
+]
+
 
 _LANGUAGES = {
-    #  'c++': CXXLanguage(),
+    'c++': CXXLanguage(),
     'go': GoLanguage(),
-    #  'java': JavaLanguage(),
+    'java': JavaLanguage(),
 }
 
 _TRANSPORT_SECURITY_OPTIONS = ['tls', 'alts', 'insecure']
@@ -162,11 +178,17 @@ def transport_security_to_args(transport_security):
 
 def lb_client_interop_jobspec(language,
                       fake_grpclb_port,
+                      fake_fallback_port,
                       docker_image,
-                      transport_security='tls'):
+                      test_case,
+                      transport_security):
     """Creates jobspec for cloud-to-cloud interop test"""
+    if test_case[1].use_bogus_fallback_port:
+      fallback_port_to_use = 443
+    else:
+      fallback_port_to_use = fake_fallback_port
     interop_only_options = [
-        '--server_uri=dns:///server.test.google.fr:443',
+        '--server_uri=dns:///server.test.google.fr:%s' % fallback_port_to_use,
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
     client_args = ' '.join(language.client_cmd(interop_only_options))
@@ -174,7 +196,7 @@ def lb_client_interop_jobspec(language,
         [os.path.join(_DNS_SCRIPTS, _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER)] + [
             '--grpclb_port=%s' % fake_grpclb_port,
             '--client_args=\"%s\"' % client_args,
-            '--records_config_template_path=%s' % os.path.join(_DNS_SCRIPTS, 'records_config.yaml.template'),
+            '--records_config_template_path=%s' % os.path.join(_DNS_SCRIPTS, '%s.yaml.template' % test_case[0]),
             '--dns_server_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_server.py'),
             '--dns_resolver_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_resolver.py'),
             '--tcp_connect_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'tcp_connect.py'),
@@ -204,45 +226,70 @@ def lb_client_interop_jobspec(language,
     return test_job
 
 
+def transport_security_to_env(transport_security):
+    use_alts = 'false'
+    use_tls = 'false'
+    if transport_security == 'alts':
+        use_alts = 'true'
+    elif transport_security == 'tls':
+        use_tls = 'true'
+    return [
+            'GRPCLB_TEST_FLAG_use_alts=%s' % use_alts,
+            'GRPCLB_TEST_FLAG_use_tls=%s' % use_tls,
+    ]
+
+
 def interop_server_jobspec(transport_security, shortname):
-    """Create jobspec for running a server"""
-    server_cmd_args = [
-            os.path.join(os.sep, 'go', 'bin', 'server'),
-            '--port=%s' % _DEFAULT_SERVER_PORT
-            ] + transport_security_to_args(transport_security)
-    cmdline = bash_cmdline(server_cmd_args)
-    container_name = dockerjob.random_name(shortname)
-    language = _LANGUAGES['go']
-    return server_in_docker_jobspec(cmdline, docker_image='go_client', container_name=container_name, environ=language.global_env(), shortname=shortname)
+    """Create jobspec for running a fake backend or fallback server"""
+    server_run_script = os.path.join(
+            'tools', 'run_tests', 'helper_scripts', 'run_fake_backend_or_fallback_server.sh')
+    server_cmd_args_as_env = [
+            'GRPCLB_TEST_FLAG_port=%s' % _DEFAULT_SERVER_PORT,
+    ] + transport_security_to_env(transport_security)
+    return server_in_docker_jobspec(server_run_script, server_cmd_args_as_env, shortname=shortname)
 
 
 def fake_grpclb_jobspec(transport_security, fake_backend_port, shortname):
-    server_cmd_args = [
-            os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc', 'interop', 'grpclb', 'fake_grpclb'),
-            '--port=%s' % _DEFAULT_SERVER_PORT,
-            '--backend_port=%s' % fake_backend_port,
-            ] + transport_security_to_args(transport_security)
+    """Create jobspec for running a fake grpclb server"""
+    server_run_script = os.path.join(
+            'tools', 'run_tests', 'helper_scripts', 'run_fake_grpclb_server.sh')
+    server_cmd_args_as_env = [
+            'GRPCLB_TEST_FLAG_port=%s' % _DEFAULT_SERVER_PORT,
+            'GRPCLB_TEST_FLAG_backend_port=%s' % fake_backend_port,
+    ] + transport_security_to_env(transport_security)
+    return server_in_docker_jobspec(server_run_script, server_cmd_args_as_env, shortname=shortname)
+
+
+def server_in_docker_jobspec(server_run_script, server_run_script_args_as_env, shortname):
+    # All of the servers in this test are grpc-go servers.
+    dockerfile_dir = os.path.join(
+            'tools',
+            'dockerfile',
+            'grpclb_interop_servers',
+            'fake_balancer_and_backend_and_fallback')
     container_name = dockerjob.random_name(shortname)
-    environ = {
-            'GRPC_GO_LOG_VERBOSITY_LEVEL': '3',
-            'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO',
+    build_and_run_docker_env = {
+            'DOCKERFILE_DIR': dockerfile_dir,
+            'DOCKER_RUN_SCRIPT': server_run_script,
+            'CONTAINER_NAME': container_name,
             }
-    return server_in_docker_jobspec(server_cmd_args, docker_image='go_servers', container_name=container_name, environ=environ, shortname=shortname)
-
-
-def server_in_docker_jobspec(cmdline, docker_image, container_name, environ, shortname):
-    docker_args = ['--name=%s' % container_name]
-    docker_args += ['-p', str(_DEFAULT_SERVER_PORT)]
-    docker_cmdline = docker_run_cmdline(
-        cmdline,
-        image=docker_image,
-        environ=environ,
-        docker_args=docker_args)
+    docker_args = ['-p', str(_DEFAULT_SERVER_PORT)]
+    # Environment variables for "server_run_script"
+    for env_setting in server_run_script_args_as_env:
+        docker_args += ['-e', env_setting]
+    docker_args += [
+            '-e', 'GRPC_GO_LOG_VERBOSITY_LEVEL=3',
+            '-e', 'GRPC_GO_LOG_SEVERITY_LEVEL=INFO',
+            ]
+    # Remove the container after the server is done running,
+    # even if the container is "docker kill"'d.
+    docker_args += ['--rm']
     server_job = jobset.JobSpec(
-        cmdline=docker_cmdline,
-        environ=environ,
-        shortname=shortname,
-        timeout_seconds=30 * 60,
+        cmdline=['tools/run_tests/dockerize/build_and_run_docker.sh'] +
+        docker_args,
+        environ=build_and_run_docker_env,
+        shortname='fake_grpclb_interop_sever.%s' % (shortname),
+        timeout_seconds=_TEST_TIMEOUT,
         verbose_success=True)
     server_job.container_name = container_name
     return server_job
@@ -270,9 +317,16 @@ argp.add_argument(
     '-l',
     '--language',
     choices=['all'] + sorted(_LANGUAGES),
-    nargs='+',
-    default=['all'],
+    type=str,
+    default='all',
     help='Clients to run.')
+argp.add_argument(
+    '-t',
+    '--test_case',
+    choices=['all'] + sorted(map(lambda t: t[0], _TEST_CASES)),
+    type=str,
+    default='all',
+    help='Test cases to run.')
 argp.add_argument('-j', '--jobs', default=multiprocessing.cpu_count(), type=int)
 argp.add_argument(
     '--transport_security',
@@ -288,7 +342,7 @@ argp.add_argument(
     type=str,
     help='This is for iterative manual runs. Setting this skips the docker image build step and runs the client from the named image. Only supports running a one client language.')
 argp.add_argument(
-    '--save_images',
+    '--save_image',
     default=False,
     type=bool,
     nargs='?',
@@ -296,12 +350,21 @@ argp.add_argument(
     help='This is for iterative manual runs. Skip docker image removal.')
 args = argp.parse_args()
 
-languages = _LANGUAGES.keys()
+if args.language == 'all':
+    languages = _LANGUAGES
+else:
+    languages = {}
+    languages[args.language] = _LANGUAGES[args.language]
+
+if args.test_case == 'all':
+    test_cases = _TEST_CASES
+else:
+    test_cases = _TEST_CASES[args.test_case]
 
 docker_images = {}
 
 build_jobs = []
-for lang_name in _LANGUAGES.keys():
+for lang_name in languages:
     l = _LANGUAGES[lang_name]
     if args.image_tag is None:
         job = build_interop_image_jobspec(l)
@@ -360,13 +423,16 @@ try:
     print('sleep 3 seconds - HACK')
     time.sleep(3)
     jobs = []
-    for lang_name in _LANGUAGES.keys():
-        test_job = lb_client_interop_jobspec(
-            _LANGUAGES[lang_name],
-            fake_grpclb_port,
-            docker_image=docker_images.get(l.safename),
-            transport_security=args.transport_security)
-        jobs.append(test_job)
+    for lang_name in languages.keys():
+        for t in test_cases:
+            test_job = lb_client_interop_jobspec(
+                _LANGUAGES[lang_name],
+                fake_grpclb_port=fake_grpclb_port,
+                fake_fallback_port=fake_fallback_port,
+                docker_image=docker_images.get(l.safename),
+                test_case=t,
+                transport_security=args.transport_security)
+            jobs.append(test_job)
     print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
     num_failures, resultset = jobset.run(
         jobs,
@@ -392,7 +458,13 @@ finally:
         if not job.is_running():
             print('Server "%s" has exited prematurely.' % server)
     dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=suppress_server_logs)
-    if not args.save_images and args.image_tag is None:
+    if not args.save_image and args.image_tag is None:
         for image in six.itervalues(docker_images):
             print('Removing docker image %s' % image)
             dockerjob.remove_image(image)
+    else:
+        if len(docker_images.keys()) > 1:
+            print('Warning: test saved docker images, but more than one client docker image was used, which is unsupported')
+        else:
+            image_tag = docker_images[docker_images.keys()[0]]
+            print('Saved docker image has tag:|%s|\nTo re-run this test and avoid re-building the client, pass this tag to --image' % image_tag)

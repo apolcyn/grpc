@@ -1,0 +1,10 @@
+resolver_tests_common_zone_name: test.google.fr.
+# The balancer a/aaaa record pointed to by the SRV record
+# doesn't exist. The client should fall back to the
+# "fallback" server.
+resolver_component_tests:
+- records:
+    _grpclb._tcp.server:
+    - {TTL: '2100', data: 0 0 443 non-existant-a-record, type: SRV}
+    server:
+    - {TTL: '2100', data: 127.0.0.1, type: A}

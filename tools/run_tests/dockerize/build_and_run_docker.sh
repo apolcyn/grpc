@@ -28,6 +28,8 @@ cd -
 # OUTPUT_DIR - Directory that will be copied from inside docker after finishing.
 # DOCKERHUB_ORGANIZATION - If set, pull a prebuilt image from given dockerhub org.
 # DOCKER_BASE_IMAGE - If set, pull the latest base image.
+# CONTAINER_NAME - If set, this will be the docker container name. Otherwise this
+#                  script will generate a random one.
 # $@ - Extra args to pass to docker run
 
 # Use image name based on Dockerfile location checksum
@@ -48,8 +50,11 @@ else
   docker build -t "$DOCKER_IMAGE_NAME" "$DOCKERFILE_DIR"
 fi
 
-# Choose random name for docker container
-CONTAINER_NAME="build_and_run_docker_$(uuidgen)"
+if [ "$CONTAINER_NAME" == "" ]
+then
+  # Choose random name for docker container
+  CONTAINER_NAME="build_and_run_docker_$(uuidgen)"
+fi
 
 # Run command inside docker
 # TODO: use a proper array instead of $EXTRA_DOCKER_ARGS

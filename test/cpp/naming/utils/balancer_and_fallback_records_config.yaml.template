@@ -1,0 +1,11 @@
+resolver_tests_common_zone_name: test.google.fr.
+# Both balancer and fallback records exist.
+# The client should prefer to balancer.
+resolver_component_tests:
+- records:
+    _grpclb._tcp.server:
+    - {TTL: '2100', data: 0 0 %(grpclb_port)d balancer, type: SRV}
+    balancer:
+    - {TTL: '2100', data: 127.0.0.1, type: A}
+    server:
+    - {TTL: '2100', data: 127.0.0.1, type: A}
