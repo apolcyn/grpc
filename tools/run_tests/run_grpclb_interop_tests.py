@@ -350,6 +350,11 @@ argp.add_argument(
     help='This is for iterative manual runs. Skip docker image removal.')
 args = argp.parse_args()
 
+if os.environ.get('DOCKERHUB_ORGANIZATION') is None:
+  print(('DOCKERHUB_ORGANIZATION not set. '
+         'This test should be pulling server docker images'))
+  sys.exit(1)
+
 if args.language == 'all':
     languages = _LANGUAGES
 else:
