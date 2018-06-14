@@ -58,7 +58,7 @@ class CXXLanguage:
         return ['bins/opt/interop_client'] + args
 
     def global_env(self):
-        return {'GRPC_DNS_RESOLVER=ares'}
+        return {'GRPC_DNS_RESOLVER': 'ares'}
 
     def __str__(self):
         return 'c++'

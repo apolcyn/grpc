@@ -81,7 +81,7 @@ void UpdateActions(
 
 std::shared_ptr<Channel> CreateChannelForTestCase(
     const grpc::string& test_case) {
-  GPR_ASSERT(FLAGS_server_port);
+  GPR_ASSERT(FLAGS_server_uri.size() > 0 || (FLAGS_server_host.size() > 0 && FLAGS_server_port));
   std::string server_uri;
   if (FLAGS_server_uri.size() > 0) {
     server_uri = FLAGS_server_uri;
