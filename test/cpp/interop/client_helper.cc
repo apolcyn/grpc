@@ -41,6 +41,7 @@ DECLARE_string(custom_credentials_type);
 DECLARE_bool(use_test_ca);
 DECLARE_int32(server_port);
 DECLARE_string(server_host);
+DECLARE_string(FLAGS_server_uri);
 DECLARE_string(server_host_override);
 DECLARE_string(test_case);
 DECLARE_string(default_service_account);
@@ -81,10 +82,14 @@ void UpdateActions(
 std::shared_ptr<Channel> CreateChannelForTestCase(
     const grpc::string& test_case) {
   GPR_ASSERT(FLAGS_server_port);
-  const int host_port_buf_size = 1024;
-  char host_port[host_port_buf_size];
-  snprintf(host_port, host_port_buf_size, "%s:%d", FLAGS_server_host.c_str(),
-           FLAGS_server_port);
+  if (FLAGS_server_uri.size() > 0) {
+    server_uri = FLAGS_server_uri;
+  } else {
+    const int server_uri_buf_size = 1024;
+    char server_uri[server_uri_buf_size];
+    snprintf(server_uri, server_uri_buf_size, "%s:%d", FLAGS_server_host.c_str(),
+             FLAGS_server_port);
+  }
 
   std::shared_ptr<CallCredentials> creds;
   if (test_case == "compute_engine_creds") {
@@ -106,10 +111,10 @@ std::shared_ptr<Channel> CreateChannelForTestCase(
   if (FLAGS_custom_credentials_type.empty()) {
     transport_security security_type =
         FLAGS_use_alts ? ALTS : (FLAGS_use_tls ? TLS : INSECURE);
-    return CreateTestChannel(host_port, FLAGS_server_host_override,
+    return CreateTestChannel(server_uri, FLAGS_server_host_override,
                              security_type, !FLAGS_use_test_ca, creds);
   } else {
-    return CreateTestChannel(host_port, FLAGS_custom_credentials_type, creds);
+    return CreateTestChannel(server_uri, FLAGS_custom_credentials_type, creds);
   }
 }
 
