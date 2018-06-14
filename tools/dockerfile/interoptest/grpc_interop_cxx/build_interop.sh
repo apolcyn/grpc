@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Builds C++ interop server and client in a base image.
-set -e
+set -ex
 
 mkdir -p /var/local/git
 git clone /var/local/jenkins/grpc /var/local/git/grpc
