@@ -41,7 +41,7 @@ DECLARE_string(custom_credentials_type);
 DECLARE_bool(use_test_ca);
 DECLARE_int32(server_port);
 DECLARE_string(server_host);
-DECLARE_string(FLAGS_server_uri);
+DECLARE_string(server_uri);
 DECLARE_string(server_host_override);
 DECLARE_string(test_case);
 DECLARE_string(default_service_account);
