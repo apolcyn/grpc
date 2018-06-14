@@ -38,10 +38,9 @@ DEFINE_string(custom_credentials_type, "", "User provided credentials type.");
 DEFINE_bool(use_test_ca, false, "False to use SSL roots for google");
 DEFINE_int32(server_port, 0, "Server port.");
 DEFINE_string(server_host, "localhost", "Server host to connect to");
-DEFINE_int32(server_uri, "", "If set, then this is passed through as the channel target.");
-DEFINE_string(server_host, "localhost", "Server host to connect to");
 DEFINE_string(server_host_override, "foo.test.google.fr",
               "Override the server host which is sent in HTTP header");
+DEFINE_string(server_uri, "", "If set, then this is passed through as the channel target.");
 DEFINE_string(
     test_case, "large_unary",
     "Configure different test cases. Valid options are:\n\n"

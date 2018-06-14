@@ -82,13 +82,11 @@ void UpdateActions(
 std::shared_ptr<Channel> CreateChannelForTestCase(
     const grpc::string& test_case) {
   GPR_ASSERT(FLAGS_server_port);
+  std::string server_uri;
   if (FLAGS_server_uri.size() > 0) {
     server_uri = FLAGS_server_uri;
   } else {
-    const int server_uri_buf_size = 1024;
-    char server_uri[server_uri_buf_size];
-    snprintf(server_uri, server_uri_buf_size, "%s:%d", FLAGS_server_host.c_str(),
-             FLAGS_server_port);
+    server_uri = FLAGS_server_host + ":" + std::to_string(FLAGS_server_port);
   }
 
   std::shared_ptr<CallCredentials> creds;
