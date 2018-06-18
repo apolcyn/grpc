@@ -57,7 +57,7 @@ static bool windows_source_addr_factory_get_source_addr(
   SOCKET s = socket(((struct sockaddr_in6*)dest_addr)->sin6_family, SOCK_DGRAM,
                     IPPROTO_UDP);
   if (s != INVALID_SOCKET) {
-    if (connect(s, (struct sockaddr*)dest_addr, dest_addr->len) == 0) {
+    if (connect(s, (struct sockaddr*)dest_addr, (int)dest_addr->len) == 0) {
       address_sorting_address found_source_addr;
       memset(&found_source_addr, 0, sizeof(found_source_addr));
       found_source_addr.len = sizeof(found_source_addr.addr);
