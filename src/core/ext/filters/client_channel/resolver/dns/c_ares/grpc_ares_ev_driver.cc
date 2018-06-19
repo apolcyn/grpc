@@ -72,6 +72,8 @@ struct grpc_ares_ev_driver {
   bool working;
   /** is this event driver being shut down */
   bool shutting_down;
+  /** Owned by the ev_driver. Creates new GrpcPolledFd's */
+  grpc_core::GrpcPolledFdFactory* polled_fd_factory;
 };
 
 static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver);
@@ -90,6 +92,7 @@ static void grpc_ares_ev_driver_unref(grpc_ares_ev_driver* ev_driver) {
     GPR_ASSERT(ev_driver->fds == nullptr);
     GRPC_COMBINER_UNREF(ev_driver->combiner, "free ares event driver");
     ares_destroy(ev_driver->channel);
+    grpc_core::Delete(ev_driver->polled_fd_factory);
     gpr_free(ev_driver);
   }
 }
@@ -99,7 +102,8 @@ static void fd_node_destroy_locked(fd_node* fdn) {
   GPR_ASSERT(!fdn->readable_registered);
   GPR_ASSERT(!fdn->writable_registered);
   GPR_ASSERT(fdn->already_shutdown);
-  grpc_core::Delete(fdn->grpc_polled_fd);
+  fdn->ev_driver->polled_fd_factory->DestroyGrpcPolledFdLocked(
+      fdn->grpc_polled_fd);
   gpr_free(fdn);
 }
 
@@ -120,7 +124,6 @@ grpc_error* grpc_ares_ev_driver_create_locked(grpc_ares_ev_driver** ev_driver,
   memset(&opts, 0, sizeof(opts));
   opts.flags |= ARES_FLAG_STAYOPEN;
   int status = ares_init_options(&(*ev_driver)->channel, &opts, ARES_OPT_FLAGS);
-  grpc_core::ConfigureAresChannelLocked(&(*ev_driver)->channel);
   gpr_log(GPR_DEBUG, "grpc_ares_ev_driver_create_locked");
   if (status != ARES_SUCCESS) {
     char* err_msg;
@@ -137,6 +140,10 @@ grpc_error* grpc_ares_ev_driver_create_locked(grpc_ares_ev_driver** ev_driver,
   (*ev_driver)->fds = nullptr;
   (*ev_driver)->working = false;
   (*ev_driver)->shutting_down = false;
+  (*ev_driver)->polled_fd_factory =
+      grpc_core::NewGrpcPolledFdFactory((*ev_driver)->combiner);
+  (*ev_driver)
+      ->polled_fd_factory->ConfigureAresChannelLocked((*ev_driver)->channel);
   return GRPC_ERROR_NONE;
 }
 
@@ -239,8 +246,9 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
         // Create a new fd_node if sock[i] is not in the fd_node list.
         if (fdn == nullptr) {
           fdn = static_cast<fd_node*>(gpr_malloc(sizeof(fd_node)));
-          fdn->grpc_polled_fd = grpc_core::NewGrpcPolledFdLocked(
-              socks[i], ev_driver->pollset_set);
+          fdn->grpc_polled_fd =
+              ev_driver->polled_fd_factory->NewGrpcPolledFdLocked(
+                  socks[i], ev_driver->pollset_set, ev_driver->combiner);
           gpr_log(GPR_DEBUG, "new fd: %s", fdn->grpc_polled_fd->GetName());
           fdn->ev_driver = ev_driver;
           fdn->readable_registered = false;
