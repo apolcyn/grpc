@@ -63,7 +63,10 @@ static void async_connect_unlock_and_cleanup(async_connect* ac,
     gpr_free(ac->addr_name);
     gpr_free(ac);
   }
-  if (socket != NULL) grpc_winsocket_destroy(socket);
+  if (socket != NULL) {
+    gpr_log(GPR_DEBUG, "APOLCYN - winsocket destroy on %" PRIdPTR " called from tcp windows", grpc_winsocket_wrapped_socket(socket));
+    grpc_winsocket_destroy(socket);
+  }
 }
 
 static void on_alarm(void* acp, grpc_error* error) {
@@ -219,6 +222,7 @@ failure:
       GRPC_ERROR_STR_TARGET_ADDRESS, grpc_slice_from_copied_string(target_uri));
   GRPC_ERROR_UNREF(error);
   if (socket != NULL) {
+    gpr_log(GPR_DEBUG, "APOLCYN - winsocket destroy on %" PRIdPTR " called from tcp windows", grpc_winsocket_wrapped_socket(socket));
     grpc_winsocket_destroy(socket);
   } else if (sock != INVALID_SOCKET) {
     closesocket(sock);

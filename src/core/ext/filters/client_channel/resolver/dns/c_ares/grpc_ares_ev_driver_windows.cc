@@ -77,9 +77,12 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     has_gotten_into_driver_list_ = false;
     read_closure_ = nullptr;
     write_closure_ = nullptr;
+    destroyed_ = false;
   }
 
   ~GrpcPolledFdWindows() {
+    gpr_log(GPR_DEBUG, "destroy called on %s. destroyed already?: %d", name_, destroyed_);
+    destroyed_ = true;
     GRPC_COMBINER_UNREF(combiner_, name_);
     grpc_slice_unref_internal(read_buf_);
     grpc_slice_unref_internal(write_buf_);
@@ -366,6 +369,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   WriteState write_state_;
   char* name_;
   bool has_gotten_into_driver_list_;
+  bool destroyed_;
 };
 
 struct SockToPolledFdEntry {
@@ -482,9 +486,12 @@ class SockToPolledFdMap {
       polled_fd->ShutdownLocked(GRPC_ERROR_CREATE_FROM_STATIC_STRING(
           "Shut down c-ares fd before without it ever having made it into the "
           "driver's list"));
+      gpr_log(GPR_DEBUG, "CloseSocket called. destroying fd");
+      grpc_core::Delete(polled_fd);
       return 0;
+    } else {
+      gpr_log(GPR_DEBUG, "CloseSocket called. skipping destroy fd");
     }
-    grpc_core::Delete(polled_fd);
     return 0;
   }
 
@@ -512,7 +519,7 @@ class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
                                       grpc_combiner* combiner) override {
     GrpcPolledFdWindows* polled_fd = sock_to_polled_fd_map_->LookupPolledFd(as);
     // Set a flag so that the virtual socket "close" function knows it
-    // it doesn't need to call ShutdownLocked, since the now driver will.
+    // it doesn't need to call ShutdownLocked, since the driver will.
     polled_fd->OnGottenIntoDriverList();
     return polled_fd;
   }
@@ -522,8 +529,9 @@ class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
                               sock_to_polled_fd_map_.get());
   }
 
-  // On windows, GrpcPolledFd's are destroyed when "closed" by c-ares
-  void DestroyGrpcPolledFdLocked(GrpcPolledFd* polled_fd) override {}
+  void DestroyGrpcPolledFdLocked(GrpcPolledFd* polled_fd) override {
+    grpc_core::Delete(polled_fd);
+  }
 
  private:
   grpc_core::UniquePtr<SockToPolledFdMap> sock_to_polled_fd_map_;

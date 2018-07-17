@@ -107,6 +107,16 @@ void grpc_winsocket_destroy(grpc_winsocket* winsocket) {
   GPR_ASSERT(!winsocket->destroy_called);
   winsocket->destroy_called = true;
   bool should_destroy = check_destroyable(winsocket);
+  gpr_log(GPR_DEBUG, "APOLCYN - grpc_winsocket destroy called: %ld. shoud destroy:%d", 
+          grpc_winsocket_wrapped_socket(winsocket),
+          should_destroy);
+  if (!should_destroy) {
+    gpr_log(GPR_DEBUG, "APOLCYN - SHOULD NOT DESTROY. write info closure: %" PRIdPTR ". read info closure: %" PRIdPTR,
+            winsocket->write_info.closure,
+            winsocket->read_info.closure);
+  } else {
+    gpr_log(GPR_DEBUG, "APOLCYN - SHOULD DESTROY.");
+  }
   gpr_mu_unlock(&winsocket->state_mu);
   if (should_destroy) destroy(winsocket);
 }
@@ -148,6 +158,9 @@ void grpc_socket_become_ready(grpc_winsocket* socket,
     info->has_pending_iocp = 1;
   }
   bool should_destroy = check_destroyable(socket);
+  if (should_destroy) {
+    gpr_log(GPR_DEBUG, "APOLCYN - socket become ready on %" PRIdPTR ". should destroy it", grpc_winsocket_wrapped_socket(socket));
+  }
   gpr_mu_unlock(&socket->state_mu);
   if (should_destroy) destroy(socket);
 }

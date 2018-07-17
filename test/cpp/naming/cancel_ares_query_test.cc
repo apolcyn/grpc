@@ -146,10 +146,10 @@ void PollPollsetUntilRequestDone(ArgsStruct* args) {
   while (true) {
     bool done = gpr_atm_acq_load(&args->done_atm) != 0;
     if (done) {
+      gpr_log(GPR_DEBUG, "APOLCYN - DONE with PollPollsetUntilRequestDone");
       break;
     }
     grpc_pollset_worker* worker = nullptr;
-    grpc_core::ExecCtx exec_ctx;
     gpr_mu_lock(args->mu);
     GRPC_LOG_IF_ERROR(
         "pollset_work",
@@ -157,6 +157,7 @@ void PollPollsetUntilRequestDone(ArgsStruct* args) {
                           grpc_timespec_to_millis_round_up(
                               gpr_inf_future(GPR_CLOCK_REALTIME))));
     gpr_mu_unlock(args->mu);
+    grpc_core::ExecCtx::Get()->Flush();
   }
 }
 
@@ -203,23 +204,27 @@ TEST(CancelDuringAresQuery, TestCancelActiveDNSQuery) {
 }
 
 TEST(CancelDuringAresQuery, TestFdsAreDeletedFromPollsetSet) {
-  grpc_core::ExecCtx exec_ctx;
-  ArgsStruct args;
-  ArgsInit(&args);
-  // Add fake_other_pollset_set into the mix to test
-  // that we're explicitly deleting fd's from their pollset.
-  // If we aren't doing so, then the remaining presence of
-  // "fake_other_pollset_set" after the request is done and the resolver
-  // pollset set is destroyed should keep the resolver's fd alive and
-  // fail the test.
-  grpc_pollset_set* fake_other_pollset_set = grpc_pollset_set_create();
-  grpc_pollset_set_add_pollset_set(fake_other_pollset_set, args.pollset_set);
-  // Note that running the cancellation c-ares test is somewhat irrelevant for
-  // this test. This test only cares about what happens to fd's that c-ares
-  // opens.
-  TestCancelActiveDNSQuery(&args);
+  {
+    grpc_core::ExecCtx exec_ctx;
+    ArgsStruct args;
+    ArgsInit(&args);
+    // Add fake_other_pollset_set into the mix to test
+    // that we're explicitly deleting fd's from their pollset.
+    // If we aren't doing so, then the remaining presence of
+    // "fake_other_pollset_set" after the request is done and the resolver
+    // pollset set is destroyed should keep the resolver's fd alive and
+    // fail the test.
+    grpc_pollset_set* fake_other_pollset_set = grpc_pollset_set_create();
+    grpc_pollset_set_add_pollset_set(fake_other_pollset_set, args.pollset_set);
+    // Note that running the cancellation c-ares test is somewhat irrelevant for
+    // this test. This test only cares about what happens to fd's that c-ares
+    // opens.
+    TestCancelActiveDNSQuery(&args);
+    grpc_core::ExecCtx::Get()->Flush();
+    // TODO: move back
+    grpc_pollset_set_destroy(fake_other_pollset_set);
+  }
   EXPECT_EQ(grpc_iomgr_count_objects_for_testing(), 0u);
-  grpc_pollset_set_destroy(fake_other_pollset_set);
 }
 
 TEST(CancelDuringAresQuery,

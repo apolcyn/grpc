@@ -128,6 +128,7 @@ typedef struct grpc_tcp {
 } grpc_tcp;
 
 static void tcp_free(grpc_tcp* tcp) {
+  gpr_log(GPR_DEBUG, "APOLCYN = winsocket destroy called from tcp free");
   grpc_winsocket_destroy(tcp->socket);
   gpr_mu_destroy(&tcp->mu);
   gpr_free(tcp->peer_string);
