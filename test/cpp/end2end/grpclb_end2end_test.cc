@@ -663,6 +663,42 @@ TEST_F(SingleBalancerTest, Vanilla) {
   EXPECT_EQ("grpclb", channel_->GetLoadBalancingPolicyName());
 }
 
+// This test sometimes fails
+TEST_F(SingleBalancerTest, BadBackendConnectionsMultipleBackendsFailsFast) {
+  SetNextResolutionAllBalancers();
+  std::vector<int> bogus_backend_ports = {10, 20, 30, 40};
+  ScheduleResponseForBalancer(
+      0, BalancerServiceImpl::BuildResponseForBackends(bogus_backend_ports, {}),
+      0);
+  gpr_log(GPR_DEBUG, "Send an RPC and expected failure");
+  EchoResponse response;
+  int timeout_ms = 1000 * 10;
+  const Status status = SendRpc(&response, timeout_ms);
+  EXPECT_EQ(StatusCode::UNAVAILABLE, status.error_code());
+  balancers_[0]->NotifyDoneWithServerlists();
+  EXPECT_EQ(1U, balancer_servers_[0].service_->request_count());
+  EXPECT_EQ(1U, balancer_servers_[0].service_->response_count());
+  EXPECT_EQ("grpclb", channel_->GetLoadBalancingPolicyName());
+}
+
+// This test always passes
+TEST_F(SingleBalancerTest, BadBackendConnectionsSingleBackendFailsFast) {
+  SetNextResolutionAllBalancers();
+  std::vector<int> bogus_backend_port = {100};
+  ScheduleResponseForBalancer(
+      0, BalancerServiceImpl::BuildResponseForBackends(bogus_backend_port, {}),
+      0);
+  gpr_log(GPR_DEBUG, "Send an RPC and expected failure");
+  EchoResponse response;
+  int timeout_ms = 1000 * 10;
+  const Status status = SendRpc(&response, timeout_ms);
+  EXPECT_EQ(StatusCode::UNAVAILABLE, status.error_code());
+  balancers_[0]->NotifyDoneWithServerlists();
+  EXPECT_EQ(1U, balancer_servers_[0].service_->request_count());
+  EXPECT_EQ(1U, balancer_servers_[0].service_->response_count());
+  EXPECT_EQ("grpclb", channel_->GetLoadBalancingPolicyName());
+}
+
 TEST_F(SingleBalancerTest, SecureNaming) {
   ResetStub(0, kApplicationTargetName_ + ";lb");
   SetNextResolution({AddressData{balancer_servers_[0].port_, true, "lb"}});
