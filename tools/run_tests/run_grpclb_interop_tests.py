@@ -163,7 +163,7 @@ def transport_security_to_args(transport_security):
 
 
 def lb_client_interop_jobspec(language,
-                      fake_dns_server_port,
+                      fake_dns_server_ip,
                       docker_image,
                       transport_security='tls'):
     """Creates jobspec for cloud-to-cloud interop test"""
@@ -181,7 +181,7 @@ def lb_client_interop_jobspec(language,
         image=docker_image,
         environ=environ,
         cwd=language.client_cwd,
-        docker_args=['--dns=127.0.0.1:%d' % int(fake_dns_server_port),
+        docker_args=['--dns=%s' % fake_dns_server_ip,
                      '--net=host',
                      '--name=%s' % container_name])
     jobset.message('IDLE', 'docker_cmdline:\b|%s|' % ' '.join(docker_cmdline), do_newline=True)
@@ -353,29 +353,29 @@ if build_jobs:
             dockerjob.remove_image(image, skip_nonexistent=True)
         sys.exit(1)
 
-def wait_until_dns_server_is_up(fake_dns_server_port):
+def wait_until_dns_server_is_up(fake_dns_server_ip):
   for i in range(0, 30):
-    test_runner_log('Health check: attempt to connect to DNS server over TCP.')
+    print('Health check: attempt to connect to DNS server over TCP.')
     tcp_connect_subprocess = subprocess.Popen([
         os.path.join(os.getcwd(), 'test/cpp/naming/utils/tcp_connect.py'),
-        '--server_host', '127.0.0.1',
-        '--server_port', str(fake_dns_server_port),
+        '--server_host', fake_dns_server_ip,
+        '--server_port', str(53), 
         '--timeout', str(1)])
     tcp_connect_subprocess.communicate()
     if tcp_connect_subprocess.returncode == 0:
-      test_runner_log(('Health check: attempt to make an A-record '
-                       'query to DNS server.'))
+      print(('Health check: attempt to make an A-record '
+             'query to DNS server.'))
       dns_resolver_subprocess = subprocess.Popen([
           os.path.join(os.getcwd(), 'test/cpp/naming/utils/dns_resolver.py'),
           '--qname', 'health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp',
-          '--server_host', '127.0.0.1',
-          '--server_port', str(fake_dns_server_port)],
+          '--server_host', fake_dns_server_ip,
+          '--server_port', str(53)],
           stdout=subprocess.PIPE)
       dns_resolver_stdout, _ = dns_resolver_subprocess.communicate()
       if dns_resolver_subprocess.returncode == 0:
         if '123.123.123.123' in dns_resolver_stdout:
-          test_runner_log(('DNS server is up! '
-                           'Successfully reached it over UDP and TCP.'))
+          print(('DNS server is up! '
+                 'Successfully reached it over UDP and TCP.'))
           return
     time.sleep(0.1)
   raise Exception(('Failed to reach DNS server over TCP and/or UDP. '
@@ -413,15 +413,24 @@ try:
     fake_dns_server_spec = dns_server_in_docker_jobspec(fake_grpclb_port, fake_dns_server_shortname)
     fake_dns_server_job = dockerjob.DockerJob(fake_dns_server_spec)
     server_jobs[fake_dns_server_shortname] = fake_dns_server_job
-    fake_dns_server_port = fake_dns_server_job.mapped_port(_DEFAULT_SERVER_PORT)
+    # Get the IP address of the docker container running the DNS server
+    # (and not the port). The DNS server is running on port 53 of
+    # that IP address. We need to use the DNS server's IP address
+    # rather than port because we will
+    # point the DNS resolvers of grpc clients under test to our
+    # controlled DNS server by modifying the /etc/resolve.conf "nameserver"
+    # lists of their docker containers, and /etc/resolv.conf
+    # "nameserver" lists don't support port number specification
+    # (port 53 is always assumed).
+    fake_dns_server_ip = fake_dns_server_job.ip_address()
     print('sleep 3 seconds - HACK')
-    wait_until_dns_server_is_up(fake_dns_server_port)
+    wait_until_dns_server_is_up(fake_dns_server_ip)
     # Run clients
     jobs = []
     for lang_name in _LANGUAGES.keys():
         test_job = lb_client_interop_jobspec(
             _LANGUAGES[lang_name],
-            fake_dns_server_port,
+            fake_dns_server_ip,
             docker_image=docker_images.get(l.safename),
             transport_security=args.transport_security)
         jobs.append(test_job)

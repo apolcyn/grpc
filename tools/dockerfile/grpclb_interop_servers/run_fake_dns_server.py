@@ -8,6 +8,8 @@ import sys
 import time
 import signal
 
+_CONVENTIONAL_DNS_SERVER_PORT = 53
+
 # Read in args passed in as env variables
 port = int(os.environ.get('PORT'))
 records_config_template_path = os.environ.get('RECORDS_CONFIG_TEMPLATE_PATH')
@@ -24,8 +26,7 @@ sys.stderr.write(records_config)
 sys.stderr.write('======================================\n')
 
 # Run the DNS server
-with open(dns_server_subprocess_output, 'w') as l:
-  subprocess.check_output([
-    '/var/local/git/grpc/test/cpp/naming/utils/dns_server.py',
-    '--port', str(port),
-    '--records_config_path', records_config_path])
+subprocess.check_output([
+  '/var/local/git/grpc/test/cpp/naming/utils/dns_server.py',
+  '--port=%d' % _CONVENTIONAL_DNS_SERVER_PORT,
+  '--records_config_path', records_config_path])
