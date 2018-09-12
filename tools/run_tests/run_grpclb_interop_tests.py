@@ -163,7 +163,7 @@ def transport_security_to_args(transport_security):
 
 
 def lb_client_interop_jobspec(language,
-                      fake_grpclb_port,
+                      fake_dns_server_port,
                       docker_image,
                       transport_security='tls'):
     """Creates jobspec for cloud-to-cloud interop test"""
@@ -172,28 +172,17 @@ def lb_client_interop_jobspec(language,
         '--server_port=443',
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
-    client_args = ' '.join(language.client_cmd(interop_only_options))
-    within_docker_cmdline = bash_cmdline(
-        [os.path.join(_DNS_SCRIPTS, _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER)] + [
-            '--grpclb_port=%s' % fake_grpclb_port,
-            '--client_args=\"%s\"' % client_args,
-            '--records_config_template_path=%s' % os.path.join(_DNS_SCRIPTS, 'records_config.yaml.template'),
-            '--dns_server_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_server.py'),
-            '--dns_resolver_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'dns_resolver.py'),
-            '--tcp_connect_bin_path=%s' % os.path.join(_DNS_SCRIPTS, 'tcp_connect.py'),
-        ]
-    )
+    client_args = language.client_cmd(interop_only_options)
     environ = language.global_env()
     container_name = dockerjob.random_name(
         'lb_interop_client_%s' % language.safename)
     docker_cmdline = docker_run_cmdline(
-        within_docker_cmdline,
+        client_args,
         image=docker_image,
         environ=environ,
         cwd=language.client_cwd,
-        docker_args=['--dns=127.0.0.1',
+        docker_args=['--dns=127.0.0.1:%d' % int(fake_dns_server_port),
                      '--net=host',
-                     '-v', '%s:%s:ro' % (os.path.join(os.getcwd(), 'test', 'cpp', 'naming', 'utils'), _DNS_SCRIPTS),
                      '--name=%s' % container_name])
     jobset.message('IDLE', 'docker_cmdline:\b|%s|' % ' '.join(docker_cmdline), do_newline=True)
     test_job = jobset.JobSpec(
@@ -209,9 +198,8 @@ def lb_client_interop_jobspec(language,
 
 def backend_or_fallback_server_jobspec(transport_security, shortname):
     """Create jobspec for running a fallback or backend server"""
-    return server_in_docker_jobspec(
+    return grpc_server_in_docker_jobspec(
         server_run_script='tools/dockerfile/grpclb_interop_servers/run_fake_backend_or_fallback_server.sh',
-        port=_DEFAULT_SERVER_PORT,
         backend_port=None,
         transport_security=transport_security,
         shortname=shortname)
@@ -219,22 +207,21 @@ def backend_or_fallback_server_jobspec(transport_security, shortname):
 
 def fake_grpclb_jobspec(transport_security, fake_backend_port, shortname):
     """Create jobspec for running a server"""
-    return server_in_docker_jobspec(
+    return grpc_server_in_docker_jobspec(
         server_run_script='tools/dockerfile/grpclb_interop_servers/run_fake_grpclb_server.sh',
-        port=_DEFAULT_SERVER_PORT,
         backend_port=fake_backend_port,
         transport_security=transport_security,
         shortname=shortname)
 
 
-def server_in_docker_jobspec(server_run_script, port, backend_port, transport_security, shortname):
+def grpc_server_in_docker_jobspec(server_run_script, backend_port, transport_security, shortname):
     container_name = dockerjob.random_name(shortname)
     build_and_run_docker_cmdline = (
         'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
     docker_extra_args = '-p=%s ' % str(_DEFAULT_SERVER_PORT)
     docker_extra_args += '-e GRPC_GO_LOG_VERBOSITY_LEVEL=3 '
     docker_extra_args += '-e GRPC_GO_LOG_SEVERITY_LEVEL=INFO '
-    docker_extra_args += '-e PORT=%s ' % port
+    docker_extra_args += '-e PORT=%s ' % _DEFAULT_SERVER_PORT
     if backend_port is not None:
       docker_extra_args += '-e BACKEND_PORT=%s ' % backend_port
     if transport_security == 'alts':
@@ -247,6 +234,29 @@ def server_in_docker_jobspec(server_run_script, port, backend_port, transport_se
       'CONTAINER_NAME': container_name,
       'DOCKERFILE_DIR': 'tools/dockerfile/grpclb_interop_servers',
       'DOCKER_RUN_SCRIPT': server_run_script,
+      'EXTRA_DOCKER_ARGS': docker_extra_args,
+    }
+    server_job = jobset.JobSpec(
+        cmdline=build_and_run_docker_cmdline,
+        environ=build_and_run_docker_environ,
+        shortname=shortname,
+        timeout_seconds=30 * 60,
+        verbose_success=True)
+    server_job.container_name = container_name
+    return server_job
+
+
+def dns_server_in_docker_jobspec(fake_grpclb_port, shortname):
+    container_name = dockerjob.random_name(shortname)
+    build_and_run_docker_cmdline = (
+        'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
+    docker_extra_args = '-p=%s ' % str(_DEFAULT_SERVER_PORT)
+    docker_extra_args += '-e PORT=%s ' % _DEFAULT_SERVER_PORT 
+    docker_extra_args += '-e FAKE_GRPCLB_PORT=%s ' % fake_grpclb_port
+    build_and_run_docker_environ = {
+      'CONTAINER_NAME': container_name,
+      'DOCKERFILE_DIR': 'tools/dockerfile/grpclb_interop_servers',
+      'DOCKER_RUN_SCRIPT': 'tools/dockerfile/grpclb_interop_servers/run_fake_dns_server.sh',
       'EXTRA_DOCKER_ARGS': docker_extra_args,
     }
     server_job = jobset.JobSpec(
@@ -307,12 +317,14 @@ argp.add_argument(
     help='This is for iterative manual runs. Skip docker image removal.')
 args = argp.parse_args()
 
-languages = _LANGUAGES.keys()
-
 docker_images = {}
 
 build_jobs = []
-for lang_name in _LANGUAGES.keys():
+if args.language == 'all':
+  languages = _LANGUAGES.keys()
+else:
+  languages = args.language
+for lang_name in languages:
     l = _LANGUAGES[lang_name]
     if args.image_tag is None:
         job = build_interop_image_jobspec(l)
@@ -341,6 +353,34 @@ if build_jobs:
             dockerjob.remove_image(image, skip_nonexistent=True)
         sys.exit(1)
 
+def wait_until_dns_server_is_up(fake_dns_server_port):
+  for i in range(0, 30):
+    test_runner_log('Health check: attempt to connect to DNS server over TCP.')
+    tcp_connect_subprocess = subprocess.Popen([
+        os.path.join(os.getcwd(), 'test/cpp/naming/utils/tcp_connect.py'),
+        '--server_host', '127.0.0.1',
+        '--server_port', str(fake_dns_server_port),
+        '--timeout', str(1)])
+    tcp_connect_subprocess.communicate()
+    if tcp_connect_subprocess.returncode == 0:
+      test_runner_log(('Health check: attempt to make an A-record '
+                       'query to DNS server.'))
+      dns_resolver_subprocess = subprocess.Popen([
+          os.path.join(os.getcwd(), 'test/cpp/naming/utils/dns_resolver.py'),
+          '--qname', 'health-check-local-dns-server-is-alive.resolver-tests.grpctestingexp',
+          '--server_host', '127.0.0.1',
+          '--server_port', str(fake_dns_server_port)],
+          stdout=subprocess.PIPE)
+      dns_resolver_stdout, _ = dns_resolver_subprocess.communicate()
+      if dns_resolver_subprocess.returncode == 0:
+        if '123.123.123.123' in dns_resolver_stdout:
+          test_runner_log(('DNS server is up! '
+                           'Successfully reached it over UDP and TCP.'))
+          return
+    time.sleep(0.1)
+  raise Exception(('Failed to reach DNS server over TCP and/or UDP. '
+                   'Exitting without running tests.'))
+
 server_jobs = {}
 server_addresses = {}
 suppress_server_logs = True
@@ -367,14 +407,21 @@ try:
     fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
     server_jobs[fake_grpclb_shortname] = fake_grpclb_job
     fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
-    # Run clients, with local DNS servers running in their docker containers
     print('sleep 3 seconds - HACK')
-    time.sleep(3)
+    # Start fake DNS server
+    fake_dns_server_shortname = 'fake_dns_server'
+    fake_dns_server_spec = dns_server_in_docker_jobspec(fake_grpclb_port, fake_dns_server_shortname)
+    fake_dns_server_job = dockerjob.DockerJob(fake_dns_server_spec)
+    server_jobs[fake_dns_server_shortname] = fake_dns_server_job
+    fake_dns_server_port = fake_dns_server_job.mapped_port(_DEFAULT_SERVER_PORT)
+    print('sleep 3 seconds - HACK')
+    wait_until_dns_server_is_up(fake_dns_server_port)
+    # Run clients
     jobs = []
     for lang_name in _LANGUAGES.keys():
         test_job = lb_client_interop_jobspec(
             _LANGUAGES[lang_name],
-            fake_grpclb_port,
+            fake_dns_server_port,
             docker_image=docker_images.get(l.safename),
             transport_security=args.transport_security)
         jobs.append(test_job)
@@ -397,6 +444,7 @@ except Exception as e:
     print('exception occurred:')
     traceback.print_exc(file=sys.stdout)
     suppress_server_logs = False
+    raise e
 finally:
     # Check if servers are still running.
     for server, job in server_jobs.items():
