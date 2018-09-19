@@ -388,6 +388,8 @@ try:
         args.transport_security, fake_backend_shortname)
     fake_backend_job = dockerjob.DockerJob(fake_backend_spec)
     server_jobs[fake_backend_shortname] = fake_backend_job
+    print('sleep 3 seconds - HACK')
+    time.sleep(3)
     fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake fallback server
     fake_fallback_shortname = 'fake_fallback_server'
@@ -395,16 +397,18 @@ try:
         args.transport_security, fake_fallback_shortname)
     fake_fallback_job = dockerjob.DockerJob(fake_fallback_spec)
     server_jobs[fake_fallback_shortname] = fake_fallback_job
-    fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
     print('sleep 3 seconds - HACK')
+    time.sleep(3)
+    fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake grpclb server
     fake_grpclb_shortname = 'fake_grpclb_server'
     fake_grpclb_spec = fake_grpclb_jobspec(
         args.transport_security, fake_backend_port, fake_grpclb_shortname)
     fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
     server_jobs[fake_grpclb_shortname] = fake_grpclb_job
-    fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
     print('sleep 3 seconds - HACK')
+    time.sleep(3)
+    fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake DNS server
     fake_dns_server_shortname = 'fake_dns_server'
     fake_dns_server_spec = dns_server_in_docker_jobspec(fake_grpclb_port, fake_dns_server_shortname)
@@ -419,8 +423,9 @@ try:
     # lists of their docker containers, and /etc/resolv.conf
     # "nameserver" lists don't support port number specification
     # (port 53 is always assumed).
-    fake_dns_server_ip = fake_dns_server_job.ip_address()
     print('sleep 3 seconds - HACK')
+    time.sleep(3)
+    fake_dns_server_ip = fake_dns_server_job.ip_address()
     wait_until_dns_server_is_up(fake_dns_server_ip)
     # Run clients
     jobs = []
