@@ -123,7 +123,7 @@ def flush_stdout_loop(timeout):
   # Prevent zombies. Tests that use this server are short-lived.
   while timeout == 0 or num_1_second_timeouts_so_far < timeout:
     sys.stdout.flush()
-    time.sleep(sleep_time)
+    time.sleep(1)
     num_1_second_timeouts_so_far += 1
   print('Process timeout reached, or cancelled. Exitting 0.')
   os.kill(os.getpid(), signal.SIGTERM)
