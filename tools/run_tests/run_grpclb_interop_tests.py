@@ -429,11 +429,12 @@ try:
     wait_until_dns_server_is_up(fake_dns_server_ip)
     # Run clients
     jobs = []
-    for lang_name in _LANGUAGES.keys():
+    for lang_name in languages:
+        lang = _LANGUAGES[lang_name]
         test_job = lb_client_interop_jobspec(
-            _LANGUAGES[lang_name],
+            lang,
             fake_dns_server_ip,
-            docker_image=docker_images.get(l.safename),
+            docker_image=docker_images.get(lang.safename),
             transport_security=args.transport_security)
         jobs.append(test_job)
     print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
@@ -454,7 +455,7 @@ try:
 except Exception as e:
     print('exception occurred:')
     traceback.print_exc(file=sys.stdout)
-    suppress_server_logs = False
+    suppress_server_logs = True # TODO: false
     raise e
 finally:
     # Check if servers are still running.
