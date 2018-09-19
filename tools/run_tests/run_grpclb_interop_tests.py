@@ -250,12 +250,11 @@ def dns_server_in_docker_jobspec(fake_grpclb_port, shortname):
     container_name = dockerjob.random_name(shortname)
     build_and_run_docker_cmdline = (
         'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
-    docker_extra_args += '-e GRPCLB_PORT=%s ' % fake_grpclb_port
     build_and_run_docker_environ = {
       'CONTAINER_NAME': container_name,
       'DOCKERFILE_DIR': 'tools/dockerfile/grpclb_interop_servers',
       'DOCKER_RUN_SCRIPT': 'tools/dockerfile/grpclb_interop_servers/run_fake_dns_server.sh',
-      'EXTRA_DOCKER_ARGS': docker_extra_args,
+      'EXTRA_DOCKER_ARGS': '-e GRPCLB_PORT=%s ' % fake_grpclb_port,
     }
     server_job = jobset.JobSpec(
         cmdline=build_and_run_docker_cmdline,

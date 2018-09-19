@@ -118,15 +118,13 @@ def _quit_on_signal(signum, _frame):
   sys.stdout.flush()
   sys.exit(0)
 
-def flush_stdout_loop():
-  num_timeouts_so_far = 0
-  sleep_time = 1
+def flush_stdout_loop(timeout):
+  num_1_second_timeouts_so_far = 0
   # Prevent zombies. Tests that use this server are short-lived.
-  max_timeouts = 60 * 2
-  while num_timeouts_so_far < max_timeouts:
+  while timeout == 0 or num_1_second_timeouts_so_far < timeout:
     sys.stdout.flush()
     time.sleep(sleep_time)
-    num_timeouts_so_far += 1
+    num_1_second_timeouts_so_far += 1
   print('Process timeout reached, or cancelled. Exitting 0.')
   os.kill(os.getpid(), signal.SIGTERM)
 
@@ -137,10 +135,12 @@ def main():
   argp.add_argument('-r', '--records_config_path', default=None, type=str,
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
+  argp.add_argument('-t', '--timeout', default=0, type=int,
+                    help='Overall timeout in seconds of the process. Infinite if unset.')
   args = argp.parse_args()
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)
-  output_flush_thread = threading.Thread(target=flush_stdout_loop)
+  output_flush_thread = threading.Thread(target=flush_stdout_loop, [args.timeout])
   output_flush_thread.setDaemon(True)
   output_flush_thread.start()
   start_local_dns_server(args)

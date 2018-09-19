@@ -31,7 +31,7 @@ RUN pip install futures==2.2.0 enum34==1.0.4 protobuf==3.5.2.post1 six==1.10.0 t
 
 # We need the grpc/grpc repo because it has the fake local DNS server scripts
 RUN mkdir -p /var/local/git/grpc
-RUN git clone https://github.com/grpc/grpc.git /var/local/git/grpc
+RUN git clone -b grpclb_interop https://github.com/apolcyn/grpc.git /var/local/git/grpc
 
 # Define the default command.
 CMD ["bash"]
