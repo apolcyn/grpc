@@ -140,7 +140,7 @@ def main():
   args = argp.parse_args()
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)
-  output_flush_thread = threading.Thread(target=flush_stdout_loop, [args.timeout])
+  output_flush_thread = threading.Thread(target=flush_stdout_loop, args=[args.timeout])
   output_flush_thread.setDaemon(True)
   output_flush_thread.start()
   start_local_dns_server(args)
