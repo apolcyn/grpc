@@ -240,8 +240,7 @@ def grpc_server_in_docker_jobspec(server_run_script, backend_port, transport_sec
         cmdline=build_and_run_docker_cmdline,
         environ=build_and_run_docker_environ,
         shortname=shortname,
-        timeout_seconds=30 * 60,
-        verbose_success=True)
+        timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
 
@@ -260,8 +259,7 @@ def dns_server_in_docker_jobspec(fake_grpclb_port, shortname):
         cmdline=build_and_run_docker_cmdline,
         environ=build_and_run_docker_environ,
         shortname=shortname,
-        timeout_seconds=30 * 60,
-        verbose_success=True)
+        timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
 
@@ -277,8 +275,7 @@ def build_interop_image_jobspec(language):
         cmdline=['tools/run_tests/dockerize/build_interop_image.sh'],
         environ=env,
         shortname='build_docker_%s' % language.safename,
-        timeout_seconds=30 * 60,
-        verbose_success=True)
+        timeout_seconds=30 * 60)
     build_job.tag = tag
     return build_job
 
@@ -293,6 +290,7 @@ argp.add_argument(
     help='Clients to run.')
 argp.add_argument('-j', '--jobs', default=multiprocessing.cpu_count(), type=int)
 argp.add_argument(
+    '-t',
     '--transport_security',
     choices=_TRANSPORT_SECURITY_OPTIONS,
     default='insecure',
@@ -374,7 +372,7 @@ def wait_until_dns_server_is_up(fake_dns_server_ip):
           print(('DNS server is up! '
                  'Successfully reached it over UDP and TCP.'))
           return
-    time.sleep(0.1)
+    time.sleep(0.5)
   raise Exception(('Failed to reach DNS server over TCP and/or UDP. '
                    'Exitting without running tests.'))
 
@@ -388,8 +386,6 @@ try:
         args.transport_security, fake_backend_shortname)
     fake_backend_job = dockerjob.DockerJob(fake_backend_spec)
     server_jobs[fake_backend_shortname] = fake_backend_job
-    print('sleep 3 seconds - HACK')
-    time.sleep(3)
     fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake fallback server
     fake_fallback_shortname = 'fake_fallback_server'
@@ -397,8 +393,6 @@ try:
         args.transport_security, fake_fallback_shortname)
     fake_fallback_job = dockerjob.DockerJob(fake_fallback_spec)
     server_jobs[fake_fallback_shortname] = fake_fallback_job
-    print('sleep 3 seconds - HACK')
-    time.sleep(3)
     fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake grpclb server
     fake_grpclb_shortname = 'fake_grpclb_server'
@@ -406,8 +400,6 @@ try:
         args.transport_security, fake_backend_port, fake_grpclb_shortname)
     fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
     server_jobs[fake_grpclb_shortname] = fake_grpclb_job
-    print('sleep 3 seconds - HACK')
-    time.sleep(3)
     fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
     # Start fake DNS server
     fake_dns_server_shortname = 'fake_dns_server'
@@ -423,8 +415,6 @@ try:
     # lists of their docker containers, and /etc/resolv.conf
     # "nameserver" lists don't support port number specification
     # (port 53 is always assumed).
-    print('sleep 3 seconds - HACK')
-    time.sleep(3)
     fake_dns_server_ip = fake_dns_server_job.ip_address()
     wait_until_dns_server_is_up(fake_dns_server_ip)
     # Run clients

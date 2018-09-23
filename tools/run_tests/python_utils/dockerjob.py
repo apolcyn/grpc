@@ -45,11 +45,13 @@ def docker_mapped_port(cid, port, timeout_seconds=15):
     """Get port mapped to internal given internal port for given container."""
     started = time.time()
     while time.time() - started < timeout_seconds:
+        cmd = 'docker port %s %s' % (cid, port)
         try:
-            output = subprocess.check_output(
-                'docker port %s %s' % (cid, port), stderr=_DEVNULL, shell=True)
+            jobset.message('IDLE', 'Run command: |%s|' % cmd)
+            output = subprocess.check_output(cmd, stderr=_DEVNULL, shell=True)
             return int(output.split(':', 2)[1])
         except subprocess.CalledProcessError as e:
+            jobset.message('IDLE', 'Command: |%s| FAILED.' % cmd)
             pass
     raise Exception('Failed to get exposed port %s for container %s.' % (port,
                                                                          cid))
