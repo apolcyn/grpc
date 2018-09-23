@@ -9,17 +9,17 @@ def generate_client_referred_to_backend():
       config = {
           'name': 'client_referred_to_backend_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': transport_sec,
               }
            ],
-          'backend_config': [
+          'backend_configs': [
               {
                   'transport_sec': transport_sec,
               }
           ],
-          'fallback_config': [
+          'fallback_configs': [
               {
                   'transport_sec': transport_sec,
               }
@@ -36,12 +36,12 @@ def generate_client_referred_to_backend_multiple_backends():
       config = {
           'name': 'client_referred_to_backend_multiple_backends_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': transport_sec,
               }
           ],
-          'backend_config': [
+          'backend_configs': [
               {
                   'transport_sec': transport_sec,
               },
@@ -58,7 +58,7 @@ def generate_client_referred_to_backend_multiple_backends():
                   'transport_sec': transport_sec,
               }
           ],
-          'fallback_config': [
+          'fallback_configs': [
               {
                   'transport_sec': transport_sec,
               }
@@ -75,13 +75,13 @@ def generate_client_falls_back_because_no_backends():
       config = {
           'name': 'client_falls_back_because_no_backends_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': transport_sec,
               }
           ],
-          'backend_config': [],
-          'fallback_config': [
+          'backend_configs': [],
+          'fallback_configs': [
               {
                   'transport_sec': transport_sec,
               }
@@ -98,13 +98,13 @@ def generate_client_falls_back_because_balancer_connection_broken():
       config = {
           'name': 'client_falls_back_because_balancer_connection_broken_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': 'insecure',
               }
           ],
-          'backend_config': [],
-          'fallback_config': [
+          'backend_configs': [],
+          'fallback_configs': [
               {
               'transport_sec': transport_sec,
               }
@@ -121,7 +121,7 @@ def generate_client_referred_to_backend_multiple_balancers():
       config = {
           'name': 'client_referred_to_backend_multiple_balancers_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': transport_sec,
               },
@@ -138,8 +138,8 @@ def generate_client_referred_to_backend_multiple_balancers():
                   'transport_sec': transport_sec,
               },
           ],
-          'backend_config': [],
-          'fallback_config': [
+          'backend_configs': [],
+          'fallback_configs': [
               {
               'transport_sec': transport_sec,
               },
@@ -156,7 +156,7 @@ def generate_client_referred_to_backend_multiple_balancers_one_works():
       config = {
           'name': 'client_referred_to_backend_multiple_balancers_one_works_%s' % transport_sec,
           'transport_sec': transport_sec,
-          'balancer_config': [
+          'balancer_configs': [
               {
                   'transport_sec': transport_sec,
               },
@@ -173,8 +173,8 @@ def generate_client_referred_to_backend_multiple_balancers_one_works():
                   'transport_sec': 'insecure',
               }
           ],
-          'backend_config': [],
-          'fallback_config': [
+          'backend_configs': [],
+          'fallback_configs': [
               {
                   'transport_sec': transport_sec,
               }
