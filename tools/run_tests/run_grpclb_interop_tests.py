@@ -290,26 +290,24 @@ argp.add_argument(
     help='Clients to run.')
 argp.add_argument('-j', '--jobs', default=multiprocessing.cpu_count(), type=int)
 argp.add_argument(
-    '-t',
-    '--transport_security',
-    choices=_TRANSPORT_SECURITY_OPTIONS,
-    default='insecure',
+    '-s',
+    '--scenarios_file',
+    default='',
     type=str,
-    nargs='?',
     const=True,
-    help='Which transport security mechanism to use.')
+    help='File containing test scenarios as JSON configs.')
 argp.add_argument(
     '--image_tag',
     default=None,
     type=str,
-    help='This is for iterative manual runs. Setting this skips the docker image build step and runs the client from the named image. Only supports running a one client language.')
+    help='Setting this skips the clients docker image build step and runs the client from the named image. Only supports running a one client language.')
 argp.add_argument(
     '--save_images',
     default=False,
     type=bool,
     nargs='?',
     const=True,
-    help='This is for iterative manual runs. Skip docker image removal.')
+    help='Skip docker image removal.')
 args = argp.parse_args()
 
 docker_images = {}
@@ -376,84 +374,94 @@ def wait_until_dns_server_is_up(fake_dns_server_ip):
   raise Exception(('Failed to reach DNS server over TCP and/or UDP. '
                    'Exitting without running tests.'))
 
-server_jobs = {}
-server_addresses = {}
-suppress_server_logs = True
-try:
-    # Start fake backend, fallback, and grpclb server
-    fake_backend_shortname = 'fake_backend_server'
-    fake_backend_spec = backend_or_fallback_server_jobspec(
-        args.transport_security, fake_backend_shortname)
-    fake_backend_job = dockerjob.DockerJob(fake_backend_spec)
-    server_jobs[fake_backend_shortname] = fake_backend_job
-    fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT)
-    # Start fake fallback server
-    fake_fallback_shortname = 'fake_fallback_server'
-    fake_fallback_spec = backend_or_fallback_server_jobspec(
-        args.transport_security, fake_fallback_shortname)
-    fake_fallback_job = dockerjob.DockerJob(fake_fallback_spec)
-    server_jobs[fake_fallback_shortname] = fake_fallback_job
-    fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
-    # Start fake grpclb server
-    fake_grpclb_shortname = 'fake_grpclb_server'
-    fake_grpclb_spec = fake_grpclb_jobspec(
-        args.transport_security, fake_backend_port, fake_grpclb_shortname)
-    fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
-    server_jobs[fake_grpclb_shortname] = fake_grpclb_job
-    fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
-    # Start fake DNS server
-    fake_dns_server_shortname = 'fake_dns_server'
-    fake_dns_server_spec = dns_server_in_docker_jobspec(fake_grpclb_port, fake_dns_server_shortname)
-    fake_dns_server_job = dockerjob.DockerJob(fake_dns_server_spec)
-    server_jobs[fake_dns_server_shortname] = fake_dns_server_job
-    # Get the IP address of the docker container running the DNS server
-    # (and not the port). The DNS server is running on port 53 of
-    # that IP address. We need to use the DNS server's IP address
-    # rather than port because we will
-    # point the DNS resolvers of grpc clients under test to our
-    # controlled DNS server by modifying the /etc/resolve.conf "nameserver"
-    # lists of their docker containers, and /etc/resolv.conf
-    # "nameserver" lists don't support port number specification
-    # (port 53 is always assumed).
-    fake_dns_server_ip = fake_dns_server_job.ip_address()
-    wait_until_dns_server_is_up(fake_dns_server_ip)
-    # Run clients
-    jobs = []
-    for lang_name in languages:
-        lang = _LANGUAGES[lang_name]
-        test_job = lb_client_interop_jobspec(
-            lang,
-            fake_dns_server_ip,
-            docker_image=docker_images.get(lang.safename),
-            transport_security=args.transport_security)
-        jobs.append(test_job)
-    print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
-    num_failures, resultset = jobset.run(
-        jobs,
-        newline_on_success=True,
-        maxjobs=args.jobs)
-    if num_failures:
-        suppress_server_logs = False
-        jobset.message('FAILED', 'Some tests failed', do_newline=True)
-    else:
-        jobset.message('SUCCESS', 'All tests passed', do_newline=True)
+def run_one_scenario(scenario_config):
+  jobset.message('IDLE', 'Run scenario: %s' % scenario_config['name'])
+  server_jobs = {}
+  server_addresses = {}
+  suppress_server_logs = True
+  # TODO: change logic to go by the scenario config
+  try:
+      # Start fake backend, fallback, and grpclb server
+      fake_backend_shortname = 'fake_backend_server'
+      fake_backend_spec = backend_or_fallback_server_jobspec(
+          args.transport_security, fake_backend_shortname)
+      fake_backend_job = dockerjob.DockerJob(fake_backend_spec)
+      server_jobs[fake_backend_shortname] = fake_backend_job
+      fake_backend_port = fake_backend_job.mapped_port(_DEFAULT_SERVER_PORT)
+      # Start fake fallback server
+      fake_fallback_shortname = 'fake_fallback_server'
+      fake_fallback_spec = backend_or_fallback_server_jobspec(
+          args.transport_security, fake_fallback_shortname)
+      fake_fallback_job = dockerjob.DockerJob(fake_fallback_spec)
+      server_jobs[fake_fallback_shortname] = fake_fallback_job
+      fake_fallback_port = fake_fallback_job.mapped_port(_DEFAULT_SERVER_PORT)
+      # Start fake grpclb server
+      fake_grpclb_shortname = 'fake_grpclb_server'
+      fake_grpclb_spec = fake_grpclb_jobspec(
+          args.transport_security, fake_backend_port, fake_grpclb_shortname)
+      fake_grpclb_job = dockerjob.DockerJob(fake_grpclb_spec)
+      server_jobs[fake_grpclb_shortname] = fake_grpclb_job
+      fake_grpclb_port = fake_grpclb_job.mapped_port(_DEFAULT_SERVER_PORT)
+      # Start fake DNS server
+      fake_dns_server_shortname = 'fake_dns_server'
+      fake_dns_server_spec = dns_server_in_docker_jobspec(fake_grpclb_port, fake_dns_server_shortname)
+      fake_dns_server_job = dockerjob.DockerJob(fake_dns_server_spec)
+      server_jobs[fake_dns_server_shortname] = fake_dns_server_job
+      # Get the IP address of the docker container running the DNS server
+      # (and not the port). The DNS server is running on port 53 of
+      # that IP address. We need to use the DNS server's IP address
+      # rather than port because we will
+      # point the DNS resolvers of grpc clients under test to our
+      # controlled DNS server by modifying the /etc/resolve.conf "nameserver"
+      # lists of their docker containers, and /etc/resolv.conf
+      # "nameserver" lists don't support port number specification
+      # (port 53 is always assumed).
+      fake_dns_server_ip = fake_dns_server_job.ip_address()
+      wait_until_dns_server_is_up(fake_dns_server_ip)
+      # Run clients
+      jobs = []
+      for lang_name in languages:
+          lang = _LANGUAGES[lang_name]
+          test_job = lb_client_interop_jobspec(
+              lang,
+              fake_dns_server_ip,
+              docker_image=docker_images.get(lang.safename),
+              transport_security=args.transport_security)
+          jobs.append(test_job)
+      print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
+      num_failures, resultset = jobset.run(
+          jobs,
+          newline_on_success=True,
+          maxjobs=args.jobs)
+      if num_failures:
+          suppress_server_logs = False
+          jobset.message('FAILED', 'Some tests failed', do_newline=True)
+      else:
+          jobset.message('SUCCESS', 'All tests passed', do_newline=True)
+  
+      if num_failures:
+          sys.exit(1)
+      else:
+          sys.exit(0)
+  except Exception as e:
+      print('exception occurred:')
+      traceback.print_exc(file=sys.stdout)
+      suppress_server_logs = False
+      raise e
+  finally:
+      # Check if servers are still running.
+      for server, job in server_jobs.items():
+          if not job.is_running():
+              print('Server "%s" has exited prematurely.' % server)
+      dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=suppress_server_logs)
 
-    if num_failures:
-        sys.exit(1)
-    else:
-        sys.exit(0)
-except Exception as e:
-    print('exception occurred:')
-    traceback.print_exc(file=sys.stdout)
-    suppress_server_logs = True # TODO: false
-    raise e
+try:
+  with open(args.scenarios_file, 'r') as scenarios_input:
+    all_scenarios = json.loads(scenarios_input.read())
+    for scenario in all_scenarios:
+      run_one_scenario(scenario)
 finally:
-    # Check if servers are still running.
-    for server, job in server_jobs.items():
-        if not job.is_running():
-            print('Server "%s" has exited prematurely.' % server)
-    dockerjob.finish_jobs([j for j in six.itervalues(server_jobs)], suppress_failure=suppress_server_logs)
-    if not args.save_images and args.image_tag is None:
-        for image in six.itervalues(docker_images):
-            print('Removing docker image %s' % image)
-            dockerjob.remove_image(image)
+  if not args.save_images and args.image_tag is None:
+      for image in six.itervalues(docker_images):
+          print('Removing docker image %s' % image)
+          dockerjob.remove_image(image)
