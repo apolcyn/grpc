@@ -422,7 +422,8 @@ def run_one_scenario(scenario_config):
                 backend_config['transport_sec'], backend_shortname)
             backend_job = dockerjob.DockerJob(backend_spec)
             server_jobs[backend_shortname] = backend_job
-            backend_addrs.append('%s:%d' % (backend_job.ip_address(), _DEFAULT_SERVER_PORT))
+            backend_addrs.append('%s:%d' % (backend_job.ip_address(),
+                                            _DEFAULT_SERVER_PORT))
         # Start fallbacks
         for i in xrange(len(scenario_config['fallback_configs'])):
             fallback_config = scenario_config['fallback_configs'][i]
@@ -444,8 +445,7 @@ def run_one_scenario(scenario_config):
             grpclb_ips.append(grpclb_job.ip_address())
         # Start DNS server
         dns_server_shortname = shortname(shortname_prefix, 'dns_server', 0)
-        dns_server_spec = dns_server_in_docker_jobspec(grpclb_ips,
-                                                       fallback_ips,
+        dns_server_spec = dns_server_in_docker_jobspec(grpclb_ips, fallback_ips,
                                                        dns_server_shortname)
         dns_server_job = dockerjob.DockerJob(dns_server_spec)
         server_jobs[dns_server_shortname] = dns_server_job
@@ -474,7 +474,7 @@ def run_one_scenario(scenario_config):
             suppress_server_logs = False
             jobset.message(
                 'FAILED',
-                'Scenario: %s. Some tests failed' % scenarios_config['name'],
+                'Scenario: %s. Some tests failed' % scenario_config['name'],
                 do_newline=True)
         else:
             jobset.message(
