@@ -53,23 +53,26 @@ def docker_mapped_port(cid, port, timeout_seconds=15):
         except subprocess.CalledProcessError as e:
             jobset.message('IDLE', 'Command: |%s| FAILED.' % cmd)
             pass
-    raise Exception('Failed to get exposed port %s for container %s.' % (port,
-                                                                         cid))
+    raise Exception('Non-retryable error: Failed to get exposed port %s for container %s.' % (port,
+                                                                                              cid))
 
 
 def docker_ip_address(cid, timeout_seconds=15):
     """Get port mapped to internal given internal port for given container."""
     started = time.time()
     while time.time() - started < timeout_seconds:
+        cmd = 'docker inspect %s' % cid
         try:
+            jobset.message('IDLE', 'Run command: |%s|' % cmd)
             output = subprocess.check_output(
-                'docker inspect %s' % cid, stderr=_DEVNULL, shell=True)
+                cmd, stderr=_DEVNULL, shell=True)
             json_info = json.loads(output)
             assert len(json_info) == 1
             return json_info[0]['NetworkSettings']['IPAddress']
         except subprocess.CalledProcessError as e:
+            jobset.message('IDLE', 'Command: |%s| FAILED.' % cmd)
             pass
-    raise Exception('Failed to get ip address of container %s.' % cid)
+    raise Exception('Non-retryable error: Failed to get ip address of container %s.' % cid)
 
 
 def wait_for_healthy(cid, shortname, timeout_seconds):

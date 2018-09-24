@@ -178,7 +178,7 @@ def lb_client_interop_jobspec(language,
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host=server.test.google.fr',
-        '--server_port=443',
+        '--server_port=%d' % _DEFAULT_SERVER_PORT,
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
     client_args = language.client_cmd(interop_only_options)
@@ -219,7 +219,7 @@ def backend_or_fallback_server_jobspec(transport_security, shortname):
         shortname=shortname)
 
 
-def grpclb_jobspec(transport_security, backend_ips, shortname):
+def grpclb_jobspec(transport_security, backend_addrs, shortname):
     """Create jobspec for running a server"""
     return grpc_server_in_docker_jobspec(
         server_run_script=
@@ -234,8 +234,7 @@ def grpc_server_in_docker_jobspec(server_run_script, backend_addrs,
     container_name = dockerjob.random_name(shortname)
     build_and_run_docker_cmdline = (
         'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
-    docker_extra_args = '-p=%s ' % str(_DEFAULT_SERVER_PORT)
-    docker_extra_args += '-e GRPC_GO_LOG_VERBOSITY_LEVEL=3 '
+    docker_extra_args = '-e GRPC_GO_LOG_VERBOSITY_LEVEL=3 '
     docker_extra_args += '-e GRPC_GO_LOG_SEVERITY_LEVEL=INFO '
     docker_extra_args += '-e PORT=%s ' % _DEFAULT_SERVER_PORT
     if backend_addrs is not None:
@@ -265,7 +264,7 @@ def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
     container_name = dockerjob.random_name(shortname)
     build_and_run_docker_cmdline = (
         'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
-    extra_docker_args = '-e GRPCLB_IPS=%s ' % ','.join(grpclb_ips),
+    extra_docker_args = '-e GRPCLB_IPS=%s ' % ','.join(grpclb_ips)
     extra_docker_args += '-e FALLBACK_IPS=%s ' % ','.join(fallback_ips)
     build_and_run_docker_environ = {
         'CONTAINER_NAME':
@@ -314,9 +313,8 @@ argp.add_argument('-j', '--jobs', default=multiprocessing.cpu_count(), type=int)
 argp.add_argument(
     '-s',
     '--scenarios_file',
-    default='',
+    default=None,
     type=str,
-    const=True,
     help='File containing test scenarios as JSON configs.')
 argp.add_argument(
     '--image_tag',
@@ -395,7 +393,7 @@ def wait_until_dns_server_is_up(dns_server_ip):
                     print(('DNS server is up! '
                            'Successfully reached it over UDP and TCP.'))
                     return
-        time.sleep(0.5)
+        time.sleep(0.1)
     raise Exception(('Failed to reach DNS server over TCP and/or UDP. '
                      'Exitting without running tests.'))
 
@@ -418,7 +416,7 @@ def run_one_scenario(scenario_config):
         # Start backends
         for i in xrange(len(scenario_config['backend_configs'])):
             backend_config = scenario_config['backend_configs'][i]
-            backend_shortname = shortname(shortnam_prefix, 'backend_server', i)
+            backend_shortname = shortname(shortname_prefix, 'backend_server', i)
             backend_spec = backend_or_fallback_server_jobspec(
                 backend_config['transport_sec'], backend_shortname)
             backend_job = dockerjob.DockerJob(backend_spec)
@@ -434,7 +432,7 @@ def run_one_scenario(scenario_config):
                 fallback_config['transport_sec'], fallback_shortname)
             fallback_job = dockerjob.DockerJob(fallback_spec)
             server_jobs[fallback_shortname] = fallback_job
-            fallback_ips = fallback_job.ip_address()
+            fallback_ips.append(fallback_job.ip_address())
         # Start balancers
         for i in xrange(len(scenario_config['balancer_configs'])):
             balancer_config = scenario_config['balancer_configs'][i]
@@ -447,6 +445,7 @@ def run_one_scenario(scenario_config):
         # Start DNS server
         dns_server_shortname = shortname(shortname_prefix, 'dns_server', 0)
         dns_server_spec = dns_server_in_docker_jobspec(grpclb_ips,
+                                                       fallback_ips,
                                                        dns_server_shortname)
         dns_server_job = dockerjob.DockerJob(dns_server_spec)
         server_jobs[dns_server_shortname] = dns_server_job
@@ -480,11 +479,6 @@ def run_one_scenario(scenario_config):
             sys.exit(1)
         else:
             sys.exit(0)
-    except Exception as e:
-        print('exception occurred:')
-        traceback.print_exc(file=sys.stdout)
-        suppress_server_logs = False
-        raise e
     finally:
         # Check if servers are still running.
         for server, job in server_jobs.items():

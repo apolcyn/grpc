@@ -1,16 +1,16 @@
 [
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "insecure"
             }
@@ -19,17 +19,17 @@
         "transport_sec": "insecure"
     }, 
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "alts"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -38,17 +38,17 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "tls"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
@@ -57,7 +57,7 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "insecure"
             }, 
@@ -74,12 +74,12 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "insecure"
             }
@@ -88,7 +88,7 @@
         "transport_sec": "insecure"
     }, 
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "alts"
             }, 
@@ -105,12 +105,12 @@
                 "transport_sec": "alts"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -119,7 +119,7 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [
+        "backend_configs": [
             {
                 "transport_sec": "tls"
             }, 
@@ -136,12 +136,12 @@
                 "transport_sec": "tls"
             }
         ], 
-        "balancer_config": [
+        "balancer_configs": [
             {
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
@@ -150,13 +150,13 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "insecure"
             }
@@ -165,13 +165,13 @@
         "transport_sec": "insecure"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -180,13 +180,13 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
@@ -195,13 +195,13 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -210,13 +210,13 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
@@ -225,8 +225,8 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "insecure"
             }, 
@@ -243,7 +243,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "insecure"
             }
@@ -252,8 +252,8 @@
         "transport_sec": "insecure"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "alts"
             }, 
@@ -270,7 +270,7 @@
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -279,8 +279,8 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "tls"
             }, 
@@ -297,7 +297,7 @@
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
@@ -306,8 +306,8 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "alts"
             }, 
@@ -324,7 +324,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "alts"
             }
@@ -333,8 +333,8 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_config": [], 
-        "balancer_config": [
+        "backend_configs": [], 
+        "balancer_configs": [
             {
                 "transport_sec": "tls"
             }, 
@@ -351,7 +351,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_config": [
+        "fallback_configs": [
             {
                 "transport_sec": "tls"
             }
