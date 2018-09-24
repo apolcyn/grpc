@@ -183,6 +183,7 @@ def lb_client_interop_jobspec(language,
     ] + transport_security_to_args(transport_security)
     client_args = language.client_cmd(interop_only_options)
     environ = language.global_env()
+    environ['BUILD_AND_RUN_DOCKER_QUIET'] = 'true'
     container_name = dockerjob.random_name(
         'lb_interop_client_%s' % language.safename)
     docker_cmdline = docker_run_cmdline(
@@ -403,7 +404,7 @@ def shortname(shortname_prefix, shortname, index):
 
 
 def run_one_scenario(scenario_config):
-    jobset.message('IDLE', 'Run scenario: %s' % scenario_config['name'])
+    jobset.message('START', 'Run scenario: %s' % scenario_config['name'])
     server_jobs = {}
     server_addresses = {}
     suppress_server_logs = True
@@ -421,8 +422,7 @@ def run_one_scenario(scenario_config):
                 backend_config['transport_sec'], backend_shortname)
             backend_job = dockerjob.DockerJob(backend_spec)
             server_jobs[backend_shortname] = backend_job
-            backend_addrs.append('%s:%d' % (backend_job.ip_address(),
-                                            _DEFAULT_SERVER_PORT))
+            backend_addrs.append('%s:%d' % (backend_job.ip_address(), _DEFAULT_SERVER_PORT))
         # Start fallbacks
         for i in xrange(len(scenario_config['fallback_configs'])):
             fallback_config = scenario_config['fallback_configs'][i]
@@ -469,16 +469,19 @@ def run_one_scenario(scenario_config):
         print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
         num_failures, resultset = jobset.run(
             jobs, newline_on_success=True, maxjobs=args.jobs)
+        report_utils.render_junit_xml_report(resultset, 'sponge_log.xml')
         if num_failures:
             suppress_server_logs = False
-            jobset.message('FAILED', 'Some tests failed', do_newline=True)
+            jobset.message(
+                'FAILED',
+                'Scenario: %s. Some tests failed' % scenarios_config['name'],
+                do_newline=True)
         else:
-            jobset.message('SUCCESS', 'All tests passed', do_newline=True)
-
-        if num_failures:
-            sys.exit(1)
-        else:
-            sys.exit(0)
+            jobset.message(
+                'SUCCESS',
+                'Scenario: %s. All tests passed' % scenario_config['name'],
+                do_newline=True)
+        return num_failures
     finally:
         # Check if servers are still running.
         for server, job in server_jobs.items():
@@ -490,10 +493,15 @@ def run_one_scenario(scenario_config):
 
 
 try:
+    num_failures = 0
     with open(args.scenarios_file, 'r') as scenarios_input:
         all_scenarios = json.loads(scenarios_input.read())
         for scenario in all_scenarios:
-            run_one_scenario(scenario)
+            num_failures += run_one_scenario(scenario)
+    if num_failures == 0:
+        sys.exit(0)
+    else:
+        sys.exit(1)
 finally:
     if not args.save_images and args.image_tag is None:
         for image in six.itervalues(docker_images):

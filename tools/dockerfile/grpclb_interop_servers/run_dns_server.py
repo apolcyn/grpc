@@ -10,19 +10,23 @@ import signal
 import yaml
 
 balancer_a_records = []
-for ip in os.environ.get('GRPCLB_IPS').split(','):
-    balancer_a_records.append({
-        'TTL': '2100',
-        'data': ip,
-        'type': 'A',
-    })
+grpclb_ips = os.environ.get('GRPCLB_IPS').split(',')
+if grpclb_ips[0]:
+    for ip in grpclb_ips:
+        balancer_a_records.append({
+            'TTL': '2100',
+            'data': ip,
+            'type': 'A',
+        })
 fallback_a_records = []
-for ip in os.environ.get('FALLBACK_IPS').split(','):
-    fallback_a_records.append({
-        'TTL': '2100',
-        'data': ip,
-        'type': 'A',
-    })
+fallback_ips = os.environ.get('FALLBACK_IPS').split(',')
+if fallback_ips[0]:
+    for ip in fallback_ips:
+        fallback_a_records.append({
+            'TTL': '2100',
+            'data': ip,
+            'type': 'A',
+        })
 records_config_yaml = {
     'resolver_tests_common_zone_name':
     'test.google.fr.',

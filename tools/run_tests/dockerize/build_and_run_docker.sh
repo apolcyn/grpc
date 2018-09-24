@@ -16,7 +16,9 @@
 # Builds docker image and runs a command under it.
 # You should never need to call this script on your own.
 
-set -ex
+#  if [[ "$BUILD_AND_RUN_DOCKER_QUIET" == "" ]]; then
+#    set -ex
+#  fi
 
 cd "$(dirname "$0")/../../.."
 git_root=$(pwd)

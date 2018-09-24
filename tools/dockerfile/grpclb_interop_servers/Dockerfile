@@ -13,6 +13,10 @@ RUN ln -s /usr/local/go/bin/go /usr/local/bin
 RUN mkdir -p /go/src/google.golang.org/grpc
 RUN echo hello
 RUN echo hello
+RUN echo hello
+RUN echo hello
+RUN echo hello
+RUN echo hello
 RUN git clone -b grpclb_interop_client https://github.com/apolcyn/grpc-go.git /go/src/google.golang.org/grpc
 # The grpc-go commit here is againt arbitrary but stable. To be updated as needed.
 # Pre-build relevant go test servers.

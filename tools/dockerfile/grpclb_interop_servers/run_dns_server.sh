@@ -16,13 +16,4 @@
 # Builds Go interop server and client in a base image.
 set -ex
 
-if [[ "$GRPCLB_IPS" == "" ]]; then
-  echo "GRPCLB_IPS unset."
-  exit 1
-elif [[ "$FALLBACK_IPS" == "" ]]; then
-  echo "FALBACK_IPS unset."
-  exit 1
-fi
-
-THIS_DIR="$(dirname $0)"
-python "$THIS_DIR"/run_dns_server.py
+python "$(dirname $0)/run_dns_server.py"

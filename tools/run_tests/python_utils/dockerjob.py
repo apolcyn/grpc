@@ -47,11 +47,11 @@ def docker_mapped_port(cid, port, timeout_seconds=15):
     while time.time() - started < timeout_seconds:
         cmd = 'docker port %s %s' % (cid, port)
         try:
-            jobset.message('IDLE', 'Run command: |%s|' % cmd)
+            jobset.message('START', 'Run command: |%s|' % cmd)
             output = subprocess.check_output(cmd, stderr=_DEVNULL, shell=True)
             return int(output.split(':', 2)[1])
         except subprocess.CalledProcessError as e:
-            jobset.message('IDLE', 'Command: |%s| FAILED.' % cmd)
+            jobset.message('FAILED', 'Command: |%s| FAILED.' % cmd)
             pass
     raise Exception('Non-retryable error: Failed to get exposed port %s for container %s.' % (port,
                                                                                               cid))
@@ -63,14 +63,19 @@ def docker_ip_address(cid, timeout_seconds=15):
     while time.time() - started < timeout_seconds:
         cmd = 'docker inspect %s' % cid
         try:
-            jobset.message('IDLE', 'Run command: |%s|' % cmd)
+            jobset.message('START', cmd)
             output = subprocess.check_output(
                 cmd, stderr=_DEVNULL, shell=True)
             json_info = json.loads(output)
             assert len(json_info) == 1
-            return json_info[0]['NetworkSettings']['IPAddress']
+            out = json_info[0]['NetworkSettings']['IPAddress']
+            if not out:
+                jobset.message('FAILED', cmd)
+                continue
+            jobset.message('SUCCESS', '%s. Got IPAddress: %s' % (cmd, out))
+            return out
         except subprocess.CalledProcessError as e:
-            jobset.message('IDLE', 'Command: |%s| FAILED.' % cmd)
+            jobset.message('FAILED', cmd)
             pass
     raise Exception('Non-retryable error: Failed to get ip address of container %s.' % cid)
 

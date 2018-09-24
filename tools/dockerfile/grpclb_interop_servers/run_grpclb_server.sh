@@ -25,6 +25,6 @@ fi
 
 /go/bin/fake_grpclb \
   --port="$PORT" \
-  --backend_port="$BACKEND_PORT" \
+  --backend_addrs="$BACKEND_ADDRS" \
   --use_tls="$USE_TLS" \
   --use_alts="$USE_ALTS"
