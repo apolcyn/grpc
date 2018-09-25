@@ -10,11 +10,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "insecure"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_insecure", 
         "transport_sec": "insecure"
     }, 
@@ -29,12 +25,42 @@
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_configs": [
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_alts", 
+        "transport_sec": "alts"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_tls", 
+        "transport_sec": "tls"
+    }, 
+    {
+        "backend_configs": [
             {
                 "transport_sec": "alts"
             }
         ], 
-        "name": "client_referred_to_backend_alts", 
+        "balancer_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [
+            {
+                "transport_sec": "insecure"
+            }
+        ], 
+        "name": "client_referred_to_backend_fallback_broken_alts", 
         "transport_sec": "alts"
     }, 
     {
@@ -50,10 +76,10 @@
         ], 
         "fallback_configs": [
             {
-                "transport_sec": "tls"
+                "transport_sec": "insecure"
             }
         ], 
-        "name": "client_referred_to_backend_tls", 
+        "name": "client_referred_to_backend_fallback_broken_tls", 
         "transport_sec": "tls"
     }, 
     {
@@ -79,11 +105,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "insecure"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_backends_insecure", 
         "transport_sec": "insecure"
     }, 
@@ -110,11 +132,7 @@
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "alts"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_backends_alts", 
         "transport_sec": "alts"
     }, 
@@ -141,11 +159,7 @@
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "tls"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_backends_tls", 
         "transport_sec": "tls"
     }, 
@@ -195,7 +209,11 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "insecure"
@@ -210,7 +228,11 @@
         "transport_sec": "alts"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "insecure"
@@ -225,7 +247,11 @@
         "transport_sec": "tls"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "insecure"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "insecure"
@@ -243,16 +269,16 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "insecure"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_balancers_insecure", 
         "transport_sec": "insecure"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "alts"
@@ -270,16 +296,16 @@
                 "transport_sec": "alts"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "alts"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_balancers_alts", 
         "transport_sec": "alts"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "tls"
@@ -297,16 +323,16 @@
                 "transport_sec": "tls"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "tls"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_balancers_tls", 
         "transport_sec": "tls"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "alts"
@@ -324,16 +350,16 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "alts"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_balancers_one_works_alts", 
         "transport_sec": "alts"
     }, 
     {
-        "backend_configs": [], 
+        "backend_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
         "balancer_configs": [
             {
                 "transport_sec": "tls"
@@ -351,11 +377,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "fallback_configs": [
-            {
-                "transport_sec": "tls"
-            }
-        ], 
+        "fallback_configs": [], 
         "name": "client_referred_to_backend_multiple_balancers_one_works_tls", 
         "transport_sec": "tls"
     }
