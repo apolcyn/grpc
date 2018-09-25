@@ -466,7 +466,9 @@ def run_one_scenario(scenario_config):
                 docker_image=docker_images.get(lang.safename),
                 transport_security=scenario_config['transport_sec'])
             jobs.append(test_job)
-        print('Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
+        jobset.message(
+            'IDLE',
+            'Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
         num_failures, resultset = jobset.run(
             jobs, newline_on_success=True, maxjobs=args.jobs)
         report_utils.render_junit_xml_report(resultset, 'sponge_log.xml')
