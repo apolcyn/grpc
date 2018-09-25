@@ -84,7 +84,8 @@ class JavaLanguage:
     def global_env(self):
         return {
             'JAVA_OPTS':
-            '-Dio.grpc.internal.DnsNameResolverProvider.enable_grpclb=true'
+            ('-Dio.grpc.internal.DnsNameResolverProvider.enable_grpclb=true '
+             '-Djava.util.logging.config.file=/var/local/grpc_java_logging/logconf.txt')
         }
 
     def __str__(self):
@@ -318,6 +319,13 @@ argp.add_argument(
     type=str,
     help='File containing test scenarios as JSON configs.')
 argp.add_argument(
+    '-n',
+    '--scenario_name',
+    default=None,
+    type=str,
+    help=('Useful for manual runs: specify the name of '
+          'the scenario to run from scenarios_file. Run all scenarios if unset.'))
+argp.add_argument(
     '--image_tag',
     default=None,
     type=str,
@@ -336,7 +344,7 @@ args = argp.parse_args()
 docker_images = {}
 
 build_jobs = []
-if args.language == 'all':
+if len(args.language) and args.language[0] == 'all':
     languages = _LANGUAGES.keys()
 else:
     languages = args.language
@@ -499,6 +507,12 @@ try:
     with open(args.scenarios_file, 'r') as scenarios_input:
         all_scenarios = json.loads(scenarios_input.read())
         for scenario in all_scenarios:
+            if args.scenario_name:
+              if args.scenario_name != scenario['name']:
+                  jobset.message(
+                      'IDLE',
+                      'Skipping scenario: %s' % scenario['name'])
+                  continue
             num_failures += run_one_scenario(scenario)
     if num_failures == 0:
         sys.exit(0)

@@ -54,5 +54,13 @@ RUN git clone --recursive --depth 1 https://github.com/grpc/grpc-java.git && \
   ./gradlew :grpc-interop-testing:installDist -PskipCodegen=true && \
   rm -r "$(pwd)"
 
+RUN mkdir -p /var/local/grpc_java_logging
+RUN echo "handlers = java.util.logging.ConsoleHandler"  > /var/local/grpc_java_logging/logconf.txt
+RUN echo "java.util.logging.ConsoleHandler.level = ALL" >> /var/local/grpc_java_logging/logconf.txt
+RUN echo ".level = FINE" >> /var/local/grpc_java_logging/logconf.txt
+RUN echo "io.grpc.netty.NettyClientHandler = ALL" >> /var/local/grpc_java_logging/logconf.txt
+RUN echo "io.grpc.netty.NettyServerHandler = ALL" >> /var/local/grpc_java_logging/logconf.txt
+RUN cat /var/local/grpc_java_logging/logconf.txt
+
 # Define the default command.
 CMD ["bash"]
