@@ -49,7 +49,7 @@ _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER = os.path.join(
 
 _GO_REPO_ROOT = os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc')
 
-_TEST_TIMEOUT = 60
+_TEST_TIMEOUT = 30
 
 
 class CXXLanguage:
@@ -182,7 +182,7 @@ def lb_client_interop_jobspec(language,
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host=server.test.google.fr',
-    #    '--server_host_override=""',
+        '--server_host_override=server.test.google.fr',
         '--server_port=%d' % _DEFAULT_SERVER_PORT,
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)

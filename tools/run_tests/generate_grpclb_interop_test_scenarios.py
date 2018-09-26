@@ -3,6 +3,24 @@ import os
 
 all_scenarios = []
 
+def generate_no_balancer():
+    all_configs = []
+    for transport_sec in ['insecure', 'alts', 'tls']:
+        config = {
+            'name': 'no_balancer_%s' % transport_sec,
+            'transport_sec': transport_sec,
+            'balancer_configs': [],
+            'backend_configs': [],
+            'fallback_configs': [{
+                'transport_sec': transport_sec,
+            }],
+        }
+        all_configs.append(config)
+    return all_configs
+
+
+all_scenarios += generate_no_balancer()
+
 
 def generate_client_referred_to_backend():
     all_configs = []

@@ -1,5 +1,38 @@
 [
     {
+        "backend_configs": [], 
+        "balancer_configs": [], 
+        "fallback_configs": [
+            {
+                "transport_sec": "insecure"
+            }
+        ], 
+        "name": "no_balancer_insecure", 
+        "transport_sec": "insecure"
+    }, 
+    {
+        "backend_configs": [], 
+        "balancer_configs": [], 
+        "fallback_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "name": "no_balancer_alts", 
+        "transport_sec": "alts"
+    }, 
+    {
+        "backend_configs": [], 
+        "balancer_configs": [], 
+        "fallback_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
+        "name": "no_balancer_tls", 
+        "transport_sec": "tls"
+    }, 
+    {
         "backend_configs": [
             {
                 "transport_sec": "insecure"
