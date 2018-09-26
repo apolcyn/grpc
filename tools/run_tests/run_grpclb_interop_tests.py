@@ -67,7 +67,8 @@ class CXXLanguage:
         return {
             'GRPC_DNS_RESOLVER': 'ares',
             'GRPC_VERBOSITY': 'DEBUG',
-            'GRPC_TRACE': 'client_channel,glb'
+            'GRPC_TRACE': 'client_channel,glb',
+            'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH': '/var/local/git/grpc/src/core/tsi/test_creds/ca.pem',
         }
 
     def __str__(self):
@@ -177,14 +178,19 @@ def lb_client_interop_jobspec(language,
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host=server.test.google.fr',
-        '--server_port=%d' % _DEFAULT_SERVER_PORT,
-        '--use_test_ca=true',
-    ] + transport_security_to_args(transport_security)
+        '--server_port=%d' % _DEFAULT_SERVER_PORT
+        ] + transport_security_to_args(transport_security)
     # Don't set the server host override in any client;
     # Go and Java default to no override.
     # We're using a DNS server so there's no need.
     if language.safename == 'c++':
         interop_only_options += ['--server_host_override=""']
+    # Don't set test CA for C++, since we're pointing
+    # GRPC_DEFAULT_SSL_ROOTS_FILE_PATH to the test CA file.
+    if language.safename != 'c++':
+        interop_only_options += ['--use_test_ca=false']
+    else:
+        interop_only_options += ['--use_test_ca=true']
     client_args = language.client_cmd(interop_only_options)
     environ = language.global_env()
     environ['BUILD_AND_RUN_DOCKER_QUIET'] = 'true'
