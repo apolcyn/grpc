@@ -65,10 +65,14 @@ class CXXLanguage:
 
     def global_env(self):
         return {
-            'GRPC_DNS_RESOLVER': 'ares',
-            'GRPC_VERBOSITY': 'DEBUG',
-            'GRPC_TRACE': 'client_channel,glb',
-            'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH': '/var/local/git/grpc/src/core/tsi/test_creds/ca.pem',
+            'GRPC_DNS_RESOLVER':
+            'ares',
+            'GRPC_VERBOSITY':
+            'DEBUG',
+            'GRPC_TRACE':
+            'client_channel,glb',
+            'GRPC_DEFAULT_SSL_ROOTS_FILE_PATH':
+            '/var/local/git/grpc/src/core/tsi/test_creds/ca.pem',
         }
 
     def __str__(self):
@@ -179,7 +183,7 @@ def lb_client_interop_jobspec(language,
     interop_only_options = [
         '--server_host=server.test.google.fr',
         '--server_port=%d' % _DEFAULT_SERVER_PORT
-        ] + transport_security_to_args(transport_security)
+    ] + transport_security_to_args(transport_security)
     # Don't set the server host override in any client;
     # Go and Java default to no override.
     # We're using a DNS server so there's no need.
@@ -225,10 +229,9 @@ def backend_or_fallback_server_jobspec(transport_security, shortname):
     cmdline = [
         'bin/server',
         '--port=%d' % _DEFAULT_SERVER_PORT,
-        ] + transport_security_to_args(transport_security)
+    ] + transport_security_to_args(transport_security)
     return grpc_server_in_docker_jobspec(
-        server_cmdline=cmdline,
-        shortname=shortname)
+        server_cmdline=cmdline, shortname=shortname)
 
 
 def grpclb_jobspec(transport_security, backend_addrs, shortname):
@@ -237,14 +240,12 @@ def grpclb_jobspec(transport_security, backend_addrs, shortname):
         'bin/fake_grpclb',
         '--backend_addrs=%s' % ','.join(backend_addrs),
         '--port=%d' % _DEFAULT_SERVER_PORT,
-        ] + transport_security_to_args(transport_security)
+    ] + transport_security_to_args(transport_security)
     return grpc_server_in_docker_jobspec(
-        server_cmdline=cmdline,
-        shortname=shortname)
+        server_cmdline=cmdline, shortname=shortname)
 
 
-def grpc_server_in_docker_jobspec(server_cmdline,
-                                  shortname):
+def grpc_server_in_docker_jobspec(server_cmdline, shortname):
     container_name = dockerjob.random_name(shortname)
     environ = {
         'GRPC_GO_LOG_VERBOSITY_LEVEL': '3',
@@ -257,9 +258,7 @@ def grpc_server_in_docker_jobspec(server_cmdline,
         environ=environ,
         docker_args=['--name=%s' % container_name])
     server_job = jobset.JobSpec(
-        cmdline=docker_cmdline,
-        shortname=shortname,
-        timeout_seconds=30 * 60)
+        cmdline=docker_cmdline, shortname=shortname, timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
 
@@ -267,20 +266,18 @@ def grpc_server_in_docker_jobspec(server_cmdline,
 def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
     container_name = dockerjob.random_name(shortname)
     run_dns_server_cmdline = [
-            'python',
-            'test/cpp/naming/utils/run_dns_server_for_lb_interop_tests.py',
-            '--grpclb_ips=%s' % ','.join(grpclb_ips),
-            '--fallback_ips=%s' % ','.join(fallback_ips),
+        'python',
+        'test/cpp/naming/utils/run_dns_server_for_lb_interop_tests.py',
+        '--grpclb_ips=%s' % ','.join(grpclb_ips),
+        '--fallback_ips=%s' % ','.join(fallback_ips),
     ]
     full_cmdline = docker_run_cmdline(
-            run_dns_server_cmdline,
-            cwd='/var/local/git/grpc',
-            image=docker_images.get(_FAKE_SERVERS_SAFENAME),
-            docker_args=['--name=%s' % container_name])
+        run_dns_server_cmdline,
+        cwd='/var/local/git/grpc',
+        image=docker_images.get(_FAKE_SERVERS_SAFENAME),
+        docker_args=['--name=%s' % container_name])
     server_job = jobset.JobSpec(
-        cmdline=full_cmdline,
-        shortname=shortname,
-        timeout_seconds=30 * 60)
+        cmdline=full_cmdline, shortname=shortname, timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
 
@@ -372,8 +369,7 @@ for lang_name in languages:
 
 if args.servers_image_tag is None:
     job = build_interop_image_jobspec(
-        _FAKE_SERVERS_SAFENAME,
-        basename_prefix='lb_interop')
+        _FAKE_SERVERS_SAFENAME, basename_prefix='lb_interop')
     build_jobs.append(job)
     docker_images[_FAKE_SERVERS_SAFENAME] = job.tag
 else:

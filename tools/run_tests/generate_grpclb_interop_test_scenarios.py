@@ -3,6 +3,7 @@ import os
 
 all_scenarios = []
 
+
 def generate_no_balancer():
     all_configs = []
     for transport_sec in ['insecure', 'alts', 'tls']:
