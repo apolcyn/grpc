@@ -524,23 +524,17 @@ def run_one_scenario(scenario_config):
             suppress_failure=suppress_failure)
 
 
-try:
-    num_failures = 0
-    with open(args.scenarios_file, 'r') as scenarios_input:
-        all_scenarios = json.loads(scenarios_input.read())
-        for scenario in all_scenarios:
-            if args.scenario_name:
-                if args.scenario_name != scenario['name']:
-                    jobset.message('IDLE',
-                                   'Skipping scenario: %s' % scenario['name'])
-                    continue
-            num_failures += run_one_scenario(scenario)
-    if num_failures == 0:
-        sys.exit(0)
-    else:
-        sys.exit(1)
-finally:
-    if not args.save_images and args.image_tag is None:
-        for image in six.itervalues(docker_images):
-            print('Removing docker image %s' % image)
-            dockerjob.remove_image(image)
+num_failures = 0
+with open(args.scenarios_file, 'r') as scenarios_input:
+    all_scenarios = json.loads(scenarios_input.read())
+    for scenario in all_scenarios:
+        if args.scenario_name:
+            if args.scenario_name != scenario['name']:
+                jobset.message('IDLE',
+                               'Skipping scenario: %s' % scenario['name'])
+                continue
+        num_failures += run_one_scenario(scenario)
+if num_failures == 0:
+    sys.exit(0)
+else:
+    sys.exit(1)
