@@ -262,7 +262,7 @@ def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
     container_name = dockerjob.random_name(shortname)
     run_dns_server_cmdline = [
             'python',
-            'test/cpp/utils/run_dns_server_for_lb_interop_tests.py',
+            'test/cpp/naming/utils/run_dns_server_for_lb_interop_tests.py',
             '--grpclb_ips=%s' % ','.join(grpclb_ips),
             '--fallback_ips=%s' % ','.join(fallback_ips),
     ]
@@ -324,6 +324,13 @@ argp.add_argument(
     type=str,
     help=
     'Setting this skips the clients docker image build step and runs the client from the named image. Only supports running a one client language.'
+)
+argp.add_argument(
+    '--servers_image_tag',
+    default=None,
+    type=str,
+    help=
+    'Setting this skips the fake servers docker image build step and runs the servers from the named image.'
 )
 argp.add_argument(
     '--save_images',

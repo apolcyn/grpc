@@ -12,7 +12,7 @@ import yaml
 argp = argparse.ArgumentParser(description='Runs a DNS server for LB interop tests')
 argp.add_argument('-l', '--grpclb_ips', default=None, type=str,
                   help='Comma-separated list of IP addresses of balancers')
-argp.add_argument('-f', '--fallback_ips', default=0, type=int,
+argp.add_argument('-f', '--fallback_ips', default=None, type=str,
                   help='Comma-separated list of IP addresses of fallback servers')
 args = argp.parse_args()
 

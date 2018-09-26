@@ -27,7 +27,7 @@ git clone --recursive /var/local/jenkins/grpc-go src/google.golang.org/grpc
 
 # Build the interop server and fake balancer
 (cd src/google.golang.org/grpc/interop/server && go install)
-(cd src/google.golang.org/grpc/interop/fake_grpclb/fake_grpclb && go install)
+(cd src/google.golang.org/grpc/interop/fake_grpclb && go install)
   
 # Clone the grpc/grpc repo to get the python DNS server.
 # Hack: we don't need to init submodules for the scripts we need.
