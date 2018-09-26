@@ -49,7 +49,7 @@ _CLIENT_WITH_LOCAL_DNS_SERVER_RUNNER = os.path.join(
 
 _GO_REPO_ROOT = os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc')
 
-_TEST_TIMEOUT = 30
+_TEST_TIMEOUT = 60
 
 
 class CXXLanguage:
@@ -85,7 +85,8 @@ class JavaLanguage:
         return {
             'JAVA_OPTS':
             ('-Dio.grpc.internal.DnsNameResolverProvider.enable_grpclb=true '
-             '-Djava.util.logging.config.file=/var/local/grpc_java_logging/logconf.txt')
+             '-Djava.util.logging.config.file=/var/local/grpc_java_logging/logconf.txt'
+            )
         }
 
     def __str__(self):
@@ -166,6 +167,8 @@ def transport_security_to_args(transport_security):
         args += ['--use_tls=false', '--use_alts=true']
     elif transport_security == 'insecure':
         args += ['--use_tls=false']
+    elif transport_security == 'google_default_credentials':
+        args += ['--custom_credentials_type=google_default_credentials']
     else:
         print('Invalid transport security option.')
         sys.exit(1)
@@ -179,6 +182,7 @@ def lb_client_interop_jobspec(language,
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host=server.test.google.fr',
+    #    '--server_host_override=""',
         '--server_port=%d' % _DEFAULT_SERVER_PORT,
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
@@ -323,8 +327,9 @@ argp.add_argument(
     '--scenario_name',
     default=None,
     type=str,
-    help=('Useful for manual runs: specify the name of '
-          'the scenario to run from scenarios_file. Run all scenarios if unset.'))
+    help=(
+        'Useful for manual runs: specify the name of '
+        'the scenario to run from scenarios_file. Run all scenarios if unset.'))
 argp.add_argument(
     '--image_tag',
     default=None,
@@ -474,9 +479,8 @@ def run_one_scenario(scenario_config):
                 docker_image=docker_images.get(lang.safename),
                 transport_security=scenario_config['transport_sec'])
             jobs.append(test_job)
-        jobset.message(
-            'IDLE',
-            'Jobs to run: \n%s\n' % '\n'.join(str(job) for job in jobs))
+        jobset.message('IDLE', 'Jobs to run: \n%s\n' % '\n'.join(
+            str(job) for job in jobs))
         num_failures, resultset = jobset.run(
             jobs, newline_on_success=True, maxjobs=args.jobs)
         report_utils.render_junit_xml_report(resultset, 'sponge_log.xml')
@@ -508,11 +512,10 @@ try:
         all_scenarios = json.loads(scenarios_input.read())
         for scenario in all_scenarios:
             if args.scenario_name:
-              if args.scenario_name != scenario['name']:
-                  jobset.message(
-                      'IDLE',
-                      'Skipping scenario: %s' % scenario['name'])
-                  continue
+                if args.scenario_name != scenario['name']:
+                    jobset.message('IDLE',
+                                   'Skipping scenario: %s' % scenario['name'])
+                    continue
             num_failures += run_one_scenario(scenario)
     if num_failures == 0:
         sys.exit(0)

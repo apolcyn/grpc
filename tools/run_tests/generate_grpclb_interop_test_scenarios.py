@@ -104,7 +104,10 @@ all_scenarios += generate_client_falls_back_because_no_backends()
 
 def generate_client_falls_back_because_balancer_connection_broken():
     all_configs = []
-    for transport_sec in ['alts', 'tls']:
+    for transport_sec in ['alts', 'tls', 'google_default_credentials']:
+        fallback_transport_sec = transport_sec
+        if transport_sec == 'google_default_credentials':
+            fallback_transport_sec = 'tls'
         config = {
             'name':
             'client_falls_back_because_balancer_connection_broken_%s' %
@@ -114,11 +117,9 @@ def generate_client_falls_back_because_balancer_connection_broken():
             'balancer_configs': [{
                 'transport_sec': 'insecure',
             }],
-            'backend_configs': [{
-                'transport_sec': transport_sec,
-            }],
+            'backend_configs': [],
             'fallback_configs': [{
-                'transport_sec': transport_sec,
+                'transport_sec': fallback_transport_sec,
             }],
         }
         all_configs.append(config)
