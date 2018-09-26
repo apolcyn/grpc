@@ -9,8 +9,15 @@ import time
 import signal
 import yaml
 
+argp = argparse.ArgumentParser(description='Runs a DNS server for LB interop tests')
+argp.add_argument('-l', '--grpclb_ips', default=None, type=str,
+                  help='Comma-separated list of IP addresses of balancers')
+argp.add_argument('-f', '--fallback_ips', default=0, type=int,
+                  help='Comma-separated list of IP addresses of fallback servers')
+args = argp.parse_args()
+
 balancer_a_records = []
-grpclb_ips = os.environ.get('GRPCLB_IPS').split(',')
+grpclb_ips = args.grpclb_ips.split(',')
 if grpclb_ips[0]:
     for ip in grpclb_ips:
         balancer_a_records.append({
@@ -19,7 +26,7 @@ if grpclb_ips[0]:
             'type': 'A',
         })
 fallback_a_records = []
-fallback_ips = os.environ.get('FALLBACK_IPS').split(',')
+fallback_ips = args.fallback_ips.split(',')
 if fallback_ips[0]:
     for ip in fallback_ips:
         fallback_a_records.append({

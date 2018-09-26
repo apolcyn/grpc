@@ -51,6 +51,8 @@ _GO_REPO_ROOT = os.path.join(os.sep, 'go', 'src', 'google.golang.org', 'grpc')
 
 _TEST_TIMEOUT = 30
 
+_FAKE_SERVERS_SAFENAME = 'fake_servers'
+
 
 class CXXLanguage:
 
@@ -142,13 +144,6 @@ def docker_run_cmdline(cmdline, image, docker_args=[], cwd=None, environ=None):
     return docker_cmdline
 
 
-def bash_cmdline(cmdline):
-    """Creates bash -c cmdline from args list."""
-    # Use login shell:
-    # * makes error messages clearer if executables are missing
-    return ['bash', '-c', ' '.join(cmdline)]
-
-
 def _job_kill_handler(job):
     assert job._spec.container_name
     dockerjob.docker_kill(job._spec.container_name)
@@ -182,10 +177,14 @@ def lb_client_interop_jobspec(language,
     """Creates jobspec for cloud-to-cloud interop test"""
     interop_only_options = [
         '--server_host=server.test.google.fr',
-        '--server_host_override=server.test.google.fr',
         '--server_port=%d' % _DEFAULT_SERVER_PORT,
         '--use_test_ca=true',
     ] + transport_security_to_args(transport_security)
+    # Don't set the server host override in any client;
+    # Go and Java default to no override.
+    # We're using a DNS server so there's no need.
+    if language.safename == 'c++':
+        interop_only_options += ['--server_host_override=""']
     client_args = language.client_cmd(interop_only_options)
     environ = language.global_env()
     environ['BUILD_AND_RUN_DOCKER_QUIET'] = 'true'
@@ -217,49 +216,42 @@ def lb_client_interop_jobspec(language,
 
 def backend_or_fallback_server_jobspec(transport_security, shortname):
     """Create jobspec for running a fallback or backend server"""
+    cmdline = [
+        'bin/server',
+        '--port=%d' % _DEFAULT_SERVER_PORT,
+        ] + transport_security_to_args(transport_security)
     return grpc_server_in_docker_jobspec(
-        server_run_script=
-        'tools/dockerfile/grpclb_interop_servers/run_backend_or_fallback_server.sh',
-        backend_addrs=None,
-        transport_security=transport_security,
+        server_cmdline=cmdline,
         shortname=shortname)
 
 
 def grpclb_jobspec(transport_security, backend_addrs, shortname):
     """Create jobspec for running a server"""
+    cmdline = [
+        'bin/fake_grpclb',
+        '--backend_addrs=%s' % ','.join(backend_addrs),
+        '--port=%d' % _DEFAULT_SERVER_PORT,
+        ] + transport_security_to_args(transport_security)
     return grpc_server_in_docker_jobspec(
-        server_run_script=
-        'tools/dockerfile/grpclb_interop_servers/run_grpclb_server.sh',
-        backend_addrs=backend_addrs,
-        transport_security=transport_security,
+        server_cmdline=cmdline,
         shortname=shortname)
 
 
-def grpc_server_in_docker_jobspec(server_run_script, backend_addrs,
-                                  transport_security, shortname):
+def grpc_server_in_docker_jobspec(server_cmdline,
+                                  shortname):
     container_name = dockerjob.random_name(shortname)
-    build_and_run_docker_cmdline = (
-        'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
-    docker_extra_args = '-e GRPC_GO_LOG_VERBOSITY_LEVEL=3 '
-    docker_extra_args += '-e GRPC_GO_LOG_SEVERITY_LEVEL=INFO '
-    docker_extra_args += '-e PORT=%s ' % _DEFAULT_SERVER_PORT
-    if backend_addrs is not None:
-        docker_extra_args += '-e BACKEND_ADDRS=%s ' % ','.join(backend_addrs)
-    if transport_security == 'alts':
-        docker_extra_args += '-e USE_ALTS=true '
-    elif transport_security == 'tls':
-        docker_extra_args += '-e USE_TLS=true '
-    else:
-        assert transport_security == 'insecure'
-    build_and_run_docker_environ = {
-        'CONTAINER_NAME': container_name,
-        'DOCKERFILE_DIR': 'tools/dockerfile/grpclb_interop_servers',
-        'DOCKER_RUN_SCRIPT': server_run_script,
-        'EXTRA_DOCKER_ARGS': docker_extra_args,
+    environ = {
+        'GRPC_GO_LOG_VERBOSITY_LEVEL': '3',
+        'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO ',
     }
+    docker_cmdline = docker_run_cmdline(
+        server_cmdline,
+        cwd='/go',
+        image=docker_images.get(_FAKE_SERVERS_SAFENAME),
+        environ=environ,
+        docker_args=['--name=%s' % container_name])
     server_job = jobset.JobSpec(
-        cmdline=build_and_run_docker_cmdline,
-        environ=build_and_run_docker_environ,
+        cmdline=docker_cmdline,
         shortname=shortname,
         timeout_seconds=30 * 60)
     server_job.container_name = container_name
@@ -268,40 +260,36 @@ def grpc_server_in_docker_jobspec(server_run_script, backend_addrs,
 
 def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
     container_name = dockerjob.random_name(shortname)
-    build_and_run_docker_cmdline = (
-        'bash -l tools/run_tests/dockerize/build_and_run_docker.sh').split()
-    extra_docker_args = '-e GRPCLB_IPS=%s ' % ','.join(grpclb_ips)
-    extra_docker_args += '-e FALLBACK_IPS=%s ' % ','.join(fallback_ips)
-    build_and_run_docker_environ = {
-        'CONTAINER_NAME':
-        container_name,
-        'DOCKERFILE_DIR':
-        'tools/dockerfile/grpclb_interop_servers',
-        'DOCKER_RUN_SCRIPT':
-        'tools/dockerfile/grpclb_interop_servers/run_dns_server.sh',
-        'EXTRA_DOCKER_ARGS':
-        extra_docker_args,
-    }
+    run_dns_server_cmdline = [
+            'python',
+            'test/cpp/utils/run_dns_server_for_lb_interop_tests.py',
+            '--grpclb_ips=%s' % ','.join(grpclb_ips),
+            '--fallback_ips=%s' % ','.join(fallback_ips),
+    ]
+    full_cmdline = docker_run_cmdline(
+            run_dns_server_cmdline,
+            cwd='/var/local/git/grpc',
+            image=docker_images.get(_FAKE_SERVERS_SAFENAME),
+            docker_args=['--name=%s' % container_name])
     server_job = jobset.JobSpec(
-        cmdline=build_and_run_docker_cmdline,
-        environ=build_and_run_docker_environ,
+        cmdline=full_cmdline,
         shortname=shortname,
         timeout_seconds=30 * 60)
     server_job.container_name = container_name
     return server_job
 
 
-def build_interop_image_jobspec(language):
+def build_interop_image_jobspec(lang_safename, basename_prefix='grpc_interop'):
     """Creates jobspec for building interop docker image for a language"""
-    tag = 'grpc_interop_%s:%s' % (language.safename, uuid.uuid4())
+    tag = '%s_%s:%s' % (basename_prefix, lang_safename, uuid.uuid4())
     env = {
         'INTEROP_IMAGE': tag,
-        'BASE_NAME': 'grpc_interop_%s' % language.safename,
+        'BASE_NAME': '%s_%s' % (basename_prefix, lang_safename),
     }
     build_job = jobset.JobSpec(
         cmdline=['tools/run_tests/dockerize/build_interop_image.sh'],
         environ=env,
-        shortname='build_docker_%s' % language.safename,
+        shortname='build_docker_%s' % lang_safename,
         timeout_seconds=30 * 60)
     build_job.tag = tag
     return build_job
@@ -356,11 +344,20 @@ else:
 for lang_name in languages:
     l = _LANGUAGES[lang_name]
     if args.image_tag is None:
-        job = build_interop_image_jobspec(l)
+        job = build_interop_image_jobspec(l.safename)
         build_jobs.append(job)
         docker_images[str(l.safename)] = job.tag
     else:
         docker_images[str(l.safename)] = args.image_tag
+
+if args.servers_image_tag is None:
+    job = build_interop_image_jobspec(
+        _FAKE_SERVERS_SAFENAME,
+        basename_prefix='lb_interop')
+    build_jobs.append(job)
+    docker_images[_FAKE_SERVERS_SAFENAME] = job.tag
+else:
+    docker_images[_FAKE_SERVERS_SAFENAME] = args.servers_image_tag
 
 if build_jobs:
     jobset.message('START', 'Building interop docker images.', do_newline=True)
