@@ -345,6 +345,13 @@ argp.add_argument(
     nargs='?',
     const=True,
     help='Skip docker image removal.')
+argp.add_argument(
+    '--verbose',
+    default=False,
+    type=bool,
+    nargs='?',
+    const=True,
+    help='Increase logging.')
 args = argp.parse_args()
 
 docker_images = {}
@@ -511,9 +518,10 @@ def run_one_scenario(scenario_config):
         for server, job in server_jobs.items():
             if not job.is_running():
                 print('Server "%s" has exited prematurely.' % server)
+        suppress_failure = suppress_server_logs and not args.verbose
         dockerjob.finish_jobs(
             [j for j in six.itervalues(server_jobs)],
-            suppress_failure=suppress_server_logs)
+            suppress_failure=suppress_failure)
 
 
 try:
