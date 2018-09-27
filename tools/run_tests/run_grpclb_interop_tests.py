@@ -365,6 +365,15 @@ argp.add_argument(
     'Setting this skips the fake servers docker image build step and runs the servers from the named image.'
 )
 argp.add_argument(
+    '--no_skips',
+    default=False,
+    type=bool,
+    nargs='?',
+    const=True,
+    help=
+    'Useful for manual runs. Setting this overrides test "skips" configured in test scenarios.'
+)
+argp.add_argument(
     '--verbose',
     default=False,
     type=bool,
@@ -512,7 +521,8 @@ def run_one_scenario(scenario_config):
         for lang_name in languages:
             # Skip languages that are known to not currently
             # work for this test.
-            if lang_name in scenario_config.get('skip_langs', []):
+            if not args.no_skips and lang_name in scenario_config.get(
+                    'skip_langs', []):
                 jobset.message('IDLE',
                                'Skipping scenario: %s for language: %s\n' %
                                (scenario_config['name'], lang_name))
