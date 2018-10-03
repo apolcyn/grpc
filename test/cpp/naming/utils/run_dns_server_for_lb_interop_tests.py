@@ -56,7 +56,7 @@ records_config_yaml = {
             '_grpclb._tcp.server': [
                 {
                     'TTL': '2100',
-                    'data': '0 0 8080 balancer',
+                    'data': '0 0 12000 balancer',
                     'type': 'SRV'
                 },
             ],

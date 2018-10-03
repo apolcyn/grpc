@@ -41,9 +41,9 @@ atexit.register(lambda: subprocess.call(['stty', 'echo']))
 ROOT = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '../..'))
 os.chdir(ROOT)
 
-_DEFAULT_SERVER_PORT = 8080
-
 _FALLBACK_SERVER_PORT = 443
+_BALANCER_SERVER_PORT = 12000
+_BACKEND_SERVER_PORT = 8080
 
 _TEST_TIMEOUT = 30
 
@@ -239,7 +239,7 @@ def backend_server_jobspec(transport_security, shortname):
     """Create jobspec for running a fallback or backend server"""
     cmdline = [
         'bin/server',
-        '--port=%d' % _DEFAULT_SERVER_PORT,
+        '--port=%d' % _BACKEND_SERVER_PORT,
     ] + transport_security_to_args(transport_security)
     return grpc_server_in_docker_jobspec(
         server_cmdline=cmdline, shortname=shortname)
@@ -250,7 +250,7 @@ def grpclb_jobspec(transport_security, short_stream, backend_addrs, shortname):
     cmdline = [
         'bin/fake_grpclb',
         '--backend_addrs=%s' % ','.join(backend_addrs),
-        '--port=%d' % _DEFAULT_SERVER_PORT,
+        '--port=%d' % _BALANCER_SERVER_PORT,
         '--short_stream=%s' % short_stream,
         '--service_name=%s' % _SERVICE_NAME,
     ] + transport_security_to_args(transport_security)
@@ -487,7 +487,7 @@ def run_one_scenario(scenario_config):
             backend_job = dockerjob.DockerJob(backend_spec)
             server_jobs[backend_shortname] = backend_job
             backend_addrs.append('%s:%d' % (backend_job.ip_address(),
-                                            _DEFAULT_SERVER_PORT))
+                                            _BACKEND_SERVER_PORT))
         # Start fallbacks
         for i in xrange(len(scenario_config['fallback_configs'])):
             fallback_config = scenario_config['fallback_configs'][i]
