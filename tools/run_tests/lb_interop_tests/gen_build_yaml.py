@@ -20,6 +20,14 @@ import yaml
 
 all_scenarios = []
 
+# TODO(https://github.com/grpc/grpc-go/issues/2347): enable
+# client_falls_back_because_no_backends_* scenarios for Java/Go
+
+# TODO(https://github.com/grpc/grpc-java/issues/4887): enable
+# *short_stream* scenarios for Java
+
+# TODO(apolcyn): figure out Java/grpclb/TLS issues
+
 
 def generate_no_balancer_because_srv_returns_no_data():
     all_configs = []
@@ -174,7 +182,7 @@ def generate_client_falls_back_because_no_backends():
     all_configs = []
     for balancer_short_stream in [True, False]:
         for transport_sec in ['insecure', 'alts', 'tls']:
-            skip_langs = []
+            skip_langs = ['go', 'java']
             if transport_sec == 'tls':
                 skip_langs += ['java']
             if balancer_short_stream:

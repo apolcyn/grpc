@@ -494,6 +494,8 @@
         ], 
         "name": "client_falls_back_because_no_backends_insecure_short_stream_True", 
         "skip_langs": [
+            "go", 
+            "java", 
             "java"
         ], 
         "transport_sec": "insecure"
@@ -513,6 +515,8 @@
         ], 
         "name": "client_falls_back_because_no_backends_alts_short_stream_True", 
         "skip_langs": [
+            "go", 
+            "java", 
             "java"
         ], 
         "transport_sec": "alts"
@@ -532,6 +536,8 @@
         ], 
         "name": "client_falls_back_because_no_backends_tls_short_stream_True", 
         "skip_langs": [
+            "go", 
+            "java", 
             "java", 
             "java"
         ], 
@@ -551,7 +557,10 @@
             }
         ], 
         "name": "client_falls_back_because_no_backends_insecure_short_stream_False", 
-        "skip_langs": [], 
+        "skip_langs": [
+            "go", 
+            "java"
+        ], 
         "transport_sec": "insecure"
     }, 
     {
@@ -568,7 +577,10 @@
             }
         ], 
         "name": "client_falls_back_because_no_backends_alts_short_stream_False", 
-        "skip_langs": [], 
+        "skip_langs": [
+            "go", 
+            "java"
+        ], 
         "transport_sec": "alts"
     }, 
     {
@@ -586,6 +598,8 @@
         ], 
         "name": "client_falls_back_because_no_backends_tls_short_stream_False", 
         "skip_langs": [
+            "go", 
+            "java", 
             "java"
         ], 
         "transport_sec": "tls"
