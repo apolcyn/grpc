@@ -29,31 +29,29 @@ all_scenarios = []
 # TODO(apolcyn): figure out why Java/grpclb/TLS doesn't work
 
 
+def server_sec(transport_sec):
+    if transport_sec == 'google_default_credentials':
+        return 'alts', 'alts', 'tls'
+    return transport_sec, transport_sec, transport_sec
+
+
 def generate_no_balancer_because_lb_a_record_returns_no_data():
     all_configs = []
     for transport_sec in [
             'insecure', 'alts', 'tls', 'google_default_credentials'
     ]:
-        fallback_transport_sec = transport_sec
-        if transport_sec == 'google_default_credentials':
-            fallback_transport_sec = 'tls'
-        skip_langs = []
-        if transport_sec in ['tls', 'google_default_credentials']:
-            skip_langs += ['java']
-        if transport_sec in ['google_default_credentials']:
-            skip_langs += ['go']
+        balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
         config = {
             'name':
             'no_balancer_because_lb_a_record_returns_no_data_%s' %
             transport_sec,
-            'skip_langs':
-            skip_langs,
+            'skip_langs': [],
             'transport_sec':
             transport_sec,
             'balancer_configs': [],
             'backend_configs': [],
             'fallback_configs': [{
-                'transport_sec': fallback_transport_sec,
+                'transport_sec': fallback_sec,
             }],
         }
         all_configs.append(config)
@@ -69,16 +67,10 @@ def generate_client_referred_to_backend():
         for transport_sec in [
                 'insecure', 'alts', 'tls', 'google_default_credentials'
         ]:
-            balancer_transport_sec = transport_sec
-            backend_transport_sec = transport_sec
-            if transport_sec == 'google_default_credentials':
-                balancer_transport_sec = 'alts'
-                backend_transport_sec = 'alts'
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
             if transport_sec in ['tls', 'google_default_credentials']:
                 skip_langs += ['java']
-            if transport_sec in ['google_default_credentials']:
-                skip_langs += ['go']
             if balancer_short_stream:
                 skip_langs += ['java']
             config = {
@@ -90,11 +82,11 @@ def generate_client_referred_to_backend():
                 'transport_sec':
                 transport_sec,
                 'balancer_configs': [{
-                    'transport_sec': balancer_transport_sec,
+                    'transport_sec': balancer_sec,
                     'short_stream': balancer_short_stream,
                 }],
                 'backend_configs': [{
-                    'transport_sec': backend_transport_sec,
+                    'transport_sec': backend_sec,
                 }],
                 'fallback_configs': [],
             }
@@ -108,7 +100,8 @@ all_scenarios += generate_client_referred_to_backend()
 def generate_client_referred_to_backend_fallback_broken():
     all_configs = []
     for balancer_short_stream in [True, False]:
-        for transport_sec in ['alts', 'tls']:
+        for transport_sec in ['alts', 'tls', 'google_default_credentials']:
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
             if transport_sec == 'tls':
                 skip_langs += ['java']
@@ -123,11 +116,11 @@ def generate_client_referred_to_backend_fallback_broken():
                 'transport_sec':
                 transport_sec,
                 'balancer_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': balancer_sec,
                     'short_stream': balancer_short_stream,
                 }],
                 'backend_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }],
                 'fallback_configs': [{
                     'transport_sec': 'insecure',
@@ -143,7 +136,10 @@ all_scenarios += generate_client_referred_to_backend_fallback_broken()
 def generate_client_referred_to_backend_multiple_backends():
     all_configs = []
     for balancer_short_stream in [True, False]:
-        for transport_sec in ['insecure', 'alts', 'tls']:
+        for transport_sec in [
+                'insecure', 'alts', 'tls', 'google_default_credentials'
+        ]:
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
             if transport_sec == 'tls':
                 skip_langs += ['java']
@@ -158,19 +154,19 @@ def generate_client_referred_to_backend_multiple_backends():
                 'transport_sec':
                 transport_sec,
                 'balancer_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': balancer_sec,
                     'short_stream': balancer_short_stream,
                 }],
                 'backend_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }, {
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }, {
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }, {
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }, {
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }],
                 'fallback_configs': [],
             }
@@ -184,7 +180,10 @@ all_scenarios += generate_client_referred_to_backend_multiple_backends()
 def generate_client_falls_back_because_no_backends():
     all_configs = []
     for balancer_short_stream in [True, False]:
-        for transport_sec in ['insecure', 'alts', 'tls']:
+        for transport_sec in [
+                'insecure', 'alts', 'tls', 'google_default_credentials'
+        ]:
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = ['go', 'java']
             if transport_sec == 'tls':
                 skip_langs += ['java']
@@ -199,12 +198,12 @@ def generate_client_falls_back_because_no_backends():
                 'transport_sec':
                 transport_sec,
                 'balancer_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': balancer_sec,
                     'short_stream': balancer_short_stream,
                 }],
                 'backend_configs': [],
                 'fallback_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': fallback_sec,
                 }],
             }
             all_configs.append(config)
@@ -217,14 +216,10 @@ all_scenarios += generate_client_falls_back_because_no_backends()
 def generate_client_falls_back_because_balancer_connection_broken():
     all_configs = []
     for transport_sec in ['alts', 'tls', 'google_default_credentials']:
-        fallback_transport_sec = transport_sec
-        if transport_sec == 'google_default_credentials':
-            fallback_transport_sec = 'tls'
+        balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
         skip_langs = []
         if transport_sec in ['tls', 'google_default_credentials']:
             skip_langs = ['java']
-        if transport_sec in ['google_default_credentials']:
-            skip_langs += ['go']
         config = {
             'name':
             'client_falls_back_because_balancer_connection_broken_%s' %
@@ -239,7 +234,7 @@ def generate_client_falls_back_because_balancer_connection_broken():
             }],
             'backend_configs': [],
             'fallback_configs': [{
-                'transport_sec': fallback_transport_sec,
+                'transport_sec': fallback_sec,
             }],
         }
         all_configs.append(config)
@@ -252,7 +247,10 @@ all_scenarios += generate_client_falls_back_because_balancer_connection_broken()
 def generate_client_referred_to_backend_multiple_balancers():
     all_configs = []
     for balancer_short_stream in [True, False]:
-        for transport_sec in ['insecure', 'alts', 'tls']:
+        for transport_sec in [
+                'insecure', 'alts', 'tls', 'google_default_credentials'
+        ]:
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
             if transport_sec == 'tls':
                 skip_langs += ['java']
@@ -268,29 +266,29 @@ def generate_client_referred_to_backend_multiple_balancers():
                 transport_sec,
                 'balancer_configs': [
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': balancer_sec,
                         'short_stream': balancer_short_stream,
                     },
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': balancer_sec,
                         'short_stream': balancer_short_stream,
                     },
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': balancer_sec,
                         'short_stream': balancer_short_stream,
                     },
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': balancer_sec,
                         'short_stream': balancer_short_stream,
                     },
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': balancer_sec,
                         'short_stream': balancer_short_stream,
                     },
                 ],
                 'backend_configs': [
                     {
-                        'transport_sec': transport_sec,
+                        'transport_sec': backend_sec,
                     },
                 ],
                 'fallback_configs': [],
@@ -305,7 +303,8 @@ all_scenarios += generate_client_referred_to_backend_multiple_balancers()
 def generate_client_referred_to_backend_multiple_balancers_one_works():
     all_configs = []
     for balancer_short_stream in [True, False]:
-        for transport_sec in ['alts', 'tls']:
+        for transport_sec in ['alts', 'tls', 'google_default_credentials']:
+            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
             if transport_sec == 'tls':
                 skip_langs += ['java']
@@ -320,7 +319,7 @@ def generate_client_referred_to_backend_multiple_balancers_one_works():
                 'transport_sec':
                 transport_sec,
                 'balancer_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': balancer_sec,
                     'short_stream': balancer_short_stream,
                 }, {
                     'transport_sec': 'insecure',
@@ -336,7 +335,7 @@ def generate_client_referred_to_backend_multiple_balancers_one_works():
                     'short_stream': balancer_short_stream,
                 }],
                 'backend_configs': [{
-                    'transport_sec': transport_sec,
+                    'transport_sec': backend_sec,
                 }],
                 'fallback_configs': [],
             }

@@ -33,9 +33,7 @@
             }
         ], 
         "name": "no_balancer_because_lb_a_record_returns_no_data_tls", 
-        "skip_langs": [
-            "java"
-        ], 
+        "skip_langs": [], 
         "transport_sec": "tls"
     }, 
     {
@@ -47,10 +45,7 @@
             }
         ], 
         "name": "no_balancer_because_lb_a_record_returns_no_data_google_default_credentials", 
-        "skip_langs": [
-            "java", 
-            "go"
-        ], 
+        "skip_langs": [], 
         "transport_sec": "google_default_credentials"
     }, 
     {
@@ -127,7 +122,6 @@
         "name": "client_referred_to_backend_google_default_credentials_short_stream_True", 
         "skip_langs": [
             "java", 
-            "go", 
             "java"
         ], 
         "transport_sec": "google_default_credentials"
@@ -200,8 +194,7 @@
         "fallback_configs": [], 
         "name": "client_referred_to_backend_google_default_credentials_short_stream_False", 
         "skip_langs": [
-            "java", 
-            "go"
+            "java"
         ], 
         "transport_sec": "google_default_credentials"
     }, 
@@ -260,6 +253,29 @@
         ], 
         "balancer_configs": [
             {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [
+            {
+                "transport_sec": "insecure"
+            }
+        ], 
+        "name": "client_referred_to_backend_fallback_broken_google_default_credentials_short_stream_True", 
+        "skip_langs": [
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
                 "short_stream": false, 
                 "transport_sec": "alts"
             }
@@ -295,6 +311,27 @@
             "java"
         ], 
         "transport_sec": "tls"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [
+            {
+                "transport_sec": "insecure"
+            }
+        ], 
+        "name": "client_referred_to_backend_fallback_broken_google_default_credentials_short_stream_False", 
+        "skip_langs": [], 
+        "transport_sec": "google_default_credentials"
     }, 
     {
         "backend_configs": [
@@ -393,6 +430,37 @@
     {
         "backend_configs": [
             {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_backends_google_default_credentials_short_stream_True", 
+        "skip_langs": [
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [
+            {
                 "transport_sec": "insecure"
             }, 
             {
@@ -480,6 +548,35 @@
         "transport_sec": "tls"
     }, 
     {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }, 
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_backends_google_default_credentials_short_stream_False", 
+        "skip_langs": [], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
         "backend_configs": [], 
         "balancer_configs": [
             {
@@ -547,6 +644,27 @@
         "backend_configs": [], 
         "balancer_configs": [
             {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
+        "name": "client_falls_back_because_no_backends_google_default_credentials_short_stream_True", 
+        "skip_langs": [
+            "go", 
+            "java", 
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [], 
+        "balancer_configs": [
+            {
                 "short_stream": false, 
                 "transport_sec": "insecure"
             }
@@ -609,6 +727,26 @@
         "balancer_configs": [
             {
                 "short_stream": false, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [
+            {
+                "transport_sec": "tls"
+            }
+        ], 
+        "name": "client_falls_back_because_no_backends_google_default_credentials_short_stream_False", 
+        "skip_langs": [
+            "go", 
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [], 
+        "balancer_configs": [
+            {
+                "short_stream": false, 
                 "transport_sec": "insecure"
             }
         ], 
@@ -655,8 +793,7 @@
         ], 
         "name": "client_falls_back_because_balancer_connection_broken_google_default_credentials", 
         "skip_langs": [
-            "java", 
-            "go"
+            "java"
         ], 
         "transport_sec": "google_default_credentials"
     }, 
@@ -769,6 +906,41 @@
     {
         "backend_configs": [
             {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_balancers_google_default_credentials_short_stream_True", 
+        "skip_langs": [
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [
+            {
                 "transport_sec": "insecure"
             }
         ], 
@@ -875,6 +1047,39 @@
         ], 
         "balancer_configs": [
             {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_balancers_google_default_credentials_short_stream_False", 
+        "skip_langs": [], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
                 "short_stream": true, 
                 "transport_sec": "alts"
             }, 
@@ -946,6 +1151,41 @@
         ], 
         "balancer_configs": [
             {
+                "short_stream": true, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": true, 
+                "transport_sec": "insecure"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_balancers_one_works_google_default_credentials_short_stream_True", 
+        "skip_langs": [
+            "java"
+        ], 
+        "transport_sec": "google_default_credentials"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
                 "short_stream": false, 
                 "transport_sec": "alts"
             }, 
@@ -1005,5 +1245,38 @@
             "java"
         ], 
         "transport_sec": "tls"
+    }, 
+    {
+        "backend_configs": [
+            {
+                "transport_sec": "alts"
+            }
+        ], 
+        "balancer_configs": [
+            {
+                "short_stream": false, 
+                "transport_sec": "alts"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "insecure"
+            }, 
+            {
+                "short_stream": false, 
+                "transport_sec": "insecure"
+            }
+        ], 
+        "fallback_configs": [], 
+        "name": "client_referred_to_backend_multiple_balancers_one_works_google_default_credentials_short_stream_False", 
+        "skip_langs": [], 
+        "transport_sec": "google_default_credentials"
     }
 ]
