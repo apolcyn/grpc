@@ -26,10 +26,10 @@ all_scenarios = []
 # TODO(https://github.com/grpc/grpc-java/issues/4887): enable
 # *short_stream* scenarios for Java
 
-# TODO(apolcyn): figure out Java/grpclb/TLS issues
+# TODO(apolcyn): figure out why Java/grpclb/TLS doesn't work
 
 
-def generate_no_balancer_because_srv_returns_no_data():
+def generate_no_balancer_because_lb_a_record_returns_no_data():
     all_configs = []
     for transport_sec in [
             'insecure', 'alts', 'tls', 'google_default_credentials'
@@ -57,7 +57,7 @@ def generate_no_balancer_because_srv_returns_no_data():
     return all_configs
 
 
-all_scenarios += generate_no_balancer_because_srv_returns_no_data()
+all_scenarios += generate_no_balancer_because_lb_a_record_returns_no_data()
 
 
 def generate_client_referred_to_backend():

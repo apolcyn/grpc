@@ -106,7 +106,12 @@ class GoLanguage:
         self.safename = str(self)
 
     def client_cmd(self, args):
-        return ['go', 'run', 'client.go'] + args
+        return [
+            'bash', '-c', ('cp /external_mount/src/core/tsi/test_creds/ca.pem '
+                           '/etc/ssl/certs/ca-certificates.crt && '
+                           'go run client.go {go_client_args}'
+                          ).format(go_client_args=' '.join(args))
+        ]
 
     def global_env(self):
         return {
@@ -176,7 +181,7 @@ def lb_client_interop_jobspec(language,
     # GRPC_DEFAULT_SSL_ROOTS_FILE_PATH to the test CA file.
     if language.safename == 'c++':
         interop_only_options += ['--use_test_ca=false']
-    else:
+    elif transport_security == 'tls':
         interop_only_options += ['--use_test_ca=true']
     client_args = language.client_cmd(interop_only_options)
     container_name = dockerjob.random_name(
@@ -187,8 +192,12 @@ def lb_client_interop_jobspec(language,
         image=docker_image,
         cwd=language.client_cwd,
         docker_args=[
-            '--dns=%s' % dns_server_ip, '--net=host',
-            '--name=%s' % container_name
+            '--dns=%s' % dns_server_ip,
+            '--net=host',
+            '--name=%s' % container_name,
+            '-v',
+            '{grpc_grpc_root_dir}:/external_mount:ro'.format(
+                grpc_grpc_root_dir=ROOT),
         ])
     jobset.message(
         'IDLE',
