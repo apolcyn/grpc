@@ -78,7 +78,13 @@ with open(records_config_path, 'r') as records_config_generated:
     sys.stderr.write('======================================\n')
 
 # Run the DNS server
+# Note that we need to add the extra
+# A record for metadata.google.internal in order for compute engine
+# OAuth creds and ALTS creds to work.
+# TODO(apolcyn): should metadata.google.internal always resolve
+# to 169.254.169.254?
 subprocess.check_output([
     '/var/local/git/grpc/test/cpp/naming/utils/dns_server.py', '--port=53',
-    '--records_config_path', records_config_path
+    '--records_config_path', records_config_path,
+    '--add_a_record=metadata.google.internal:169.254.169.254',
 ])

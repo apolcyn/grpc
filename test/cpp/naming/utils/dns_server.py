@@ -93,6 +93,10 @@ def start_local_dns_server(args):
           _push_record(record_full_name, dns.Record_SRV(p, w, port, target_full_name, ttl=r_ttl))
         if r_type == 'TXT':
           _maybe_split_up_txt_data(record_full_name, r_data, r_ttl)
+  # Add an optional IPv4 record is specified
+  if args.add_a_record:
+    extra_host, extra_host_ipv4 = args.add_a_record.split(':')
+    _push_record(extra_host, dns.Record_A(extra_host_ipv4, ttl=0))
   # Server health check record
   _push_record(_SERVER_HEALTH_CHECK_RECORD_NAME, dns.Record_A(_SERVER_HEALTH_CHECK_RECORD_DATA, ttl=0))
   soa_record = dns.Record_SOA(mname = common_zone_name)
@@ -137,6 +141,11 @@ def main():
   argp.add_argument('-r', '--records_config_path', default=None, type=str,
                     help=('Directory of resolver_test_record_groups.yaml file. '
                           'Defauls to path needed when the test is invoked as part of run_tests.py.'))
+  argp.add_argument('--add_a_record', default=None, type=str,
+                    help=('Add an A record via the command line. Useful for when we need '
+                          'to serve a one-off A record that is under a different domain then the rest '
+                          'the records configured in --records_config_path (which all need to be '
+                          'under the same domain). Format: <name>:<ipv4 address>'))
   args = argp.parse_args()
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)
