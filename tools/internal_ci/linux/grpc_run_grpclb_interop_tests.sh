@@ -23,8 +23,4 @@ cd $(dirname $0)/../../..
 source tools/internal_ci/helper_scripts/prepare_build_linux_rc
 source tools/internal_ci/helper_scripts/prepare_build_grpclb_interop_rc
 
-virtualenv env
-source env/bin/activate
-pip install twisted
-
 tools/run_tests/run_grpclb_interop_tests.py -l all --scenarios_file=tools/run_tests/generated/lb_interop_test_scenarios.json

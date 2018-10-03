@@ -49,7 +49,7 @@ _TEST_TIMEOUT = 30
 
 _FAKE_SERVERS_SAFENAME = 'fake_servers'
 
-# Use a server name that's covered by the test certs
+# Use a name that's verified by the test certs
 _SERVICE_NAME = 'server.test.google.fr'
 
 
@@ -126,36 +126,20 @@ _LANGUAGES = {
 
 _TRANSPORT_SECURITY_OPTIONS = ['tls', 'alts', 'insecure']
 
-DOCKER_WORKDIR_ROOT = '/var/local/git/grpc'
 
-
-def docker_run_cmdline(cmdline, image, docker_args=[], cwd=None, environ=None):
+def docker_run_cmdline(cmdline, image, docker_args, cwd, environ=None):
     """Wraps given cmdline array to create 'docker run' cmdline from it."""
-    docker_cmdline = ['docker', 'run', '-i', '--rm=true']
-
     # turn environ into -e docker args
+    docker_cmdline = 'docker run -i --rm=true'.split()
     if environ:
         for k, v in environ.items():
             docker_cmdline += ['-e', '%s=%s' % (k, v)]
-
-    # set working directory
-    workdir = DOCKER_WORKDIR_ROOT
-    if cwd:
-        workdir = os.path.join(workdir, cwd)
-    docker_cmdline += ['-w', workdir]
-
-    docker_cmdline += docker_args + [image] + cmdline
-    return docker_cmdline
+    return docker_cmdline + ['-w', cwd] + docker_args + [image] + cmdline
 
 
 def _job_kill_handler(job):
     assert job._spec.container_name
     dockerjob.docker_kill(job._spec.container_name)
-    # When the job times out and we decide to kill it,
-    # we need to wait a before restarting the job
-    # to prevent "container name already in use" error.
-    # TODO(jtattermusch): figure out a cleaner way to to this.
-    time.sleep(2)
 
 
 def transport_security_to_args(transport_security):
@@ -467,7 +451,6 @@ def run_one_scenario(scenario_config):
     server_jobs = {}
     server_addresses = {}
     suppress_server_logs = True
-    # TODO: change logic to go by the scenario config
     try:
         backend_addrs = []
         fallback_ips = []
