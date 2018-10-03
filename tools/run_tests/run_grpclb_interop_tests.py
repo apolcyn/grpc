@@ -85,7 +85,23 @@ class JavaLanguage:
         self.safename = str(self)
 
     def client_cmd(self, args):
-        return ['./run-test-client.sh'] + args
+        pem_to_dir_cmd = ('openssl x509 -outform der '
+                          '-in /external_mount/src/core/tsi/test_creds/ca.pem '
+                          '-out /tmp/test_ca.der')
+        keystore_import_cmd = (
+            'keytool -import '
+            '-keystore /usr/lib/jvm/java-8-oracle/jre/lib/security/cacerts '
+            '-file /tmp/test_ca.der '
+            '-deststorepass changeit '
+            '-noprompt')
+        return [
+            'bash', '-c', ('{pem_to_dir_cmd} && '
+                           '{keystore_import_cmd} && '
+                           './run-test-client.sh {java_client_args}').format(
+                               pem_to_dir_cmd=pem_to_dir_cmd,
+                               keystore_import_cmd=keystore_import_cmd,
+                               java_client_args=' '.join(args))
+        ]
 
     def global_env(self):
         return {
@@ -177,12 +193,9 @@ def lb_client_interop_jobspec(language,
     # We're using a DNS server so there's no need.
     if language.safename == 'c++':
         interop_only_options += ['--server_host_override=""']
-    # Don't set use_test_ca for C++, since we're pointing
-    # GRPC_DEFAULT_SSL_ROOTS_FILE_PATH to the test CA file.
-    if language.safename == 'c++':
-        interop_only_options += ['--use_test_ca=false']
-    elif transport_security == 'tls':
-        interop_only_options += ['--use_test_ca=true']
+    # Don't set --use_test_ca; we're configuring
+    # clients to use test CA's via alternate means.
+    interop_only_options += ['--use_test_ca=false']
     client_args = language.client_cmd(interop_only_options)
     container_name = dockerjob.random_name(
         'lb_interop_client_%s' % language.safename)

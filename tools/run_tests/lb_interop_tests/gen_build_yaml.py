@@ -44,9 +44,12 @@ def generate_no_balancer_because_lb_a_record_returns_no_data():
             skip_langs += ['go']
         config = {
             'name':
-            'no_balancer_because_srv_returns_no_data_%s' % transport_sec,
-            'skip_langs': skip_langs,
-            'transport_sec': transport_sec,
+            'no_balancer_because_lb_a_record_returns_no_data_%s' %
+            transport_sec,
+            'skip_langs':
+            skip_langs,
+            'transport_sec':
+            transport_sec,
             'balancer_configs': [],
             'backend_configs': [],
             'fallback_configs': [{

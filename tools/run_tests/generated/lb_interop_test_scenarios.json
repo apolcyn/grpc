@@ -8,7 +8,7 @@
                 "transport_sec": "insecure"
             }
         ], 
-        "name": "no_balancer_because_srv_returns_no_data_insecure", 
+        "name": "no_balancer_because_lb_a_record_returns_no_data_insecure", 
         "skip_langs": [], 
         "transport_sec": "insecure"
     }, 
@@ -20,7 +20,7 @@
                 "transport_sec": "alts"
             }
         ], 
-        "name": "no_balancer_because_srv_returns_no_data_alts", 
+        "name": "no_balancer_because_lb_a_record_returns_no_data_alts", 
         "skip_langs": [], 
         "transport_sec": "alts"
     }, 
@@ -32,7 +32,7 @@
                 "transport_sec": "tls"
             }
         ], 
-        "name": "no_balancer_because_srv_returns_no_data_tls", 
+        "name": "no_balancer_because_lb_a_record_returns_no_data_tls", 
         "skip_langs": [
             "java"
         ], 
@@ -46,7 +46,7 @@
                 "transport_sec": "tls"
             }
         ], 
-        "name": "no_balancer_because_srv_returns_no_data_google_default_credentials", 
+        "name": "no_balancer_because_lb_a_record_returns_no_data_google_default_credentials", 
         "skip_langs": [
             "java", 
             "go"
