@@ -85,7 +85,7 @@ class JavaLanguage:
         self.safename = str(self)
 
     def client_cmd(self, args):
-        pem_to_dir_cmd = ('openssl x509 -outform der '
+        pem_to_der_cmd = ('openssl x509 -outform der '
                           '-in /external_mount/src/core/tsi/test_creds/ca.pem '
                           '-out /tmp/test_ca.der')
         keystore_import_cmd = (
@@ -95,10 +95,10 @@ class JavaLanguage:
             '-deststorepass changeit '
             '-noprompt')
         return [
-            'bash', '-c', ('{pem_to_dir_cmd} && '
+            'bash', '-c', ('{pem_to_der_cmd} && '
                            '{keystore_import_cmd} && '
                            './run-test-client.sh {java_client_args}').format(
-                               pem_to_dir_cmd=pem_to_dir_cmd,
+                               pem_to_der_cmd=pem_to_der_cmd,
                                keystore_import_cmd=keystore_import_cmd,
                                java_client_args=' '.join(args))
         ]
