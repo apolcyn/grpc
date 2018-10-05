@@ -140,12 +140,14 @@ def main():
                     help='Port for DNS server to listen on for TCP and UDP.')
   argp.add_argument('-r', '--records_config_path', default=None, type=str,
                     help=('Directory of resolver_test_record_groups.yaml file. '
-                          'Defauls to path needed when the test is invoked as part of run_tests.py.'))
+                          'Defauls to path needed when the test is invoked as part '
+                          'of run_tests.py.'))
   argp.add_argument('--add_a_record', default=None, type=str,
-                    help=('Add an A record via the command line. Useful for when we need '
-                          'to serve a one-off A record that is under a different domain then the rest '
-                          'the records configured in --records_config_path (which all need to be '
-                          'under the same domain). Format: <name>:<ipv4 address>'))
+                    help=('Add an A record via the command line. Useful for when we '
+                          'need to serve a one-off A record that is under a '
+                          'different domain then the rest the records configured in '
+                          '--records_config_path (which all need to be under the '
+                          'same domain). Format: <name>:<ipv4 address>'))
   args = argp.parse_args()
   signal.signal(signal.SIGTERM, _quit_on_signal)
   signal.signal(signal.SIGINT, _quit_on_signal)

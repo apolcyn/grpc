@@ -21,12 +21,13 @@ import yaml
 all_scenarios = []
 
 # TODO(https://github.com/grpc/grpc-go/issues/2347): enable
-# client_falls_back_because_no_backends_* scenarios for Java/Go
+# client_falls_back_because_no_backends_* scenarios for Java/Go.
 
 # TODO(https://github.com/grpc/grpc-java/issues/4887): enable
-# *short_stream* scenarios for Java
+# *short_stream* scenarios for Java.
 
-# TODO(apolcyn): figure out why Java/grpclb/TLS doesn't work
+# TODO(https://github.com/grpc/grpc-java/issues/4912): enable
+# Java TLS tests involving TLS to the balancer.
 
 
 def server_sec(transport_sec):
