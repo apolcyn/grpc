@@ -26,6 +26,7 @@ cd /var/local/git/grpc-java
 
 ./gradlew :grpc-interop-testing:installDist -PskipCodegen=true
 
+# enable extra java logging
 mkdir -p /var/local/grpc_java_logging
 echo "handlers = java.util.logging.ConsoleHandler
 java.util.logging.ConsoleHandler.level = ALL
