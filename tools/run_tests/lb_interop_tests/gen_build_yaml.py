@@ -70,7 +70,7 @@ def generate_client_referred_to_backend():
         ]:
             balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
             skip_langs = []
-            if transport_sec in ['tls', 'google_default_credentials']:
+            if transport_sec == 'tls':
                 skip_langs += ['java']
             if balancer_short_stream:
                 skip_langs += ['java']
@@ -219,7 +219,7 @@ def generate_client_falls_back_because_balancer_connection_broken():
     for transport_sec in ['alts', 'tls', 'google_default_credentials']:
         balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
         skip_langs = []
-        if transport_sec in ['tls', 'google_default_credentials']:
+        if transport_sec == 'tls':
             skip_langs = ['java']
         config = {
             'name':

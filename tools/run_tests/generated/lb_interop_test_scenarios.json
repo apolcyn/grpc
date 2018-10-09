@@ -121,7 +121,6 @@
         "fallback_configs": [], 
         "name": "client_referred_to_backend_google_default_credentials_short_stream_True", 
         "skip_langs": [
-            "java", 
             "java"
         ], 
         "transport_sec": "google_default_credentials"
@@ -193,9 +192,7 @@
         ], 
         "fallback_configs": [], 
         "name": "client_referred_to_backend_google_default_credentials_short_stream_False", 
-        "skip_langs": [
-            "java"
-        ], 
+        "skip_langs": [], 
         "transport_sec": "google_default_credentials"
     }, 
     {
@@ -792,9 +789,7 @@
             }
         ], 
         "name": "client_falls_back_because_balancer_connection_broken_google_default_credentials", 
-        "skip_langs": [
-            "java"
-        ], 
+        "skip_langs": [], 
         "transport_sec": "google_default_credentials"
     }, 
     {
