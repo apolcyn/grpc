@@ -301,52 +301,6 @@ def generate_client_referred_to_backend_multiple_balancers():
 all_scenarios += generate_client_referred_to_backend_multiple_balancers()
 
 
-def generate_client_referred_to_backend_multiple_balancers_one_works():
-    all_configs = []
-    for balancer_short_stream in [True, False]:
-        for transport_sec in ['alts', 'tls', 'google_default_credentials']:
-            balancer_sec, backend_sec, fallback_sec = server_sec(transport_sec)
-            skip_langs = []
-            if transport_sec == 'tls':
-                skip_langs += ['java']
-            if balancer_short_stream:
-                skip_langs += ['java']
-            config = {
-                'name':
-                'client_referred_to_backend_multiple_balancers_one_works_%s_short_stream_%s'
-                % (transport_sec, balancer_short_stream),
-                'skip_langs':
-                skip_langs,
-                'transport_sec':
-                transport_sec,
-                'balancer_configs': [{
-                    'transport_sec': balancer_sec,
-                    'short_stream': balancer_short_stream,
-                }, {
-                    'transport_sec': 'insecure',
-                    'short_stream': balancer_short_stream,
-                }, {
-                    'transport_sec': 'insecure',
-                    'short_stream': balancer_short_stream,
-                }, {
-                    'transport_sec': 'insecure',
-                    'short_stream': balancer_short_stream,
-                }, {
-                    'transport_sec': 'insecure',
-                    'short_stream': balancer_short_stream,
-                }],
-                'backend_configs': [{
-                    'transport_sec': backend_sec,
-                }],
-                'fallback_configs': [],
-            }
-            all_configs.append(config)
-    return all_configs
-
-
-all_scenarios += generate_client_referred_to_backend_multiple_balancers_one_works(
-)
-
 print(yaml.dump({
     'lb_interop_test_scenarios': all_scenarios,
 }))
