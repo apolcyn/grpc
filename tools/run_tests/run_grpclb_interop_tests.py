@@ -295,7 +295,8 @@ def grpc_server_in_docker_jobspec(server_cmdline, shortname):
     return server_job
 
 
-def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
+def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname,
+                                 cause_no_error_no_data_for_balancer_a_record):
     container_name = dockerjob.random_name(shortname)
     run_dns_server_cmdline = [
         'python',
@@ -303,6 +304,9 @@ def dns_server_in_docker_jobspec(grpclb_ips, fallback_ips, shortname):
         '--grpclb_ips=%s' % ','.join(grpclb_ips),
         '--fallback_ips=%s' % ','.join(fallback_ips),
     ]
+    if cause_no_error_no_data_for_balancer_a_record:
+        run_dns_server_cmdline.append(
+            '--cause_no_error_no_data_for_balancer_a_record')
     docker_cmdline = docker_run_cmdline(
         run_dns_server_cmdline,
         cwd='/var/local/git/grpc',
@@ -531,8 +535,9 @@ def run_one_scenario(scenario_config):
             grpclb_ips.append(grpclb_job.ip_address())
         # Start DNS server
         dns_server_shortname = shortname(shortname_prefix, 'dns_server', 0)
-        dns_server_spec = dns_server_in_docker_jobspec(grpclb_ips, fallback_ips,
-                                                       dns_server_shortname)
+        dns_server_spec = dns_server_in_docker_jobspec(
+            grpclb_ips, fallback_ips, dns_server_shortname,
+            scenario_config['cause_no_error_no_data_for_balancer_a_record'])
         dns_server_job = dockerjob.DockerJob(dns_server_spec)
         server_jobs[dns_server_shortname] = dns_server_job
         # Get the IP address of the docker container running the DNS server.
