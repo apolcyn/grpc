@@ -142,7 +142,7 @@ class GoLanguage:
         return [
             'bash', '-c', ('cp /external_mount/src/core/tsi/test_creds/ca.pem '
                            '/etc/ssl/certs/ca-certificates.crt && '
-                           'go run client.go {go_client_args}'
+                           '/go/bin/client {go_client_args}'
                           ).format(go_client_args=' '.join(args))
         ]
 
