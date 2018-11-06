@@ -27,6 +27,7 @@
 #include "src/core/lib/gprpp/thd.h"
 
 typedef struct alts_shared_resource {
+  size_t refs;
   grpc_channel* channel;
   gpr_mu mu;
 } alts_shared_resource;

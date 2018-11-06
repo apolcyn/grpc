@@ -237,16 +237,28 @@ tsi_result alts_tsi_handshaker_result_create(grpc_gcp_handshaker_resp* resp,
   return TSI_OK;
 }
 
-static void init_shared_resources(const char* handshaker_service_url,
-                                  bool use_dedicated_cq) {
+static void shared_resource_ref(const char* handshaker_service_url,
+                                bool use_dedicated_cq) {
   GPR_ASSERT(handshaker_service_url != nullptr);
   gpr_mu_lock(&g_shared_resources->mu);
-  if (g_shared_resources->channel == nullptr) {
+  if (g_shared_resources->refs++ == 0u) {
+    gpr_log(GPR_DEBUG, "Create shared ALTS channel.");
+    GPR_ASSERT(g_shared_resources->channel == nullptr);
     g_shared_resources->channel =
         grpc_insecure_channel_create(handshaker_service_url, nullptr, nullptr);
     if (use_dedicated_cq) {
       grpc_alts_shared_resource_dedicated_start();
     }
+  }
+  gpr_mu_unlock(&g_shared_resources->mu);
+}
+
+static void shared_resource_unref() {
+  gpr_mu_lock(&g_shared_resources->mu);
+  if (g_shared_resources->refs-- == 1u) {
+    gpr_log(GPR_DEBUG, "Destroy shared ALTS channel.");
+    grpc_channel_destroy(g_shared_resources->channel);
+    g_shared_resources->channel = nullptr;
   }
   gpr_mu_unlock(&g_shared_resources->mu);
 }
@@ -289,8 +301,9 @@ static tsi_result handshaker_next(
       reinterpret_cast<alts_tsi_handshaker*>(self);
   tsi_result ok = TSI_OK;
   if (!handshaker->has_created_handshaker_client) {
-    init_shared_resources(handshaker->handshaker_service_url,
-                          handshaker->use_dedicated_cq);
+    handshaker->has_created_handshaker_client = true;
+    shared_resource_ref(handshaker->handshaker_service_url,
+                        handshaker->use_dedicated_cq);
     if (handshaker->use_dedicated_cq) {
       handshaker->interested_parties =
           grpc_alts_get_shared_resource_dedicated()->interested_parties;
@@ -308,7 +321,6 @@ static tsi_result handshaker_next(
       gpr_log(GPR_ERROR, "Failed to create ALTS handshaker client");
       return TSI_FAILED_PRECONDITION;
     }
-    handshaker->has_created_handshaker_client = true;
   }
   if (handshaker->use_dedicated_cq &&
       handshaker->client_vtable_for_testing == nullptr) {
@@ -371,6 +383,9 @@ static void handshaker_destroy(tsi_handshaker* self) {
   alts_handshaker_client_destroy(handshaker->client);
   grpc_slice_unref_internal(handshaker->target_name);
   grpc_alts_credentials_options_destroy(handshaker->options);
+  if (handshaker->has_created_handshaker_client) {
+    shared_resource_unref();
+  }
   gpr_free(handshaker->handshaker_service_url);
   gpr_free(handshaker);
 }

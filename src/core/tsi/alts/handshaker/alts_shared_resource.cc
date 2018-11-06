@@ -52,13 +52,16 @@ void grpc_alts_shared_resource_dedicated_init() {
 }
 
 void grpc_alts_shared_resource_dedicated_start() {
-  g_alts_resource_dedicated.cq = grpc_completion_queue_create_for_next(nullptr);
-  g_alts_resource_dedicated.thread =
-      grpc_core::Thread("alts_tsi_handshaker", &thread_worker, nullptr);
-  g_alts_resource_dedicated.interested_parties = grpc_pollset_set_create();
-  grpc_pollset_set_add_pollset(g_alts_resource_dedicated.interested_parties,
-                               grpc_cq_pollset(g_alts_resource_dedicated.cq));
-  g_alts_resource_dedicated.thread.Start();
+  if (g_alts_resource_dedicated.cq == nullptr) {
+    g_alts_resource_dedicated.cq =
+        grpc_completion_queue_create_for_next(nullptr);
+    g_alts_resource_dedicated.thread =
+        grpc_core::Thread("alts_tsi_handshaker", &thread_worker, nullptr);
+    g_alts_resource_dedicated.interested_parties = grpc_pollset_set_create();
+    grpc_pollset_set_add_pollset(g_alts_resource_dedicated.interested_parties,
+                                 grpc_cq_pollset(g_alts_resource_dedicated.cq));
+    g_alts_resource_dedicated.thread.Start();
+  }
 }
 
 void grpc_alts_shared_resource_dedicated_shutdown() {

@@ -29,13 +29,13 @@ alts_shared_resource* alts_get_shared_resource(void) {
 }
 
 void grpc_tsi_alts_init() {
+  g_alts_resource.refs = 0u;
   g_alts_resource.channel = nullptr;
   gpr_mu_init(&g_alts_resource.mu);
 }
 
 void grpc_tsi_alts_shutdown() {
-  if (g_alts_resource.channel != nullptr) {
-    grpc_channel_destroy(g_alts_resource.channel);
-  }
+  GPR_ASSERT(g_alts_resource.refs == 0u);
+  GPR_ASSERT(g_alts_resource.channel == nullptr);
   gpr_mu_destroy(&g_alts_resource.mu);
 }
