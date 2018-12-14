@@ -74,6 +74,8 @@ struct grpc_ares_request {
   bool success;
   /** the errors explaining the request failure, set in on_done_cb */
   grpc_error* error;
+  /** offload closure */
+  grpc_closure offload_on_done;
 };
 
 typedef struct grpc_ares_hostbyname_request {
@@ -527,6 +529,11 @@ static bool target_matches_localhost(const char* name) {
   return out;
 }
 
+static void offload_on_done(void* arg, grpc_error* error) {
+  grpc_ares_request* r = static_cast<grpc_ares_request*>(arg);
+  GRPC_CLOSURE_SCHED(r->on_done, GRPC_ERROR_NONE);
+}
+
 static grpc_ares_request* grpc_dns_lookup_ares_locked_impl(
     const char* dns_server, const char* name, const char* default_port,
     grpc_pollset_set* interested_parties, grpc_closure* on_done,
@@ -542,6 +549,8 @@ static grpc_ares_request* grpc_dns_lookup_ares_locked_impl(
   r->success = false;
   r->error = GRPC_ERROR_NONE;
   r->pending_queries = 0;
+  GRPC_CLOSURE_INIT(&r->offload_on_done, offload_on_done, r,
+                    grpc_executor_scheduler(GRPC_EXECUTOR_SHORT));
   GRPC_CARES_TRACE_LOG(
       "request:%p c-ares grpc_dns_lookup_ares_locked_impl name=%s, "
       "default_port=%s",
