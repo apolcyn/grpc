@@ -49,14 +49,45 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <fcntl.h>
+
+#define SOCKET_CACHE_SIZE 2
+
+pthread_mutex_t g_socket_cache_mu;
+
+typedef struct socket_cache_entry{
+  int s;
+  pthread_mutex_t mu;
+} socket_cache_entry;
+
+socket_cache_entry g_socket_cache[SOCKET_CACHE_SIZE];
+
+static int get_socket_cache_index(int address_family) {
+  switch(address_family) {
+    case AF_INET:
+      return 0;
+      break;
+    case AF_INET6:
+      return 1;
+      break;
+    default:
+      return -1;
+  }
+}
 
 static bool posix_source_addr_factory_get_source_addr(
     address_sorting_source_addr_factory* factory,
     const address_sorting_address* dest_addr,
     address_sorting_address* source_addr) {
+  int cache_index = get_socket_cache_index(((struct sockaddr*)dest_addr)->sa_family);
+  if (cache_index < 0) {
+    return false;
+  }
   bool source_addr_exists = false;
-  // Android sets SOCK_CLOEXEC. Don't set this here for portability.
-  int s = socket(((struct sockaddr*)dest_addr)->sa_family, SOCK_DGRAM, 0);
+  socket_cache_entry *cache_entry = &g_socket_cache[cache_index];
+  pthread_mutex_lock(&cache_entry->mu);
+  int s = cache_entry->s;
   if (s != -1) {
     if (connect(s, (const struct sockaddr*)&dest_addr->addr,
                 (socklen_t)dest_addr->len) != -1) {
@@ -70,12 +101,16 @@ static bool posix_source_addr_factory_get_source_addr(
       }
     }
   }
-  close(s);
+  pthread_mutex_unlock(&cache_entry->mu);
   return source_addr_exists;
 }
 
 static void posix_source_addr_factory_destroy(
     address_sorting_source_addr_factory* self) {
+  for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
+    close(g_socket_cache[i].s);
+    pthread_mutex_destroy(&g_socket_cache[i].mu);
+  }
   free(self);
 }
 
@@ -89,6 +124,15 @@ address_sorting_source_addr_factory*
 address_sorting_create_source_addr_factory_for_current_platform() {
   address_sorting_source_addr_factory* factory =
       malloc(sizeof(address_sorting_source_addr_factory));
+  // Android sets SOCK_CLOEXEC. Don't set this here for portability.
+  int ipv4_index = get_socket_cache_index(AF_INET);
+  g_socket_cache[ipv4_index].s = socket(AF_INET, SOCK_DGRAM, 0);
+  fcntl(g_socket_cache[ipv4_index].s, F_SETFL, O_NONBLOCK);
+  pthread_mutex_init(&g_socket_cache[ipv4_index].mu, NULL);
+  int ipv6_index = get_socket_cache_index(AF_INET6);
+  g_socket_cache[ipv6_index].s = socket(AF_INET6, SOCK_DGRAM, 0);
+  fcntl(g_socket_cache[ipv6_index].s, F_SETFL, O_NONBLOCK);
+  pthread_mutex_init(&g_socket_cache[ipv6_index].mu, NULL);
   memset(factory, 0, sizeof(address_sorting_source_addr_factory));
   factory->vtable = &posix_source_addr_factory_vtable;
   return factory;
