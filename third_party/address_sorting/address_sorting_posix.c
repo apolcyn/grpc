@@ -43,7 +43,6 @@
 #if defined(ADDRESS_SORTING_POSIX)
 
 #include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
@@ -63,8 +62,7 @@ static socket_cache_entry g_ipv4_socket_cache[SOCKET_CACHE_SIZE];
 static socket_cache_entry g_ipv6_socket_cache[SOCKET_CACHE_SIZE];
 
 static socket_cache_entry* get_socket_cache_entry(int address_family) {
-  size_t hash = (size_t)&address_family;
-  hash = (hash >> 5) % SOCKET_CACHE_SIZE;
+  size_t hash = ((size_t)&address_family >> 5) % SOCKET_CACHE_SIZE;
   switch (address_family) {
     case AF_INET:
       return &g_ipv4_socket_cache[hash];
@@ -81,13 +79,18 @@ static bool posix_source_addr_factory_get_source_addr(
     address_sorting_source_addr_factory* factory,
     const address_sorting_address* dest_addr,
     address_sorting_address* source_addr) {
+  int dest_addr_family = ((struct sockaddr*)dest_addr)->sa_family;
   socket_cache_entry *cache_entry =
-      get_socket_cache_entry(((struct sockaddr*)dest_addr)->sa_family);
+      get_socket_cache_entry(dest_addr_family);
   if (cache_entry == NULL) {
     return false;
   }
   bool source_addr_exists = false;
   pthread_mutex_lock(&cache_entry->mu);
+  if (cache_entry->s == -1) {
+    // Android sets SOCK_CLOEXEC. Don't set this here for portability.
+    cache_entry->s = socket(dest_addr_family, SOCK_DGRAM, 0);
+  }
   int s = cache_entry->s;
   if (s != -1) {
     if (connect(s, (const struct sockaddr*)&dest_addr->addr,
@@ -130,14 +133,11 @@ address_sorting_create_source_addr_factory_for_current_platform() {
   address_sorting_source_addr_factory* factory =
       malloc(sizeof(address_sorting_source_addr_factory));
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
-    // Android sets SOCK_CLOEXEC. Don't set this here for portability.
-    g_ipv4_socket_cache[i].s = socket(AF_INET, SOCK_DGRAM, 0);
-    fcntl(g_ipv4_socket_cache[i].s, F_SETFL, O_NONBLOCK);
+    g_ipv4_socket_cache[i].s = -1;
     pthread_mutex_init(&g_ipv4_socket_cache[i].mu, NULL);
   }
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
-    g_ipv6_socket_cache[i].s = socket(AF_INET6, SOCK_DGRAM, 0);
-    fcntl(g_ipv6_socket_cache[i].s, F_SETFL, O_NONBLOCK);
+    g_ipv6_socket_cache[i].s = -1;
     pthread_mutex_init(&g_ipv6_socket_cache[i].mu, NULL);
   }
   memset(factory, 0, sizeof(address_sorting_source_addr_factory));
