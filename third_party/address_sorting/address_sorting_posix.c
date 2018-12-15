@@ -43,36 +43,37 @@
 #if defined(ADDRESS_SORTING_POSIX)
 
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <fcntl.h>
 
-#define SOCKET_CACHE_SIZE 2
+#define SOCKET_CACHE_SIZE 5
 
-pthread_mutex_t g_socket_cache_mu;
-
-typedef struct socket_cache_entry{
+typedef struct socket_cache_entry {
   int s;
-  pthread_mutex_t mu;
+  pthread_spinlock_t mu;
 } socket_cache_entry;
 
-socket_cache_entry g_socket_cache[SOCKET_CACHE_SIZE];
+static socket_cache_entry g_ipv4_socket_cache[SOCKET_CACHE_SIZE];
+static socket_cache_entry g_ipv6_socket_cache[SOCKET_CACHE_SIZE];
 
-static int get_socket_cache_index(int address_family) {
-  switch(address_family) {
+static socket_cache_entry* get_socket_cache_entry(int address_family) {
+  size_t hash = (size_t)&address_family;
+  hash = (hash >> 5) % SOCKET_CACHE_SIZE;
+  switch (address_family) {
     case AF_INET:
-      return 0;
+      return &g_ipv4_socket_cache[hash];
       break;
     case AF_INET6:
-      return 1;
+      return &g_ipv6_socket_cache[hash];
       break;
     default:
-      return -1;
+      return NULL;
   }
 }
 
@@ -80,13 +81,13 @@ static bool posix_source_addr_factory_get_source_addr(
     address_sorting_source_addr_factory* factory,
     const address_sorting_address* dest_addr,
     address_sorting_address* source_addr) {
-  int cache_index = get_socket_cache_index(((struct sockaddr*)dest_addr)->sa_family);
-  if (cache_index < 0) {
+  socket_cache_entry *cache_entry =
+      get_socket_cache_entry(((struct sockaddr*)dest_addr)->sa_family);
+  if (cache_entry == NULL) {
     return false;
   }
   bool source_addr_exists = false;
-  socket_cache_entry *cache_entry = &g_socket_cache[cache_index];
-  pthread_mutex_lock(&cache_entry->mu);
+  pthread_spin_lock(&cache_entry->mu);
   int s = cache_entry->s;
   if (s != -1) {
     if (connect(s, (const struct sockaddr*)&dest_addr->addr,
@@ -101,15 +102,19 @@ static bool posix_source_addr_factory_get_source_addr(
       }
     }
   }
-  pthread_mutex_unlock(&cache_entry->mu);
+  pthread_spin_unlock(&cache_entry->mu);
   return source_addr_exists;
 }
 
 static void posix_source_addr_factory_destroy(
     address_sorting_source_addr_factory* self) {
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
-    close(g_socket_cache[i].s);
-    pthread_mutex_destroy(&g_socket_cache[i].mu);
+    close(g_ipv4_socket_cache[i].s);
+    pthread_spin_destroy(&g_ipv4_socket_cache[i].mu);
+  }
+  for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
+    close(g_ipv6_socket_cache[i].s);
+    pthread_spin_destroy(&g_ipv6_socket_cache[i].mu);
   }
   free(self);
 }
@@ -124,15 +129,17 @@ address_sorting_source_addr_factory*
 address_sorting_create_source_addr_factory_for_current_platform() {
   address_sorting_source_addr_factory* factory =
       malloc(sizeof(address_sorting_source_addr_factory));
-  // Android sets SOCK_CLOEXEC. Don't set this here for portability.
-  int ipv4_index = get_socket_cache_index(AF_INET);
-  g_socket_cache[ipv4_index].s = socket(AF_INET, SOCK_DGRAM, 0);
-  fcntl(g_socket_cache[ipv4_index].s, F_SETFL, O_NONBLOCK);
-  pthread_mutex_init(&g_socket_cache[ipv4_index].mu, NULL);
-  int ipv6_index = get_socket_cache_index(AF_INET6);
-  g_socket_cache[ipv6_index].s = socket(AF_INET6, SOCK_DGRAM, 0);
-  fcntl(g_socket_cache[ipv6_index].s, F_SETFL, O_NONBLOCK);
-  pthread_mutex_init(&g_socket_cache[ipv6_index].mu, NULL);
+  for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
+    // Android sets SOCK_CLOEXEC. Don't set this here for portability.
+    g_ipv4_socket_cache[i].s = socket(AF_INET, SOCK_DGRAM, 0);
+    fcntl(g_ipv4_socket_cache[i].s, F_SETFL, O_NONBLOCK);
+    pthread_spin_init(&g_ipv4_socket_cache[i].mu, PTHREAD_PROCESS_PRIVATE);
+  }
+  for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
+    g_ipv6_socket_cache[i].s = socket(AF_INET6, SOCK_DGRAM, 0);
+    fcntl(g_ipv6_socket_cache[i].s, F_SETFL, O_NONBLOCK);
+    pthread_spin_init(&g_ipv6_socket_cache[i].mu, PTHREAD_PROCESS_PRIVATE);
+  }
   memset(factory, 0, sizeof(address_sorting_source_addr_factory));
   factory->vtable = &posix_source_addr_factory_vtable;
   return factory;
