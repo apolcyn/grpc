@@ -56,7 +56,7 @@
 
 typedef struct socket_cache_entry {
   int s;
-  pthread_spinlock_t mu;
+  pthread_mutex_t mu;
 } socket_cache_entry;
 
 static socket_cache_entry g_ipv4_socket_cache[SOCKET_CACHE_SIZE];
@@ -87,7 +87,7 @@ static bool posix_source_addr_factory_get_source_addr(
     return false;
   }
   bool source_addr_exists = false;
-  pthread_spin_lock(&cache_entry->mu);
+  pthread_mutex_lock(&cache_entry->mu);
   int s = cache_entry->s;
   if (s != -1) {
     if (connect(s, (const struct sockaddr*)&dest_addr->addr,
@@ -102,7 +102,7 @@ static bool posix_source_addr_factory_get_source_addr(
       }
     }
   }
-  pthread_spin_unlock(&cache_entry->mu);
+  pthread_mutex_unlock(&cache_entry->mu);
   return source_addr_exists;
 }
 
@@ -110,11 +110,11 @@ static void posix_source_addr_factory_destroy(
     address_sorting_source_addr_factory* self) {
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
     close(g_ipv4_socket_cache[i].s);
-    pthread_spin_destroy(&g_ipv4_socket_cache[i].mu);
+    pthread_mutex_destroy(&g_ipv4_socket_cache[i].mu);
   }
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
     close(g_ipv6_socket_cache[i].s);
-    pthread_spin_destroy(&g_ipv6_socket_cache[i].mu);
+    pthread_mutex_destroy(&g_ipv6_socket_cache[i].mu);
   }
   free(self);
 }
@@ -133,12 +133,12 @@ address_sorting_create_source_addr_factory_for_current_platform() {
     // Android sets SOCK_CLOEXEC. Don't set this here for portability.
     g_ipv4_socket_cache[i].s = socket(AF_INET, SOCK_DGRAM, 0);
     fcntl(g_ipv4_socket_cache[i].s, F_SETFL, O_NONBLOCK);
-    pthread_spin_init(&g_ipv4_socket_cache[i].mu, PTHREAD_PROCESS_PRIVATE);
+    pthread_mutex_init(&g_ipv4_socket_cache[i].mu, NULL);
   }
   for (int i = 0; i < SOCKET_CACHE_SIZE; i++) {
     g_ipv6_socket_cache[i].s = socket(AF_INET6, SOCK_DGRAM, 0);
     fcntl(g_ipv6_socket_cache[i].s, F_SETFL, O_NONBLOCK);
-    pthread_spin_init(&g_ipv6_socket_cache[i].mu, PTHREAD_PROCESS_PRIVATE);
+    pthread_mutex_init(&g_ipv6_socket_cache[i].mu, NULL);
   }
   memset(factory, 0, sizeof(address_sorting_source_addr_factory));
   factory->vtable = &posix_source_addr_factory_vtable;
