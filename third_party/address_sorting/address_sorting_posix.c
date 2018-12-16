@@ -80,8 +80,7 @@ static bool posix_source_addr_factory_get_source_addr(
     const address_sorting_address* dest_addr,
     address_sorting_address* source_addr) {
   int dest_addr_family = ((struct sockaddr*)dest_addr)->sa_family;
-  socket_cache_entry *cache_entry =
-      get_socket_cache_entry(dest_addr_family);
+  socket_cache_entry* cache_entry = get_socket_cache_entry(dest_addr_family);
   if (cache_entry == NULL) {
     return false;
   }

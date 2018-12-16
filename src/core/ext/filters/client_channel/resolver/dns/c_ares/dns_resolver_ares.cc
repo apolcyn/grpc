@@ -56,6 +56,9 @@ namespace grpc_core {
 
 namespace {
 
+grpc_combiner* g_start_resolving_under_rate_limit_combiner;
+grpc_millis last_start_resolving_locked_time;
+
 const char kDefaultPort[] = "https";
 
 class AresDnsResolver : public Resolver {
@@ -77,9 +80,12 @@ class AresDnsResolver : public Resolver {
   void MaybeStartResolvingLocked();
   void StartResolvingLocked();
   void MaybeFinishNextLocked();
+  void InitiateStartResolvingUnderRateLimitLocked();
 
   static void OnNextResolutionLocked(void* arg, grpc_error* error);
   static void OnResolvedLocked(void* arg, grpc_error* error);
+  static void StartResolvingUnderRateLimitLocked(void* arg, grpc_error* error);
+  static void ContinueStartResolvingLocked(void* arg, grpc_error* error);
 
   /// DNS server to use (if not system default)
   char* dns_server_;
@@ -130,6 +136,10 @@ class AresDnsResolver : public Resolver {
   // list of server addresses to initialize the
   // c-ares channel with before each lookup.
   struct ares_addr_node* c_ares_channel_server_list_ = nullptr;
+  // global c-ares resolution start rate limiter
+  grpc_closure start_resolving_under_rate_limit_locked_;
+  grpc_closure continue_start_resolving_locked_;
+  grpc_timer continue_start_resolving_alarm_;
 };
 
 AresDnsResolver::AresDnsResolver(const ResolverArgs& args)
@@ -172,9 +182,17 @@ AresDnsResolver::AresDnsResolver(const ResolverArgs& args)
   query_timeout_ms_ = grpc_channel_arg_get_integer(
       query_timeout_ms_arg,
       {GRPC_DNS_ARES_DEFAULT_QUERY_TIMEOUT_MS, 0, INT_MAX});
+  GRPC_CARES_TRACE_LOG("resolver:%p creating c-ares channel", this);
   grpc_init_c_ares_channel(&c_ares_channel_);
   GPR_ASSERT(ares_get_servers(c_ares_channel_, &c_ares_channel_server_list_) ==
              ARES_SUCCESS);
+  GRPC_CLOSURE_INIT(
+      &start_resolving_under_rate_limit_locked_,
+      AresDnsResolver::StartResolvingUnderRateLimitLocked, this,
+      grpc_combiner_scheduler(g_start_resolving_under_rate_limit_combiner));
+  GRPC_CLOSURE_INIT(&continue_start_resolving_locked_,
+                    AresDnsResolver::ContinueStartResolvingLocked, this,
+                    grpc_combiner_scheduler(combiner()));
 }
 
 AresDnsResolver::~AresDnsResolver() {
@@ -244,7 +262,7 @@ void AresDnsResolver::OnNextResolutionLocked(void* arg, grpc_error* error) {
     if (!r->resolving_) {
       GRPC_CARES_TRACE_LOG(
           "resolver:%p start resolving due to re-resolution timer", r);
-      r->StartResolvingLocked();
+      r->InitiateStartResolvingUnderRateLimitLocked();
     }
   }
   r->Unref(DEBUG_LOCATION, "next_resolution_timer");
@@ -415,19 +433,11 @@ void AresDnsResolver::MaybeStartResolvingLocked() {
       return;
     }
   }
-  StartResolvingLocked();
+  InitiateStartResolvingUnderRateLimitLocked();
 }
 
 void AresDnsResolver::StartResolvingLocked() {
-  // TODO(roth): We currently deal with this ref manually.  Once the
-  // new closure API is done, find a way to track this ref with the timer
-  // callback as part of the type system.
-  RefCountedPtr<Resolver> self = Ref(DEBUG_LOCATION, "dns-resolving");
-  self.release();
-  GPR_ASSERT(!resolving_);
-  resolving_ = true;
-  service_config_json_ = nullptr;
-  ares_set_servers(c_ares_channel_, c_ares_channel_server_list_);
+  GPR_ASSERT(resolving_);
   pending_request_ = grpc_dns_lookup_ares_locked(
       c_ares_channel_, dns_server_, name_to_resolve_, kDefaultPort,
       interested_parties_, &on_resolved_, &addresses_, true /* check_grpclb */,
@@ -448,6 +458,50 @@ void AresDnsResolver::MaybeFinishNextLocked() {
     GRPC_CLOSURE_SCHED(next_completion_, GRPC_ERROR_NONE);
     next_completion_ = nullptr;
     published_version_ = resolved_version_;
+  }
+}
+
+void AresDnsResolver::InitiateStartResolvingUnderRateLimitLocked() {
+  // TODO(roth): We currently deal with this ref manually.  Once the
+  // new closure API is done, find a way to track this ref with the timer
+  // callback as part of the type system.
+  RefCountedPtr<Resolver> self = Ref(DEBUG_LOCATION, "dns-resolving");
+  self.release();
+  GPR_ASSERT(!resolving_);
+  resolving_ = true;
+  service_config_json_ = nullptr;
+  ares_set_servers(c_ares_channel_, c_ares_channel_server_list_);
+  GRPC_CLOSURE_SCHED(&start_resolving_under_rate_limit_locked_,
+                     GRPC_ERROR_NONE);
+}
+
+grpc_millis max(grpc_millis a, grpc_millis b) {
+  if (a > b) {
+    return a;
+  }
+  return b;
+}
+
+void AresDnsResolver::StartResolvingUnderRateLimitLocked(void* arg,
+                                                         grpc_error* error) {
+  AresDnsResolver* r = static_cast<AresDnsResolver*>(arg);
+  grpc_core::ExecCtx::Get()->InvalidateNow();
+  grpc_millis next_start_resolving_locked_time = max(
+      last_start_resolving_locked_time + 1, grpc_core::ExecCtx::Get()->Now());
+  last_start_resolving_locked_time = next_start_resolving_locked_time;
+  grpc_timer_init(&r->continue_start_resolving_alarm_,
+                  next_start_resolving_locked_time,
+                  &r->continue_start_resolving_locked_);
+}
+
+void AresDnsResolver::ContinueStartResolvingLocked(void* arg,
+                                                   grpc_error* error) {
+  AresDnsResolver* r = static_cast<AresDnsResolver*>(arg);
+  if (r->shutdown_initiated_) {
+    GRPC_CLOSURE_SCHED(&r->on_resolved_, GRPC_ERROR_CREATE_FROM_STATIC_STRING(
+                                             "Shutdown initiated"));
+  } else {
+    r->StartResolvingLocked();
   }
 }
 
@@ -501,6 +555,8 @@ void grpc_resolver_dns_ares_init() {
     if (default_resolver == nullptr) {
       default_resolver = grpc_resolve_address_impl;
     }
+    grpc_core::g_start_resolving_under_rate_limit_combiner =
+        grpc_combiner_create();
     grpc_set_resolver_impl(&ares_resolver);
     grpc_core::ResolverRegistry::Builder::RegisterResolverFactory(
         grpc_core::UniquePtr<grpc_core::ResolverFactory>(
@@ -514,6 +570,8 @@ void grpc_resolver_dns_ares_shutdown() {
   if (should_use_ares(resolver_env)) {
     address_sorting_shutdown();
     grpc_ares_cleanup();
+    GRPC_COMBINER_UNREF(grpc_core::g_start_resolving_under_rate_limit_combiner,
+                        "grpc_resolver_dns_ares_shutdown");
   }
   gpr_free(resolver_env);
 }
