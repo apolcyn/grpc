@@ -322,6 +322,7 @@ static void create_new_lb_policy_locked(
     channel_data* chand, char* lb_policy_name, grpc_json* lb_config,
     grpc_connectivity_state* connectivity_state,
     grpc_error** connectivity_error, TraceStringVector* trace_strings) {
+  gpr_log(GPR_DEBUG, "apolcyn top of create_new_lb_policy_locked: chand:%p", chand);
   grpc_core::LoadBalancingPolicy::Args lb_policy_args;
   lb_policy_args.combiner = chand->combiner;
   lb_policy_args.client_channel_factory = chand->client_channel_factory;
@@ -349,6 +350,7 @@ static void create_new_lb_policy_locked(
     }
     // Swap out the LB policy and update the fds in
     // chand->interested_parties.
+    gpr_log(GPR_INFO, "apolcyn - chand:%p swap out LB policy and update fields", chand);
     if (chand->lb_policy != nullptr) {
       if (grpc_client_channel_trace.enabled()) {
         gpr_log(GPR_INFO, "chand=%p: shutting down lb_policy=%p", chand,
@@ -362,6 +364,7 @@ static void create_new_lb_policy_locked(
     grpc_pollset_set_add_pollset_set(chand->lb_policy->interested_parties(),
                                      chand->interested_parties);
     // Set up re-resolution callback.
+    gpr_log(GPR_INFO, "apolcyn - chand:%p setup re-resolution callback", chand);
     reresolution_request_args* args =
         static_cast<reresolution_request_args*>(gpr_zalloc(sizeof(*args)));
     args->chand = chand;
@@ -372,6 +375,7 @@ static void create_new_lb_policy_locked(
     chand->lb_policy->SetReresolutionClosureLocked(&args->closure);
     // Get the new LB policy's initial connectivity state and start a
     // connectivity watch.
+    gpr_log(GPR_INFO, "apolcyn - chand:%p eget new lb policy initial connectivity state", chand);
     GRPC_ERROR_UNREF(*connectivity_error);
     *connectivity_state =
         chand->lb_policy->CheckConnectivityLocked(connectivity_error);
@@ -439,6 +443,8 @@ static void on_resolver_result_changed_locked(void* arg, grpc_error* error) {
   // Handle shutdown.
   if (error != GRPC_ERROR_NONE || chand->resolver == nullptr) {
     on_resolver_shutdown_locked(chand, GRPC_ERROR_REF(error));
+    gpr_log(GPR_INFO,
+            "apolcyn - chand=%p. resolver shutdown", chand);
     return;
   }
   // Data used to set the channel's connectivity state.
@@ -467,6 +473,8 @@ static void on_resolver_result_changed_locked(void* arg, grpc_error* error) {
     if (chand->lb_policy != nullptr) set_connectivity_state = false;
   } else {
     // Parse the resolver result.
+    gpr_log(GPR_INFO,
+            "apolcyn - chand=%p. parse resolver result", chand);
     ProcessedResolverResult resolver_result(chand->resolver_result,
                                             chand->enable_retries);
     chand->retry_throttle_data = resolver_result.retry_throttle_data();
@@ -485,6 +493,8 @@ static void on_resolver_result_changed_locked(void* arg, grpc_error* error) {
     // taking a lock on chand->info_mu, because this function is the
     // only thing that modifies its value, and it can only be invoked
     // once at any given time.
+    gpr_log(GPR_INFO,
+            "apolcyn - chand=%p. check lb p;oliy namae changed", chand);
     bool lb_policy_name_changed =
         chand->info_lb_policy_name == nullptr ||
         strcmp(chand->info_lb_policy_name.get(), lb_policy_name.get()) != 0;
@@ -500,9 +510,13 @@ static void on_resolver_result_changed_locked(void* arg, grpc_error* error) {
       set_connectivity_state = false;
     } else {
       // Instantiate new LB policy.
+      gpr_log(GPR_INFO,
+              "apolcyn - chand=%p. about to create new lb policy locked", chand);
       create_new_lb_policy_locked(chand, lb_policy_name.get(), lb_policy_config,
                                   &connectivity_state, &connectivity_error,
                                   &trace_strings);
+      gpr_log(GPR_INFO,
+              "apolcyn - chand=%p. done create new lb policy locked", chand);
     }
     // Note: It's safe to use chand->info_service_config_json here without
     // taking a lock on chand->info_mu, because this function is the
@@ -718,6 +732,7 @@ static grpc_error* cc_init_channel_elem(grpc_channel_element* elem,
       proxy_name != nullptr ? proxy_name : arg->value.string,
       new_args != nullptr ? new_args : args->channel_args,
       chand->interested_parties, chand->combiner);
+  gpr_log(GPR_DEBUG, "apolcyn - resolver:%p chand:%p", chand->resolver.get(), chand);
   if (proxy_name != nullptr) gpr_free(proxy_name);
   if (new_args != nullptr) grpc_channel_args_destroy(new_args);
   if (chand->resolver == nullptr) {
@@ -3424,6 +3439,7 @@ void grpc_client_channel_watch_connectivity_state(
   w->watcher_timer_init = watcher_timer_init;
   grpc_polling_entity_add_to_pollset_set(&w->pollent,
                                          chand->interested_parties);
+  gpr_log(GPR_DEBUG, "apolcyn - watch conn state inner: on_complete:%p my_closure:%p state:%p chand:%p", closure, &w->my_closure, state, chand);
   GRPC_CHANNEL_STACK_REF(w->chand->owning_stack,
                          "external_connectivity_watcher");
   GRPC_CLOSURE_SCHED(

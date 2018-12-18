@@ -37,9 +37,9 @@ grpc_connectivity_state grpc_channel_check_connectivity_state(
       grpc_channel_stack_last_element(grpc_channel_get_channel_stack(channel));
   grpc_core::ExecCtx exec_ctx;
   grpc_connectivity_state state;
-  GRPC_API_TRACE(
-      "grpc_channel_check_connectivity_state(channel=%p, try_to_connect=%d)", 2,
-      (channel, try_to_connect));
+  gpr_log(GPR_DEBUG,
+      "apolcyn - grpc_channel_check_connectivity_state(channel=%p, try_to_connect=%d)",
+      channel, try_to_connect);
   if (GPR_LIKELY(client_channel_elem->filter == &grpc_client_channel_filter)) {
     state = grpc_client_channel_check_connectivity_state(client_channel_elem,
                                                          try_to_connect);
@@ -235,6 +235,7 @@ void grpc_channel_watch_connectivity_state(
   wa->deadline = deadline;
   GRPC_CLOSURE_INIT(&w->watcher_timer_init, watcher_timer_init, wa,
                     grpc_schedule_on_exec_ctx);
+  gpr_log(GPR_DEBUG, "apolcyn - watch conn state API: channel:%p on_complete:%p on_timeout:%p", channel, &w->on_complete, &w->on_timeout);
 
   if (client_channel_elem->filter == &grpc_client_channel_filter) {
     GRPC_CHANNEL_INTERNAL_REF(channel, "watch_channel_connectivity");

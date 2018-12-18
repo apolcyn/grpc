@@ -297,10 +297,13 @@ void grpc_tcp_client_create_from_prepared_fd(
   const int fd = grpc_fd_wrapped_fd(fdobj);
   int err;
   async_connect* ac;
+  gpr_log(GPR_DEBUG, "apolcyn - connect: %p", interested_parties);
   do {
     err = connect(fd, reinterpret_cast<const grpc_sockaddr*>(addr->addr),
                   addr->len);
+    gpr_log(GPR_DEBUG, "apolcyn - connect done: parties:%p err:%d errno:%d", interested_parties, err, errno);
   } while (err < 0 && errno == EINTR);
+  gpr_log(GPR_DEBUG, "apolcyn - connect really done done: parties:%p", interested_parties);
   if (err >= 0) {
     char* addr_str = grpc_sockaddr_to_uri(addr);
     *ep = grpc_tcp_client_create_from_fd(fdobj, channel_args, addr_str);
@@ -311,6 +314,7 @@ void grpc_tcp_client_create_from_prepared_fd(
   if (errno != EWOULDBLOCK && errno != EINPROGRESS) {
     grpc_fd_orphan(fdobj, nullptr, nullptr, "tcp_client_connect_error");
     GRPC_CLOSURE_SCHED(closure, GRPC_OS_ERROR(errno, "connect"));
+    gpr_log(GPR_DEBUG, "apolcyn - TCP client error:%d parties:%p", errno, interested_parties);
     return;
   }
 
@@ -328,10 +332,10 @@ void grpc_tcp_client_create_from_prepared_fd(
                     grpc_schedule_on_exec_ctx);
   ac->channel_args = grpc_channel_args_copy(channel_args);
 
-  if (grpc_tcp_trace.enabled()) {
-    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: asynchronously connecting fd %p",
-            ac->addr_str, fdobj);
-  }
+  //if (grpc_tcp_trace.enabled()) {
+    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: asynchronously connecting fd %p parties:%p",
+            ac->addr_str, fdobj, interested_parties);
+  //}
 
   gpr_mu_lock(&ac->mu);
   GRPC_CLOSURE_INIT(&ac->on_alarm, tc_on_alarm, ac, grpc_schedule_on_exec_ctx);

@@ -412,6 +412,7 @@ void PickFirst::UpdateLocked(const grpc_channel_args& args,
       // Note: No need to use CheckConnectivityStateAndStartWatchingLocked()
       // here, since we've already checked the initial connectivity
       // state of all subchannels above.
+      gpr_log(GPR_DEBUG, "apolcyn - start conn watch. list:%p pf:%p", subchannel_list_.get(), this);
       subchannel_list_->subchannel(0)->StartConnectivityWatchLocked();
     }
   } else {

@@ -42,6 +42,8 @@ build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 build --define GRPC_PORT_ISOLATED_RUNTIME=1
 # without verbose gRPC logs the test outputs are not very useful
 test --test_env=GRPC_VERBOSITY=debug
+test --test_env=GRPC_DNS_RESOLVER=ares
+test --test_env=GRPC_TRACE=combiner,executor,cares_resolver,client_channel,pick_first
 
 # address sanitizer: most settings are already in %workspace%/.bazelrc
 # we only need a few additional ones that are Foundry specific

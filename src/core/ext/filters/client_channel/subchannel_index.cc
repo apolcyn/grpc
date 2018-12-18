@@ -159,6 +159,7 @@ grpc_subchannel* grpc_subchannel_index_find(grpc_subchannel_key* key) {
 
 grpc_subchannel* grpc_subchannel_index_register(grpc_subchannel_key* key,
                                                 grpc_subchannel* constructed) {
+  gpr_log(GPR_DEBUG, "subchannel index register. BEGIN subchannel:%p", constructed);
   grpc_subchannel* c = nullptr;
   bool need_to_unref_constructed = false;
 
@@ -203,6 +204,7 @@ grpc_subchannel* grpc_subchannel_index_register(grpc_subchannel_key* key,
   if (need_to_unref_constructed) {
     GRPC_SUBCHANNEL_UNREF(constructed, "index_register");
   }
+  gpr_log(GPR_DEBUG, "subchannel index register. DONE subchannel:%p", constructed);
 
   return c;
 }

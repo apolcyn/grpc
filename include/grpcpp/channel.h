@@ -58,6 +58,7 @@ class Channel final : public ChannelInterface,
   /// Returns the service config in JSON form, or the empty string if
   /// not available.
   grpc::string GetServiceConfigJSON() const;
+  const grpc_channel* get_inner_channel();
 
  private:
   template <class InputMessage, class OutputMessage>

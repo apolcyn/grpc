@@ -500,12 +500,15 @@ class ClientImpl : public Client {
             connect_deadline = atoi(channel_connect_timeout_str);
           }
           gpr_log(GPR_INFO,
-                  "Waiting for up to %d seconds for the channel %p to connect",
-                  connect_deadline, channel_.get());
+                  "Waiting for up to %d seconds for the channel %p (%p) to connect",
+                  connect_deadline, channel_.get(), channel_->get_inner_channel());
           gpr_free(channel_connect_timeout_str);
-          GPR_ASSERT(channel_->WaitForConnected(gpr_time_add(
+          if (!channel_->WaitForConnected(gpr_time_add(
               gpr_now(GPR_CLOCK_REALTIME),
-              gpr_time_from_seconds(connect_deadline, GPR_TIMESPAN))));
+              gpr_time_from_seconds(connect_deadline, GPR_TIMESPAN)))) {
+            gpr_log(GPR_DEBUG, "apolcyn - channel:%p failed to connect", channel_.get());
+            abort();
+          }
           gpr_log(GPR_INFO, "Channel %p connected!", channel_.get());
         }
       }));

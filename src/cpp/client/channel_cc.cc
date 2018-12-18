@@ -62,6 +62,10 @@ Channel::Channel(
   g_gli_initializer.summon();
 }
 
+const grpc_channel* Channel::get_inner_channel() {
+  return c_channel_;
+}
+
 Channel::~Channel() {
   grpc_channel_destroy(c_channel_);
   if (callback_cq_ != nullptr) {

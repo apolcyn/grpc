@@ -556,6 +556,7 @@ grpc_subchannel* grpc_subchannel_create(grpc_connector* connector,
                                         const grpc_subchannel_args* args) {
   grpc_subchannel_key* key = grpc_subchannel_key_create(args);
   grpc_subchannel* c = grpc_subchannel_index_find(key);
+  gpr_log(GPR_DEBUG, "apolcyn - grpc subchannel create subchannel:%p", c);
   if (c) {
     grpc_subchannel_key_destroy(key);
     return c;
@@ -643,6 +644,7 @@ grpc_subchannel* grpc_subchannel_create(grpc_connector* connector,
         grpc_slice_from_static_string("Subchannel created"));
   }
 
+  gpr_log(GPR_DEBUG, "apolcyn - grpc subchannel index register subchannel:%p", c);
   return grpc_subchannel_index_register(key, c);
 }
 
@@ -742,6 +744,7 @@ static void maybe_start_connecting_locked(grpc_subchannel* c) {
   if (!grpc_connectivity_state_has_watchers(&c->state_tracker) &&
       !grpc_connectivity_state_has_watchers(&c->state_and_health_tracker)) {
     /* Nobody is interested in connecting: so don't just yet */
+    gpr_log(GPR_DEBUG, "apolcyn - nodboy connecting yet, exit - subchannel:%p");
     return;
   }
   c->connecting = true;
