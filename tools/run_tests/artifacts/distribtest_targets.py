@@ -349,6 +349,7 @@ def targets():
         RubyDistribTest('linux', 'x64', 'ubuntu1204'),
         RubyDistribTest('linux', 'x64', 'ubuntu1404'),
         RubyDistribTest('linux', 'x64', 'ubuntu1604'),
+        RubyDistribTest('linux', 'x64', 'ubuntu1604', ruby_version='ruby_2_6_0'),
         PHPDistribTest('linux', 'x64', 'jessie'),
         PHPDistribTest('macos', 'x64'),
     ]
