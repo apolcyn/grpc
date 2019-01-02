@@ -14,13 +14,13 @@
   # See the License for the specific language governing permissions and
   # limitations under the License.
   
-  FROM debian:jessie
+  FROM debian:wheezy
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
+  RUN apt-get update && apt-get install -y curl
+  
+  RUN apt-get update && apt-get install -y procps
+  
   <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
   
+  RUN /bin/bash -l -c "echo '. /etc/profile.d/rvm.sh' >> ~/.bashrc"
+  UN /bin/bash -l -c "gem install --update bundler"

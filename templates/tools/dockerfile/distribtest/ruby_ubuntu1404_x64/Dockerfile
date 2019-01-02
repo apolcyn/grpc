@@ -14,13 +14,11 @@
   # See the License for the specific language governing permissions and
   # limitations under the License.
   
-  FROM debian:jessie
+  FROM ubuntu:14.04
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
+  RUN apt-get update -y && apt-get install -y curl
+  
   <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
   
+  RUN /bin/bash -l -c "echo '. /etc/profile.d/rvm.sh' >> ~/.bashrc"
+  RUN /bin/bash -l -c "gem install --update bundler"

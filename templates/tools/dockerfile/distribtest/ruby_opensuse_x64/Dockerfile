@@ -14,13 +14,17 @@
   # See the License for the specific language governing permissions and
   # limitations under the License.
   
-  FROM debian:jessie
+  FROM opensuse:42.1
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
+  RUN zypper --non-interactive install curl
+  
+  RUN zypper --non-interactive install tar which
+  
+  RUN zypper --non-interactive install ca-certificates-mozilla
+  
   <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
   
+  # OpenSUSE is a bit crazy and ignores .bashrc for login shell.
+  RUN /bin/bash -l -c "echo '. /etc/profile.d/rvm.sh' >> ~/.profile"
+  
+  RUN /bin/bash -l -c 'gem install --update bundler'

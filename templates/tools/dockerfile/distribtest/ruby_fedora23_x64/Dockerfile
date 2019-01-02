@@ -14,13 +14,8 @@
   # See the License for the specific language governing permissions and
   # limitations under the License.
   
-  FROM debian:jessie
+  FROM fedora:23
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
-  <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
+  RUN yum clean all && yum update -y && yum install -y ruby findutils
   
+  RUN gem install bundler

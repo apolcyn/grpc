@@ -14,13 +14,13 @@
   # See the License for the specific language governing permissions and
   # limitations under the License.
   
-  FROM debian:jessie
+  FROM fedora:21
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
-  <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
+  # Make yum work properly under docker when using overlay storage driver.
+  # https://bugzilla.redhat.com/show_bug.cgi?id=1213602#c9
+  # https://github.com/docker/docker/issues/10180
+  RUN yum install -y yum-plugin-ovl
   
+  RUN yum clean all && yum update -y && yum install -y ruby findutils
+  
+  RUN gem install bundler

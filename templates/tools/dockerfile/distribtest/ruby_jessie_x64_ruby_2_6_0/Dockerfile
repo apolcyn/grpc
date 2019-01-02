@@ -16,11 +16,22 @@
   
   FROM debian:jessie
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
+  # Install Git and basic packages.
+  RUN apt-get update && apt-get install -y \
+    curl \
+    gcc && apt-get clean
+  
   <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
+  
+  # Install Ruby 2.6
+  RUN /bin/bash -l -c "rvm install ruby-2.6.0"
+  RUN /bin/bash -l -c "rvm use --default ruby-2.6.0"
+  RUN /bin/bash -l -c "echo 'gem: --no-ri --no-rdoc' > ~/.gemrc"
+  RUN /bin/bash -l -c "echo 'export PATH=/usr/local/rvm/bin:$PATH' >> ~/.bashrc"
+  RUN /bin/bash -l -c "echo 'rvm --default use ruby-2.6.0' >> ~/.bashrc"
+  RUN /bin/bash -l -c "gem install bundler --no-ri --no-rdoc"
+  
+  RUN mkdir /var/local/jenkins
+  
   # Define the default command.
   CMD ["bash"]
-  

@@ -16,11 +16,6 @@
   
   FROM debian:jessie
   
-  <%include file="../../apt_get_basic.include"/>
-  <%include file="../../python_deps.include"/>
-  <%include file="../../ruby_install_rvm.include"/>
-  <%include file="../../ruby_deps.include"/>
-  <%include file="../../run_tests_addons.include"/>
-  # Define the default command.
-  CMD ["bash"]
+  RUN apt-get update && apt-get install -y ruby-full
   
+  RUN gem install bundler
