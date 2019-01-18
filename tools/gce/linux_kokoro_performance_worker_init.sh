@@ -158,7 +158,7 @@ rbenv global 2.4.0
 ruby -v
 
 # Install bundler (prerequisite for gRPC Ruby)
-gem install bundler
+gem install bundler -v 1.17.3
 
 # PHP dependencies
 sudo apt-get install -y php php-dev phpunit php-pear unzip zlib1g-dev

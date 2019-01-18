@@ -16,4 +16,4 @@ FROM fedora:23
 
 RUN yum clean all && yum update -y && yum install -y ruby findutils
 
-RUN gem install bundler
+RUN gem install bundler -v 1.17.3
