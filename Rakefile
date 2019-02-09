@@ -34,9 +34,7 @@ Rake::ExtensionTask.new('grpc_c', spec) do |ext|
   ext.lib_dir = File.join('src', 'ruby', 'lib', 'grpc')
   ext.cross_compile = true
   ext.cross_platform = [
-    'x86-mingw32', 'x64-mingw32',
-    'x86_64-linux', 'x86-linux',
-    'universal-darwin'
+    'x64-mingw32',
   ]
   ext.cross_compiling do |spec|
     spec.files = %w( etc/roots.pem grpc_c.32.ruby grpc_c.64.ruby )
@@ -105,7 +103,7 @@ task 'dlls' do
     env_comp = "CC=#{opt[:cross]}-gcc "
     env_comp += "CXX=#{opt[:cross]}-g++ "
     env_comp += "LD=#{opt[:cross]}-gcc "
-    docker_for_windows "gem update --system --no-document && #{env} #{env_comp} make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}"
+    docker_for_windows "#{env} #{env_comp} make -j #{out} && #{opt[:cross]}-strip -x -S #{out} && cp #{out} #{opt[:out]}"
   end
 
 end
@@ -126,8 +124,8 @@ task 'gem:native' do
     end
     system "rake cross native gem RUBY_CC_VERSION=2.6.0:2.5.0:2.4.0:2.3.0:2.2.2 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   else
-    Rake::Task['dlls'].execute
-    docker_for_windows "gem update --system --no-document && bundle && rake cross native gem RUBY_CC_VERSION=2.6.0:2.5.0:2.4.0:2.3.0:2.2.2 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
+    #Rake::Task['dlls'].execute
+    docker_for_windows "bundle && rake cross native gem RUBY_CC_VERSION=2.4.0 V=#{verbose} GRPC_CONFIG=#{grpc_config}"
   end
 end
 
