@@ -685,9 +685,10 @@ static VALUE run_poll_channels_loop(VALUE arg) {
   gpr_log(
       GPR_DEBUG,
       "GRPC_RUBY: run_poll_channels_loop - create connection polling thread");
+  grpc_ruby_init();
   rb_thread_call_without_gvl(run_poll_channels_loop_no_gil, NULL,
                              run_poll_channels_loop_unblocking_func, NULL);
-
+  grpc_ruby_shutdown();
   return Qnil;
 }
 

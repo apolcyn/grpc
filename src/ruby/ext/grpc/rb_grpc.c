@@ -317,13 +317,23 @@ static void grpc_ruby_init_threads() {
   rb_mutex_unlock(bg_thread_init_rb_mu);
 }
 
+static int64_t g_grpc_ruby_init_count;
+
 void grpc_ruby_init() {
+  gpr_log(GPR_DEBUG,
+          "GRPC_RUBY: grpc_ruby_init - prev g_grpc_ruby_init_count:%" PRId64,
+          g_grpc_ruby_init_count++);
   gpr_once_init(&g_once_init, grpc_ruby_set_init_pid);
   grpc_init();
   grpc_ruby_init_threads();
 }
 
 void grpc_ruby_shutdown() {
+  gpr_log(
+      GPR_DEBUG,
+      "GRPC_RUBY: grpc_ruby_shutdown - prev g_grpc_ruby_init_count:%" PRId64,
+      g_grpc_ruby_init_count--);
+  GPR_ASSERT(g_grpc_ruby_init_count >= 0);
   if (!grpc_ruby_forked_after_init()) grpc_shutdown();
 }
 
