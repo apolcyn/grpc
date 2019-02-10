@@ -276,10 +276,6 @@ static bool grpc_ruby_forked_after_init(void) {
 }
 #endif
 
-static void grpc_rb_shutdown(void) {
-  if (!grpc_ruby_forked_after_init()) grpc_shutdown();
-}
-
 /* Initialize the GRPC module structs */
 
 /* grpc_rb_sNewServerRpc is the struct that holds new server rpc details. */
@@ -298,12 +294,6 @@ VALUE sym_metadata = Qundef;
 
 static gpr_once g_once_init = GPR_ONCE_INIT;
 
-static void grpc_ruby_once_init_internal() {
-  grpc_ruby_set_init_pid();
-  grpc_init();
-  atexit(grpc_rb_shutdown);
-}
-
 void grpc_ruby_fork_guard() {
   if (grpc_ruby_forked_after_init()) {
     rb_raise(rb_eRuntimeError, "grpc cannot be used before and after forking");
@@ -313,19 +303,7 @@ void grpc_ruby_fork_guard() {
 static VALUE bg_thread_init_rb_mu = Qundef;
 static int bg_thread_init_done = 0;
 
-void grpc_ruby_once_init() {
-  /* ruby_vm_at_exit doesn't seem to be working. It would crash once every
-   * blue moon, and some users are getting it repeatedly. See the discussions
-   *  - https://github.com/grpc/grpc/pull/5337
-   *  - https://bugs.ruby-lang.org/issues/12095
-   *
-   * In order to still be able to handle the (unlikely) situation where the
-   * extension is loaded by a first Ruby VM that is subsequently destroyed,
-   * then loaded again by another VM within the same process, we need to
-   * schedule our initialization and destruction only once.
-   */
-  gpr_once_init(&g_once_init, grpc_ruby_once_init_internal);
-
+static void grpc_ruby_init_threads() {
   // Avoid calling calling into ruby library (when creating threads here)
   // in gpr_once_init. In general, it appears to be unsafe to call
   // into the ruby library while holding a non-ruby mutex, because a gil yield
@@ -337,6 +315,16 @@ void grpc_ruby_once_init() {
     bg_thread_init_done = 1;
   }
   rb_mutex_unlock(bg_thread_init_rb_mu);
+}
+
+void grpc_ruby_init() {
+  gpr_once_init(&g_once_init, grpc_ruby_set_init_pid);
+  grpc_init();
+  grpc_ruby_init_threads();
+}
+
+void grpc_ruby_shutdown() {
+  if (!grpc_ruby_forked_after_init()) grpc_shutdown();
 }
 
 void Init_grpc_c() {
