@@ -18,6 +18,9 @@
 #
 # Usage: $ path/to/greeter_client.rb
 
+ENV['GRPC_VERBOSITY'] = 'DEBUG'
+ENV['GRPC_TRACE'] = 'api'
+
 this_dir = File.expand_path(File.dirname(__FILE__))
 lib_dir = File.join(this_dir, 'lib')
 $LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
