@@ -24,21 +24,22 @@
 #                            --test_case=<testcase_name>
 
 # These lines are required for the generated files to load grpc
-this_dir = File.expand_path(File.dirname(__FILE__))
-lib_dir = File.join(File.dirname(File.dirname(this_dir)), 'lib')
-pb_dir = File.dirname(this_dir)
-$LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
-$LOAD_PATH.unshift(pb_dir) unless $LOAD_PATH.include?(pb_dir)
+#this_dir = File.expand_path(File.dirname(__FILE__))
+#lib_dir = File.join(File.dirname(File.dirname(this_dir)), 'lib')
+#pb_dir = File.dirname(this_dir)
+#$LOAD_PATH.unshift(lib_dir) unless $LOAD_PATH.include?(lib_dir)
+#$LOAD_PATH.unshift(pb_dir) unless $LOAD_PATH.include?(pb_dir)
 
 require 'optparse'
 require 'logger'
 
-require_relative '../../lib/grpc'
+#require_relative '../../lib/grpc'
+require 'grpc'
 require 'googleauth'
 require 'google/protobuf'
 
-require_relative '../src/proto/grpc/testing/empty_pb'
-require_relative '../src/proto/grpc/testing/messages_pb'
+#require_relative '../src/proto/grpc/testing/empty_pb'
+#require_relative '../src/proto/grpc/testing/messages_pb'
 require_relative '../src/proto/grpc/testing/test_services_pb'
 
 AUTH_ENV = Google::Auth::CredentialsLoader::ENV_VAR
