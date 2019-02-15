@@ -34,10 +34,11 @@ namespace GreeterServer
 
         public static void Main(string[] args)
         {
+            string hostname = "127.0.0.1";
             Server server = new Server
             {
                 Services = { Greeter.BindService(new GreeterImpl()) },
-                Ports = { new ServerPort("localhost", Port, ServerCredentials.Insecure) }
+                Ports = { new ServerPort(hostname, Port, ServerCredentials.Insecure) }
             };
             server.Start();
 

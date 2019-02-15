@@ -14,7 +14,9 @@
 
 using System;
 using Grpc.Core;
+using Grpc.Core.Logging;
 using Helloworld;
+using System.IO;
 
 namespace GreeterClient
 {
@@ -22,7 +24,12 @@ namespace GreeterClient
     {
         public static void Main(string[] args)
         {
-            Channel channel = new Channel("127.0.0.1:50051", ChannelCredentials.Insecure);
+            string hostname = "dns://127.0.0.1:15353/exp1.test.com";
+            int port = 50051;
+            GrpcEnvironment.SetLogger(
+                new TextWriterLogger(
+                    TextWriter.Synchronized(File.CreateText("test.txt"))));
+            Channel channel = new Channel(hostname, port, ChannelCredentials.Insecure);
 
             var client = new Greeter.GreeterClient(channel);
             String user = "you";

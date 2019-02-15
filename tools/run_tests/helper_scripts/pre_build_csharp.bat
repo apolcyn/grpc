@@ -28,7 +28,7 @@ cd build
 mkdir %ARCHITECTURE%
 cd %ARCHITECTURE%
 
-cmake -G "Visual Studio 14 2015" -A %ARCHITECTURE% -DgRPC_BUILD_TESTS=OFF -DgRPC_MSVC_STATIC_RUNTIME=ON ../../.. || goto :error
+cmake -G "Visual Studio 15 2017" -A %ARCHITECTURE% -DgRPC_BUILD_TESTS=OFF -DgRPC_MSVC_STATIC_RUNTIME=ON ../../.. || goto :error
 
 cd ..\..\..\src\csharp
 
