@@ -633,7 +633,6 @@ grpc_cc_test(
     external_deps = [
         "gtest",
     ],
-    linkstatic = 1,
     tags = ["manual"],  # test requires root, won't work with bazel RBE
     deps = [
         ":test_service_impl",
