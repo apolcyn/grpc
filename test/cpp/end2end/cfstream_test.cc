@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
   gpr_setenv("grpc_cfstream", "1");
   // TODO (pjaikumar): remove the line below when
   // https://github.com/grpc/grpc/issues/18080 has been fixed.
-  gpr_setenv("GRPC_DNS_RESOLVER", "native");
+  //gpr_setenv("GRPC_DNS_RESOLVER", "native");
   const auto result = RUN_ALL_TESTS();
   return result;
 }
