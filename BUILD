@@ -1545,7 +1545,6 @@ grpc_cc_library(
         "grpc_base",
         "grpc_client_channel",
     ],
-    alwayslink = 1,
 )
 
 grpc_cc_library(
@@ -1573,6 +1572,7 @@ grpc_cc_library(
         "grpc_base",
         "grpc_client_channel",
     ],
+    alwayslink = 1,
 )
 
 grpc_cc_library(
