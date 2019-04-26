@@ -105,8 +105,14 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   void RegisterForOnReadableLocked(grpc_closure* read_closure) override {
+    GRPC_CARES_TRACE_LOG(
+        "RegisterForOnWriteableLocked. fd:|%s|. Current read state: %d. Terminal error:%d",
+        GetName(), write_state_, terminal_error_);
     GPR_ASSERT(read_closure_ == nullptr);
     read_closure_ = read_closure;
+    if (terminal_error_ != 0) {
+      ScheduleAndNullReadClosure(error);
+    }
     GPR_ASSERT(GRPC_SLICE_LENGTH(read_buf_) == 0);
     grpc_slice_unref_internal(read_buf_);
     GPR_ASSERT(!read_buf_has_data_);
@@ -138,10 +144,13 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
 
   void RegisterForOnWriteableLocked(grpc_closure* write_closure) override {
     GRPC_CARES_TRACE_LOG(
-        "RegisterForOnWriteableLocked. fd:|%s|. Current write state: %d",
-        GetName(), write_state_);
+        "RegisterForOnWriteableLocked. fd:|%s|. Current write state: %d. Terminal error:%d",
+        GetName(), write_state_, terminal_error_);
     GPR_ASSERT(write_closure_ == nullptr);
     write_closure_ = write_closure;
+    if (terminal_error_ != 0) {
+      ScheduleAndNullWriteClosure(GRPC_ERROR_NONE);
+    }
     switch (write_state_) {
       case WRITE_IDLE:
         ScheduleAndNullWriteClosure(GRPC_ERROR_NONE);
@@ -174,8 +183,12 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   ares_ssize_t RecvFrom(void* data, ares_socket_t data_len, int flags,
                         struct sockaddr* from, ares_socklen_t* from_len) {
     GRPC_CARES_TRACE_LOG(
-        "RecvFrom called on fd:|%s|. Current read buf length:|%d|", GetName(),
-        GRPC_SLICE_LENGTH(read_buf_));
+        "RecvFrom called on fd:|%s|. Current read buf length:|%d|. Terminal error:%d", GetName(),
+        GRPC_SLICE_LENGTH(read_buf_), terminal_error_);
+    if (terminal_error_ != 0) {
+      WSASetLastError(terminal_error_);
+      return -1;
+    }
     if (!read_buf_has_data_) {
       WSASetLastError(WSAEWOULDBLOCK);
       return -1;
@@ -251,8 +264,12 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   ares_ssize_t SendV(const struct iovec* iov, int iov_count) {
-    GRPC_CARES_TRACE_LOG("SendV called on fd:|%s|. Current write state: %d",
-                         GetName(), write_state_);
+    GRPC_CARES_TRACE_LOG("SendV called on fd:|%s|. Current write state: %d. Terminal error:%d",
+                         GetName(), write_state_, terminal_error_);
+    if (terminal_error_ != 0) {
+      WSASetLastError(terminal_error_);
+      return -1;
+    }
     switch (write_state_) {
       case WRITE_IDLE:
         GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
@@ -329,13 +346,17 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
                                         winsocket_->read_info.bytes_transfered);
       read_buf_has_data_ = true;
     } else {
+      terminal_error_ = WSAECONNRESET;
+      GRPC_CARES_TRACE_LOG(
+          "OnIocpReadable error:|%s|. Overriding socket terminal error to:%d. fd:|%s|",
+          grpc_error_string(error), terminal_error_, GetName());
       grpc_slice_unref_internal(read_buf_);
       read_buf_ = grpc_empty_slice();
     }
     GRPC_CARES_TRACE_LOG(
         "OnIocpReadable finishing. read buf length now:|%d|. :fd:|%s|",
         GRPC_SLICE_LENGTH(read_buf_), GetName());
-    ScheduleAndNullReadClosure(error);
+    ScheduleAndNullReadClosure(GRPC_ERROR_NONE);
   }
 
   static void OnIocpWriteable(void* arg, grpc_error* error) {
@@ -362,6 +383,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       write_buf_ = grpc_slice_sub_no_ref(
           write_buf_, 0, winsocket_->write_info.bytes_transfered);
     } else {
+      terminal_error_ = WSAECONNRESET;
+      GRPC_CARES_TRACE_LOG(
+          "OnIocpWriteable error:|%s|. Overriding socket terminal error to:%d. fd:|%s|",
+          grpc_error_string(error), terminal_error_, WSAECONNRESET, GetName());
       grpc_slice_unref_internal(write_buf_);
       write_buf_ = grpc_empty_slice();
     }
@@ -385,6 +410,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   WriteState write_state_;
   char* name_ = nullptr;
   bool gotten_into_driver_list_;
+  int terminal_error_ = 0;
 };
 
 struct SockToPolledFdEntry {
