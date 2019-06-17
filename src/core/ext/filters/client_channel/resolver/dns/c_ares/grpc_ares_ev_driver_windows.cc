@@ -31,6 +31,8 @@
 #include "src/core/lib/gpr/string.h"
 #include "src/core/lib/gprpp/memory.h"
 #include "src/core/lib/iomgr/combiner.h"
+#include "src/core/lib/iomgr/iocp_windows.h"
+#include "src/core/lib/iomgr/sockaddr_windows.h"
 #include "src/core/lib/iomgr/socket_windows.h"
 #include "src/core/lib/iomgr/tcp_windows.h"
 #include "src/core/lib/slice/slice_internal.h"
@@ -154,11 +156,11 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       GRPC_CLOSURE_SCHED(&continue_register_for_on_readable_locked_, connect_error_);
     } else {
       GPR_ASSERT(pending_continue_register_for_on_readable_locked_ == nullptr);
-      pending_continue_register_for_on_readable_locked_ = &continue_register_for_on_readable_locked;
+      pending_continue_register_for_on_readable_locked_ = &continue_register_for_on_readable_locked_;
     }
   }
 
-  void ContinueRegisterForOnReadableLocked(void* arg, grpc_error* error) {
+  static void ContinueRegisterForOnReadableLocked(void* arg, grpc_error* error) {
     GrpcPolledFdWindows* grpc_polled_fd = static_cast<GrpcPolledFdWindows*>(arg);
     grpc_polled_fd->InnerContinueRegisterForOnReadableLocked(error);
   }
@@ -207,8 +209,8 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     }
   }
 
-  void ContinueRegisterForOnWriteableLocked(void* arg, grpc_error* error) {
-    GrpcPolledFdWindows grpc_polled_fd* = static_cast<GrpcPolledFdWindows*>(arg);
+  static void ContinueRegisterForOnWriteableLocked(void* arg, grpc_error* error) {
+    GrpcPolledFdWindows* grpc_polled_fd = static_cast<GrpcPolledFdWindows*>(arg);
     grpc_polled_fd->InnerContinueRegisterForOnWriteableLocked(error);
   }
 
@@ -358,7 +360,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     abort();
   }
 
-  static void OnIocpConnectLocked(GrpcPolledFdWindows* grpc_polled_fd, grpc_error* error) {
+  static void OnIocpConnectLocked(void* arg, grpc_error* error) {
     GrpcPolledFdWindows* grpc_polled_fd = static_cast<GrpcPolledFdWindows*>(arg);
     grpc_polled_fd->InnerOnIocpConnectLocked(error);
   }
@@ -369,10 +371,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     GPR_ASSERT(connect_error_ == GRPC_ERROR_NONE);
     GRPC_ERROR_UNREF(connect_error_);
     connect_error_ = GRPC_ERROR_REF(error);
-    if (pending_continue_register_on_readable_locked_ != nullptr) {
+    if (pending_continue_register_for_on_readable_locked_ != nullptr) {
       GRPC_CLOSURE_SCHED(pending_continue_register_for_on_readable_locked_, connect_error_);
     }
-    if (pending_continue_register_on_writeable_locked_ != nullptr) {
+    if (pending_continue_register_for_on_writeable_locked_ != nullptr) {
       GRPC_CLOSURE_SCHED(pending_continue_register_for_on_writeable_locked_, connect_error_);
     }
   }
@@ -409,7 +411,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   int ConnectTCP(WSAErrorContext* wsa_error_ctx, const struct sockaddr* target, ares_socklen_t target_len) {
     GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s ConnectTCP", GetName());
     LPFN_CONNECTEX ConnectEx;
-    GUioctl_num_bytesID guid;
+    GUID guid = WSAID_CONNECTEX;
     DWORD ioctl_num_bytes;
     SOCKET s = grpc_winsocket_wrapped_socket(winsocket_);
     if (WSAIoctl(s, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
@@ -418,13 +420,13 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       wsa_error_ctx->SetWSAError(wsa_last_error);
       char* msg = gpr_format_message(wsa_last_error);
       GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
-      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPED_STRING(msg);
-      GRPC_CLOSURE_SCHED(on_connect_locked_, error);
+      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+      GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
       gpr_free(msg);
       return -1;
     }
     int out = 0;
-    if (ConnectEx(s, target, target_len, nullptr, 0, nullptr, &winsocket_.write_info.overlapped) == 0) {
+    if (ConnectEx(s, target, target_len, nullptr, 0, nullptr, &winsocket_->write_info.overlapped) == 0) {
       out = -1;
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
@@ -433,11 +435,11 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
       gpr_free(msg);
       if (wsa_last_error != WSA_IO_PENDING) {
-        GRPC_CLOSURE_SCHED(on_connect_locked_, error);
+        GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
         return out;
       }
     }
-    grpc_socket_notify_on_write(winsocket_, on_connect_locked_);
+    grpc_socket_notify_on_write(winsocket_, &on_connect_locked_);
     return out;
   }
 
@@ -526,12 +528,12 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   grpc_closure* write_closure_ = nullptr;
   grpc_closure outer_read_closure_;
   grpc_closure outer_write_closure_;
-  grpc_closure on_connect_locked_;
   grpc_winsocket* winsocket_;
   WriteState write_state_;
   char* name_ = nullptr;
   bool gotten_into_driver_list_;
   int socket_type_;
+  grpc_closure on_connect_locked_;
   bool connect_done_ = false;
   grpc_error* connect_error_ = GRPC_ERROR_NONE;
   // We don't run register_for_{readable,writeable} logic until
