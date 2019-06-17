@@ -106,59 +106,66 @@ static void poll_pollset_until_request_done(args_struct* args) {
 
 static void must_succeed(void* argsp, grpc_error* err) {
   args_struct* args = static_cast<args_struct*>(argsp);
+  if (err != GRPC_ERROR_NONE) {
+    gpr_log(GPR_DEBUG, "Expected error NONE. Got %s", grpc_error_string(err));
+    abort();
+  }
   GPR_ASSERT(err == GRPC_ERROR_NONE);
   GPR_ASSERT(args->addrs != nullptr);
-  GPR_ASSERT(args->addrs->naddrs > 0);
+  if (args->addrs->naddrs != 40) {
+    gpr_log(GPR_DEBUG, "Expecting 40 addrs. Got %d", (int)args->addrs->naddrs);
+    abort();
+  }
   gpr_atm_rel_store(&args->done_atm, 1);
   gpr_mu_lock(args->mu);
   GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
   gpr_mu_unlock(args->mu);
 }
 
-static void must_fail(void* argsp, grpc_error* err) {
-  args_struct* args = static_cast<args_struct*>(argsp);
-  GPR_ASSERT(err != GRPC_ERROR_NONE);
-  gpr_atm_rel_store(&args->done_atm, 1);
-  gpr_mu_lock(args->mu);
-  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
-  gpr_mu_unlock(args->mu);
-}
+//static void must_fail(void* argsp, grpc_error* err) {
+//  args_struct* args = static_cast<args_struct*>(argsp);
+//  GPR_ASSERT(err != GRPC_ERROR_NONE);
+//  gpr_atm_rel_store(&args->done_atm, 1);
+//  gpr_mu_lock(args->mu);
+//  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
+//  gpr_mu_unlock(args->mu);
+//}
+//
+//// This test assumes the environment has an ipv6 loopback
+//static void must_succeed_with_ipv6_first(void* argsp, grpc_error* err) {
+//  args_struct* args = static_cast<args_struct*>(argsp);
+//  GPR_ASSERT(err == GRPC_ERROR_NONE);
+//  GPR_ASSERT(args->addrs != nullptr);
+//  GPR_ASSERT(args->addrs->naddrs > 0);
+//  const struct sockaddr* first_address =
+//      reinterpret_cast<const struct sockaddr*>(args->addrs->addrs[0].addr);
+//  GPR_ASSERT(first_address->sa_family == AF_INET6);
+//  gpr_atm_rel_store(&args->done_atm, 1);
+//  gpr_mu_lock(args->mu);
+//  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
+//  gpr_mu_unlock(args->mu);
+//}
+//
+//static void must_succeed_with_ipv4_first(void* argsp, grpc_error* err) {
+//  args_struct* args = static_cast<args_struct*>(argsp);
+//  GPR_ASSERT(err == GRPC_ERROR_NONE);
+//  GPR_ASSERT(args->addrs != nullptr);
+//  GPR_ASSERT(args->addrs->naddrs > 0);
+//  const struct sockaddr* first_address =
+//      reinterpret_cast<const struct sockaddr*>(args->addrs->addrs[0].addr);
+//  GPR_ASSERT(first_address->sa_family == AF_INET);
+//  gpr_atm_rel_store(&args->done_atm, 1);
+//  gpr_mu_lock(args->mu);
+//  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
+//  gpr_mu_unlock(args->mu);
+//}
 
-// This test assumes the environment has an ipv6 loopback
-static void must_succeed_with_ipv6_first(void* argsp, grpc_error* err) {
-  args_struct* args = static_cast<args_struct*>(argsp);
-  GPR_ASSERT(err == GRPC_ERROR_NONE);
-  GPR_ASSERT(args->addrs != nullptr);
-  GPR_ASSERT(args->addrs->naddrs > 0);
-  const struct sockaddr* first_address =
-      reinterpret_cast<const struct sockaddr*>(args->addrs->addrs[0].addr);
-  GPR_ASSERT(first_address->sa_family == AF_INET6);
-  gpr_atm_rel_store(&args->done_atm, 1);
-  gpr_mu_lock(args->mu);
-  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
-  gpr_mu_unlock(args->mu);
-}
-
-static void must_succeed_with_ipv4_first(void* argsp, grpc_error* err) {
-  args_struct* args = static_cast<args_struct*>(argsp);
-  GPR_ASSERT(err == GRPC_ERROR_NONE);
-  GPR_ASSERT(args->addrs != nullptr);
-  GPR_ASSERT(args->addrs->naddrs > 0);
-  const struct sockaddr* first_address =
-      reinterpret_cast<const struct sockaddr*>(args->addrs->addrs[0].addr);
-  GPR_ASSERT(first_address->sa_family == AF_INET);
-  gpr_atm_rel_store(&args->done_atm, 1);
-  gpr_mu_lock(args->mu);
-  GRPC_LOG_IF_ERROR("pollset_kick", grpc_pollset_kick(args->pollset, nullptr));
-  gpr_mu_unlock(args->mu);
-}
-
-static void test_localhost(void) {
+static void test_large_aaaa_record(void) {
   grpc_core::ExecCtx exec_ctx;
   args_struct args;
   args_init(&args);
   grpc_resolve_address(
-      "localhost:1", nullptr, args.pollset_set,
+      "large-aaaa-record.apolcyn.exp-test-zone:1", nullptr, args.pollset_set,
       GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
       &args.addrs);
   grpc_core::ExecCtx::Get()->Flush();
@@ -166,176 +173,176 @@ static void test_localhost(void) {
   args_finish(&args);
 }
 
-static void test_default_port(void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address(
-      "localhost", "1", args.pollset_set,
-      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
-      &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_localhost_result_has_ipv6_first(void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address("localhost:1", nullptr, args.pollset_set,
-                       GRPC_CLOSURE_CREATE(must_succeed_with_ipv6_first, &args,
-                                           grpc_schedule_on_exec_ctx),
-                       &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_localhost_result_has_ipv4_first_when_ipv6_isnt_available(
-    void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address("localhost:1", nullptr, args.pollset_set,
-                       GRPC_CLOSURE_CREATE(must_succeed_with_ipv4_first, &args,
-                                           grpc_schedule_on_exec_ctx),
-                       &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_non_numeric_default_port(void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address(
-      "localhost", "https", args.pollset_set,
-      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
-      &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_missing_default_port(void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address(
-      "localhost", nullptr, args.pollset_set,
-      GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
-      &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_ipv6_with_port(void) {
-  grpc_core::ExecCtx exec_ctx;
-  args_struct args;
-  args_init(&args);
-  grpc_resolve_address(
-      "[2001:db8::1]:1", nullptr, args.pollset_set,
-      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
-      &args.addrs);
-  grpc_core::ExecCtx::Get()->Flush();
-  poll_pollset_until_request_done(&args);
-  args_finish(&args);
-}
-
-static void test_ipv6_without_port(void) {
-  const char* const kCases[] = {
-      "2001:db8::1",
-      "2001:db8::1.2.3.4",
-      "[2001:db8::1]",
-  };
-  unsigned i;
-  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
-    grpc_core::ExecCtx exec_ctx;
-    args_struct args;
-    args_init(&args);
-    grpc_resolve_address(
-        kCases[i], "80", args.pollset_set,
-        GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
-        &args.addrs);
-    grpc_core::ExecCtx::Get()->Flush();
-    poll_pollset_until_request_done(&args);
-    args_finish(&args);
-  }
-}
-
-static void test_invalid_ip_addresses(void) {
-  const char* const kCases[] = {
-      "293.283.1238.3:1",
-      "[2001:db8::11111]:1",
-  };
-  unsigned i;
-  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
-    grpc_core::ExecCtx exec_ctx;
-    args_struct args;
-    args_init(&args);
-    grpc_resolve_address(
-        kCases[i], nullptr, args.pollset_set,
-        GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
-        &args.addrs);
-    grpc_core::ExecCtx::Get()->Flush();
-    poll_pollset_until_request_done(&args);
-    args_finish(&args);
-  }
-}
-
-static void test_unparseable_hostports(void) {
-  const char* const kCases[] = {
-      "[", "[::1", "[::1]bad", "[1.2.3.4]", "[localhost]", "[localhost]:1",
-  };
-  unsigned i;
-  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
-    grpc_core::ExecCtx exec_ctx;
-    args_struct args;
-    args_init(&args);
-    grpc_resolve_address(
-        kCases[i], "1", args.pollset_set,
-        GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
-        &args.addrs);
-    grpc_core::ExecCtx::Get()->Flush();
-    poll_pollset_until_request_done(&args);
-    args_finish(&args);
-  }
-}
-
-typedef struct mock_ipv6_disabled_source_addr_factory {
-  address_sorting_source_addr_factory base;
-} mock_ipv6_disabled_source_addr_factory;
-
-static bool mock_ipv6_disabled_source_addr_factory_get_source_addr(
-    address_sorting_source_addr_factory* factory,
-    const address_sorting_address* dest_addr,
-    address_sorting_address* source_addr) {
-  // Mock lack of IPv6. For IPv4, set the source addr to be the same
-  // as the destination; tests won't actually connect on the result anyways.
-  if (address_sorting_abstract_get_family(dest_addr) ==
-      ADDRESS_SORTING_AF_INET6) {
-    return false;
-  }
-  memcpy(source_addr->addr, &dest_addr->addr, dest_addr->len);
-  source_addr->len = dest_addr->len;
-  return true;
-}
-
-void mock_ipv6_disabled_source_addr_factory_destroy(
-    address_sorting_source_addr_factory* factory) {
-  mock_ipv6_disabled_source_addr_factory* f =
-      reinterpret_cast<mock_ipv6_disabled_source_addr_factory*>(factory);
-  gpr_free(f);
-}
-
-const address_sorting_source_addr_factory_vtable
-    kMockIpv6DisabledSourceAddrFactoryVtable = {
-        mock_ipv6_disabled_source_addr_factory_get_source_addr,
-        mock_ipv6_disabled_source_addr_factory_destroy,
-};
+//static void test_default_port(void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address(
+//      "localhost", "1", args.pollset_set,
+//      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
+//      &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_localhost_result_has_ipv6_first(void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address("localhost:1", nullptr, args.pollset_set,
+//                       GRPC_CLOSURE_CREATE(must_succeed_with_ipv6_first, &args,
+//                                           grpc_schedule_on_exec_ctx),
+//                       &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_localhost_result_has_ipv4_first_when_ipv6_isnt_available(
+//    void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address("localhost:1", nullptr, args.pollset_set,
+//                       GRPC_CLOSURE_CREATE(must_succeed_with_ipv4_first, &args,
+//                                           grpc_schedule_on_exec_ctx),
+//                       &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_non_numeric_default_port(void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address(
+//      "localhost", "https", args.pollset_set,
+//      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
+//      &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_missing_default_port(void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address(
+//      "localhost", nullptr, args.pollset_set,
+//      GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
+//      &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_ipv6_with_port(void) {
+//  grpc_core::ExecCtx exec_ctx;
+//  args_struct args;
+//  args_init(&args);
+//  grpc_resolve_address(
+//      "[2001:db8::1]:1", nullptr, args.pollset_set,
+//      GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
+//      &args.addrs);
+//  grpc_core::ExecCtx::Get()->Flush();
+//  poll_pollset_until_request_done(&args);
+//  args_finish(&args);
+//}
+//
+//static void test_ipv6_without_port(void) {
+//  const char* const kCases[] = {
+//      "2001:db8::1",
+//      "2001:db8::1.2.3.4",
+//      "[2001:db8::1]",
+//  };
+//  unsigned i;
+//  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
+//    grpc_core::ExecCtx exec_ctx;
+//    args_struct args;
+//    args_init(&args);
+//    grpc_resolve_address(
+//        kCases[i], "80", args.pollset_set,
+//        GRPC_CLOSURE_CREATE(must_succeed, &args, grpc_schedule_on_exec_ctx),
+//        &args.addrs);
+//    grpc_core::ExecCtx::Get()->Flush();
+//    poll_pollset_until_request_done(&args);
+//    args_finish(&args);
+//  }
+//}
+//
+//static void test_invalid_ip_addresses(void) {
+//  const char* const kCases[] = {
+//      "293.283.1238.3:1",
+//      "[2001:db8::11111]:1",
+//  };
+//  unsigned i;
+//  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
+//    grpc_core::ExecCtx exec_ctx;
+//    args_struct args;
+//    args_init(&args);
+//    grpc_resolve_address(
+//        kCases[i], nullptr, args.pollset_set,
+//        GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
+//        &args.addrs);
+//    grpc_core::ExecCtx::Get()->Flush();
+//    poll_pollset_until_request_done(&args);
+//    args_finish(&args);
+//  }
+//}
+//
+//static void test_unparseable_hostports(void) {
+//  const char* const kCases[] = {
+//      "[", "[::1", "[::1]bad", "[1.2.3.4]", "[localhost]", "[localhost]:1",
+//  };
+//  unsigned i;
+//  for (i = 0; i < sizeof(kCases) / sizeof(*kCases); i++) {
+//    grpc_core::ExecCtx exec_ctx;
+//    args_struct args;
+//    args_init(&args);
+//    grpc_resolve_address(
+//        kCases[i], "1", args.pollset_set,
+//        GRPC_CLOSURE_CREATE(must_fail, &args, grpc_schedule_on_exec_ctx),
+//        &args.addrs);
+//    grpc_core::ExecCtx::Get()->Flush();
+//    poll_pollset_until_request_done(&args);
+//    args_finish(&args);
+//  }
+//}
+//
+//typedef struct mock_ipv6_disabled_source_addr_factory {
+//  address_sorting_source_addr_factory base;
+//} mock_ipv6_disabled_source_addr_factory;
+//
+//static bool mock_ipv6_disabled_source_addr_factory_get_source_addr(
+//    address_sorting_source_addr_factory* factory,
+//    const address_sorting_address* dest_addr,
+//    address_sorting_address* source_addr) {
+//  // Mock lack of IPv6. For IPv4, set the source addr to be the same
+//  // as the destination; tests won't actually connect on the result anyways.
+//  if (address_sorting_abstract_get_family(dest_addr) ==
+//      ADDRESS_SORTING_AF_INET6) {
+//    return false;
+//  }
+//  memcpy(source_addr->addr, &dest_addr->addr, dest_addr->len);
+//  source_addr->len = dest_addr->len;
+//  return true;
+//}
+//
+//void mock_ipv6_disabled_source_addr_factory_destroy(
+//    address_sorting_source_addr_factory* factory) {
+//  mock_ipv6_disabled_source_addr_factory* f =
+//      reinterpret_cast<mock_ipv6_disabled_source_addr_factory*>(factory);
+//  gpr_free(f);
+//}
+//
+//const address_sorting_source_addr_factory_vtable
+//    kMockIpv6DisabledSourceAddrFactoryVtable = {
+//        mock_ipv6_disabled_source_addr_factory_get_source_addr,
+//        mock_ipv6_disabled_source_addr_factory_destroy,
+//};
 
 int main(int argc, char** argv) {
   // First set the resolver type based off of --resolver
@@ -368,37 +375,38 @@ int main(int argc, char** argv) {
   grpc_init();
   {
     grpc_core::ExecCtx exec_ctx;
-    test_localhost();
-    test_default_port();
-    test_non_numeric_default_port();
-    test_missing_default_port();
-    test_ipv6_with_port();
-    test_ipv6_without_port();
-    test_invalid_ip_addresses();
-    test_unparseable_hostports();
-    if (gpr_stricmp(resolver_type, "ares") == 0) {
-      // This behavior expectation is specific to c-ares.
-      test_localhost_result_has_ipv6_first();
-    }
+    //test_localhost();
+    test_large_aaaa_record();
+    //test_default_port();
+    //test_non_numeric_default_port();
+    //test_missing_default_port();
+    //test_ipv6_with_port();
+    //test_ipv6_without_port();
+    //test_invalid_ip_addresses();
+    //test_unparseable_hostports();
+    //if (gpr_stricmp(resolver_type, "ares") == 0) {
+    //  // This behavior expectation is specific to c-ares.
+    //  test_localhost_result_has_ipv6_first();
+    //}
     grpc_core::Executor::ShutdownAll();
   }
   gpr_cmdline_destroy(cl);
   grpc_shutdown();
-  // The following test uses
-  // "address_sorting_override_source_addr_factory_for_testing", which works
-  // on a per-grpc-init basis, and so it's simplest to run this next test
-  // within a standalone grpc_init/grpc_shutdown pair.
-  if (gpr_stricmp(resolver_type, "ares") == 0) {
-    // Run a test case in which c-ares's address sorter
-    // thinks that IPv4 is available and IPv6 isn't.
-    grpc_init();
-    mock_ipv6_disabled_source_addr_factory* factory =
-        static_cast<mock_ipv6_disabled_source_addr_factory*>(
-            gpr_malloc(sizeof(mock_ipv6_disabled_source_addr_factory)));
-    factory->base.vtable = &kMockIpv6DisabledSourceAddrFactoryVtable;
-    address_sorting_override_source_addr_factory_for_testing(&factory->base);
-    test_localhost_result_has_ipv4_first_when_ipv6_isnt_available();
-    grpc_shutdown();
-  }
+  //// The following test uses
+  //// "address_sorting_override_source_addr_factory_for_testing", which works
+  //// on a per-grpc-init basis, and so it's simplest to run this next test
+  //// within a standalone grpc_init/grpc_shutdown pair.
+  //if (gpr_stricmp(resolver_type, "ares") == 0) {
+  //  // Run a test case in which c-ares's address sorter
+  //  // thinks that IPv4 is available and IPv6 isn't.
+  //  grpc_init();
+  //  mock_ipv6_disabled_source_addr_factory* factory =
+  //      static_cast<mock_ipv6_disabled_source_addr_factory*>(
+  //          gpr_malloc(sizeof(mock_ipv6_disabled_source_addr_factory)));
+  //  factory->base.vtable = &kMockIpv6DisabledSourceAddrFactoryVtable;
+  //  address_sorting_override_source_addr_factory_for_testing(&factory->base);
+  //  test_localhost_result_has_ipv4_first_when_ipv6_isnt_available();
+  //  grpc_shutdown();
+  //}
   return 0;
 }
