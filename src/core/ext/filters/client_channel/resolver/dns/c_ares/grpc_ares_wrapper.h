@@ -32,12 +32,76 @@ extern grpc_core::TraceFlag grpc_trace_cares_address_sorting;
 
 extern grpc_core::TraceFlag grpc_trace_cares_resolver;
 
+extern grpc_core::TraceFlag grpc_trace_ev_driver_1_1;
+
+extern grpc_core::TraceFlag grpc_trace_ev_driver_1_2;
+
+extern grpc_core::TraceFlag grpc_trace_ev_driver_1_3;
+
+extern grpc_core::TraceFlag grpc_trace_ev_driver_2;
+
+extern grpc_core::TraceFlag grpc_trace_ev_driver_3;
+
+extern grpc_core::TraceFlag grpc_trace_ev_driver_4;
+
+extern grpc_core::TraceFlag grpc_trace_windows_ev_driver;
+
 #define GRPC_CARES_TRACE_LOG(format, ...)                           \
   do {                                                              \
     if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_cares_resolver)) {       \
       gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
     }                                                               \
   } while (0)
+
+#define GRPC_EV_DRIVER_1_1_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_1_1)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_EV_DRIVER_1_2_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_1_2)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_EV_DRIVER_1_3_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_1_3)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_EV_DRIVER_2_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_2)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_EV_DRIVER_3_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_3)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_EV_DRIVER_4_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_ev_driver_4)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
+#define GRPC_WINDOWS_EV_DRIVER_TRACE_LOG(format, ...)                           \
+  do {                                                              \
+    if (GRPC_TRACE_FLAG_ENABLED(grpc_trace_windows_ev_driver)) {       \
+      gpr_log(GPR_DEBUG, "(c-ares resolver) " format, __VA_ARGS__); \
+    }                                                               \
+  } while (0)
+
 
 typedef struct grpc_ares_request grpc_ares_request;
 
