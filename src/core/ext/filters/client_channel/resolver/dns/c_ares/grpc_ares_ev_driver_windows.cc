@@ -50,6 +50,34 @@ struct iovec {
 
 namespace grpc_core {
 
+/* c-ares reads and takes action on the error codes of the
+ * "virtual socket operations" in this file, via the WSAGetLastError
+ * APIs. If code in this file wants to set a specific WSA error that
+ * c-ares should read, it must do so by calling SetWSAError() on the
+ * WSAErrorContext instance passed to it. A WSAErrorContext must only be
+ * instantiated at the top of the virtual socket function callstack. */
+class WSAErrorContext {
+ public:
+  explicit WSAErrorContext() {};
+
+  ~WSAErrorContext() {
+    if (error_ != 0) {
+      WSASetLastError(error_);
+    }
+  }
+
+  /* Disallow copy and assignment operators */
+  WSAErrorContext(const WSAErrorContext&) = delete;
+  WSAErrorContext& operator=(const WSAErrorContext&) = delete;
+
+  void SetWSAError(int error) {
+    error_ = error;
+  }
+
+ private:
+  int error_ = 0;
+};
+
 /* c-ares creates its own sockets and is meant to read them when readable and
  * write them when writeable. To fit this socket usage model into the grpc
  * windows poller (which gives notifications when attempted reads and writes are
@@ -171,13 +199,13 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
 
   const char* GetName() override { return name_; }
 
-  ares_ssize_t RecvFrom(void* data, ares_socket_t data_len, int flags,
+  ares_ssize_t RecvFrom(WSAErrorContext* wsa_error_ctx, void* data, ares_socket_t data_len, int flags,
                         struct sockaddr* from, ares_socklen_t* from_len) {
     GRPC_CARES_TRACE_LOG(
         "RecvFrom called on fd:|%s|. Current read buf length:|%d|", GetName(),
         GRPC_SLICE_LENGTH(read_buf_));
     if (!read_buf_has_data_) {
-      WSASetLastError(WSAEWOULDBLOCK);
+      wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
       return -1;
     }
     ares_ssize_t bytes_read = 0;
@@ -229,7 +257,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     return out;
   }
 
-  ares_ssize_t TrySendWriteBufSyncNonBlocking() {
+  ares_ssize_t TrySendWriteBufSyncNonBlocking(WSAErrorContext* wsa_error_ctx) {
     GPR_ASSERT(write_state_ == WRITE_IDLE);
     DWORD bytes_sent = 0;
     if (SendWriteBuf(&bytes_sent, nullptr) != 0) {
@@ -240,7 +268,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
           msg, GetName());
       gpr_free(msg);
       if (wsa_last_error == WSA_IO_PENDING) {
-        WSASetLastError(WSAEWOULDBLOCK);
+        wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
         write_state_ = WRITE_REQUESTED;
       }
     }
@@ -249,7 +277,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     return bytes_sent;
   }
 
-  ares_ssize_t SendV(const struct iovec* iov, int iov_count) {
+  ares_ssize_t SendV(WSAErrorContext* wsa_error_ctx, const struct iovec* iov, int iov_count) {
     GRPC_CARES_TRACE_LOG("SendV called on fd:|%s|. Current write state: %d",
                          GetName(), write_state_);
     switch (write_state_) {
@@ -257,10 +285,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
         GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
         grpc_slice_unref_internal(write_buf_);
         write_buf_ = FlattenIovec(iov, iov_count);
-        return TrySendWriteBufSyncNonBlocking();
+        return TrySendWriteBufSyncNonBlocking(wsa_error_ctx);
       case WRITE_REQUESTED:
       case WRITE_PENDING:
-        WSASetLastError(WSAEWOULDBLOCK);
+        wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
         return -1;
       case WRITE_WAITING_FOR_VERIFICATION_UPON_RETRY:
         grpc_slice currently_attempted = FlattenIovec(iov, iov_count);
@@ -277,19 +305,20 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
             grpc_slice_sub_no_ref(currently_attempted, total_sent,
                                   GRPC_SLICE_LENGTH(currently_attempted));
         write_state_ = WRITE_IDLE;
-        total_sent += TrySendWriteBufSyncNonBlocking();
+        total_sent += TrySendWriteBufSyncNonBlocking(wsa_error_ctx);
         return total_sent;
     }
     abort();
   }
 
-  int Connect(const struct sockaddr* target, ares_socklen_t target_len) {
+  int Connect(WSAErrorContext* wsa_error_ctx, const struct sockaddr* target, ares_socklen_t target_len) {
     SOCKET s = grpc_winsocket_wrapped_socket(winsocket_);
     GRPC_CARES_TRACE_LOG("Connect: fd:|%s|", GetName());
     int out =
         WSAConnect(s, target, target_len, nullptr, nullptr, nullptr, nullptr);
+    int wsa_last_error = WSAGetLastError();
+    wsa_error_ctx->SetWSAError(wsa_last_error);
     if (out != 0) {
-      int wsa_last_error = WSAGetLastError();
       char* msg = gpr_format_message(wsa_last_error);
       GRPC_CARES_TRACE_LOG("Connect error code:|%d|, msg:|%s|. fd:|%s|",
                            wsa_last_error, msg, GetName());
@@ -469,24 +498,27 @@ class SockToPolledFdMap {
 
   static int Connect(ares_socket_t as, const struct sockaddr* target,
                      ares_socklen_t target_len, void* user_data) {
+    WSAErrorContext wsa_error_ctx;
     SockToPolledFdMap* map = static_cast<SockToPolledFdMap*>(user_data);
     GrpcPolledFdWindows* polled_fd = map->LookupPolledFd(as);
-    return polled_fd->Connect(target, target_len);
+    return polled_fd->Connect(&wsa_error_ctx, target, target_len);
   }
 
   static ares_ssize_t SendV(ares_socket_t as, const struct iovec* iov,
                             int iovec_count, void* user_data) {
+    WSAErrorContext wsa_error_ctx;
     SockToPolledFdMap* map = static_cast<SockToPolledFdMap*>(user_data);
     GrpcPolledFdWindows* polled_fd = map->LookupPolledFd(as);
-    return polled_fd->SendV(iov, iovec_count);
+    return polled_fd->SendV(&wsa_error_ctx, iov, iovec_count);
   }
 
   static ares_ssize_t RecvFrom(ares_socket_t as, void* data, size_t data_len,
                                int flags, struct sockaddr* from,
                                ares_socklen_t* from_len, void* user_data) {
+    WSAErrorContext wsa_error_ctx;
     SockToPolledFdMap* map = static_cast<SockToPolledFdMap*>(user_data);
     GrpcPolledFdWindows* polled_fd = map->LookupPolledFd(as);
-    return polled_fd->RecvFrom(data, data_len, flags, from, from_len);
+    return polled_fd->RecvFrom(&wsa_error_ctx, data, data_len, flags, from, from_len);
   }
 
   static int CloseSocket(SOCKET s, void* user_data) {
