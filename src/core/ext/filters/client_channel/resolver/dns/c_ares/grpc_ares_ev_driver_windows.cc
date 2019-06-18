@@ -300,26 +300,13 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   int SendWriteBuf(LPDWORD bytes_sent_ptr, LPWSAOVERLAPPED overlapped, int* wsa_error_code) {
-    GRPC_CARES_TRACE_LOG("fd:%s made it here 1", GetName());
     WSABUF buf;
     buf.len = GRPC_SLICE_LENGTH(write_buf_);
-    GRPC_CARES_TRACE_LOG("fd:%s made it here 2", GetName());
     buf.buf = (char*)GRPC_SLICE_START_PTR(write_buf_);
-    GRPC_CARES_TRACE_LOG("fd:%s made it here 3", GetName());
     DWORD flags = 0;
-    // TEST
-    int out = -1;
-    if (socket_type_ == SOCK_STREAM && overlapped == nullptr) {
-      *wsa_error_code = WSAEWOULDBLOCK;
-    } else {
-      GRPC_CARES_TRACE_LOG("fd:%s made it here 4", GetName());
-      out = WSASend(grpc_winsocket_wrapped_socket(winsocket_), &buf, 1,
-                    bytes_sent_ptr, flags, overlapped, nullptr);
-      GRPC_CARES_TRACE_LOG("fd:%s made it here 5", GetName());
-    }
-    // TEST
-    // Capture the WSA error before logging
-    // *wsa_error_code = WSAGetLastError();
+    int out = WSASend(grpc_winsocket_wrapped_socket(winsocket_), &buf, 1,
+                      bytes_sent_ptr, flags, overlapped, nullptr);
+    *wsa_error_code = WSAGetLastError();
     GRPC_CARES_TRACE_LOG(
         "WSASend fd:%s. buf len:%d. bytes sent: %d. overlapped %p. return "
         "val: %d wsa_error_code:%d",
@@ -327,29 +314,8 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     return out;
   }
 
-  ares_ssize_t TrySendWriteBufSyncNonBlocking(WSAErrorContext* wsa_error_ctx) {
-    GPR_ASSERT(write_state_ == WRITE_IDLE);
-    DWORD bytes_sent = 0;
-    int wsa_error_code = 0;
-    if (SendWriteBuf(&bytes_sent, nullptr, &wsa_error_code) != 0) {
-      char* msg = gpr_format_message(wsa_error_code);
-      GRPC_CARES_TRACE_LOG(
-          "fd:|%s| TrySendWriteBufSyncNonBlocking SendWriteBuf error code:%d msg:|%s|",
-          GetName(), wsa_error_code, msg);
-      gpr_free(msg);
-      if (wsa_error_code == WSAEWOULDBLOCK) {
-        write_state_ = WRITE_REQUESTED;
-      }
-      return 0;
-    }
-    write_buf_ = grpc_slice_sub_no_ref(write_buf_, bytes_sent,
-                                       GRPC_SLICE_LENGTH(write_buf_));
-    return bytes_sent;
-  }
-
   ares_ssize_t SendV(WSAErrorContext* wsa_error_ctx, const struct iovec* iov, int iov_count) {
-    GRPC_CARES_TRACE_LOG("SendV called on fd:|%s|. Current write state: %d",
-                         GetName(), write_state_);
+    GRPC_CARES_TRACE_LOG("fd:|%s| SendV called", GetName());
     if (!connect_done_) {
       wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
       return -1;
@@ -358,12 +324,45 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       wsa_error_ctx->SetWSAError(wsa_connect_error_);
       return -1;
     }
+    switch (socket_type_) {
+    case SOCK_DGRAM:
+      return SendVUDP(wsa_error_ctx, iov, iov_count);
+    case SOCK_STREAM:
+      return SendVTCP(wsa_error_ctx, iov, iov_count);
+    default:
+      abort();
+    }
+  }
+
+  ares_ssize_t SendVUDP(WSAErrorContext* wsa_error_ctx, const struct iovec* iov, int iov_count) {
+    GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
+    grpc_slice_unref_internal(write_buf_);
+    write_buf_ = FlattenIovec(iov, iov_count);
+    DWORD bytes_sent = 0;
+    int wsa_error_code = 0;
+    if (SendWriteBuf(&bytes_sent, nullptr, &wsa_error_code) != 0) {
+      wsa_error_ctx->SetWSAError(wsa_error_code);
+      char* msg = gpr_format_message(wsa_error_code);
+      GRPC_CARES_TRACE_LOG(
+          "fd:|%s| SendVUDP SendWriteBuf error code:%d msg:|%s|",
+          GetName(), wsa_error_code, msg);
+      gpr_free(msg);
+      return -1;
+    }
+    write_buf_ = grpc_slice_sub_no_ref(write_buf_, bytes_sent,
+                                       GRPC_SLICE_LENGTH(write_buf_));
+    return bytes_sent;
+  }
+
+  ares_ssize_t SendVTCP(WSAErrorContext* wsa_error_ctx, const struct iovec* iov, int iov_count) {
     switch (write_state_) {
       case WRITE_IDLE:
+        write_state_ = WRITE_REQUESTED;
         GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
         grpc_slice_unref_internal(write_buf_);
         write_buf_ = FlattenIovec(iov, iov_count);
-        return TrySendWriteBufSyncNonBlocking(wsa_error_ctx);
+        wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
+        return -1;
       case WRITE_REQUESTED:
       case WRITE_PENDING:
         wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
@@ -382,8 +381,11 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
         write_buf_ =
             grpc_slice_sub_no_ref(currently_attempted, total_sent,
                                   GRPC_SLICE_LENGTH(currently_attempted));
-        write_state_ = WRITE_IDLE;
-        total_sent += TrySendWriteBufSyncNonBlocking(wsa_error_ctx);
+        if (GRPC_SLICE_LENGTH(write_buf_) == 0) {
+          write_state_ = WRITE_IDLE;
+        } else {
+          write_state_ = WRITE_REQUESTED;
+        }
         return total_sent;
     }
     abort();
