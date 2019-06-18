@@ -133,7 +133,6 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     GPR_ASSERT(read_closure_ == nullptr);
     GPR_ASSERT(write_closure_ == nullptr);
     grpc_winsocket_destroy(winsocket_);
-    GRPC_ERROR_UNREF(connect_error_);
     gpr_free(name_);
   }
 
@@ -168,11 +167,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   void InnerContinueRegisterForOnReadableLocked(grpc_error* unused_error) {
-    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnReadableLocked connect_error_:%s", GetName(), grpc_error_string(connect_error_));
+    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnReadableLocked wsa_connect_error_:%d", GetName(), wsa_connect_error_);
     GPR_ASSERT(connect_done_);
-    if (connect_error_ != GRPC_ERROR_NONE) {
-      GRPC_ERROR_REF(connect_error_);
-      ScheduleAndNullReadClosure(connect_error_);
+    if (wsa_connect_error_ != 0) {
+      ScheduleAndNullReadClosure(GRPC_WSA_ERROR(wsa_connect_error_, "connect"));
       return;
     }
     WSABUF buffer;
@@ -186,12 +184,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
                     &recv_from_source_addr_len_,
                     &winsocket_->read_info.overlapped, nullptr)) {
       int wsa_last_error = WSAGetLastError();
-      char* msg = gpr_format_message(wsa_last_error);
-      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+      grpc_error* error = GRPC_WSA_ERROR(wsa_last_error, "WSARecvFrom");
       GRPC_CARES_TRACE_LOG(
-          "RegisterForOnReadableLocked: WSARecvFrom error:|%s|. fd:|%s|", msg,
+          "RegisterForOnReadableLocked: WSARecvFrom error:|%s|. fd:|%s|", grpc_error_string(error),
           GetName());
-      gpr_free(msg);
       if (wsa_last_error != WSA_IO_PENDING) {
         ScheduleAndNullReadClosure(error);
         return;
@@ -220,11 +216,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   void InnerContinueRegisterForOnWriteableLocked(grpc_error* unused_error) {
-    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnWriteableLocked connect_error_:%s", GetName(), grpc_error_string(connect_error_));
+    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnWriteableLocked wsa_connect_error_:%d", GetName(), wsa_connect_error_);
     GPR_ASSERT(connect_done_);
-    if (connect_error_ != GRPC_ERROR_NONE) {
-      GRPC_ERROR_REF(connect_error_);
-      ScheduleAndNullWriteClosure(connect_error_);
+    if (wsa_connect_error_ != 0) {
+      ScheduleAndNullWriteClosure(GRPC_WSA_ERROR(wsa_connect_error_, "connect"));
       return;
     }
     switch (write_state_) {
@@ -319,11 +314,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     DWORD bytes_sent = 0;
     if (SendWriteBuf(&bytes_sent, nullptr) != 0) {
       int wsa_last_error = WSAGetLastError();
-      char* msg = gpr_format_message(wsa_last_error);
+      grpc_error* error = GRPC_WSA_ERROR(wsa_last_error, "connect");
       GRPC_CARES_TRACE_LOG(
           "TrySendWriteBufSyncNonBlocking: SendWriteBuf error:|%s|. fd:|%s|",
-          msg, GetName());
-      gpr_free(msg);
+          grpc_error_string(error), GetName());
       if (wsa_last_error == WSA_IO_PENDING) {
         wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
         write_state_ = WRITE_REQUESTED;
@@ -337,6 +331,14 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   ares_ssize_t SendV(WSAErrorContext* wsa_error_ctx, const struct iovec* iov, int iov_count) {
     GRPC_CARES_TRACE_LOG("SendV called on fd:|%s|. Current write state: %d",
                          GetName(), write_state_);
+    if (!connect_done_) {
+      wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
+      return -1;
+    }
+    if (wsa_connect_error_ != 0) {
+      wsa_error_ctx->SetWSAError(wsa_connect_error_);
+      return -1;
+    }
     switch (write_state_) {
       case WRITE_IDLE:
         GPR_ASSERT(GRPC_SLICE_LENGTH(write_buf_) == 0);
@@ -382,7 +384,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       pending_continue_register_for_on_writeable_locked_);
     GPR_ASSERT(!connect_done_);
     connect_done_ = true;
-    GPR_ASSERT(connect_error_ == GRPC_ERROR_NONE);
+    GPR_ASSERT(wsa_connect_error_ == 0);
     if (error == GRPC_ERROR_NONE) {
       DWORD transfered_bytes = 0;
       DWORD flags;
@@ -391,17 +393,15 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
                                  &transfered_bytes, FALSE, &flags);
       GPR_ASSERT(transfered_bytes == 0);
       if (!wsa_success) {
-        int wsa_last_error = WSAGetLastError();
-        char* msg = gpr_format_message(wsa_last_error);
+        wsa_connect_error_ = WSAGetLastError();
+        char* msg = gpr_format_message(wsa_connect_error_);
         GRPC_CARES_TRACE_LOG("fd:%s InnerOnIocpConnectLocked WSA overlapped result code:%d msg:|%s|",
-                             GetName(), wsa_last_error, msg);
-        GRPC_ERROR_UNREF(connect_error_);
-        connect_error_ = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+                             GetName(), wsa_connect_error_, msg);
         gpr_free(msg);
       }
     } else {
-      GRPC_ERROR_UNREF(connect_error_);
-      connect_error_ = GRPC_ERROR_REF(error);
+      // Spoof up an error code that will cause any c-ares operations on this fd to abort.
+      wsa_connect_error_ = WSA_OPERATION_ABORTED;
     }
     if (pending_continue_register_for_on_readable_locked_ != nullptr) {
       GRPC_CLOSURE_SCHED(pending_continue_register_for_on_readable_locked_, GRPC_ERROR_NONE);
@@ -431,12 +431,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     wsa_error_ctx->SetWSAError(wsa_last_error);
     grpc_error* error = GRPC_ERROR_NONE;
     if (out != 0) {
-      char* msg = gpr_format_message(wsa_last_error);
-      GRPC_CARES_TRACE_LOG("fd:%s Connect error code:|%d|, msg:|%s|. fd:|%s|",
-                           GetName(), wsa_last_error, msg, GetName());
       GRPC_ERROR_UNREF(error);
-      error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      gpr_free(msg);
+      error = GRPC_WSA_ERROR(wsa_last_error, "connect");
+      GRPC_CARES_TRACE_LOG("fd:%s Connect error code:|%d| msg:|%s|",
+                           GetName(), wsa_last_error, grpc_error_string(error), GetName());
       // c-ares expects a posix-style connect API
       out = -1;
     }
@@ -454,10 +452,8 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
         &ConnectEx, sizeof(ConnectEx), &ioctl_num_bytes, nullptr, nullptr) != 0) {
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
-      char* msg = gpr_format_message(wsa_last_error);
-      GRPC_CARES_TRACE_LOG("fd:%s WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
-      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      gpr_free(msg);
+      grpc_error* error = GRPC_WSA_ERROR(wsa_last_error, "WSAIoctl");
+      GRPC_CARES_TRACE_LOG("fd:%s WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) error code:%d msg:|%s|", GetName(), wsa_last_error, grpc_error_string(error));
       GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
       return -1;
     }
@@ -473,10 +469,8 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     if (bind(s, (struct sockaddr*)local_address->addr, (int)local_address->len) != 0) {
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
-      char* msg = gpr_format_message(wsa_last_error);
-      GRPC_CARES_TRACE_LOG("fd:%s bind error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
-      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      gpr_free(msg);
+      grpc_error* error = GRPC_WSA_ERROR(wsa_last_error, "bind");
+      GRPC_CARES_TRACE_LOG("fd:%s bind error code:%d msg:|%s|", GetName(), wsa_last_error, grpc_error_string(error));
       GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
       return -1;
     }
@@ -484,8 +478,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     // TEST
     sockaddr_in localhost;
     memset(&localhost, 0, sizeof(localhost));
-    ((char*)&localhost.sin_addr)[0] = 0x7f;
-    ((char*)&localhost.sin_addr)[3] = 0x01;
+    ((char*)&localhost.sin_addr)[0] = 192;
+    ((char*)&localhost.sin_addr)[1] = 168;
+    ((char*)&localhost.sin_addr)[2] = 0;
+    ((char*)&localhost.sin_addr)[3] = 10;
     localhost.sin_family = AF_INET;
     localhost.sin_port = 12000;
     // TEST
@@ -493,10 +489,8 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       out = -1;
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
-      char* msg = gpr_format_message(wsa_last_error);
-      GRPC_CARES_TRACE_LOG("fd:%s ConnectEx error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
-      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      gpr_free(msg);
+      grpc_error* error = GRPC_WSA_ERROR(wsa_last_error, "ConnectEx");
+      GRPC_CARES_TRACE_LOG("fd:%s ConnectEx error code:%d msg:|%s|", GetName(), wsa_last_error, grpc_error_string(error));
       if (wsa_last_error == WSA_IO_PENDING) {
         // c-ares only understands WSAEINPROGRESS and EWOULDBLOCK error codes on connect, but
         // an async connect on IOCP socket will give WSA_IO_PENDING, so we need to convert.
@@ -529,12 +523,10 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
          * in subsequent c-ares reads. */
         if (winsocket_->read_info.wsa_error != WSAEMSGSIZE) {
           GRPC_ERROR_UNREF(error);
-          char* msg = gpr_format_message(winsocket_->read_info.wsa_error);
+          error = GRPC_WSA_ERROR(winsocket_->read_info.wsa_error, "OnIocpReadableInner");
           GRPC_CARES_TRACE_LOG(
-              "OnIocpReadableInner. winsocket error:|%s|. fd:|%s|", msg,
+              "OnIocpReadableInner. winsocket error:|%s|. fd:|%s|", grpc_error_string(error),
               GetName());
-          error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-          gpr_free(msg);
         }
       }
     }
@@ -561,13 +553,11 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     GRPC_CARES_TRACE_LOG("OnIocpWriteableInner. fd:|%s|", GetName());
     if (error == GRPC_ERROR_NONE) {
       if (winsocket_->write_info.wsa_error != 0) {
-        char* msg = gpr_format_message(winsocket_->write_info.wsa_error);
-        GRPC_CARES_TRACE_LOG(
-            "OnIocpWriteableInner. winsocket error:|%s|. fd:|%s|", msg,
-            GetName());
         GRPC_ERROR_UNREF(error);
-        error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-        gpr_free(msg);
+        error = GRPC_WSA_ERROR(winsocket_->write_info.wsa_error, "OnIocpWriteableInner");
+        GRPC_CARES_TRACE_LOG(
+            "OnIocpWriteableInner. winsocket error:|%s|. fd:|%s|", grpc_error_string(error),
+            GetName());
       }
     }
     GPR_ASSERT(write_state_ == WRITE_PENDING);
@@ -603,7 +593,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   int socket_type_;
   grpc_closure on_connect_locked_;
   bool connect_done_ = false;
-  grpc_error* connect_error_ = GRPC_ERROR_NONE;
+  int wsa_connect_error_ = 0;
   // We don't run register_for_{readable,writeable} logic until
   // a socket is connected. In the interim, we queue readable/writeable
   // registrations with the following state.
