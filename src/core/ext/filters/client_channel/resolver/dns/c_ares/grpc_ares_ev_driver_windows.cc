@@ -155,22 +155,25 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     GPR_ASSERT(!read_buf_has_data_);
     read_buf_ = GRPC_SLICE_MALLOC(4192);
     if (connect_done_) {
-      GRPC_CLOSURE_SCHED(&continue_register_for_on_readable_locked_, connect_error_);
+      GRPC_CLOSURE_SCHED(&continue_register_for_on_readable_locked_, GRPC_ERROR_NONE);
     } else {
       GPR_ASSERT(pending_continue_register_for_on_readable_locked_ == nullptr);
       pending_continue_register_for_on_readable_locked_ = &continue_register_for_on_readable_locked_;
     }
   }
 
-  static void ContinueRegisterForOnReadableLocked(void* arg, grpc_error* error) {
+  static void ContinueRegisterForOnReadableLocked(void* arg, grpc_error* unused_error) {
     GrpcPolledFdWindows* grpc_polled_fd = static_cast<GrpcPolledFdWindows*>(arg);
-    grpc_polled_fd->InnerContinueRegisterForOnReadableLocked(error);
+    grpc_polled_fd->InnerContinueRegisterForOnReadableLocked(GRPC_ERROR_NONE);
   }
 
-  void InnerContinueRegisterForOnReadableLocked(grpc_error* error) {
-    GRPC_CARES_TRACE_LOG("fd:%s InnerContinueRegisterForOnReadableLocked error:%s", GetName(), grpc_error_string(error));
-    if (error != GRPC_ERROR_NONE) {
-      ScheduleAndNullReadClosure(error);
+  void InnerContinueRegisterForOnReadableLocked(grpc_error* unused_error) {
+    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnReadableLocked connect_error_:%s", GetName(), grpc_error_string(connect_error_));
+    GPR_ASSERT(connect_done_);
+    if (connect_error_ != GRPC_ERROR_NONE) {
+      GRPC_ERROR_REF(connect_error_);
+      ScheduleAndNullReadClosure(connect_error_);
+      return;
     }
     WSABUF buffer;
     buffer.buf = (char*)GRPC_SLICE_START_PTR(read_buf_);
@@ -204,22 +207,25 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     GPR_ASSERT(write_closure_ == nullptr);
     write_closure_ = write_closure;
     if (connect_done_) {
-      GRPC_CLOSURE_SCHED(&continue_register_for_on_writeable_locked_, connect_error_);
+      GRPC_CLOSURE_SCHED(&continue_register_for_on_writeable_locked_, GRPC_ERROR_NONE);
     } else {
       GPR_ASSERT(pending_continue_register_for_on_writeable_locked_ == nullptr);
       pending_continue_register_for_on_writeable_locked_ = &continue_register_for_on_writeable_locked_;
     }
   }
 
-  static void ContinueRegisterForOnWriteableLocked(void* arg, grpc_error* error) {
+  static void ContinueRegisterForOnWriteableLocked(void* arg, grpc_error* unused_error) {
     GrpcPolledFdWindows* grpc_polled_fd = static_cast<GrpcPolledFdWindows*>(arg);
-    grpc_polled_fd->InnerContinueRegisterForOnWriteableLocked(error);
+    grpc_polled_fd->InnerContinueRegisterForOnWriteableLocked(GRPC_ERROR_NONE);
   }
 
-  void InnerContinueRegisterForOnWriteableLocked(grpc_error* error) {
-    GRPC_CARES_TRACE_LOG("fd:%s InnerContinueRegisterForOnWriteableLocked error:%s", GetName(), grpc_error_string(error));
-    if (error != GRPC_ERROR_NONE) {
-      ScheduleAndNullWriteClosure(error);
+  void InnerContinueRegisterForOnWriteableLocked(grpc_error* unused_error) {
+    GRPC_CARES_TRACE_LOG("fd:|%s| InnerContinueRegisterForOnWriteableLocked connect_error_:%s", GetName(), grpc_error_string(connect_error_));
+    GPR_ASSERT(connect_done_);
+    if (connect_error_ != GRPC_ERROR_NONE) {
+      GRPC_ERROR_REF(connect_error_);
+      ScheduleAndNullWriteClosure(connect_error_);
+      return;
     }
     switch (write_state_) {
       case WRITE_IDLE:
@@ -368,16 +374,40 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   }
 
   void InnerOnIocpConnectLocked(grpc_error* error) {
+    GRPC_CARES_TRACE_LOG(
+      "fd:%s InnerOnIocpConnectLocked error:|%s| pending readable:%" PRIdPTR " pending writeable:%" PRIdPTR,
+      GetName(),
+      grpc_error_string(error),
+      pending_continue_register_for_on_readable_locked_,
+      pending_continue_register_for_on_writeable_locked_);
     GPR_ASSERT(!connect_done_);
     connect_done_ = true;
     GPR_ASSERT(connect_error_ == GRPC_ERROR_NONE);
-    GRPC_ERROR_UNREF(connect_error_);
-    connect_error_ = GRPC_ERROR_REF(error);
+    if (error == GRPC_ERROR_NONE) {
+      DWORD transfered_bytes = 0;
+      DWORD flags;
+      BOOL wsa_success =
+          WSAGetOverlappedResult(grpc_winsocket_wrapped_socket(winsocket_), &winsocket_->write_info.overlapped,
+                                 &transfered_bytes, FALSE, &flags);
+      GPR_ASSERT(transfered_bytes == 0);
+      if (!wsa_success) {
+        int wsa_last_error = WSAGetLastError();
+        char* msg = gpr_format_message(wsa_last_error);
+        GRPC_CARES_TRACE_LOG("fd:%s InnerOnIocpConnectLocked WSA overlapped result code:%d msg:|%s|",
+                             GetName(), wsa_last_error, msg);
+        GRPC_ERROR_UNREF(connect_error_);
+        connect_error_ = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+        gpr_free(msg);
+      }
+    } else {
+      GRPC_ERROR_UNREF(connect_error_);
+      connect_error_ = GRPC_ERROR_REF(error);
+    }
     if (pending_continue_register_for_on_readable_locked_ != nullptr) {
-      GRPC_CLOSURE_SCHED(pending_continue_register_for_on_readable_locked_, connect_error_);
+      GRPC_CLOSURE_SCHED(pending_continue_register_for_on_readable_locked_, GRPC_ERROR_NONE);
     }
     if (pending_continue_register_for_on_writeable_locked_ != nullptr) {
-      GRPC_CLOSURE_SCHED(pending_continue_register_for_on_writeable_locked_, connect_error_);
+      GRPC_CLOSURE_SCHED(pending_continue_register_for_on_writeable_locked_, GRPC_ERROR_NONE);
     }
   }
 
@@ -451,7 +481,15 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       return -1;
     }
     int out = 0;
-    if (ConnectEx(s, target, target_len, nullptr, 0, nullptr, &winsocket_->write_info.overlapped) == 0) {
+    // TEST
+    sockaddr_in localhost;
+    memset(&localhost, 0, sizeof(localhost));
+    ((char*)&localhost.sin_addr)[0] = 0x7f;
+    ((char*)&localhost.sin_addr)[3] = 0x01;
+    localhost.sin_family = AF_INET;
+    localhost.sin_port = 12000;
+    // TEST
+    if (ConnectEx(s, (struct sockaddr*)&localhost, sizeof(localhost), nullptr, 0, nullptr, &winsocket_->write_info.overlapped) == 0) {
       out = -1;
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
