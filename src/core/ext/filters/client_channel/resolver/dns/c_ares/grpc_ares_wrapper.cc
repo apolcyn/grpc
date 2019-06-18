@@ -52,20 +52,6 @@ grpc_core::TraceFlag grpc_trace_cares_address_sorting(false,
 
 grpc_core::TraceFlag grpc_trace_cares_resolver(false, "cares_resolver");
 
-grpc_core::TraceFlag grpc_trace_ev_driver_1_1(false, "ev_driver_1_1");
-
-grpc_core::TraceFlag grpc_trace_ev_driver_1_2(false, "ev_driver_1_2");
-
-grpc_core::TraceFlag grpc_trace_ev_driver_1_3(false, "ev_driver_1_3");
-
-grpc_core::TraceFlag grpc_trace_ev_driver_2(false, "ev_driver_2");
-
-grpc_core::TraceFlag grpc_trace_ev_driver_3(false, "ev_driver_3");
-
-grpc_core::TraceFlag grpc_trace_ev_driver_4(false, "ev_driver_4");
-
-grpc_core::TraceFlag grpc_trace_windows_ev_driver(false, "windows_ev_driver");
-
 struct grpc_ares_request {
   /** indicates the DNS server to use, if specified */
   struct ares_addr_port_node dns_server_addr;
