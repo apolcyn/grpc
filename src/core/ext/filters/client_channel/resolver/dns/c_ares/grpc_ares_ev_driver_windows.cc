@@ -33,6 +33,7 @@
 #include "src/core/lib/iomgr/combiner.h"
 #include "src/core/lib/iomgr/iocp_windows.h"
 #include "src/core/lib/iomgr/sockaddr_windows.h"
+#include "src/core/lib/iomgr/sockaddr_utils.h"
 #include "src/core/lib/iomgr/socket_windows.h"
 #include "src/core/lib/iomgr/tcp_windows.h"
 #include "src/core/lib/slice/slice_internal.h"
@@ -98,11 +99,12 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
     WRITE_WAITING_FOR_VERIFICATION_UPON_RETRY,
   };
 
-  GrpcPolledFdWindows(ares_socket_t as, grpc_combiner* combiner, int socket_type)
+  GrpcPolledFdWindows(ares_socket_t as, grpc_combiner* combiner, int address_family, int socket_type)
       : read_buf_(grpc_empty_slice()),
         write_buf_(grpc_empty_slice()),
         write_state_(WRITE_IDLE),
         gotten_into_driver_list_(false),
+        address_family_(address_family),
         socket_type_(socket_type) {
     gpr_asprintf(&name_, "c-ares socket: %" PRIdPTR, as);
     winsocket_ = grpc_winsocket_create(as, name_);
@@ -397,14 +399,18 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
         WSAConnect(s, target, target_len, nullptr, nullptr, nullptr, nullptr);
     int wsa_last_error = WSAGetLastError();
     wsa_error_ctx->SetWSAError(wsa_last_error);
+    grpc_error* error = GRPC_ERROR_NONE;
     if (out != 0) {
       char* msg = gpr_format_message(wsa_last_error);
       GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s Connect error code:|%d|, msg:|%s|. fd:|%s|",
                            GetName(), wsa_last_error, msg, GetName());
+      GRPC_ERROR_UNREF(error);
+      error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
       gpr_free(msg);
       // c-ares expects a posix-style connect API
       out = -1;
     }
+    GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
     return out;
   }
 
@@ -421,8 +427,27 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       char* msg = gpr_format_message(wsa_last_error);
       GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER) error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
       grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
-      GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
       gpr_free(msg);
+      GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
+      return -1;
+    }
+    grpc_resolved_address wildcard4_addr;
+    grpc_resolved_address wildcard6_addr;
+    grpc_sockaddr_make_wildcards(0, &wildcard4_addr, &wildcard6_addr);
+    grpc_resolved_address* local_address = nullptr;
+    if (address_family_ == AF_INET) {
+      local_address = &wildcard4_addr;
+    } else {
+      local_address = &wildcard6_addr;
+    }
+    if (bind(s, (struct sockaddr*)local_address->addr, (int)local_address->len) != 0) {
+      int wsa_last_error = WSAGetLastError();
+      wsa_error_ctx->SetWSAError(wsa_last_error);
+      char* msg = gpr_format_message(wsa_last_error);
+      GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s bind error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
+      grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
+      gpr_free(msg);
+      GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
       return -1;
     }
     int out = 0;
@@ -434,9 +459,13 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("fd:%s ConnectEx error code:%d msg:|%s|", GetName(), wsa_last_error, msg);
       grpc_error* error = GRPC_ERROR_CREATE_FROM_COPIED_STRING(msg);
       gpr_free(msg);
-      if (wsa_last_error != WSA_IO_PENDING) {
+      if (wsa_last_error == WSA_IO_PENDING) {
+        // c-ares only understands WSAEINPROGRESS and EWOULDBLOCK error codes on connect, but
+        // an async connect on IOCP socket will give WSA_IO_PENDING, so we need to convert.
+        wsa_error_ctx->SetWSAError(WSAEWOULDBLOCK);
+      } else {
         GRPC_CLOSURE_SCHED(&on_connect_locked_, error);
-        return out;
+        return -1;
       }
     }
     grpc_socket_notify_on_write(winsocket_, &on_connect_locked_);
@@ -532,6 +561,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
   WriteState write_state_;
   char* name_ = nullptr;
   bool gotten_into_driver_list_;
+  int address_family_;
   int socket_type_;
   grpc_closure on_connect_locked_;
   bool connect_done_ = false;
@@ -608,6 +638,10 @@ class SockToPolledFdMap {
    * objects.
    */
   static ares_socket_t Socket(int af, int type, int protocol, void* user_data) {
+    if (type != SOCK_DGRAM && type != SOCK_STREAM) {
+      GRPC_WINDOWS_EV_DRIVER_TRACE_LOG("Socket called with invalid socket type:%d", type);
+      return INVALID_SOCKET;
+    }
     SockToPolledFdMap* map = static_cast<SockToPolledFdMap*>(user_data);
     SOCKET s = WSASocket(af, type, protocol, nullptr, 0,
                          grpc_get_default_wsa_socket_flags());
@@ -616,7 +650,7 @@ class SockToPolledFdMap {
     }
     grpc_tcp_set_non_block(s);
     GrpcPolledFdWindows* polled_fd =
-        New<GrpcPolledFdWindows>(s, map->combiner_, type);
+        New<GrpcPolledFdWindows>(s, map->combiner_, af, type);
     map->AddNewSocket(s, polled_fd);
     return s;
   }
