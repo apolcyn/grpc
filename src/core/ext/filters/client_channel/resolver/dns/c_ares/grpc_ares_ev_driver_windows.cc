@@ -494,18 +494,7 @@ class GrpcPolledFdWindows : public GrpcPolledFd {
       return -1;
     }
     int out = 0;
-    //    // TEST
-    //    TODO: test unroutable
-    //    sockaddr_in localhost;
-    //    memset(&localhost, 0, sizeof(localhost));
-    //    ((char*)&localhost.sin_addr)[0] = 192;
-    //    ((char*)&localhost.sin_addr)[1] = 168;
-    //    ((char*)&localhost.sin_addr)[2] = 0;
-    //    ((char*)&localhost.sin_addr)[3] = 10;
-    //    localhost.sin_family = AF_INET;
-    //    localhost.sin_port = 12000;
-    //    // TEST
-    if (ConnectEx(s, (struct sockaddr*)target, target_len, nullptr, 0, nullptr, &winsocket_->write_info.overlapped) == 0) {
+    if (ConnectEx(s, target, target_len, nullptr, 0, nullptr, &winsocket_->write_info.overlapped) == 0) {
       out = -1;
       int wsa_last_error = WSAGetLastError();
       wsa_error_ctx->SetWSAError(wsa_last_error);
