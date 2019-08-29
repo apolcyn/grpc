@@ -49,6 +49,8 @@ class InteropClient {
 
   void Reset(const std::shared_ptr<Channel>& channel);
 
+  static void LoopDoRPCs(std::unique_ptr<TestService::Stub>);
+
   bool DoEmpty();
   bool DoLargeUnary();
   bool DoServerCompressedUnary();
@@ -103,6 +105,7 @@ class InteropClient {
                 bool new_stub_every_call);
 
     TestService::Stub* Get();
+    std::unique_ptr<TestService::Stub> CreateNewStub();
     UnimplementedService::Stub* GetUnimplementedServiceStub();
 
     // forces channel to be recreated.

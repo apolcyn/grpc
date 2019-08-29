@@ -20,7 +20,9 @@
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <thread>
 
+#include <gflags/gflags.h>
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
@@ -36,6 +38,8 @@
 #include "src/proto/grpc/testing/test.grpc.pb.h"
 #include "test/cpp/interop/client_helper.h"
 #include "test/cpp/interop/interop_client.h"
+
+DEFINE_int32(num_chans, 100, "Debug num chans.");
 
 namespace grpc {
 namespace testing {
@@ -94,6 +98,11 @@ TestService::Stub* InteropClient::ServiceStub::Get() {
   return stub_.get();
 }
 
+std::unique_ptr<TestService::Stub> InteropClient::ServiceStub::CreateNewStub() {
+  auto new_channel = channel_creation_func_();
+  return TestService::NewStub(new_channel);
+}
+
 UnimplementedService::Stub*
 InteropClient::ServiceStub::GetUnimplementedServiceStub() {
   if (unimplemented_service_stub_ == nullptr) {
@@ -150,20 +159,41 @@ bool InteropClient::AssertStatusCode(
   abort();
 }
 
+void InteropClient::LoopDoRPCs(std::unique_ptr<grpc::testing::TestService::Stub> stub) {
+  gpr_log(GPR_INFO, "Begin RPC loop");
+  for (int i = 0; i < 1; i++) {
+    SimpleRequest request;
+    SimpleResponse response;
+    request.set_fill_grpclb_route_type(true);
+    ClientContext context;
+    Status s = stub->UnaryCall(&context, request, &response);
+    if (!s.ok()) {
+      gpr_log(GPR_ERROR, "Error in RPC: %s", context.debug_error_string().c_str());
+    } else {
+      gpr_log(GPR_DEBUG, "Got grpclb route type: %d", response.grpclb_route_type());
+    }
+    gpr_log(GPR_DEBUG, "Empty rpc done.");
+    //gpr_sleep_until(gpr_time_add(
+    //    gpr_now(GPR_CLOCK_MONOTONIC),
+    //    gpr_time_from_millis(100, GPR_TIMESPAN)));
+  }
+  gpr_log(GPR_INFO, "End RPC loop");
+}
+
 bool InteropClient::DoEmpty() {
   gpr_log(GPR_DEBUG, "Sending an empty rpc...");
 
-  Empty request;
-  Empty response;
-  ClientContext context;
-
-  Status s = serviceStub_.Get()->EmptyCall(&context, request, &response);
-
-  if (!AssertStatusOk(s, context.debug_error_string())) {
-    return false;
+  std::vector<std::thread> callers;
+  int chan_count = FLAGS_num_chans;
+  for (int i = 0; i < chan_count; i++) {
+    gpr_sleep_until(gpr_time_add(
+        gpr_now(GPR_CLOCK_MONOTONIC),
+        gpr_time_from_millis(1, GPR_TIMESPAN)));
+    callers.emplace_back(std::thread(LoopDoRPCs, serviceStub_.CreateNewStub()));
   }
-
-  gpr_log(GPR_DEBUG, "Empty rpc done.");
+  for (int i = 0; i < chan_count; i++) {
+    callers[i].join();
+  }
   return true;
 }
 
