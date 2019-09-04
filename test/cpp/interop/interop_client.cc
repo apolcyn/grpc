@@ -20,7 +20,11 @@
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
+#include <gflags/gflags.h>
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
@@ -30,6 +34,10 @@
 #include <grpcpp/client_context.h>
 #include <grpcpp/security/credentials.h>
 
+#include "src/core/lib/surface/completion_queue.h"
+
+#include <grpcpp/impl/codegen/async_stream_impl.h>
+
 #include "src/core/lib/transport/byte_stream.h"
 #include "src/proto/grpc/testing/empty.pb.h"
 #include "src/proto/grpc/testing/messages.pb.h"
@@ -37,13 +45,54 @@
 #include "test/cpp/interop/client_helper.h"
 #include "test/cpp/interop/interop_client.h"
 
+DEFINE_int32(num_chans, 100, "Debug num chans.");
+
 namespace grpc {
 namespace testing {
 
 namespace {
 // The same value is defined by the Java client.
-const std::vector<int> request_stream_sizes = {27182, 8, 1828, 45904};
-const std::vector<int> response_stream_sizes = {31415, 9, 2653, 58979};
+const std::vector<int> request_stream_sizes = {27182, 8, 1828, 45904,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+	2648000,
+    };
+const std::vector<int> response_stream_sizes = request_stream_sizes;
 const int kNumResponseMessages = 2000;
 const int kResponseMessageSize = 1030;
 const int kReceiveDelayMilliSeconds = 20;
@@ -92,6 +141,11 @@ TestService::Stub* InteropClient::ServiceStub::Get() {
   }
 
   return stub_.get();
+}
+
+std::unique_ptr<TestService::Stub> InteropClient::ServiceStub::CreateNewStub() {
+  auto new_channel = channel_creation_func_();
+  return TestService::NewStub(new_channel);
 }
 
 UnimplementedService::Stub*
@@ -150,20 +204,368 @@ bool InteropClient::AssertStatusCode(
   abort();
 }
 
+class ThreadPool {
+ public:
+  ThreadPool(int size) {
+    for (int i = 0; i < size; i++) {
+      thds_.emplace_back(std::thread(ProcessJobs, this));
+    }
+  }
+  void Shutdown() {
+    {
+      std::lock_guard<std::mutex> lock(jobs_mu_);
+      shutdown_ = true;
+      jobs_cv_.notify_all();
+    }
+    {
+      for (int i = 0; i < thds_.size(); i++) {
+        thds_[i].join();
+      }
+    }
+  }
+  void AddJob(std::function<void()> job) {
+    std::lock_guard<std::mutex> lock(jobs_mu_);
+    jobs_.emplace_back(job);
+    jobs_cv_.notify_all();
+  }
+  static void ProcessJobs(ThreadPool *self) {
+   for (;;) {
+     std::function<void()> next_job;
+     {
+       std::unique_lock<std::mutex> lock(self->jobs_mu_);
+       while (self->jobs_.size() == 0 && !self->shutdown_) {
+         self->jobs_cv_.wait(lock);
+       }
+       if (self->shutdown_ && self->jobs_.size() == 0) {
+         return;
+       }
+       next_job = self->jobs_.front();
+       self->jobs_.erase(self->jobs_.begin());
+     }
+     next_job();
+   }
+ }
+ private:
+  std::vector<std::thread> thds_;
+  std::vector<std::function<void()>> jobs_;
+  std::mutex jobs_mu_;
+  std::condition_variable jobs_cv_;
+  bool shutdown_ = false;
+};
+
+void MyCheckEq(void* a, void* b) {
+  if (a != b) {
+    gpr_log(GPR_ERROR, "A != B");
+    abort();
+  }
+}
+
+// Wrapper function to call @finish_fn (typically a stream's Finish
+// // method) with a timeout.
+static Status FinishWithTimeout(
+  const std::function<void(::grpc::Status*, void*)>& finish_fn,
+  ::grpc::CompletionQueue* cq,
+  ::grpc::ClientContext* context) {
+bool ok = false;
+void* tag = nullptr;
+  void* expected_tag = cq;
+  ::grpc::Status status;
+  finish_fn(&status, expected_tag);
+  auto deadline =
+  std::chrono::system_clock::now() + std::chrono::milliseconds(1000*30);
+  auto result = cq->AsyncNext(&tag, &ok, deadline);
+  switch (result) {
+    case ::grpc::CompletionQueue::SHUTDOWN: {
+      return Status(StatusCode::FAILED_PRECONDITION,
+      "Unexpected shutdown at finish");
+    }
+    case ::grpc::CompletionQueue::TIMEOUT: {
+      context->TryCancel();
+      if (!cq->Next(&tag, &ok)) {
+        return Status(StatusCode::FAILED_PRECONDITION,
+        "Unexpected shutdown at timeout / finish");
+      }
+      MyCheckEq(expected_tag, tag);
+      if (!ok) {
+        return Status(StatusCode::FAILED_PRECONDITION,
+        "Failed to retrieve cancel operation status at finish");
+      }
+      return Status(StatusCode::DEADLINE_EXCEEDED, "Timed out at finish");
+    }
+    case ::grpc::CompletionQueue::GOT_EVENT: {
+      MyCheckEq(expected_tag, tag);
+      if (!ok) {
+        return Status(StatusCode::FAILED_PRECONDITION,
+        "Failed to retrieve finish status");
+      }
+      return status;
+    }
+  }
+  return grpc::Status();
+}
+
+grpc::Status HandlePendingAsyncEvent(
+  const std::function<void(grpc::Status*, void*)>& finish_fn,
+  grpc::CompletionQueue* cq, ::grpc::ClientContext* context,
+  const std::string& operation, void* expected_tag, bool *done) {
+  bool ok = false;
+  void* tag = nullptr;
+  auto deadline = std::chrono::system_clock::now() + std::chrono::milliseconds(1000*2);
+  auto result = cq->AsyncNext(&tag, &ok, deadline);
+  switch (result) {
+    case ::grpc::CompletionQueue::SHUTDOWN: {
+      *done = true;
+      return Status(StatusCode::FAILED_PRECONDITION,
+        "Unexpected shutdown - " + operation);
+    }
+    case ::grpc::CompletionQueue::TIMEOUT: {
+      *done = true;
+      context->TryCancel();
+      // NB: we need to drain the cancelled read tag as well as issue
+      // a Finish() and fetch it.
+      if (!cq->Next(&tag, &ok)) {
+        return Status(StatusCode::INTERNAL,
+          "Unexpected shutdown, timeout - " + operation);
+      }
+      if (expected_tag != tag) {
+	gpr_log(GPR_ERROR, "Tag mismatch: %ld %ld", (long)expected_tag, (long)tag);
+	abort();
+      }
+      if (ok) {
+        gpr_log(GPR_ERROR, "Cancelled a read that was ready - ");
+      }
+      auto status = FinishWithTimeout(finish_fn, cq, context);
+      if (status.ok() || status.error_code() == StatusCode::CANCELLED) {
+        return Status(StatusCode::DEADLINE_EXCEEDED,
+          "Timed out during " + operation + " from/to shuffle");
+      }
+      return status;
+    }
+    case ::grpc::CompletionQueue::GOT_EVENT: {
+      MyCheckEq(expected_tag, tag);
+      if (!ok) {
+        // End of stream / read-done is signaled by a GOT_EVENT and
+        // !OK, so we can now issue a Finish() and fetch the status.
+        *done = true;
+        return FinishWithTimeout(finish_fn, cq, context);
+      }
+      break;
+    }
+  }
+  return Status();
+}
+
+class PingPongState {
+ public:
+  PingPongState(grpc::testing::InteropClient *interop_client, ThreadPool *pool) : interop_client_(interop_client), pool_(pool) {
+    gpr_log(GPR_INFO, "PingPongState constructor. cq pollset: %p", grpc_cq_pollset(cq_.cq()));
+  }
+  ~PingPongState() {
+    cq_.Shutdown();
+    void* ignored_tag = nullptr;
+    bool ignored_ok = false;
+    while (cq_.Next(&ignored_tag, &ignored_ok)) {}
+  }
+
+  void RunNextState() {
+    if (!stream_connected_) {
+      gpr_log(GPR_DEBUG, "create new stream now");
+      context_.reset(new grpc::ClientContext);
+      context_->set_fail_fast(false);
+      stub_ = interop_client_->serviceStub_.CreateNewStub();
+      grpc::Status stream_connected_status;
+      {
+        bool done = false;
+        stream_ = stub_->AsyncFullDuplexCall(context_.get(), &cq_, &done);
+        stream_connected_status = HandlePendingAsyncEvent(
+          [this](grpc::Status* status, void* finish_tag) {
+            stream_->Finish(status, finish_tag);
+          },
+          &cq_, context_.get(), "connect", (void*)&done, &done);
+      }
+      if (stream_connected_status.ok()) {
+        stream_connected_ = true;
+      } else {
+        pool_->AddJob([this]() { this->RunNextState(); });
+      }
+    }
+    SendAndReceive();
+    if (messages_sent_ == request_stream_sizes.size()) {
+      {
+        grpc::Status writes_done_status;
+        bool done = false;
+        stream_->WritesDone(&done);
+        writes_done_status = HandlePendingAsyncEvent(
+          [this](grpc::Status* status, void* finish_tag) {
+            stream_->Finish(status, finish_tag);
+          },
+          &cq_, context_.get(), "writesdone", (void*)&done, &done);
+	if (!writes_done_status.ok()) {
+          gpr_log(GPR_ERROR, "Writes done status not ok: %s", writes_done_status.error_message().c_str());
+	  return;
+	}
+      }
+      {
+        StreamingOutputCallResponse response;
+	grpc::Status status;
+	bool done = false;
+	stream_->Read(&response, (void*)&done);
+        status = HandlePendingAsyncEvent(
+          [this](::grpc::Status* status, void* finish_tag) {
+            stream_->Finish(status, finish_tag);
+          },
+          &cq_, context_.get(), "read done", (void*)&done, &done);
+	if (!status.ok()) {
+          gpr_log(GPR_ERROR, "read finish status not ok: %s", status.error_message().c_str());
+	  return;
+	}
+      }
+      gpr_log(GPR_INFO, "PingPongState DONE");
+      return;
+    }
+    pool_->AddJob([this]() { this->RunNextState(); });
+  }
+
+  void SendAndReceive() {
+    if (messages_sent_ < request_stream_sizes.size()) {
+      StreamingOutputCallRequest request;
+      ResponseParameters* response_parameter = request.add_response_parameters();
+      response_parameter->set_size(response_stream_sizes[messages_sent_]);
+      request.mutable_payload()->set_body(grpc::string(request_stream_sizes[messages_sent_], '\0'));
+      grpc::Status write_status;
+      {
+        bool done = false;
+        stream_->Write(request, &done);
+	//stream_->Finish(&write_status, &done+1);
+        write_status = HandlePendingAsyncEvent(
+          [this](grpc::Status* status, void* tag) {
+	    stream_->Finish(status, tag);
+	  },
+	  &cq_, context_.get(),
+          "write", (void*)&done, &done);
+      }
+      if (!write_status.ok()) {
+        gpr_log(GPR_ERROR, "DoPingPong(): stream->Write() failed. i: %d. %s", messages_sent_, context_->debug_error_string().c_str());
+        stream_connected_ = false;
+	return;
+      }
+      StreamingOutputCallResponse response;
+      grpc::Status read_status;
+      {
+        bool done = false;
+        stream_->Read(&response, (void*)&done);
+	//stream_->Finish(&read_status, &done+1);
+        read_status = HandlePendingAsyncEvent(
+          [this](grpc::Status* status, void* tag) {
+	    stream_->Finish(status, tag);
+	  },
+	  &cq_, context_.get(),
+          "read", (void*)&done, &done);
+      }
+      if (!read_status.ok()) {
+        gpr_log(GPR_ERROR, "DoPingPong(): stream->Read() failed. i:%d. %s", messages_sent_, context_->debug_error_string().c_str());
+        stream_connected_ = false;
+	return;
+      }
+      GPR_ASSERT(response.payload().body() ==
+                 grpc::string(response_stream_sizes[messages_sent_], '\0'));
+    }
+    messages_sent_++;
+  }
+
+ private:
+  std::unique_ptr<ClientAsyncReaderWriter<StreamingOutputCallRequest,
+                                          StreamingOutputCallResponse>> stream_ = nullptr;
+  grpc::CompletionQueue cq_;
+  std::unique_ptr<grpc::testing::TestService::Stub> stub_ = nullptr;
+  grpc::testing::InteropClient* interop_client_;
+  ThreadPool* pool_ = nullptr;
+  bool stream_connected_ = false;
+  bool stream_finised_ = false;
+  int messages_sent_ = 0;
+  int messages_received_ = 0;
+  std::unique_ptr<ClientContext> context_ = nullptr;
+};
+
+void InteropClient::LoopDoStreamingRPCs(InteropClient* self, int lock) {
+  gpr_log(GPR_INFO, "Begin RPC loop");
+  int i = 0;
+  while (i < request_stream_sizes.size()) {
+    ClientContext context;
+    std::unique_ptr<grpc::testing::TestService::Stub> stub = self->serviceStub_.CreateNewStub();
+    std::unique_ptr<ClientReaderWriter<StreamingOutputCallRequest,
+                                     StreamingOutputCallResponse>>
+      stream(stub->FullDuplexCall(&context));
+    StreamingOutputCallRequest request;
+    ResponseParameters* response_parameter = request.add_response_parameters();
+    Payload* payload = request.mutable_payload();
+    StreamingOutputCallResponse response;
+    while (i < request_stream_sizes.size()) {
+      //std::lock_guard<std::mutex> scope_lock(g_locks[lock]);
+      response_parameter->set_size(response_stream_sizes[i]);
+      payload->set_body(grpc::string(request_stream_sizes[i], '\0'));
+      if (!stream->Write(request)) {
+        gpr_log(GPR_ERROR, "DoPingPong(): stream->Write() failed. i: %d. %s", i, context.debug_error_string().c_str());
+        break;
+      }
+      if (!stream->Read(&response)) {
+        gpr_log(GPR_ERROR, "DoPingPong(): stream->Read() failed. i:%d. %s", i, context.debug_error_string().c_str());
+        break;
+      }
+      GPR_ASSERT(response.payload().body() ==
+                 grpc::string(response_stream_sizes[i], '\0'));
+      i++;
+    }
+    if (i < request_stream_sizes.size()) {
+      continue;
+    }
+    stream->WritesDone();
+    if(stream->Read(&response)) {
+      gpr_log(GPR_ERROR, "stream Read returned NOT FALSE. %s", context.debug_error_string().c_str());
+    }
+    Status s = stream->Finish();
+    if (!s.ok()) {
+      gpr_log(GPR_ERROR, "DoPingPong FAILED: %s", context.debug_error_string().c_str());
+    }
+  }
+  gpr_log(GPR_INFO, "End RPC loop");
+}
+
+void InteropClient::LoopDoRPCs(std::unique_ptr<grpc::testing::TestService::Stub> stub) {
+  gpr_log(GPR_INFO, "Begin RPC loop");
+  for (int i = 0; i < 1; i++) {
+    SimpleRequest request;
+    SimpleResponse response;
+    request.set_fill_grpclb_route_type(true);
+    ClientContext context;
+    Status s = stub->UnaryCall(&context, request, &response);
+    if (!s.ok()) {
+      gpr_log(GPR_ERROR, "Error in RPC: %s", context.debug_error_string().c_str());
+    } else {
+      gpr_log(GPR_DEBUG, "Got grpclb route type: %d", response.grpclb_route_type());
+    }
+    gpr_log(GPR_DEBUG, "Empty rpc done.");
+    //gpr_sleep_until(gpr_time_add(
+    //    gpr_now(GPR_CLOCK_MONOTONIC),
+    //    gpr_time_from_millis(100, GPR_TIMESPAN)));
+  }
+  gpr_log(GPR_INFO, "End RPC loop");
+}
+
 bool InteropClient::DoEmpty() {
   gpr_log(GPR_DEBUG, "Sending an empty rpc...");
 
-  Empty request;
-  Empty response;
-  ClientContext context;
-
-  Status s = serviceStub_.Get()->EmptyCall(&context, request, &response);
-
-  if (!AssertStatusOk(s, context.debug_error_string())) {
-    return false;
+  std::vector<std::thread> callers;
+  int chan_count = FLAGS_num_chans;
+  for (int i = 0; i < chan_count; i++) {
+    gpr_sleep_until(gpr_time_add(
+        gpr_now(GPR_CLOCK_MONOTONIC),
+        gpr_time_from_millis(1, GPR_TIMESPAN)));
+    callers.emplace_back(std::thread(LoopDoRPCs, serviceStub_.CreateNewStub()));
   }
-
-  gpr_log(GPR_DEBUG, "Empty rpc done.");
+  for (int i = 0; i < chan_count; i++) {
+    callers[i].join();
+  }
   return true;
 }
 
@@ -694,46 +1096,70 @@ bool InteropClient::DoHalfDuplex() {
 bool InteropClient::DoPingPong() {
   gpr_log(GPR_DEBUG, "Sending Ping Pong streaming rpc ...");
 
-  ClientContext context;
-  std::unique_ptr<ClientReaderWriter<StreamingOutputCallRequest,
-                                     StreamingOutputCallResponse>>
-      stream(serviceStub_.Get()->FullDuplexCall(&context));
-
-  StreamingOutputCallRequest request;
-  ResponseParameters* response_parameter = request.add_response_parameters();
-  Payload* payload = request.mutable_payload();
-  StreamingOutputCallResponse response;
-
-  for (unsigned int i = 0; i < request_stream_sizes.size(); ++i) {
-    response_parameter->set_size(response_stream_sizes[i]);
-    payload->set_body(grpc::string(request_stream_sizes[i], '\0'));
-
-    if (!stream->Write(request)) {
-      gpr_log(GPR_ERROR, "DoPingPong(): stream->Write() failed. i: %d", i);
-      return TransientFailureOrAbort();
-    }
-
-    if (!stream->Read(&response)) {
-      gpr_log(GPR_ERROR, "DoPingPong(): stream->Read() failed. i:%d", i);
-      return TransientFailureOrAbort();
-    }
-
-    GPR_ASSERT(response.payload().body() ==
-               grpc::string(response_stream_sizes[i], '\0'));
+  auto pool = std::unique_ptr<ThreadPool>(new ThreadPool(2));
+  int chan_count = FLAGS_num_chans;
+  std::vector<std::unique_ptr<PingPongState>> states;
+  for (int i = 0; i < chan_count; i++) {
+    states.push_back(std::unique_ptr<PingPongState>(new PingPongState(this, pool.get())));
+    auto state = states.back().get();
+    auto cb = [&pool, state]() { state->RunNextState(); };
+    pool->AddJob(cb);
   }
-
-  stream->WritesDone();
-
-  GPR_ASSERT(!stream->Read(&response));
-
-  Status s = stream->Finish();
-  if (!AssertStatusOk(s, context.debug_error_string())) {
-    return false;
-  }
-
+  pool->Shutdown();
+  pool.reset();
   gpr_log(GPR_DEBUG, "Ping pong streaming done.");
   return true;
 }
+
+  //        for (int i = 0; i < chan_count; i++) {
+  //          //gpr_sleep_until(gpr_time_add(
+  //          //    gpr_now(GPR_CLOCK_MONOTONIC),
+  //          //    gpr_time_from_millis(1, GPR_TIMESPAN)));
+  //          callers.emplace_back(std::thread(LoopDoStreamingRPCs, this, i));
+  //        }
+  //        for (int i = 0; i < chan_count; i++) {
+  //          callers[i].join();
+  //        }
+  //        //  ClientContext context;
+  //        //  std::unique_ptr<ClientReaderWriter<StreamingOutputCallRequest,
+  //        //                                     StreamingOutputCallResponse>>
+  //        //      stream(serviceStub_.Get()->FullDuplexCall(&context));
+  //        //
+  //        //StreamingOutputCallRequest request;
+  //        //ResponseParameters* response_parameter = request.add_response_parameters();
+  //        //Payload* payload = request.mutable_payload();
+  //        //StreamingOutputCallResponse response;
+
+  //        //for (unsigned int i = 0; i < request_stream_sizes.size(); ++i) {
+  //        //  response_parameter->set_size(response_stream_sizes[i]);
+  //        //  payload->set_body(grpc::string(request_stream_sizes[i], '\0'));
+
+  //        //  if (!stream->Write(request)) {
+  //        //    gpr_log(GPR_ERROR, "DoPingPong(): stream->Write() failed. i: %d", i);
+  //        //    return TransientFailureOrAbort();
+  //        //  }
+
+  //        //  if (!stream->Read(&response)) {
+  //        //    gpr_log(GPR_ERROR, "DoPingPong(): stream->Read() failed. i:%d", i);
+  //        //    return TransientFailureOrAbort();
+  //        //  }
+
+  //        //  GPR_ASSERT(response.payload().body() ==
+  //        //             grpc::string(response_stream_sizes[i], '\0'));
+  //        //}
+
+  //        //stream->WritesDone();
+
+  //        //GPR_ASSERT(!stream->Read(&response));
+
+  //        //Status s = stream->Finish();
+  //        //if (!AssertStatusOk(s, context.debug_error_string())) {
+  //        //  return false;
+  //        //}
+//          
+//            gpr_log(GPR_DEBUG, "Ping pong streaming done.");
+//            return true;
+//          }
 
 bool InteropClient::DoCancelAfterBegin() {
   gpr_log(GPR_DEBUG, "Sending request streaming rpc ...");
@@ -1125,7 +1551,7 @@ bool InteropClient::DoLongLivedChannelTest(int32_t soak_iterations,
   }
 }
 
-bool InteropClient::DoUnimplementedService() {
+bool InteropClient::InnerDoUnimplementedService() {
   gpr_log(GPR_DEBUG, "Sending a request for an unimplemented service...");
 
   Empty request;
@@ -1142,6 +1568,12 @@ bool InteropClient::DoUnimplementedService() {
   }
 
   gpr_log(GPR_DEBUG, "unimplemented service done.");
+  return true;
+}
+
+bool InteropClient::DoUnimplementedService() {
+  ThreadPool pool(1);
+  pool.AddJob([this](){ this->InnerDoUnimplementedService(); });
   return true;
 }
 

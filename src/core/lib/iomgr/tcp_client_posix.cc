@@ -113,6 +113,7 @@ static void tc_on_alarm(void* acp, grpc_error* error) {
     gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: on_alarm: error=%s", ac->addr_str,
             str);
   }
+  gpr_log(GPR_INFO, "connect fd pointer %p address %s on_alarm: error=%s", ac->fd, ac->addr_str, grpc_error_string(error));
   gpr_mu_lock(&ac->mu);
   if (ac->fd != nullptr) {
     grpc_fd_shutdown(
@@ -297,6 +298,10 @@ void grpc_tcp_client_create_from_prepared_fd(
   const int fd = grpc_fd_wrapped_fd(fdobj);
   int err;
   async_connect* ac;
+  char* to_s = nullptr;
+  GPR_ASSERT(grpc_sockaddr_to_string(&to_s, addr, 1));
+  gpr_log(GPR_DEBUG, "connect fd %d address %s", fd, to_s);
+  gpr_free(to_s);
   do {
     err = connect(fd, reinterpret_cast<const grpc_sockaddr*>(addr->addr),
                   addr->len);

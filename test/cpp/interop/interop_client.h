@@ -49,6 +49,9 @@ class InteropClient {
 
   void Reset(const std::shared_ptr<Channel>& channel);
 
+  static void LoopDoRPCs(std::unique_ptr<TestService::Stub>);
+  static void LoopDoStreamingRPCs(grpc::testing::InteropClient* self, int);
+
   bool DoEmpty();
   bool DoLargeUnary();
   bool DoServerCompressedUnary();
@@ -67,6 +70,7 @@ class InteropClient {
   bool DoStatusWithMessage();
   bool DoCustomMetadata();
   bool DoUnimplementedMethod();
+  bool InnerDoUnimplementedService();
   bool DoUnimplementedService();
   bool DoCacheableUnary();
   // all requests are sent to one server despite multiple servers are resolved
@@ -94,7 +98,8 @@ class InteropClient {
   // default_service_account is the GCE default service account email
   bool DoGoogleDefaultCredentials(const grpc::string& default_service_account);
 
- private:
+ //private:
+ public:
   class ServiceStub {
    public:
     // If new_stub_every_call = true, pointer to a new instance of
@@ -103,6 +108,7 @@ class InteropClient {
                 bool new_stub_every_call);
 
     TestService::Stub* Get();
+    std::unique_ptr<TestService::Stub> CreateNewStub();
     UnimplementedService::Stub* GetUnimplementedServiceStub();
 
     // forces channel to be recreated.

@@ -36,10 +36,12 @@
 #include <grpc/support/log.h>
 #include <grpc/support/string_util.h>
 
+#include "src/core/lib/gpr/string.h"
 #include "src/core/lib/debug/stats.h"
 #include "src/core/lib/gpr/murmur_hash.h"
 #include "src/core/lib/gpr/tls.h"
 #include "src/core/lib/gpr/useful.h"
+#include "src/core/lib/gprpp/memory.h"
 #include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/iomgr/block_annotate.h"
 #include "src/core/lib/iomgr/iomgr_internal.h"
@@ -996,6 +998,21 @@ static grpc_error* pollset_work(grpc_pollset* pollset,
         }
       }
       pollset->fd_count = fd_count;
+      {
+        //gpr_strvec entries;
+        //gpr_strvec_init(&entries);
+        //char* first;
+        //gpr_asprintf(&first, "pollset %p about to poll. Now have %zu fds:\n", pollset, pollset->fd_count);
+        //gpr_strvec_add(&entries, first);
+        //for (int i = 0; i < pollset->fd_count; i++) {
+        //  char* next_line;
+        //  gpr_asprintf(&next_line, "    %d\n", grpc_fd_wrapped_fd(pollset->fds[i]));
+        //  gpr_strvec_add(&entries, next_line);
+        //}
+        //grpc_core::UniquePtr<char> result(gpr_strvec_flatten(&entries, nullptr));
+        //gpr_log(GPR_DEBUG, "%s", result.get());
+        //gpr_strvec_destroy(&entries);
+      }
       gpr_mu_unlock(&pollset->mu);
 
       for (i = 1; i < pfd_count; i++) {
@@ -1207,6 +1224,21 @@ static void pollset_set_add_pollset(grpc_pollset_set* pollset_set,
     }
   }
   pollset_set->fd_count = j;
+  {
+    //gpr_strvec entries;
+    //gpr_strvec_init(&entries);
+    //char* first;
+    //gpr_asprintf(&first, "pollset_set %p added to pollset %p. Now have %zu fds:\n", pollset_set, pollset, pollset->fd_count);
+    //gpr_strvec_add(&entries, first);
+    //for (int i = 0; i < pollset->fd_count; i++) {
+    //  char* next_line;
+    //  gpr_asprintf(&next_line, "    %d\n", grpc_fd_wrapped_fd(pollset->fds[i]));
+    //  gpr_strvec_add(&entries, next_line);
+    //}
+    //grpc_core::UniquePtr<char> result(gpr_strvec_flatten(&entries, nullptr));
+    //gpr_log(GPR_DEBUG, "%s", result.get());
+    //gpr_strvec_destroy(&entries);
+  }
   gpr_mu_unlock(&pollset_set->mu);
 }
 
