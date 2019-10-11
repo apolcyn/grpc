@@ -67,15 +67,13 @@ void drain_cq(grpc_completion_queue* cq) {
 
 class FakeHandshakeServer {
  public:
-  FakeHandshakeServer(int max_concurrent_streams) {
+  FakeHandshakeServer() {
     int port = grpc_pick_unused_port_or_die();
     grpc_core::JoinHostPort(&address_, "localhost",
                             port);
     service_ = grpc::gcp::CreateFakeHandshakerService();
     grpc::ServerBuilder builder;
-    if (max_concurrent_streams != 0) {
-      builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, max_concurrent_streams);
-    }
+    builder.SetResourceQuota(ResourceQuota("FakeHandshakerService").Resize(2 * 1024 * 1024 /* 2 MB */));
     builder.AddListeningPort(address_.get(),
                              grpc::InsecureServerCredentials());
     builder.RegisterService(service_.get());
@@ -96,6 +94,123 @@ class FakeHandshakeServer {
   grpc_core::UniquePtr<char> address_;
   std::unique_ptr<grpc::Service> service_;
   std::unique_ptr<grpc::Server> server_;
+};
+
+class OneRPCTestServer {
+ public:
+  OneRPCTestServer(const char* fake_handshake_server_address) {
+    grpc_alts_credentials_options* alts_options =
+        grpc_alts_credentials_server_options_create();
+    grpc_server_credentials* server_creds =
+        grpc_alts_server_credentials_create_customized(
+            alts_options, fake_handshake_server_address,
+            true /* enable_untrusted_alts */);
+    grpc_alts_credentials_options_destroy(alts_options);
+    server_ = grpc_server_create(nullptr, nullptr);
+    server_cq_ = grpc_completion_queue_create_for_next(nullptr);
+    grpc_server_register_completion_queue(server_, server_cq_, nullptr);
+    int port = grpc_pick_unused_port_or_die();
+    grpc_server_register_completion_queue(server, server_cq, nullptr);
+    grpc_core::JoinHostPort(&server_addr_, "localhost", port);
+    GPR_ASSERT(grpc_server_add_secure_http2_port(server_, server_addr_.get(),
+                                                 server_creds));
+    grpc_server_credentials_release(server_creds);
+    grpc_server_start(server);
+    gpr_log(GPR_DEBUG, "Start OneRPCTestServer %p. listen on %s", server_addr_.get(), this);
+    server_thd_ =
+        grpc_core::MakeUnique<grpc_core::Thread>(
+            "test_basic_client_server_handshake server_thd", ServerOneRPC,
+            this);
+    server_thd_->Start();
+  }
+
+  ~OneRPCTestServer() {
+    gpr_log(GPR_DEBUG, "Begin dtor of OneRPCTestServer %p", this);
+    server_thd_->Join();
+    grpc_completion_queue* shutdown_cq =
+        grpc_completion_queue_create_for_pluck(nullptr);
+    grpc_server_shutdown_and_notify(server_, shutdown_cq, tag(1000));
+    GPR_ASSERT(grpc_completion_queue_pluck(shutdown_cq, tag(1000),
+                                           grpc_timeout_seconds_to_deadline(5),
+                                           nullptr)
+                   .type == GRPC_OP_COMPLETE);
+    grpc_server_destroy(server_);
+    grpc_completion_queue_shutdown(shutdown_cq);
+    grpc_completion_queue_destroy(shutdown_cq);
+    grpc_completion_queue_shutdown(server_cq_);
+    drain_cq(server_cq_);
+    grpc_completion_queue_destroy(server_cq_);
+  }
+
+  const char* Address() {
+    return server_addr_.get();
+  }
+
+  static void ServerOneRPC(void* arg) {
+    OneRPCTestServer* self = static_cast<OneRPCTestServer*>(arg);
+    cq_verifier* cqv = cq_verifier_create(self->server_cq_);
+    // Request and respond to a single RPC
+    grpc_call* s;
+    grpc_metadata_array request_metadata_recv;
+    grpc_metadata_array_init(&request_metadata_recv);
+    grpc_call_details call_details;
+    grpc_call_details_init(&call_details);
+    grpc_slice response_payload_slice = grpc_slice_from_copied_string("response");
+    grpc_byte_buffer* response_payload =
+        grpc_raw_byte_buffer_create(&response_payload_slice, 1);
+    grpc_byte_buffer* request_payload_recv = nullptr;
+    gpr_log(GPR_DEBUG, "serve_one_rpc: request call");
+    grpc_call_error error = grpc_server_request_call(
+        self->server_, &s, &call_details, &request_metadata_recv, self->server_cq_,
+        self->server_cq_, tag(1));
+    GPR_ASSERT(GRPC_CALL_OK == error);
+    CQ_EXPECT_COMPLETION(cqv, tag(1), 1);
+    gpr_log(GPR_DEBUG, "serve_one_rpc: accepted call");
+    cq_verify(cqv);
+    grpc_op ops[6];
+    grpc_op* op;
+    memset(ops, 0, sizeof(ops));
+    op = ops;
+    op->op = GRPC_OP_SEND_INITIAL_METADATA;
+    op->data.send_initial_metadata.count = 0;
+    op->flags = 0;
+    op->reserved = nullptr;
+    op++;
+    op->op = GRPC_OP_SEND_MESSAGE;
+    op->data.send_message.send_message = response_payload;
+    op->flags = 0;
+    op->op = GRPC_OP_SEND_STATUS_FROM_SERVER;
+    op->data.send_status_from_server.trailing_metadata_count = 0;
+    op->data.send_status_from_server.status = GRPC_STATUS_OK;
+    op->flags = 0;
+    op->reserved = nullptr;
+    op++;
+    op->op = GRPC_OP_RECV_MESSAGE;
+    op->data.recv_message.recv_message = &request_payload_recv;
+    op->op = GRPC_OP_RECV_CLOSE_ON_SERVER;
+    op->flags = 0;
+    op->reserved = nullptr;
+    op++;
+    error = grpc_call_start_batch(s, ops, static_cast<size_t>(op - ops), tag(1),
+                                  nullptr);
+    GPR_ASSERT(GRPC_CALL_OK == error);
+    CQ_EXPECT_COMPLETION(cqv, tag(1), 1);
+    cq_verify(cqv);
+    // Cleanup
+    grpc_metadata_array_destroy(&request_metadata_recv);
+    grpc_call_details_destroy(&call_details);
+    grpc_byte_buffer_destroy(response_payload);
+    grpc_byte_buffer_destroy(request_payload_recv);
+    grpc_call_unref(s);
+    cq_verifier_destroy(cqv);
+    gpr_log(GPR_DEBUG, "serve_one_rpc: done");
+  }
+
+ private:
+  grpc_server* server_;
+  grpc_completion_queue* server_cq_;
+  grpc_core::UniquePtr<grpc_core::Thread> server_thd_;
+  grpc_core::UniquePtr<char> server_addr_;
 };
 
 grpc_core::UniquePtr<grpc::Server> build_and_start_fake_handshaker_server(grpc_core::UniquePtr<char>* address) {
@@ -190,124 +305,31 @@ grpc_status_code perform_rpc_and_get_status(
   return status;
 }
 
-struct serve_one_rpc_args {
-  grpc_server* server;
-  grpc_completion_queue* cq;
-};
-
-void serve_one_rpc(void* arg) {
-  serve_one_rpc_args* args = static_cast<serve_one_rpc_args*>(arg);
-  cq_verifier* cqv = cq_verifier_create(args->cq);
-  // Request and respond to a single RPC
-  grpc_call* s;
-  grpc_metadata_array request_metadata_recv;
-  grpc_metadata_array_init(&request_metadata_recv);
-  grpc_call_details call_details;
-  grpc_call_details_init(&call_details);
-  grpc_slice response_payload_slice = grpc_slice_from_copied_string("response");
-  grpc_byte_buffer* response_payload =
-      grpc_raw_byte_buffer_create(&response_payload_slice, 1);
-  grpc_byte_buffer* request_payload_recv = nullptr;
-  gpr_log(GPR_DEBUG, "serve_one_rpc: request call");
-  grpc_call_error error = grpc_server_request_call(
-      args->server, &s, &call_details, &request_metadata_recv, args->cq,
-      args->cq, tag(1));
-  GPR_ASSERT(GRPC_CALL_OK == error);
-  CQ_EXPECT_COMPLETION(cqv, tag(1), 1);
-  gpr_log(GPR_DEBUG, "serve_one_rpc: accepted call");
-  cq_verify(cqv);
-  grpc_op ops[6];
-  grpc_op* op;
-  memset(ops, 0, sizeof(ops));
-  op = ops;
-  op->op = GRPC_OP_SEND_INITIAL_METADATA;
-  op->data.send_initial_metadata.count = 0;
-  op->flags = 0;
-  op->reserved = nullptr;
-  op++;
-  op->op = GRPC_OP_SEND_MESSAGE;
-  op->data.send_message.send_message = response_payload;
-  op->flags = 0;
-  op->op = GRPC_OP_SEND_STATUS_FROM_SERVER;
-  op->data.send_status_from_server.trailing_metadata_count = 0;
-  op->data.send_status_from_server.status = GRPC_STATUS_OK;
-  op->flags = 0;
-  op->reserved = nullptr;
-  op++;
-  op->op = GRPC_OP_RECV_MESSAGE;
-  op->data.recv_message.recv_message = &request_payload_recv;
-  op->op = GRPC_OP_RECV_CLOSE_ON_SERVER;
-  op->flags = 0;
-  op->reserved = nullptr;
-  op++;
-  error = grpc_call_start_batch(s, ops, static_cast<size_t>(op - ops), tag(1),
-                                nullptr);
-  GPR_ASSERT(GRPC_CALL_OK == error);
-  CQ_EXPECT_COMPLETION(cqv, tag(1), 1);
-  cq_verify(cqv);
-  // Cleanup
-  grpc_metadata_array_destroy(&request_metadata_recv);
-  grpc_call_details_destroy(&call_details);
-  grpc_byte_buffer_destroy(response_payload);
-  grpc_byte_buffer_destroy(request_payload_recv);
-  grpc_call_unref(s);
-  cq_verifier_destroy(cqv);
-  gpr_log(GPR_DEBUG, "serve_one_rpc: done");
-}
-
 void test_basic_client_server_handshake() {
   gpr_log(GPR_DEBUG, "Running test: test_basic_client_server_handshake");
-  FakeHandshakeServer fake_handshake_server(0);
-  // Setup
-  grpc_alts_credentials_options* alts_options =
-      grpc_alts_credentials_server_options_create();
-  grpc_server_credentials* server_creds =
-      grpc_alts_server_credentials_create_customized(
-          alts_options, fake_handshake_server.Address(),
-          true /* enable_untrusted_alts */);
-  grpc_alts_credentials_options_destroy(alts_options);
-  grpc_server* server = grpc_server_create(nullptr, nullptr);
-  grpc_completion_queue* server_cq =
-      grpc_completion_queue_create_for_next(nullptr);
-  grpc_server_register_completion_queue(server, server_cq, nullptr);
-  int server_port = grpc_pick_unused_port_or_die();
-  grpc_server_register_completion_queue(server, server_cq, nullptr);
-  grpc_core::UniquePtr<char> server_addr;
-  grpc_core::JoinHostPort(&server_addr, "localhost", server_port);
-  GPR_ASSERT(grpc_server_add_secure_http2_port(server, server_addr.get(),
-                                               server_creds));
-  grpc_server_credentials_release(server_creds);
-  grpc_server_start(server);
-  serve_one_rpc_args args;
-  memset(&args, 0, sizeof(args));
-  args.server = server;
-  args.cq = server_cq;
+  FakeHandshakeServer fake_handshake_server;
   // Test
   {
-    grpc_core::UniquePtr<grpc_core::Thread> server_thd =
-        grpc_core::MakeUnique<grpc_core::Thread>(
-            "test_basic_client_server_handshake server_thd", serve_one_rpc,
-            &args);
-    server_thd->Start();
+    OneRPCTestServer test_server(fake_handshake_server.Address());
     GPR_ASSERT(GRPC_STATUS_OK ==
-               perform_rpc_and_get_status(server_addr.get(),
+               perform_rpc_and_get_status(test_server.Address(),
                                           fake_handshake_server.Address(), nullptr /* debug_id */));
-    server_thd->Join();
   }
-  // Cleanup
-  grpc_completion_queue* shutdown_cq =
-      grpc_completion_queue_create_for_pluck(nullptr);
-  grpc_server_shutdown_and_notify(server, shutdown_cq, tag(1000));
-  GPR_ASSERT(grpc_completion_queue_pluck(shutdown_cq, tag(1000),
-                                         grpc_timeout_seconds_to_deadline(5),
-                                         nullptr)
-                 .type == GRPC_OP_COMPLETE);
-  grpc_server_destroy(server);
-  grpc_completion_queue_shutdown(shutdown_cq);
-  grpc_completion_queue_destroy(shutdown_cq);
-  grpc_completion_queue_shutdown(server_cq);
-  drain_cq(server_cq);
-  grpc_completion_queue_destroy(server_cq);
+}
+
+/* This test is interesting largely because of the fake handshake server's
+ * low resource quota. We make sure that all handshakes succeed, without
+ * overloading the fake handshake server. */
+void test_concurrent_client_server_handshakes() {
+  gpr_log(GPR_DEBUG, "Running test: test_concurrent_client_server_handshakes");
+  FakeHandshakeServer fake_handshake_server;
+  // Test
+  {
+    OneRPCTestServer test_server(fake_handshake_server.Address());
+    GPR_ASSERT(GRPC_STATUS_OK ==
+               perform_rpc_and_get_status(test_server.Address(),
+                                          fake_handshake_server.Address(), nullptr /* debug_id */));
+  }
 }
 
 struct fake_tcp_server_args {
@@ -415,7 +437,7 @@ void run_one_rpc_handshake_fails_fast(void* arg) {
  * when the security handshaker gets a read endpoint from the remote peer. The
  * goal is that RPC's will sharply slow down due to exceeding the number
  * of handshakes that can be outstanding at once, forcing new handshakes to be
- * queued up for longer than they should be, if that isn't done. */
+ * queued up for longer than they should be if that isn't done. */
 void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting() {
   gpr_log(GPR_DEBUG, "Running test: test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting");
   FakeHandshakeServer fake_handshake_server(20);
