@@ -65,6 +65,42 @@ void drain_cq(grpc_completion_queue* cq) {
   } while (ev.type != GRPC_QUEUE_SHUTDOWN);
 }
 
+class FakeHandshakeServer {
+ public:
+  FakeHandshakeServer(int max_concurrent_streams) {
+    int port = grpc_pick_unused_port_or_die();
+    grpc_core::JoinHostPort(&address_, "localhost",
+                            port);
+    service_ = grpc::gcp::CreateFakeHandshakerService();
+    grpc::ServerBuilder builder;
+    if (max_concurrent_streams != 0) {
+      builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, max_concurrent_streams);
+    }
+    builder.AddListeningPort(address_.get(),
+                             grpc::InsecureServerCredentials());
+    builder.RegisterService(service_.get());
+    server_ = builder.BuildAndStart();
+    gpr_log(GPR_INFO, "Fake handshaker server listening on %s",
+            address_.get());
+  }
+
+  ~FakeHandshakeServer() {
+    server_->Shutdown(grpc_timeout_milliseconds_to_deadline(0));
+  }
+
+  const char* Address() {
+    return address_.get();
+  }
+
+ private:
+  grpc_core::UniquePtr<char> address_;
+  std::unique_ptr<grpc::Service> service_;
+  std::unique_ptr<grpc::Server> server_;
+};
+
+grpc_core::UniquePtr<grpc::Server> build_and_start_fake_handshaker_server(grpc_core::UniquePtr<char>* address) {
+}
+
 grpc_status_code perform_rpc_and_get_status(
     const char* server_address, const char* fake_handshaker_service_address, const void* debug_id) {
   gpr_log(GPR_DEBUG, "debug_id:%p perform_rpc_and_get_status BEGIN", debug_id);
@@ -219,15 +255,15 @@ void serve_one_rpc(void* arg) {
   gpr_log(GPR_DEBUG, "serve_one_rpc: done");
 }
 
-void test_basic_client_server_handshake(
-    const char* fake_handshaker_server_addr) {
+void test_basic_client_server_handshake() {
   gpr_log(GPR_DEBUG, "Running test: test_basic_client_server_handshake");
+  FakeHandshakeServer fake_handshake_server(0);
   // Setup
   grpc_alts_credentials_options* alts_options =
       grpc_alts_credentials_server_options_create();
   grpc_server_credentials* server_creds =
       grpc_alts_server_credentials_create_customized(
-          alts_options, fake_handshaker_server_addr,
+          alts_options, fake_handshake_server.Address(),
           true /* enable_untrusted_alts */);
   grpc_alts_credentials_options_destroy(alts_options);
   grpc_server* server = grpc_server_create(nullptr, nullptr);
@@ -255,7 +291,7 @@ void test_basic_client_server_handshake(
     server_thd->Start();
     GPR_ASSERT(GRPC_STATUS_OK ==
                perform_rpc_and_get_status(server_addr.get(),
-                                          fake_handshaker_server_addr, nullptr /* debug_id */));
+                                          fake_handshake_server.Address(), nullptr /* debug_id */));
     server_thd->Join();
   }
   // Cleanup
@@ -376,49 +412,52 @@ void run_one_rpc_handshake_fails_fast(void* arg) {
 }
 
 /* This test is intended to make sure that we quickly cancel ALTS RPC's
- * when the security handshaker gets a read endpoint from the remote peer. This
- * test is designed to get stuck and slow way down due to exceeding the number
- * of handshakes that can be outstanding at once. */
-void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting(
-    const char* fake_handshaker_server_addr) {
+ * when the security handshaker gets a read endpoint from the remote peer. The
+ * goal is that RPC's will sharply slow down due to exceeding the number
+ * of handshakes that can be outstanding at once, forcing new handshakes to be
+ * queued up for longer than they should be, if that isn't done. */
+void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting() {
   gpr_log(GPR_DEBUG, "Running test: test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting");
-  fake_tcp_server_args args;
-  memset(&args, 0, sizeof(args));
-  args.port = grpc_pick_unused_port_or_die();
-  gpr_event_init(&args.stop_ev);
-  grpc_core::UniquePtr<grpc_core::Thread> fake_tcp_server_thd =
-      grpc_core::MakeUnique<grpc_core::Thread>(
-          "fake tcp server that closes connections upon receiving bytes",
-          run_fake_tcp_server_that_closes_connections_upon_receiving_bytes,
-          &args);
-  fake_tcp_server_thd->Start();
-  grpc_core::UniquePtr<char> fake_tcp_server_addr;
-  grpc_core::JoinHostPort(&fake_tcp_server_addr, "[::1]", args.port);
+  FakeHandshakeServer fake_handshake_server(20);
   {
-    gpr_timespec test_deadline = gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_seconds(5, GPR_TIMESPAN));
-    gpr_log(GPR_DEBUG, "start performing concurrent RPCs");
-    std::vector<grpc_core::UniquePtr<grpc_core::Thread>> rpc_thds;
-    int num_concurrent_rpcs = 100;
-    rpc_thds.reserve(num_concurrent_rpcs);
-    run_one_rpc_handshake_fails_fast_args rpc_args;
-    rpc_args.fake_tcp_server_addr = fake_tcp_server_addr.get();
-    rpc_args.fake_handshaker_server_addr = fake_handshaker_server_addr;
-    for (size_t i = 0; i < num_concurrent_rpcs; i++) {
-      auto new_thd = grpc_core::MakeUnique<grpc_core::Thread>("run one rpc handshake fails fast", run_one_rpc_handshake_fails_fast, &rpc_args);
-      new_thd->Start();
-      rpc_thds.push_back(std::move(new_thd));
+    fake_tcp_server_args args;
+    memset(&args, 0, sizeof(args));
+    args.port = grpc_pick_unused_port_or_die();
+    gpr_event_init(&args.stop_ev);
+    grpc_core::UniquePtr<grpc_core::Thread> fake_tcp_server_thd =
+        grpc_core::MakeUnique<grpc_core::Thread>(
+            "fake tcp server that closes connections upon receiving bytes",
+            run_fake_tcp_server_that_closes_connections_upon_receiving_bytes,
+            &args);
+    fake_tcp_server_thd->Start();
+    grpc_core::UniquePtr<char> fake_tcp_server_addr;
+    grpc_core::JoinHostPort(&fake_tcp_server_addr, "[::1]", args.port);
+    {
+      gpr_timespec test_deadline = gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_seconds(5, GPR_TIMESPAN));
+      gpr_log(GPR_DEBUG, "start performing concurrent RPCs");
+      std::vector<grpc_core::UniquePtr<grpc_core::Thread>> rpc_thds;
+      int num_concurrent_rpcs = 100;
+      rpc_thds.reserve(num_concurrent_rpcs);
+      run_one_rpc_handshake_fails_fast_args rpc_args;
+      rpc_args.fake_tcp_server_addr = fake_tcp_server_addr.get();
+      rpc_args.fake_handshaker_server_addr = fake_handshake_server.Address();
+      for (size_t i = 0; i < num_concurrent_rpcs; i++) {
+        auto new_thd = grpc_core::MakeUnique<grpc_core::Thread>("run one rpc handshake fails fast", run_one_rpc_handshake_fails_fast, &rpc_args);
+        new_thd->Start();
+        rpc_thds.push_back(std::move(new_thd));
+      }
+      for (size_t i = 0; i < num_concurrent_rpcs; i++) {
+        rpc_thds[i]->Join();
+      }
+      gpr_event_set(&args.stop_ev, (void*)1);
+      gpr_log(GPR_DEBUG, "done performing concurrent RPCs");
+      if (gpr_time_cmp(gpr_now(GPR_CLOCK_MONOTONIC), test_deadline) > 0) {
+        gpr_log(GPR_ERROR, "Exceeded test deadline. ALTS handshakes might not be failing fast when the peer endpoint closes the connection abruptly");
+        abort();
+      }
     }
-    for (size_t i = 0; i < num_concurrent_rpcs; i++) {
-      rpc_thds[i]->Join();
-    }
-    gpr_event_set(&args.stop_ev, (void*)1);
-    gpr_log(GPR_DEBUG, "done performing concurrent RPCs");
-    if (gpr_time_cmp(gpr_now(GPR_CLOCK_MONOTONIC), test_deadline) > 0) {
-      gpr_log(GPR_ERROR, "Exceeded test deadline. This suggests that ALTS handshakes are not failing fast when the peer endpoint closes the connection abruptly");
-      abort();
-    }
+    fake_tcp_server_thd->Join();
   }
-  fake_tcp_server_thd->Join();
 }
 
 }  // namespace
@@ -426,25 +465,8 @@ void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accept
 int main(int argc, char** argv) {
   grpc_init();
   {
-    int fake_handshaker_server_port = grpc_pick_unused_port_or_die();
-    grpc_core::UniquePtr<char> fake_handshaker_server_addr;
-    grpc_core::JoinHostPort(&fake_handshaker_server_addr, "localhost",
-                            fake_handshaker_server_port);
-    std::unique_ptr<grpc::Service> service =
-        grpc::gcp::CreateFakeHandshakerService();
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort(fake_handshaker_server_addr.get(),
-                             grpc::InsecureServerCredentials());
-    builder.RegisterService(service.get());
-    std::unique_ptr<grpc::Server> server = builder.BuildAndStart();
-    gpr_log(GPR_INFO, "Fake handshaker server listening on %s",
-            fake_handshaker_server_addr.get());
-    {
-      //test_basic_client_server_handshake(fake_handshaker_server_addr.get());
-      test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting(
-          fake_handshaker_server_addr.get());
-    }
-    server->Shutdown(grpc_timeout_milliseconds_to_deadline(0));
+    //test_basic_client_server_handshake();
+    test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting();
   }
   grpc_shutdown();
   return 0;

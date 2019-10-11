@@ -433,7 +433,7 @@ tsi_result alts_tsi_handshaker_create(
           ? nullptr
           : grpc_insecure_channel_create_internal(
               handshaker->handshaker_service_url,
-              nullptr, nullptr);
+              nullptr);
   *self = &handshaker->base;
   return TSI_OK;
 }
