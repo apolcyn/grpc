@@ -42,6 +42,7 @@
 
 /* Main struct for ALTS TSI handshaker. */
 struct alts_tsi_handshaker {
+  gpr_mu mu;
   tsi_handshaker base;
   alts_handshaker_client* client;
   grpc_slice target_name;
@@ -248,6 +249,7 @@ tsi_result alts_tsi_handshaker_result_create(grpc_gcp_HandshakerResp* resp,
 /* gRPC provided callback used when gRPC thread model is applied. */
 static void on_handshaker_service_resp_recv(void* arg, grpc_error* error) {
   alts_handshaker_client* client = static_cast<alts_handshaker_client*>(arg);
+  grpc_core::MutexLock lock(&client->handshaker.mu);
   if (client == nullptr) {
     gpr_log(GPR_ERROR, "ALTS handshaker client is nullptr");
     return;
@@ -259,7 +261,7 @@ static void on_handshaker_service_resp_recv(void* arg, grpc_error* error) {
             grpc_error_string(error));
     success = false;
   }
-  alts_handshaker_client_handle_response(client, success);
+  alts_handshaker_client_handle_response_locked(client, success);
 }
 
 /* gRPC provided callback used when dedicatd CQ and thread are used.
@@ -282,6 +284,9 @@ static tsi_result handshaker_next(
     gpr_log(GPR_ERROR, "Invalid arguments to handshaker_next()");
     return TSI_INVALID_ARGUMENT;
   }
+  alts_tsi_handshaker* handshaker =
+      reinterpret_cast<alts_tsi_handshaker*>(self);
+  grpc_core::MutextLock(handshaker->mu);
   if (self->handshake_shutdown) {
     gpr_log(GPR_ERROR, "TSI handshake shutdown");
     return TSI_HANDSHAKE_SHUTDOWN;
@@ -304,7 +309,7 @@ static tsi_result handshaker_next(
         handshaker->channel == nullptr
             ? grpc_alts_get_shared_resource_dedicated()->channel
             : handshaker->channel;
-    handshaker->client = alts_grpc_handshaker_client_create(
+    handshaker->client = alts_grpc_handshaker_client_create_locked(
         handshaker, channel, handshaker->handshaker_service_url,
         handshaker->interested_parties, handshaker->options,
         handshaker->target_name, grpc_cb, cb, user_data,
@@ -327,11 +332,11 @@ static tsi_result handshaker_next(
                                received_bytes_size);
   if (!handshaker->has_sent_start_message) {
     ok = handshaker->is_client
-             ? alts_handshaker_client_start_client(handshaker->client)
-             : alts_handshaker_client_start_server(handshaker->client, &slice);
+             ? alts_handshaker_client_start_client_locked(handshaker->client)
+             : alts_handshaker_client_start_server_locked(handshaker->client, &slice);
     handshaker->has_sent_start_message = true;
   } else {
-    ok = alts_handshaker_client_next(handshaker->client, &slice);
+    ok = alts_handshaker_client_next_locked(handshaker->client, &slice);
   }
   grpc_slice_unref_internal(slice);
   if (ok != TSI_OK) {
@@ -359,21 +364,23 @@ static tsi_result handshaker_next_dedicated(
 
 static void handshaker_shutdown(tsi_handshaker* self) {
   GPR_ASSERT(self != nullptr);
+  grpc_core::MutexLock(self&->mu);
   if (self->handshake_shutdown) {
     return;
   }
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  alts_handshaker_client_shutdown(handshaker->client);
+  alts_handshaker_client_shutdown_locked(handshaker->client);
 }
 
 static void handshaker_destroy(tsi_handshaker* self) {
   if (self == nullptr) {
     return;
   }
+  grpc_core::MutexLock(self&->mu);
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  alts_handshaker_client_destroy(handshaker->client);
+  alts_handshaker_client_destroy_locked(handshaker->client);
   grpc_slice_unref_internal(handshaker->target_name);
   grpc_alts_credentials_options_destroy(handshaker->options);
   if (handshaker->channel != nullptr) {
@@ -399,7 +406,7 @@ static const tsi_handshaker_vtable handshaker_vtable_dedicated = {
     handshaker_next_dedicated,
     handshaker_shutdown};
 
-bool alts_tsi_handshaker_has_shutdown(alts_tsi_handshaker* handshaker) {
+bool alts_tsi_handshaker_has_shutdown_locked(alts_tsi_handshaker* handshaker) {
   GPR_ASSERT(handshaker != nullptr);
   return handshaker->base.handshake_shutdown;
 }
@@ -416,6 +423,7 @@ tsi_result alts_tsi_handshaker_create(
   alts_tsi_handshaker* handshaker =
       static_cast<alts_tsi_handshaker*>(gpr_zalloc(sizeof(*handshaker)));
   bool use_dedicated_cq = interested_parties == nullptr;
+  gpr_mu_init(&handshaker->mu);
   handshaker->client = nullptr;
   handshaker->is_client = is_client;
   handshaker->has_sent_start_message = false;
