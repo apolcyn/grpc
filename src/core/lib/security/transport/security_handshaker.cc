@@ -130,6 +130,7 @@ SecurityHandshaker::SecurityHandshaker(tsi_handshaker* handshaker,
 
 SecurityHandshaker::~SecurityHandshaker() {
   gpr_mu_destroy(&mu_);
+  gpr_log(GPR_DEBUG, "skip destroy handshaker: %p", handshaker_);
   tsi_handshaker_destroy(handshaker_);
   tsi_handshaker_result_destroy(handshaker_result_);
   if (endpoint_to_destroy_ != nullptr) {
@@ -186,6 +187,8 @@ void SecurityHandshaker::HandshakeFailedLocked(grpc_error* error) {
   gpr_log(GPR_DEBUG, "Security handshake failed: %s", msg);
 
   if (!is_shutdown_) {
+    // TODO(apolcyn): bug fix to check in
+    tsi_handshaker_shutdown(handshaker_);
     // TODO(ctiller): It is currently necessary to shutdown endpoints
     // before destroying them, even if we know that there are no
     // pending read/write callbacks.  This should be fixed, at which

@@ -33,6 +33,7 @@
 #include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/slice/slice_internal.h"
+#include "src/core/lib/surface/channel.h"
 #include "src/core/tsi/alts/frame_protector/alts_frame_protector.h"
 #include "src/core/tsi/alts/handshaker/alts_handshaker_client.h"
 #include "src/core/tsi/alts/handshaker/alts_shared_resource.h"
@@ -430,8 +431,9 @@ tsi_result alts_tsi_handshaker_create(
   handshaker->channel =
       use_dedicated_cq
           ? nullptr
-          : grpc_insecure_channel_create(handshaker->handshaker_service_url,
-                                         nullptr, nullptr);
+          : grpc_insecure_channel_create_internal(
+              handshaker->handshaker_service_url,
+              nullptr, nullptr);
   *self = &handshaker->base;
   return TSI_OK;
 }
