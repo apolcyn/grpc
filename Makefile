@@ -1154,7 +1154,7 @@ alts_iovec_record_protocol_test: $(BINDIR)/$(CONFIG)/alts_iovec_record_protocol_
 alts_security_connector_test: $(BINDIR)/$(CONFIG)/alts_security_connector_test
 alts_tsi_handshaker_test: $(BINDIR)/$(CONFIG)/alts_tsi_handshaker_test
 alts_tsi_utils_test: $(BINDIR)/$(CONFIG)/alts_tsi_utils_test
-alts_with_fake_handshaker_test: $(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test
+alts_with_fake_handshake_server_test: $(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test
 alts_zero_copy_grpc_protector_test: $(BINDIR)/$(CONFIG)/alts_zero_copy_grpc_protector_test
 async_end2end_test: $(BINDIR)/$(CONFIG)/async_end2end_test
 auth_property_iterator_test: $(BINDIR)/$(CONFIG)/auth_property_iterator_test
@@ -1637,7 +1637,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/alts_security_connector_test \
   $(BINDIR)/$(CONFIG)/alts_tsi_handshaker_test \
   $(BINDIR)/$(CONFIG)/alts_tsi_utils_test \
-  $(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test \
+  $(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test \
   $(BINDIR)/$(CONFIG)/alts_zero_copy_grpc_protector_test \
   $(BINDIR)/$(CONFIG)/async_end2end_test \
   $(BINDIR)/$(CONFIG)/auth_property_iterator_test \
@@ -1809,7 +1809,7 @@ buildtests_cxx: privatelibs_cxx \
   $(BINDIR)/$(CONFIG)/alts_security_connector_test \
   $(BINDIR)/$(CONFIG)/alts_tsi_handshaker_test \
   $(BINDIR)/$(CONFIG)/alts_tsi_utils_test \
-  $(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test \
+  $(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test \
   $(BINDIR)/$(CONFIG)/alts_zero_copy_grpc_protector_test \
   $(BINDIR)/$(CONFIG)/async_end2end_test \
   $(BINDIR)/$(CONFIG)/auth_property_iterator_test \
@@ -2259,8 +2259,8 @@ test_cxx: buildtests_cxx
 	$(Q) $(BINDIR)/$(CONFIG)/alts_tsi_handshaker_test || ( echo test alts_tsi_handshaker_test failed ; exit 1 )
 	$(E) "[RUN]     Testing alts_tsi_utils_test"
 	$(Q) $(BINDIR)/$(CONFIG)/alts_tsi_utils_test || ( echo test alts_tsi_utils_test failed ; exit 1 )
-	$(E) "[RUN]     Testing alts_with_fake_handshaker_test"
-	$(Q) $(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test || ( echo test alts_with_fake_handshaker_test failed ; exit 1 )
+	$(E) "[RUN]     Testing alts_with_fake_handshake_server_test"
+	$(Q) $(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test || ( echo test alts_with_fake_handshake_server_test failed ; exit 1 )
 	$(E) "[RUN]     Testing alts_zero_copy_grpc_protector_test"
 	$(Q) $(BINDIR)/$(CONFIG)/alts_zero_copy_grpc_protector_test || ( echo test alts_zero_copy_grpc_protector_test failed ; exit 1 )
 	$(E) "[RUN]     Testing async_end2end_test"
@@ -13868,18 +13868,18 @@ endif
 endif
 
 
-ALTS_WITH_FAKE_HANDSHAKER_TEST_SRC = \
+ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_SRC = \
     $(GENDIR)/test/core/tsi/alts/fake_handshaker/handshaker.pb.cc $(GENDIR)/test/core/tsi/alts/fake_handshaker/handshaker.grpc.pb.cc \
     $(GENDIR)/test/core/tsi/alts/fake_handshaker/transport_security_common.pb.cc $(GENDIR)/test/core/tsi/alts/fake_handshaker/transport_security_common.grpc.pb.cc \
     test/core/tsi/alts/fake_handshaker/fake_handshaker_server.cc \
     test/core/tsi/alts/handshaker/alts_with_fake_handshaker_test.cc \
 
-ALTS_WITH_FAKE_HANDSHAKER_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(ALTS_WITH_FAKE_HANDSHAKER_TEST_SRC))))
+ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_OBJS = $(addprefix $(OBJDIR)/$(CONFIG)/, $(addsuffix .o, $(basename $(ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_SRC))))
 ifeq ($(NO_SECURE),true)
 
 # You can't build secure targets if you don't have OpenSSL.
 
-$(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test: openssl_dep_error
+$(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test: openssl_dep_error
 
 else
 
@@ -13890,14 +13890,14 @@ ifeq ($(NO_PROTOBUF),true)
 
 # You can't build the protoc plugins or protobuf-enabled targets if you don't have protobuf 3.5.0+.
 
-$(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test: protobuf_dep_error
+$(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test: protobuf_dep_error
 
 else
 
-$(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test: $(PROTOBUF_DEP) $(ALTS_WITH_FAKE_HANDSHAKER_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
+$(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test: $(PROTOBUF_DEP) $(ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 	$(E) "[LD]      Linking $@"
 	$(Q) mkdir -p `dirname $@`
-	$(Q) $(LDXX) $(LDFLAGS) $(ALTS_WITH_FAKE_HANDSHAKER_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/alts_with_fake_handshaker_test
+	$(Q) $(LDXX) $(LDFLAGS) $(ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_OBJS) $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a $(LDLIBSXX) $(LDLIBS_PROTOBUF) $(LDLIBS) $(LDLIBS_SECURE) $(GTEST_LIB) -o $(BINDIR)/$(CONFIG)/alts_with_fake_handshake_server_test
 
 endif
 
@@ -13911,11 +13911,11 @@ $(OBJDIR)/$(CONFIG)/test/core/tsi/alts/fake_handshaker/fake_handshaker_server.o:
 
 $(OBJDIR)/$(CONFIG)/test/core/tsi/alts/handshaker/alts_with_fake_handshaker_test.o:  $(LIBDIR)/$(CONFIG)/libgrpc++_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc_test_util.a $(LIBDIR)/$(CONFIG)/libgrpc++.a $(LIBDIR)/$(CONFIG)/libgrpc.a $(LIBDIR)/$(CONFIG)/libgpr.a $(LIBDIR)/$(CONFIG)/libgrpc++_test_config.a
 
-deps_alts_with_fake_handshaker_test: $(ALTS_WITH_FAKE_HANDSHAKER_TEST_OBJS:.o=.dep)
+deps_alts_with_fake_handshake_server_test: $(ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_OBJS:.o=.dep)
 
 ifneq ($(NO_SECURE),true)
 ifneq ($(NO_DEPS),true)
--include $(ALTS_WITH_FAKE_HANDSHAKER_TEST_OBJS:.o=.dep)
+-include $(ALTS_WITH_FAKE_HANDSHAKE_SERVER_TEST_OBJS:.o=.dep)
 endif
 endif
 $(OBJDIR)/$(CONFIG)/test/core/tsi/alts/fake_handshaker/fake_handshaker_server.o: $(GENDIR)/test/core/tsi/alts/fake_handshaker/handshaker.pb.cc $(GENDIR)/test/core/tsi/alts/fake_handshaker/handshaker.grpc.pb.cc $(GENDIR)/test/core/tsi/alts/fake_handshaker/transport_security_common.pb.cc $(GENDIR)/test/core/tsi/alts/fake_handshaker/transport_security_common.grpc.pb.cc

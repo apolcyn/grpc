@@ -3311,7 +3311,7 @@
     "flaky": false, 
     "gtest": false, 
     "language": "c++", 
-    "name": "alts_with_fake_handshaker_test", 
+    "name": "alts_with_fake_handshake_server_test", 
     "platforms": [
       "linux"
     ], 

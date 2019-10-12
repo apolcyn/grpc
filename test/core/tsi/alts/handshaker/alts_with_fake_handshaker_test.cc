@@ -158,7 +158,7 @@ struct connect_args {
   const char* server_address;
   const char* fake_handshaker_server_addr;
   const void* debug_id;
-  int deadline_seconds;
+  int per_connect_deadline_seconds;
   int loops;
 };
 
@@ -179,7 +179,7 @@ void connect_loop(void* arg) {
     grpc_channel_credentials_release(channel_creds);
     // Connect, forcing an ALTS handshake
     gpr_timespec connect_deadline =
-      grpc_timeout_seconds_to_deadline(args->deadline_seconds);
+      grpc_timeout_seconds_to_deadline(args->per_connect_deadline_seconds);
     grpc_connectivity_state state = grpc_channel_check_connectivity_state(channel, 1);
     GPR_ASSERT(state == GRPC_CHANNEL_IDLE);
     while (state != GRPC_CHANNEL_READY) {
@@ -211,7 +211,7 @@ void test_basic_client_server_handshake() {
     args.fake_handshaker_server_addr = fake_handshake_server.Address();
     args.server_address = test_server.Address();
     args.debug_id = nullptr;
-    args.deadline_seconds = 5;
+    args.per_connect_deadline_seconds = 5;
     args.loops = 10;
     connect_loop(&args);
   }
@@ -231,7 +231,7 @@ void test_concurrent_client_server_handshakes() {
     args.fake_handshaker_server_addr = fake_handshake_server.Address();
     args.server_address = test_server.Address();
     args.debug_id = nullptr;
-    args.deadline_seconds = 10;
+    args.per_connect_deadline_seconds = 10;
     args.loops = 1;
     int num_concurrent_connects = 100;
     std::vector<grpc_core::UniquePtr<grpc_core::Thread>> thds;
@@ -348,7 +348,7 @@ void expect_connect_fails_loop(void* arg) {
         channel_creds, args->server_address, nullptr, nullptr);
     // Connect, forcing an ALTS handshake attempt
     gpr_timespec connect_failure_deadline =
-      grpc_timeout_milliseconds_to_deadline(args->deadline_seconds);
+      grpc_timeout_milliseconds_to_deadline(args->per_connect_deadline_seconds);
     grpc_connectivity_state state = grpc_channel_check_connectivity_state(channel, 1);
     GPR_ASSERT(state == GRPC_CHANNEL_IDLE);
     while (state != GRPC_CHANNEL_TRANSIENT_FAILURE) {
@@ -422,9 +422,9 @@ void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accept
 int main(int argc, char** argv) {
   grpc_init();
   {
-//    test_basic_client_server_handshake();
-//    test_concurrent_client_server_handshakes();
-    test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting();
+    test_basic_client_server_handshake();
+    //test_concurrent_client_server_handshakes();
+    //test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting();
   }
   grpc_shutdown();
   return 0;

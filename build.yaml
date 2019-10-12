@@ -4009,7 +4009,7 @@ targets:
   - alts_test_util
   - gpr
   - grpc
-- name: alts_with_fake_handshaker_test
+- name: alts_with_fake_handshake_server_test
   build: test
   language: c++
   headers:

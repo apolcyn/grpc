@@ -30,6 +30,7 @@
 #include <grpc/support/sync.h>
 #include <grpc/support/thd_id.h>
 
+#include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/slice/slice_internal.h"
@@ -42,8 +43,8 @@
 
 /* Main struct for ALTS TSI handshaker. */
 struct alts_tsi_handshaker {
-  gpr_mu mu;
   tsi_handshaker base;
+  gpr_mu mu;
   alts_handshaker_client* client;
   grpc_slice target_name;
   bool is_client;
@@ -54,6 +55,9 @@ struct alts_tsi_handshaker {
   grpc_alts_credentials_options* options;
   alts_handshaker_client_vtable* client_vtable_for_testing;
   grpc_channel* channel;
+  // shutdown effectively tracks base.handshake_shutdown,
+  // but is synchronized by mu and so safe for access.
+  bool shutdown;
 };
 
 /* Main struct for ALTS TSI handshaker result. */
@@ -248,10 +252,10 @@ tsi_result alts_tsi_handshaker_result_create(grpc_gcp_HandshakerResp* resp,
 
 /* gRPC provided callback used when gRPC thread model is applied. */
 static void on_handshaker_service_resp_recv(void* arg, grpc_error* error) {
-  alts_handshaker_client* client = static_cast<alts_handshaker_client*>(arg);
-  grpc_core::MutexLock lock(&client->handshaker.mu);
-  if (client == nullptr) {
-    gpr_log(GPR_ERROR, "ALTS handshaker client is nullptr");
+  alts_tsi_handshaker* handshaker = static_cast<alts_tsi_handshaker*>(arg);
+  grpc_core::MutexLock lock(&handshaker->mu);
+  if (handshaker == nullptr || handshaker->client == nullptr) {
+    gpr_log(GPR_ERROR, "handshaker or ALTS handshaker client is nullptr");
     return;
   }
   bool success = true;
@@ -261,7 +265,12 @@ static void on_handshaker_service_resp_recv(void* arg, grpc_error* error) {
             grpc_error_string(error));
     success = false;
   }
-  alts_handshaker_client_handle_response_locked(client, success);
+  alts_handshaker_client_handle_response_locked(handshaker->client, success);
+}
+
+void alts_tsi_handshaker_handle_response(alts_tsi_handshaker* handshaker, bool success) {
+  grpc_core::MutexLock lock(&handshaker->mu);
+  alts_handshaker_client_handle_response_locked(handshaker->client, success);
 }
 
 /* gRPC provided callback used when dedicatd CQ and thread are used.
@@ -286,13 +295,11 @@ static tsi_result handshaker_next(
   }
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  grpc_core::MutextLock(handshaker->mu);
+  grpc_core::MutexLock(&handshaker->mu);
   if (self->handshake_shutdown) {
     gpr_log(GPR_ERROR, "TSI handshake shutdown");
     return TSI_HANDSHAKE_SHUTDOWN;
   }
-  alts_tsi_handshaker* handshaker =
-      reinterpret_cast<alts_tsi_handshaker*>(self);
   tsi_result ok = TSI_OK;
   if (!handshaker->has_created_handshaker_client) {
     if (handshaker->channel == nullptr) {
@@ -364,12 +371,13 @@ static tsi_result handshaker_next_dedicated(
 
 static void handshaker_shutdown(tsi_handshaker* self) {
   GPR_ASSERT(self != nullptr);
-  grpc_core::MutexLock(self&->mu);
-  if (self->handshake_shutdown) {
-    return;
-  }
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
+  grpc_core::MutexLock(&handshaker->mu);
+  if (handshaker->shutdown) {
+    return;
+  }
+  handshaker->shutdown = true;
   alts_handshaker_client_shutdown_locked(handshaker->client);
 }
 
@@ -377,9 +385,9 @@ static void handshaker_destroy(tsi_handshaker* self) {
   if (self == nullptr) {
     return;
   }
-  grpc_core::MutexLock(self&->mu);
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
+  grpc_core::MutexLock(&handshaker->mu);
   alts_handshaker_client_destroy_locked(handshaker->client);
   grpc_slice_unref_internal(handshaker->target_name);
   grpc_alts_credentials_options_destroy(handshaker->options);
@@ -408,7 +416,7 @@ static const tsi_handshaker_vtable handshaker_vtable_dedicated = {
 
 bool alts_tsi_handshaker_has_shutdown_locked(alts_tsi_handshaker* handshaker) {
   GPR_ASSERT(handshaker != nullptr);
-  return handshaker->base.handshake_shutdown;
+  return handshaker->shutdown;
 }
 
 tsi_result alts_tsi_handshaker_create(

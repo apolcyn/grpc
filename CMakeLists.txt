@@ -525,7 +525,7 @@ add_dependencies(buildtests_cxx alts_security_connector_test)
 add_dependencies(buildtests_cxx alts_tsi_handshaker_test)
 add_dependencies(buildtests_cxx alts_tsi_utils_test)
 if(_gRPC_PLATFORM_LINUX)
-add_dependencies(buildtests_cxx alts_with_fake_handshaker_test)
+add_dependencies(buildtests_cxx alts_with_fake_handshake_server_test)
 endif()
 add_dependencies(buildtests_cxx alts_zero_copy_grpc_protector_test)
 add_dependencies(buildtests_cxx async_end2end_test)
@@ -10469,7 +10469,7 @@ endif (gRPC_BUILD_TESTS)
 if (gRPC_BUILD_TESTS)
 if(_gRPC_PLATFORM_LINUX)
 
-add_executable(alts_with_fake_handshaker_test
+add_executable(alts_with_fake_handshake_server_test
   ${_gRPC_PROTO_GENS_DIR}/test/core/tsi/alts/fake_handshaker/handshaker.pb.cc
   ${_gRPC_PROTO_GENS_DIR}/test/core/tsi/alts/fake_handshaker/handshaker.grpc.pb.cc
   ${_gRPC_PROTO_GENS_DIR}/test/core/tsi/alts/fake_handshaker/handshaker.pb.h
@@ -10491,7 +10491,7 @@ protobuf_generate_grpc_cpp(
   test/core/tsi/alts/fake_handshaker/transport_security_common.proto
 )
 
-target_include_directories(alts_with_fake_handshaker_test
+target_include_directories(alts_with_fake_handshake_server_test
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${_gRPC_ADDRESS_SORTING_INCLUDE_DIR}
@@ -10511,7 +10511,7 @@ target_include_directories(alts_with_fake_handshaker_test
   PRIVATE ${_gRPC_PROTO_GENS_DIR}
 )
 
-target_link_libraries(alts_with_fake_handshaker_test
+target_link_libraries(alts_with_fake_handshake_server_test
   ${_gRPC_PROTOBUF_LIBRARIES}
   ${_gRPC_ALLTARGETS_LIBRARIES}
   grpc++_test_util
