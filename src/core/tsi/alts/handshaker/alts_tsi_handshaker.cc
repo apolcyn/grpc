@@ -295,7 +295,7 @@ static tsi_result handshaker_next(
   }
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  grpc_core::MutexLock(&handshaker->mu);
+  grpc_core::MutexLock lock(&handshaker->mu);
   if (self->handshake_shutdown) {
     gpr_log(GPR_ERROR, "TSI handshake shutdown");
     return TSI_HANDSHAKE_SHUTDOWN;
@@ -373,7 +373,7 @@ static void handshaker_shutdown(tsi_handshaker* self) {
   GPR_ASSERT(self != nullptr);
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  grpc_core::MutexLock(&handshaker->mu);
+  grpc_core::MutexLock lock(&handshaker->mu);
   if (handshaker->shutdown) {
     return;
   }
@@ -387,7 +387,7 @@ static void handshaker_destroy(tsi_handshaker* self) {
   }
   alts_tsi_handshaker* handshaker =
       reinterpret_cast<alts_tsi_handshaker*>(self);
-  grpc_core::MutexLock(&handshaker->mu);
+  gpr_mu_lock(&handshaker->mu);
   alts_handshaker_client_destroy_locked(handshaker->client);
   grpc_slice_unref_internal(handshaker->target_name);
   grpc_alts_credentials_options_destroy(handshaker->options);
@@ -395,6 +395,8 @@ static void handshaker_destroy(tsi_handshaker* self) {
     grpc_channel_destroy(handshaker->channel);
   }
   gpr_free(handshaker->handshaker_service_url);
+  gpr_mu_unlock(&handshaker->mu);
+  gpr_mu_destroy(&handshaker->mu);
   gpr_free(handshaker);
 }
 

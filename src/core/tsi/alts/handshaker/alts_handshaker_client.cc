@@ -501,7 +501,7 @@ alts_handshaker_client* alts_grpc_handshaker_client_create_locked(
   client->base.vtable =
       vtable_for_testing == nullptr ? &vtable : vtable_for_testing;
   GRPC_CLOSURE_INIT(&client->on_handshaker_service_resp_recv, client->grpc_cb,
-                    &client->handshaker, grpc_schedule_on_exec_ctx);
+                    client->handshaker, grpc_schedule_on_exec_ctx);
   grpc_slice_unref_internal(slice);
   return &client->base;
 }

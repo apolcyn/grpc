@@ -164,8 +164,9 @@ struct connect_args {
 
 void connect_loop(void* arg) {
   connect_args* args = static_cast<connect_args*>(arg);
+  void* debug_id = &args;
   for (size_t i = 0; i < args->loops; i++) {
-    gpr_log(GPR_DEBUG, "debug_id:%p connect_loop begin loop %ld", args->debug_id, i);
+    gpr_log(GPR_DEBUG, "debug_id:%p connect_loop begin loop %ld", debug_id, i);
     grpc_alts_credentials_options* alts_options =
         grpc_alts_credentials_client_options_create();
     grpc_channel_credentials* channel_creds =
@@ -187,7 +188,7 @@ void connect_loop(void* arg) {
                                             nullptr);
       grpc_event ev = grpc_completion_queue_next(cq, connect_deadline, nullptr);
       if (ev.type != GRPC_OP_COMPLETE) {
-        gpr_log(GPR_ERROR, "connect_loop debug_id:%p got ev.type:%d i:%ld", args->debug_id, ev.type, i);
+        gpr_log(GPR_ERROR, "connect_loop debug_id:%p got ev.type:%d i:%ld", debug_id, ev.type, i);
         abort();
       }
       GPR_ASSERT(ev.success);
@@ -197,7 +198,7 @@ void connect_loop(void* arg) {
     grpc_completion_queue_shutdown(cq);
     drain_cq(cq);
     grpc_completion_queue_destroy(cq);
-    gpr_log(GPR_DEBUG, "debug_id:%p connect_loop finished loop %ld", args->debug_id, i);
+    gpr_log(GPR_DEBUG, "debug_id:%p connect_loop finished loop %ld", debug_id, i);
   }
 }
 
@@ -210,7 +211,6 @@ void test_basic_client_server_handshake() {
     connect_args args;
     args.fake_handshaker_server_addr = fake_handshake_server.Address();
     args.server_address = test_server.Address();
-    args.debug_id = nullptr;
     args.per_connect_deadline_seconds = 5;
     args.loops = 10;
     connect_loop(&args);
@@ -226,18 +226,17 @@ void test_concurrent_client_server_handshakes() {
   // Test
   {
     TestServer test_server(fake_handshake_server.Address());
-    gpr_timespec test_deadline = gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_seconds(30, GPR_TIMESPAN));
-    connect_args args;
-    args.fake_handshaker_server_addr = fake_handshake_server.Address();
-    args.server_address = test_server.Address();
-    args.debug_id = nullptr;
-    args.per_connect_deadline_seconds = 10;
-    args.loops = 1;
+    gpr_timespec test_deadline = grpc_timeout_seconds_to_deadline(10);
     int num_concurrent_connects = 100;
     std::vector<grpc_core::UniquePtr<grpc_core::Thread>> thds;
     thds.reserve(num_concurrent_connects);
+    connect_args c_args;
+    c_args.fake_handshaker_server_addr = fake_handshake_server.Address();
+    c_args.server_address = test_server.Address();
+    c_args.per_connect_deadline_seconds = 10;
+    c_args.loops = 1;
     for (size_t i = 0; i < num_concurrent_connects; i++) {
-      auto new_thd = grpc_core::MakeUnique<grpc_core::Thread>("test_concurrent_client_server_handshakes thd", connect_loop, &args);
+      auto new_thd = grpc_core::MakeUnique<grpc_core::Thread>("test_concurrent_client_server_handshakes thd", connect_loop, &c_args);
       new_thd->Start();
       thds.push_back(std::move(new_thd));
     }
@@ -334,8 +333,9 @@ void run_fake_tcp_server_that_closes_connections_upon_receiving_bytes(
 
 void expect_connect_fails_loop(void* arg) {
   connect_args* args = static_cast<connect_args*>(arg);
-  for (size_t i = 0; i < 10; i++) {
-    gpr_log(GPR_DEBUG, "debug_id:%p expect_connect_fails_loop begin loop %ld", args->debug_id, i);
+  void* debug_id = &args;
+  for (size_t i = 0; i < args->loops; i++) {
+    gpr_log(GPR_DEBUG, "debug_id:%p expect_connect_fails_loop begin loop %ld", debug_id, i);
     grpc_alts_credentials_options* alts_options =
         grpc_alts_credentials_client_options_create();
     grpc_channel_credentials* channel_creds =
@@ -348,7 +348,7 @@ void expect_connect_fails_loop(void* arg) {
         channel_creds, args->server_address, nullptr, nullptr);
     // Connect, forcing an ALTS handshake attempt
     gpr_timespec connect_failure_deadline =
-      grpc_timeout_milliseconds_to_deadline(args->per_connect_deadline_seconds);
+      grpc_timeout_seconds_to_deadline(args->per_connect_deadline_seconds);
     grpc_connectivity_state state = grpc_channel_check_connectivity_state(channel, 1);
     GPR_ASSERT(state == GRPC_CHANNEL_IDLE);
     while (state != GRPC_CHANNEL_TRANSIENT_FAILURE) {
@@ -356,14 +356,17 @@ void expect_connect_fails_loop(void* arg) {
       grpc_channel_watch_connectivity_state(channel, state, gpr_inf_future(GPR_CLOCK_REALTIME), cq,
                                             nullptr);
       grpc_event ev = grpc_completion_queue_next(cq, connect_failure_deadline, nullptr);
-      GPR_ASSERT(ev.type == GRPC_OP_COMPLETE);
+      if (ev.type != GRPC_OP_COMPLETE) {
+        gpr_log(GPR_ERROR, "expect_connect_fails_loop debug_id:%p got ev.type:%d i:%ld", debug_id, ev.type, i);
+        abort();
+      }
       state = grpc_channel_check_connectivity_state(channel, 1);
     }
     grpc_channel_destroy(channel);
     grpc_completion_queue_shutdown(cq);
     drain_cq(cq);
     grpc_completion_queue_destroy(cq);
-    gpr_log(GPR_DEBUG, "debug_id:%p expect_connect_fails_loop finished loop %ld", args->debug_id, i);
+    gpr_log(GPR_DEBUG, "debug_id:%p expect_connect_fails_loop finished loop %ld", debug_id, i);
   }
 }
 
@@ -389,15 +392,16 @@ void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accept
     grpc_core::UniquePtr<char> fake_tcp_server_addr;
     grpc_core::JoinHostPort(&fake_tcp_server_addr, "[::1]", args.port);
     {
-      gpr_timespec test_deadline = gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_seconds(30, GPR_TIMESPAN));
+      gpr_timespec test_deadline = grpc_timeout_seconds_to_deadline(10);
       std::vector<grpc_core::UniquePtr<grpc_core::Thread>> connect_thds;
       int num_concurrent_connects = 100;
       connect_thds.reserve(num_concurrent_connects);
       connect_args c_args;
       c_args.server_address = fake_tcp_server_addr.get();
       c_args.fake_handshaker_server_addr = fake_handshake_server.Address();
-      c_args.debug_id = &c_args;
-      gpr_log(GPR_DEBUG, "start performing concurrent connect expect failures debug_id:%p", c_args.debug_id);
+      c_args.loops = 5;
+      c_args.per_connect_deadline_seconds = 10;
+      gpr_log(GPR_DEBUG, "start performing concurrent connect expect failures");
       for (size_t i = 0; i < num_concurrent_connects; i++) {
         auto new_thd = grpc_core::MakeUnique<grpc_core::Thread>("connect fails fast", expect_connect_fails_loop, &c_args);
         new_thd->Start();
@@ -407,7 +411,7 @@ void test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accept
         connect_thds[i]->Join();
       }
       gpr_event_set(&args.stop_ev, (void*)1);
-      gpr_log(GPR_DEBUG, "done performing concurrent connect expect failures debug_id:%p", c_args.debug_id);
+      gpr_log(GPR_DEBUG, "done performing concurrent connect expect failures");
       if (gpr_time_cmp(gpr_now(GPR_CLOCK_MONOTONIC), test_deadline) > 0) {
         gpr_log(GPR_ERROR, "Exceeded test deadline. ALTS handshakes might not be failing fast when the peer endpoint closes the connection abruptly");
         abort();
@@ -423,8 +427,8 @@ int main(int argc, char** argv) {
   grpc_init();
   {
     test_basic_client_server_handshake();
-    //test_concurrent_client_server_handshakes();
-    //test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting();
+    test_concurrent_client_server_handshakes();
+    test_handshake_fails_fast_when_peer_endpoint_closes_connection_after_accepting();
   }
   grpc_shutdown();
   return 0;
