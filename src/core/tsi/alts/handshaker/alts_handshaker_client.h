@@ -137,8 +137,7 @@ void alts_handshaker_client_destroy_locked(alts_handshaker_client* client);
  * returns the created ALTS handshaker client on success, and NULL on failure.
  */
 alts_handshaker_client* alts_grpc_handshaker_client_create_locked(
-    alts_tsi_handshaker* handshaker, grpc_channel* channel,
-    const char* handshaker_service_url, grpc_pollset_set* interested_parties,
+    alts_tsi_handshaker* handshaker,
     grpc_alts_credentials_options* options, const grpc_slice& target_name,
     grpc_iomgr_cb_func grpc_cb, tsi_handshaker_on_next_done_cb cb,
     void* user_data, alts_handshaker_client_vtable* vtable_for_testing,
@@ -152,7 +151,9 @@ alts_handshaker_client* alts_grpc_handshaker_client_create_locked(
  * - client: an ALTS handshaker client instance.
  * - is_ok: a boolean value indicating if the handshaker response is ok to read.
  */
-void alts_handshaker_client_handle_response_locked(alts_handshaker_client* client,
-                                            bool is_ok);
+void alts_handshaker_client_handle_response_locked(
+    alts_handshaker_client* client, bool is_ok);
+
+void alts_handshaker_client_continue_make_grpc_call_locked(alts_handshaker_client* client, grpc_call* call);
 
 #endif /* GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_HANDSHAKER_CLIENT_H */

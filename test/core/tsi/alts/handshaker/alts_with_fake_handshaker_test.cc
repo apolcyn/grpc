@@ -346,6 +346,7 @@ void expect_connect_fails_loop(void* arg) {
     grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
     grpc_channel* channel = grpc_secure_channel_create(
         channel_creds, args->server_address, nullptr, nullptr);
+    grpc_channel_credentials_release(channel_creds);
     // Connect, forcing an ALTS handshake attempt
     gpr_timespec connect_failure_deadline =
       grpc_timeout_seconds_to_deadline(args->per_connect_deadline_seconds);
