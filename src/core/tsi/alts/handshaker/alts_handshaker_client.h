@@ -57,7 +57,7 @@ typedef struct alts_handshaker_client_vtable {
   tsi_result (*server_start_locked)(alts_handshaker_client* client,
                                     grpc_slice* bytes_received);
   tsi_result (*next_locked)(alts_handshaker_client* client,
-                     grpc_slice* bytes_received);
+                            grpc_slice* bytes_received);
   void (*shutdown_locked)(alts_handshaker_client* client);
   void (*destruct_locked)(alts_handshaker_client* client);
 } alts_handshaker_client_vtable;
@@ -70,7 +70,8 @@ typedef struct alts_handshaker_client_vtable {
  *
  * It returns TSI_OK on success and an error status code on failure.
  */
-tsi_result alts_handshaker_client_start_client_locked(alts_handshaker_client* client);
+tsi_result alts_handshaker_client_start_client_locked(
+    alts_handshaker_client* client);
 
 /**
  * This method schedules a server_start handshaker request to ALTS handshaker
@@ -82,8 +83,8 @@ tsi_result alts_handshaker_client_start_client_locked(alts_handshaker_client* cl
  *
  * It returns TSI_OK on success and an error status code on failure.
  */
-tsi_result alts_handshaker_client_start_server_locked(alts_handshaker_client* client,
-                                               grpc_slice* bytes_received);
+tsi_result alts_handshaker_client_start_server_locked(
+    alts_handshaker_client* client, grpc_slice* bytes_received);
 
 /**
  * This method schedules a next handshaker request to ALTS handshaker service.
@@ -94,9 +95,8 @@ tsi_result alts_handshaker_client_start_server_locked(alts_handshaker_client* cl
  *
  * It returns TSI_OK on success and an error status code on failure.
  */
-tsi_result alts_handshaker_client_next_locked(
-    alts_handshaker_client* client,
-    grpc_slice* bytes_received);
+tsi_result alts_handshaker_client_next_locked(alts_handshaker_client* client,
+                                              grpc_slice* bytes_received);
 
 /**
  * This method cancels previously scheduled, but yet executed handshaker
@@ -137,11 +137,10 @@ void alts_handshaker_client_destroy_locked(alts_handshaker_client* client);
  * returns the created ALTS handshaker client on success, and NULL on failure.
  */
 alts_handshaker_client* alts_grpc_handshaker_client_create_locked(
-    alts_tsi_handshaker* handshaker,
-    grpc_alts_credentials_options* options, const grpc_slice& target_name,
-    grpc_iomgr_cb_func grpc_cb, tsi_handshaker_on_next_done_cb cb,
-    void* user_data, alts_handshaker_client_vtable* vtable_for_testing,
-    bool is_client);
+    alts_tsi_handshaker* handshaker, grpc_alts_credentials_options* options,
+    const grpc_slice& target_name, grpc_iomgr_cb_func grpc_cb,
+    tsi_handshaker_on_next_done_cb cb, void* user_data,
+    alts_handshaker_client_vtable* vtable_for_testing, bool is_client);
 
 /**
  * This method handles handshaker response returned from ALTS handshaker
@@ -154,6 +153,7 @@ alts_handshaker_client* alts_grpc_handshaker_client_create_locked(
 void alts_handshaker_client_handle_response_locked(
     alts_handshaker_client* client, bool is_ok);
 
-void alts_handshaker_client_continue_make_grpc_call_locked(alts_handshaker_client* client, grpc_call* call);
+void alts_handshaker_client_continue_make_grpc_call_locked(
+    alts_handshaker_client* client, grpc_call* call);
 
 #endif /* GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_HANDSHAKER_CLIENT_H */

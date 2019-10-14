@@ -91,13 +91,15 @@ void alts_tsi_handshaker_result_set_unused_bytes(tsi_handshaker_result* result,
  */
 bool alts_tsi_handshaker_has_shutdown_locked(alts_tsi_handshaker* handshaker);
 
-void alts_tsi_handshaker_handle_response(alts_tsi_handshaker* handshaker, bool success);
+void alts_tsi_handshaker_handle_response(alts_tsi_handshaker* handshaker,
+                                         bool success);
 
 struct alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call_args {
   alts_tsi_handshaker* handshaker;
   bool is_start;
 };
 
-void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(void* arg, grpc_error* unused_error);
+void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(
+    void* arg, grpc_error* unused_error);
 
 #endif /* GRPC_CORE_TSI_ALTS_HANDSHAKER_ALTS_TSI_HANDSHAKER_H */

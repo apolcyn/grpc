@@ -30,13 +30,12 @@
 #include <grpc/support/sync.h>
 #include <grpc/support/thd_id.h>
 
-#include "src/core/lib/slice/slice_internal.h"
 #include "src/core/lib/gprpp/sync.h"
-#include "src/core/lib/surface/call.h"
-#include "src/core/lib/surface/channel.h"
 #include "src/core/lib/gprpp/thd.h"
 #include "src/core/lib/iomgr/closure.h"
 #include "src/core/lib/slice/slice_internal.h"
+#include "src/core/lib/surface/call.h"
+#include "src/core/lib/surface/channel.h"
 #include "src/core/tsi/alts/frame_protector/alts_frame_protector.h"
 #include "src/core/tsi/alts/handshaker/alts_handshaker_client.h"
 #include "src/core/tsi/alts/handshaker/alts_shared_resource.h"
@@ -271,7 +270,8 @@ static void on_handshaker_service_resp_recv(void* arg, grpc_error* error) {
   alts_handshaker_client_handle_response_locked(handshaker->client, success);
 }
 
-void alts_tsi_handshaker_handle_response(alts_tsi_handshaker* handshaker, bool success) {
+void alts_tsi_handshaker_handle_response(alts_tsi_handshaker* handshaker,
+                                         bool success) {
   grpc_core::MutexLock lock(&handshaker->mu);
   alts_handshaker_client_handle_response_locked(handshaker->client, success);
 }
@@ -316,10 +316,9 @@ static tsi_result handshaker_next(
                                      ? on_handshaker_service_resp_recv_dedicated
                                      : on_handshaker_service_resp_recv;
     handshaker->client = alts_grpc_handshaker_client_create_locked(
-        handshaker,
-        handshaker->options, handshaker->target_name,
-        grpc_cb, cb, user_data,
-        handshaker->client_vtable_for_testing, handshaker->is_client);
+        handshaker, handshaker->options, handshaker->target_name, grpc_cb, cb,
+        user_data, handshaker->client_vtable_for_testing,
+        handshaker->is_client);
     if (handshaker->client == nullptr) {
       gpr_log(GPR_ERROR, "Failed to create ALTS handshaker client");
       return TSI_FAILED_PRECONDITION;
@@ -339,7 +338,8 @@ static tsi_result handshaker_next(
   if (!handshaker->has_sent_start_message) {
     ok = handshaker->is_client
              ? alts_handshaker_client_start_client_locked(handshaker->client)
-             : alts_handshaker_client_start_server_locked(handshaker->client, &slice);
+             : alts_handshaker_client_start_server_locked(handshaker->client,
+                                                          &slice);
     handshaker->has_sent_start_message = true;
   } else {
     ok = alts_handshaker_client_next_locked(handshaker->client, &slice);
@@ -464,8 +464,12 @@ void alts_tsi_handshaker_result_set_unused_bytes(tsi_handshaker_result* self,
          result->unused_bytes_size);
 }
 
-void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(void* arg, grpc_error* unused_error) {
-  alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call_args* args = static_cast<alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call_args*>(arg);
+void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(
+    void* arg, grpc_error* unused_error) {
+  alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call_args* args =
+      static_cast<
+          alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call_args*>(
+          arg);
   alts_tsi_handshaker* handshaker = args->handshaker;
   bool is_start = args->is_start;
   gpr_free(args);
@@ -474,7 +478,8 @@ void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(void* arg, g
     bool use_dedicated_cq;
     {
       grpc_core::MutexLock lock(&handshaker->mu);
-      handshaker_service_url = grpc_core::UniquePtr<char>(gpr_strdup(handshaker->handshaker_service_url));
+      handshaker_service_url = grpc_core::UniquePtr<char>(
+          gpr_strdup(handshaker->handshaker_service_url));
       use_dedicated_cq = handshaker->use_dedicated_cq;
     }
     // Explicitly create the channel without holding our own lock, just to
@@ -483,21 +488,26 @@ void alts_tsi_handshaker_re_enter_lock_then_continue_make_grpc_call(void* arg, g
     if (use_dedicated_cq) {
       channel = grpc_alts_get_shared_resource_dedicated()->channel;
     } else {
-      channel = grpc_insecure_channel_create(handshaker_service_url.get(), nullptr, nullptr);
+      channel = grpc_insecure_channel_create(handshaker_service_url.get(),
+                                             nullptr, nullptr);
     }
     grpc_core::MutexLock lock(&handshaker->mu);
     GPR_ASSERT(handshaker->channel == nullptr);
     handshaker->channel = channel;
-    grpc_slice slice = grpc_slice_from_copied_string(handshaker->handshaker_service_url);
+    grpc_slice slice =
+        grpc_slice_from_copied_string(handshaker->handshaker_service_url);
     grpc_call* call = grpc_channel_create_pollset_set_call(
-        handshaker->channel, nullptr, GRPC_PROPAGATE_DEFAULTS, handshaker->interested_parties,
+        handshaker->channel, nullptr, GRPC_PROPAGATE_DEFAULTS,
+        handshaker->interested_parties,
         grpc_slice_from_static_string(ALTS_SERVICE_METHOD), &slice,
         GRPC_MILLIS_INF_FUTURE, nullptr);
     grpc_slice_unref_internal(slice);
-    alts_handshaker_client_continue_make_grpc_call_locked(handshaker->client, call);
+    alts_handshaker_client_continue_make_grpc_call_locked(handshaker->client,
+                                                          call);
   } else {
     grpc_core::MutexLock lock(&handshaker->mu);
-    alts_handshaker_client_continue_make_grpc_call_locked(handshaker->client, nullptr);
+    alts_handshaker_client_continue_make_grpc_call_locked(handshaker->client,
+                                                          nullptr);
   }
 }
 
