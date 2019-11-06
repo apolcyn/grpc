@@ -171,25 +171,25 @@ static void maybe_complete_tsi_next(
 static void on_status_received(void* arg, grpc_error* error) {
   alts_grpc_handshaker_client* client =
       static_cast<alts_grpc_handshaker_client*>(arg);
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   if (client->handshake_status_code != GRPC_STATUS_OK) {
-    gpr_log(GPR_DEBUG, "here" config);
+    gpr_log(GPR_DEBUG, "here");
     char* status_details =
         grpc_slice_to_c_string(client->handshake_status_details);
-    gpr_log(GPR_DEBUG, "here" config);
+    gpr_log(GPR_DEBUG, "here");
     gpr_log(GPR_INFO,
             "alts_grpc_handshaker_client:%p on_status_received "
             "status:%d details:|%s| error:|%s|",
             client, client->handshake_status_code, status_details,
             grpc_error_string(error));
-    gpr_log(GPR_DEBUG, "here" config);
+    gpr_log(GPR_DEBUG, "here");
     gpr_free(status_details);
-    gpr_log(GPR_DEBUG, "here" config);
+    gpr_log(GPR_DEBUG, "here");
   }
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   maybe_complete_tsi_next(client, true /* receive_status_finished */,
                           nullptr /* pending_recv_message_result */);
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   alts_grpc_handshaker_client_unref(client);
 }
 
@@ -735,13 +735,13 @@ void alts_handshaker_client_on_status_received_for_testing(
     alts_handshaker_client* c, grpc_status_code status, grpc_error* error) {
   alts_grpc_handshaker_client* client =
       reinterpret_cast<alts_grpc_handshaker_client*>(c);
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   client->handshake_status_code = status;
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   client->handshake_status_details = grpc_empty_slice();
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
   GRPC_CLOSURE_RUN(&client->on_status_received, error);
-  gpr_log(GPR_DEBUG, "here" config);
+  gpr_log(GPR_DEBUG, "here");
 }
 
 }  // namespace internal
