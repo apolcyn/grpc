@@ -141,28 +141,43 @@ static void alts_grpc_handshaker_client_unref(
 static void maybe_complete_tsi_next(
     alts_grpc_handshaker_client* client, bool receive_status_finished,
     recv_message_result* pending_recv_message_result) {
+  gpr_log(GPR_DEBUG, "here");
   recv_message_result* r;
+  gpr_log(GPR_DEBUG, "here");
   {
+    gpr_log(GPR_DEBUG, "here");
     grpc_core::MutexLock lock(&client->mu);
+    gpr_log(GPR_DEBUG, "here");
     client->receive_status_finished |= receive_status_finished;
+    gpr_log(GPR_DEBUG, "here");
     if (pending_recv_message_result != nullptr) {
+    gpr_log(GPR_DEBUG, "here");
       GPR_ASSERT(client->pending_recv_message_result == nullptr);
+    gpr_log(GPR_DEBUG, "here");
       client->pending_recv_message_result = pending_recv_message_result;
+    gpr_log(GPR_DEBUG, "here");
     }
     if (client->pending_recv_message_result == nullptr) {
+    gpr_log(GPR_DEBUG, "here");
       return;
     }
     bool have_final_result = false;
+    gpr_log(GPR_DEBUG, "here");
     if (client->pending_recv_message_result->result != nullptr ||
         client->pending_recv_message_result->status != TSI_OK) {
+    gpr_log(GPR_DEBUG, "here");
       have_final_result = true;
     }
+    gpr_log(GPR_DEBUG, "here");
     if (have_final_result && !client->receive_status_finished) {
       return;
     }
+    gpr_log(GPR_DEBUG, "here");
     r = client->pending_recv_message_result;
+    gpr_log(GPR_DEBUG, "here");
     client->pending_recv_message_result = nullptr;
   }
+  gpr_log(GPR_DEBUG, "here");
   client->cb(r->status, client->user_data, r->bytes_to_send,
              r->bytes_to_send_size, r->result);
   gpr_free(r);
