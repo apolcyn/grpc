@@ -424,6 +424,9 @@ static void schedule_request_success_test() {
   GPR_ASSERT(alts_handshaker_client_next(config->server, &config->out_frame) ==
              TSI_OK);
   gpr_log(GPR_DEBUG, "here");
+  gpr_log(GPR_DEBUG, "here: config:%p", config);
+  gpr_log(GPR_DEBUG, "here: config->client:%p", config->client);
+  gpr_log(GPR_DEBUG, "here");
   /* Cleanup. */
   alts_handshaker_client_on_status_received_for_testing(
       config->client, GRPC_STATUS_OK, GRPC_ERROR_NONE);
