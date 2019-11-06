@@ -433,11 +433,21 @@ int main(int /*argc*/, char** /*argv*/) {
   grpc_init();
   grpc_alts_shared_resource_dedicated_init();
   /* Tests. */
+  gpr_log(GPR_DEBUG, "schedule_request_invalid_arg_test BEGIN");
   schedule_request_invalid_arg_test();
+  gpr_log(GPR_DEBUG, "schedule_request_invalid_arg_test DONE");
+  gpr_log(GPR_DEBUG, "schedule_request_success_test BEGIN");
   schedule_request_success_test();
+  gpr_log(GPR_DEBUG, "schedule_request_success_test DONE");
+  gpr_log(GPR_DEBUG, "schedule_request_grpc_call_failure_test BEGIN");
   schedule_request_grpc_call_failure_test();
+  gpr_log(GPR_DEBUG, "schedule_request_grpc_call_failure_test DONE");
   /* Cleanup. */
+  gpr_log(GPR_DEBUG, "grpc_alts_shared_resource_dedicated_shutdown BEGIN");
   grpc_alts_shared_resource_dedicated_shutdown();
+  gpr_log(GPR_DEBUG, "grpc_alts_shared_resource_dedicated_shutdown DONE");
+  gpr_log(GPR_DEBUG, "grpc_shutdown BEGIN");
   grpc_shutdown();
+  gpr_log(GPR_DEBUG, "grpc_shutdown DONE");
   return 0;
 }
