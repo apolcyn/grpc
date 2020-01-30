@@ -52,6 +52,7 @@
 #include "src/core/lib/surface/completion_queue.h"
 #include "src/core/lib/surface/server.h"
 #include "src/core/lib/surface/validate_metadata.h"
+#include "src/core/lib/surface/idle_accounting.h"
 #include "src/core/lib/transport/error_utils.h"
 #include "src/core/lib/transport/metadata.h"
 #include "src/core/lib/transport/static_metadata.h"
@@ -143,6 +144,7 @@ struct grpc_call {
         metadata_batch[i][j].deadline = GRPC_MILLIS_INF_FUTURE;
       }
     }
+    grpc_call_set_context(this, GRPC_CONTEXT_IDLE_ACCOUNT, &idle_account_, nullptr);
   }
 
   ~grpc_call() {
@@ -260,6 +262,8 @@ struct grpc_call {
     For 1, 4: See receiving_initial_metadata_ready() function
     For 2, 3: See receiving_stream_ready() function */
   gpr_atm recv_state = 0;
+
+  IdleAccount idle_account_;
 };
 
 grpc_core::TraceFlag grpc_call_error_trace(false, "call_error");
@@ -1542,6 +1546,7 @@ static void finish_batch(void* bctlp, grpc_error* error) {
     cancel_with_error(call, GRPC_ERROR_REF(error));
   }
   finish_batch_step(bctl);
+  call->idle_account_.stop(grpc_core::IdleAccountMetric.SEND_WALL_TIME);
 }
 
 static void free_no_op_completion(void* /*p*/, grpc_cq_completion* completion) {
@@ -1923,6 +1928,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
     GRPC_CLOSURE_INIT(&bctl->finish_batch, finish_batch, bctl,
                       grpc_schedule_on_exec_ctx);
     stream_op->on_complete = &bctl->finish_batch;
+    call->idle_account_.start(grpc_core::IdleAccountMetric.SEND_WALL_TIME);
   }
 
   gpr_atm_rel_store(&call->any_ops_sent_atm, 1);

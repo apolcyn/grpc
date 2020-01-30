@@ -21,25 +21,24 @@
 
 #include <grpc/support/port_platform.h>
 
-#include "src/core/lib/channel/channel_stack.h"
-#include "src/core/lib/channel/context.h"
-#include "src/core/lib/gprpp/arena.h"
-#include "src/core/lib/surface/api_trace.h"
-
 #include <grpc/grpc.h>
 #include <grpc/support/time.h>
+#include <grpc/impl/codegen/log.h>
+
+#include "src/core/lib/iomgr/exec_ctx.h"
 
 namespace grpc_core {
 
-enum IdleReason {
-  WALL_TIME,
+enum IdleAccountMetric {
+  SEND_WALL_TIME,
+  RECV_WALL_TIME,
   WAITING_FOR_PICK,
   WAITING_FOR_TRANSPORT_FC,
   WAITING_FOR_STREAM_FC,
   WAITING_FOR_WRITEABLE,
-  WAITING_FOR_READABLE,
   WAITING_FOR_CLIENT_AUTH,
-  NUM_IDLE_REASONS,
+  WAITING_FOR_READABLE,
+  NUM_METRICS,
 };
 
 class IdleAccount {
@@ -47,59 +46,72 @@ class IdleAccount {
   explicit IdleAccount() {}
   ~IdleAccount() {}
 
-  void start(IdleReason reason) {
-    if (idle_totals_[reason].wall_time_active_) {
-      gpr_log(GPR_ERROR, "idle_account:%s wall time %d already active", name_, reason);
-      abort();
+  void start(IdleAccountMetric reason) {
+    if (metric_totals_[reason].cur_active_++ == 0) {
+      metric_totals_[reason].cur_wall_time_start_ = grpc_core:ExecCtx::Get()->Now();
     }
-    idle_totals_[reason].wall_time_active_ = true;
-    idle_totals_[reason] = gpr_now(GPR_CLOCK_MONOTONIC);
-  }
-  void stop(IdleReason reason) {
-    if (idle_totals_[reason].wall_time_active_) {
-      gpr_log(GPR_ERROR, "idle_account:%s wall time %d not active", name_, reason);
-      abort();
-    }
-    idle_totals_[reason].wall_time_active_ = false;
-    idle_totals_[reason].total_us += gpr_timespec_to_micros(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), idle_totals_[reason].cur_wall_time_start_));
-  }
-  double get_total_wall_us() {
-    return idle_totals_[IdleReason.WALL_TIME];
-  }
-  double get_total_idle_us() {
-    double out = 0;
-    for (int i = 0; i < IdleReason.NUM_IDLE_REASONS; i++) {
-      if (i != IdleReason.WALL_TIME) {
-        out += idle_totals_[i];
+    for (int i = IdleAccountMetric.WAITING_FOR_PICK; i <= IdleAccountMetric.WAITING_FOR_CLIENT_AUTH; i++) {
+      if (metric_totals_[i].cur_active_ > 1) {
+        gpr_log(GPR_ERROR, "metric %d max active is 1. have:%d", i, metric_totals_[i].cur_active_);
+        abort();
       }
     }
-    return out;
   }
+
+  void stop(IdleAccountMetric reason) {
+    if (metric_totals_[reason].cur_active_ == 0) {
+      gpr_log(GPR_ERROR, "idle_account:%p wall time %d not active", reason);
+      abort();
+    }
+    if (--metric_totals_[reason].cur_active_ == 0) {
+      metric_totals_[reason].total_ms += grpc_core::ExecCtx::Get()->Now() - metric_totals_[reason].cur_wall_time_start_;
+    }
+  }
+
+  double get_total_send_wall_ms() {
+    return metric_totals_[IdleAccountMetric.SEND_WALL_TIME];
+  }
+
+  double get_total_recv_wall_ms() {
+    return metric_totals_[IdleAccountMetric.RECV_WALL_TIME];
+  }
+
+  double get_total_send_idle_ms() {
+    return metric_totals_[IdleAccountMetric.WAITING_FOR_PICK] +
+        metric_totals_[IdleAccountMetric.WAITING_FOR_TRANSPORT_FC] +
+        metric_totals_[IdleAccountMetric.WAITING_FOR_STREAM_FC] +
+        metric_totals_[IdleAccountMetric.WAITING_FOR_WRITEABLE];
+  }
+
+  double get_total_recv_idle_ms() {
+    return metric_totals_[IdleAccountMetric.WAITING_FOR_READABLE];
+  }
+
   std::string as_string() {
     char* out;
-    gpr_asprint(&out, "idle_account:%s wall_time:%lf waiting_for_pick:%lf waiting_for_transport_fc:%lf waiting_for_stream_fc:%lf waiting_for_writeable:%lf waiting_for_readable:%lf waiting_for_client_auth:%lf",
-                idle_totals_[WALL_TIME],
-                idle_totals_[WAITING_FOR_PICK],
-                idle_totals_[WAITING_FOR_TRANSPORT_FC],
-                idle_totals_[WAITING_FOR_STREAM_FC],
-                idle_totals_[WAITING_FOR_WRITEABLE],
-                idle_totals_[WAITING_FOR_READABLE],
-                idle_totals_[WAITING_FOR_CLIENT_AUTH]);
+    gpr_asprint(&out, "idle_account:%p send_wall_time:%lf recv_wall_time:%lf waiting_for_pick:%lf waiting_for_transport_fc:%lf waiting_for_stream_fc:%lf waiting_for_writeable:%lf waiting_for_readable:%lf waiting_for_client_auth:%lf",
+                this,
+                metric_totals_[SEND_WALL_TIME],
+                metric_totals_[RECV_WALL_TIME],
+                metric_totals_[WAITING_FOR_PICK],
+                metric_totals_[WAITING_FOR_TRANSPORT_FC],
+                metric_totals_[WAITING_FOR_STREAM_FC],
+                metric_totals_[WAITING_FOR_WRITEABLE],
+                metric_totals_[WAITING_FOR_READABLE],
+                metric_totals_[WAITING_FOR_CLIENT_AUTH]);
     auto ret = std::string(out);
     gpr_free(out);
     return ret;
   }
 
  private:
-  const char* name_;
-
-  struct IdleTotal {
-    bool wall_time_active_;
-    gpr_timespec cur_wall_time_start_;
-    double total_us;
+  struct MetricTotal {
+    int cur_active_ = 0;
+    grpc_millis cur_wall_time_start_ = 0;
+    double total_ms = 0;
   };
 
-  IdleTotal[IdleReason.NUM_IDLE_REASONS] idle_totals_;
+  MetricTotal[IdleAccountMetric.NUM_METRICS] metric_totals_;
 };
 
 } // namespace grpc_core

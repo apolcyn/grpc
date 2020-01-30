@@ -38,6 +38,9 @@ typedef enum {
   /// Holds a pointer to ServiceConfig::CallData associated with this call.
   GRPC_CONTEXT_SERVICE_CONFIG_CALL_DATA,
 
+  /// Holds a pointer to the idle time account associated with this call.
+  GRPC_CONTEXT_IDLE_ACCOUNT,
+
   GRPC_CONTEXT_COUNT
 } grpc_context_index;
 
