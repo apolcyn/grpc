@@ -20,6 +20,7 @@
 
 #include "src/core/ext/transport/chttp2/transport/chttp2_transport.h"
 #include "src/core/ext/transport/chttp2/transport/internal.h"
+#include "src/core/lib/surface/idle_accounting.h"
 
 #include <grpc/support/log.h>
 
@@ -170,47 +171,101 @@ bool grpc_chttp2_list_pop_writing_stream(grpc_chttp2_transport* t,
 
 void grpc_chttp2_list_add_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream* s) {
+  grpc_core::IdleAccount *idle_account =
+      static_cast<grpc_core::IdleAccount*>(
+          static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::WAITING_FOR_CONCURRENT_STREAM);
   stream_list_add(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
 }
 
 bool grpc_chttp2_list_pop_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  if (stream_list_pop(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>((*s)->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_CONCURRENT_STREAM, GRPC_ERROR_NONE);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void grpc_chttp2_list_remove_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                      grpc_chttp2_stream* s) {
-  stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  if (stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_CONCURRENT_STREAM, GRPC_ERROR_NONE);
+  }
 }
 
 void grpc_chttp2_list_add_stalled_by_transport(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream* s) {
   GPR_ASSERT(t->flow_control->flow_control_enabled());
+  grpc_core::IdleAccount *idle_account =
+      static_cast<grpc_core::IdleAccount*>(
+          static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::WAITING_FOR_TRANSPORT_FC);
   stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
 }
 
 bool grpc_chttp2_list_pop_stalled_by_transport(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  if (stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>((*s)->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_TRANSPORT_FC, GRPC_ERROR_NONE);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void grpc_chttp2_list_remove_stalled_by_transport(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream* s) {
-  stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  if (stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_TRANSPORT_FC, GRPC_ERROR_NONE);
+  }
 }
 
 void grpc_chttp2_list_add_stalled_by_stream(grpc_chttp2_transport* t,
                                             grpc_chttp2_stream* s) {
   GPR_ASSERT(t->flow_control->flow_control_enabled());
+  grpc_core::IdleAccount *idle_account =
+      static_cast<grpc_core::IdleAccount*>(
+          static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::WAITING_FOR_STREAM_FC);
   stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
 }
 
 bool grpc_chttp2_list_pop_stalled_by_stream(grpc_chttp2_transport* t,
                                             grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  if (stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>((*s)->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_STREAM_FC, GRPC_ERROR_NONE);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool grpc_chttp2_list_remove_stalled_by_stream(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream* s) {
-  return stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  if (stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM)) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_STREAM_FC, GRPC_ERROR_NONE);
+    return true;
+  } else {
+    return false;
+  }
 }

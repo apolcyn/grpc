@@ -323,7 +323,7 @@ grpc_error* SecurityHandshaker::OnHandshakeNextDoneLocked(
             &on_handshake_data_sent_to_peer_,
             &SecurityHandshaker::OnHandshakeDataSentToPeerFnScheduler, this,
             grpc_schedule_on_exec_ctx),
-        nullptr);
+        nullptr, nullptr);
   } else if (handshaker_result == nullptr) {
     // There is nothing to send, but need to read from peer.
     grpc_endpoint_read(

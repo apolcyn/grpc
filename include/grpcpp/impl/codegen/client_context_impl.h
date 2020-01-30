@@ -38,6 +38,7 @@
 #include <memory>
 #include <string>
 
+#include <grpc/grpc.h>
 #include <grpc/impl/codegen/compression_types.h>
 #include <grpc/impl/codegen/propagation_bits.h>
 #include <grpcpp/impl/codegen/client_interceptor.h>
@@ -375,6 +376,13 @@ class ClientContext {
   /// Returns the census context that has been set, or nullptr if not set.
   struct census_context* census_context() const {
     return census_context_;
+  }
+
+  grpc::string client_idle_stats() const {
+    char* str = grpc_call_get_idle_account_str(call_);
+    grpc::string out(str);
+    grpc::g_core_codegen_interface->gpr_free(str);
+    return out;
   }
 
   /// Send a best-effort out-of-band cancel on the call associated with

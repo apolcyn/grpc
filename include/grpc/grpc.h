@@ -68,6 +68,8 @@ GRPCAPI void grpc_register_plugin(void (*init)(void), void (*destroy)(void));
     library). */
 GRPCAPI void grpc_init(void);
 
+GRPCAPI char* grpc_call_get_idle_account_str(grpc_call* call);
+
 /** Shut down the grpc library.
 
     Before it's called, there should haven been a matching invocation to

@@ -281,7 +281,7 @@ static void flush_write_staging_buffer(secure_endpoint* ep, uint8_t** cur,
 }
 
 static void endpoint_write(grpc_endpoint* secure_ep, grpc_slice_buffer* slices,
-                           grpc_closure* cb, void* arg) {
+                           grpc_closure* cb, void* arg, grpc_core::EndpointIdleContext *idle_context) {
   GPR_TIMER_SCOPE("secure_endpoint.endpoint_write", 0);
 
   unsigned i;
@@ -370,7 +370,7 @@ static void endpoint_write(grpc_endpoint* secure_ep, grpc_slice_buffer* slices,
     return;
   }
 
-  grpc_endpoint_write(ep->wrapped_ep, &ep->output_buffer, cb, arg);
+  grpc_endpoint_write(ep->wrapped_ep, &ep->output_buffer, cb, arg, idle_context);
 }
 
 static void endpoint_shutdown(grpc_endpoint* secure_ep, grpc_error* why) {

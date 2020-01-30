@@ -287,6 +287,8 @@ typedef enum {
   GRPC_CHTTP2_KEEPALIVE_STATE_DISABLED,
 } grpc_chttp2_keepalive_state;
 
+class CHttp2EndpointIdleContext;
+
 struct grpc_chttp2_transport {
   grpc_chttp2_transport(const grpc_channel_args* channel_args,
                         grpc_endpoint* ep, bool is_client,
@@ -496,6 +498,9 @@ struct grpc_chttp2_transport {
    * thereby reducing the number of induced frames. */
   uint32_t num_pending_induced_frames = 0;
   bool reading_paused_on_pending_induced_frames = false;
+
+  // For passing down to the endpoint
+  std::unique_ptr<CHttp2EndpointIdleContext> endpoint_idle_context;
 };
 
 typedef enum {
@@ -661,6 +666,42 @@ struct grpc_chttp2_stream {
    * compression.
    */
   grpc_slice_buffer decompressed_data_buffer;
+};
+
+class CHttp2EndpointIdleContext : public grpc_core::EndpointIdleContext {
+ public:
+  explicit CHttp2EndpointIdleContext(struct grpc_chttp2_transport* t) : t_(t) {}
+
+  void OnWriteIdleStart() override {
+    grpc_chttp2_stream_map_for_each(&t_->stream_map, OnStreamWriteIdleStart, nullptr);
+  }
+
+  void OnWriteIdleStop() override {
+    grpc_chttp2_stream_map_for_each(&t_->stream_map, OnStreamWriteIdleStop, nullptr);
+  }
+
+ private:
+  static void OnStreamWriteIdleStart(void* /* user_data */, uint32_t /*key*/, void* stream) {
+    grpc_chttp2_stream* s = static_cast<grpc_chttp2_stream*>(stream);
+    if (s->included[GRPC_CHTTP2_LIST_WRITING]) {
+      grpc_core::IdleAccount *idle_account =
+          static_cast<grpc_core::IdleAccount*>(
+              static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+      idle_account->start(grpc_core::IdleAccountMetric::WAITING_FOR_WRITABLE);
+    }
+  }
+
+  static void OnStreamWriteIdleStop(void* /* user_data */, uint32_t /*key*/, void* stream) {
+    grpc_chttp2_stream* s = static_cast<grpc_chttp2_stream*>(stream);
+    if (s->included[GRPC_CHTTP2_LIST_WRITING]) {
+      grpc_core::IdleAccount *idle_account =
+          static_cast<grpc_core::IdleAccount*>(
+              static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+      idle_account->stop(grpc_core::IdleAccountMetric::WAITING_FOR_WRITABLE, GRPC_ERROR_NONE);
+    }
+  }
+
+  struct grpc_chttp2_transport* t_;
 };
 
 /** Transport writing call flow:

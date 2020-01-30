@@ -27,6 +27,7 @@
 #include "src/core/lib/iomgr/pollset.h"
 #include "src/core/lib/iomgr/pollset_set.h"
 #include "src/core/lib/iomgr/resource_quota.h"
+#include "src/core/lib/surface/idle_accounting.h"
 
 /* An endpoint caps a streaming channel between two communicating processes.
    Examples may be: a tcp socket, <stdin+stdout>, or some shared memory. */
@@ -35,11 +36,21 @@ typedef struct grpc_endpoint grpc_endpoint;
 typedef struct grpc_endpoint_vtable grpc_endpoint_vtable;
 class Timestamps;
 
+namespace grpc_core {
+
+class EndpointIdleContext {
+ public:
+  virtual void OnWriteIdleStart() = 0;
+  virtual void OnWriteIdleStop() = 0;
+};
+
+} // namespace grpc_core
+
 struct grpc_endpoint_vtable {
   void (*read)(grpc_endpoint* ep, grpc_slice_buffer* slices, grpc_closure* cb,
                bool urgent);
   void (*write)(grpc_endpoint* ep, grpc_slice_buffer* slices, grpc_closure* cb,
-                void* arg);
+                void* arg, grpc_core::EndpointIdleContext* endpoint_idle_context);
   void (*add_to_pollset)(grpc_endpoint* ep, grpc_pollset* pollset);
   void (*add_to_pollset_set)(grpc_endpoint* ep, grpc_pollset_set* pollset);
   void (*delete_from_pollset_set)(grpc_endpoint* ep, grpc_pollset_set* pollset);
@@ -78,7 +89,7 @@ int grpc_endpoint_get_fd(grpc_endpoint* ep);
    platforms as an argument that would be forwarded to the timestamps callback.
    */
 void grpc_endpoint_write(grpc_endpoint* ep, grpc_slice_buffer* slices,
-                         grpc_closure* cb, void* arg);
+                         grpc_closure* cb, void* arg, grpc_core::EndpointIdleContext* endpoint_idle_context);
 
 /* Causes any pending and future read/write callbacks to run immediately with
    success==0 */

@@ -28,6 +28,7 @@
 
 #include <grpc/impl/codegen/port_platform.h>
 
+#include <grpc/grpc.h>
 #include <grpc/impl/codegen/compression_types.h>
 #include <grpcpp/impl/codegen/call.h>
 #include <grpcpp/impl/codegen/call_op_set.h>
@@ -262,6 +263,13 @@ class ServerContextBase {
 
   /// Get the census context associated with this server call.
   const struct census_context* census_context() const;
+
+  grpc::string idle_stats() const {
+    char* str = grpc_call_get_idle_account_str(call_);
+    grpc::string out(str);
+    grpc::g_core_codegen_interface->gpr_free(str);
+    return out;
+  }
 
   /// Should be used for framework-level extensions only.
   /// Applications never need to call this method.

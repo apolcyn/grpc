@@ -32,6 +32,13 @@
 #include <string.h>
 
 #include "absl/strings/str_format.h"
+#include <memory>
+
+#include <grpc/slice_buffer.h>
+#include <grpc/support/alloc.h>
+#include <grpc/support/log.h>
+#include <grpc/support/string_util.h>
+
 #include "src/core/ext/transport/chttp2/transport/context_list.h"
 #include "src/core/ext/transport/chttp2/transport/frame_data.h"
 #include "src/core/ext/transport/chttp2/transport/internal.h"
@@ -446,7 +453,8 @@ grpc_chttp2_transport::grpc_chttp2_transport(
                     GRPC_CHANNEL_READY),
       is_client(is_client),
       next_stream_id(is_client ? 1 : 2),
-      deframe_state(is_client ? GRPC_DTS_FH_0 : GRPC_DTS_CLIENT_PREFIX_0) {
+      deframe_state(is_client ? GRPC_DTS_FH_0 : GRPC_DTS_CLIENT_PREFIX_0),
+      endpoint_idle_context(new CHttp2EndpointIdleContext(this)) {
   GPR_ASSERT(strlen(GRPC_CHTTP2_CLIENT_CONNECT_STRING) ==
              GRPC_CHTTP2_CLIENT_CONNECT_STRLEN);
   base.vtable = get_vtable();
@@ -982,7 +990,7 @@ static void write_action(void* gt, grpc_error* /*error*/) {
       t->ep, &t->outbuf,
       GRPC_CLOSURE_INIT(&t->write_action_end_locked, write_action_end, t,
                         grpc_schedule_on_exec_ctx),
-      cl);
+      cl, t->endpoint_idle_context.get());
 }
 
 static void write_action_end(void* tp, grpc_error* error) {
@@ -2097,6 +2105,7 @@ void grpc_chttp2_fake_status(grpc_chttp2_transport* t, grpc_chttp2_stream* s,
   grpc_status_code status;
   grpc_slice slice;
   grpc_error_get_status(error, s->deadline, &status, &slice, nullptr, nullptr);
+  gpr_log(GPR_DEBUG, "faking status to %d stream is client:%d", status, t->is_client);
   if (status != GRPC_STATUS_OK) {
     s->seen_error = true;
   }
@@ -2593,6 +2602,12 @@ static void read_action_locked(void* tp, grpc_error* error) {
   }
 
   GRPC_ERROR_UNREF(error);
+}
+
+static void on_read_idle_start(void* arg, grpc_error* /* error */) {
+}
+
+static void on_read_idle_stop(void* arg, grpc_error* /* error */) {
 }
 
 static void continue_read_action_locked(grpc_chttp2_transport* t) {
