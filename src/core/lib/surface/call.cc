@@ -1259,6 +1259,7 @@ static void continue_receiving_slices(batch_control* bctl) {
     if (remaining == 0) {
       call->receiving_message = 0;
       call->receiving_stream.reset();
+      call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
       finish_batch_step(bctl);
       return;
     }
@@ -1272,6 +1273,7 @@ static void continue_receiving_slices(batch_control* bctl) {
         grpc_byte_buffer_destroy(*call->receiving_buffer);
         *call->receiving_buffer = nullptr;
         call->receiving_message = 0;
+        call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
         finish_batch_step(bctl);
         GRPC_ERROR_UNREF(error);
         return;
@@ -1308,6 +1310,7 @@ static void receiving_slice_ready(void* bctlp, grpc_error* error) {
     grpc_byte_buffer_destroy(*call->receiving_buffer);
     *call->receiving_buffer = nullptr;
     call->receiving_message = 0;
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
     finish_batch_step(bctl);
     if (release_error) {
       GRPC_ERROR_UNREF(error);
@@ -1320,6 +1323,7 @@ static void process_data_after_md(batch_control* bctl) {
   if (call->receiving_stream == nullptr) {
     *call->receiving_buffer = nullptr;
     call->receiving_message = 0;
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
     finish_batch_step(bctl);
   } else {
     call->test_only_last_message_flags = call->receiving_stream->flags();
@@ -1524,6 +1528,7 @@ static void receiving_initial_metadata_ready(void* bctlp, grpc_error* error) {
                             GRPC_ERROR_REF(error));
   }
 
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
   finish_batch_step(bctl);
 }
 
@@ -1534,6 +1539,7 @@ static void receiving_trailing_metadata_ready(void* bctlp, grpc_error* error) {
   grpc_metadata_batch* md =
       &call->metadata_batch[1 /* is_receiving */][1 /* is_trailing */];
   recv_trailing_filter(call, md, GRPC_ERROR_REF(error));
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
   finish_batch_step(bctl);
 }
 
@@ -1549,8 +1555,8 @@ static void finish_batch(void* bctlp, grpc_error* error) {
   if (error != GRPC_ERROR_NONE) {
     cancel_with_error(call, GRPC_ERROR_REF(error));
   }
-  finish_batch_step(bctl);
   call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_WALL_TIME);
+  finish_batch_step(bctl);
 }
 
 static void free_no_op_completion(void* /*p*/, grpc_cq_completion* completion) {
@@ -1933,6 +1939,9 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
                       grpc_schedule_on_exec_ctx);
     stream_op->on_complete = &bctl->finish_batch;
     call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_WALL_TIME);
+  }
+  for (int i = 0; i < num_recv_ops; i++) {
+    call->idle_account_.start(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
   }
 
   gpr_atm_rel_store(&call->any_ops_sent_atm, 1);

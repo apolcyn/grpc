@@ -87,7 +87,7 @@ class IdleAccount {
 
   void stop(IdleAccountMetric reason) {
     if (metric_totals_[reason].cur_active_ == 0) {
-      gpr_log(GPR_ERROR, "idle_account:%p wall time %d not active", reason);
+      gpr_log(GPR_ERROR, "idle_account:%p wall time %s not active", this, MetricToName(reason));
       abort();
     }
     if (--metric_totals_[reason].cur_active_ == 0) {

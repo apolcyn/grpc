@@ -415,6 +415,7 @@ bool InteropClient::TransientFailureOrAbort() {
 bool InteropClient::DoRequestStreaming() {
   gpr_log(GPR_DEBUG, "Sending request steaming rpc ...");
 
+  gpr_timespec start = gpr_now(GPR_CLOCK_MONOTONIC);
   ClientContext context;
   StreamingInputCallRequest request;
   StreamingInputCallResponse response;
@@ -438,6 +439,10 @@ bool InteropClient::DoRequestStreaming() {
   if (!AssertStatusOk(s, context.debug_error_string())) {
     return false;
   }
+
+  grpc_millis elapsed = grpc_timespec_to_millis_round_down(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
+
+  gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
 
   GPR_ASSERT(response.aggregated_payload_size() == aggregated_payload_size);
   return true;
