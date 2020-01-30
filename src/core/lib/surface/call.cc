@@ -263,7 +263,7 @@ struct grpc_call {
     For 2, 3: See receiving_stream_ready() function */
   gpr_atm recv_state = 0;
 
-  IdleAccount idle_account_;
+  grpc_core::IdleAccount idle_account_;
 };
 
 grpc_core::TraceFlag grpc_call_error_trace(false, "call_error");
