@@ -36,6 +36,7 @@ enum IdleAccountMetric {
   SEND_WALL_TIME,
   RECV_WALL_TIME,
   WAITING_FOR_PICK,
+  WAITING_FOR_STREAM,
   WAITING_FOR_TRANSPORT_FC,
   WAITING_FOR_STREAM_FC,
   WAITING_FOR_WRITEABLE,
@@ -52,6 +53,8 @@ const char* MetricToName(IdleAccountMetric metric) {
       return "RECV_WALL_TIME";
     case WAITING_FOR_PICK:
       return "WAITING_FOR_PICK";
+    case WAITING_FOR_STREAM:
+      return "WAITING_FOR_STREAM";
     case WAITING_FOR_TRANSPORT_FC:
       return "WAITING_FOR_TRANSPORT_FC";
     case WAITING_FOR_STREAM_FC:
@@ -118,11 +121,12 @@ class IdleAccount {
 
   std::string as_string() {
     char* out;
-    gpr_asprintf(&out, "idle_account:%p send_wall_time:%ld recv_wall_time:%ld waiting_for_pick:%ld waiting_for_transport_fc:%ld waiting_for_stream_fc:%ld waiting_for_writeable:%ld waiting_for_readable:%ld waiting_for_client_auth:%ld",
+    gpr_asprintf(&out, "idle_account:%p send_wall_time:%ld recv_wall_time:%ld waiting_for_pick:%ld waiting_for_stream:%ld waiting_for_transport_fc:%ld waiting_for_stream_fc:%ld waiting_for_writeable:%ld waiting_for_readable:%ld waiting_for_client_auth:%ld",
                 this,
                 metric_totals_[SEND_WALL_TIME].total_ms,
                 metric_totals_[RECV_WALL_TIME].total_ms,
                 metric_totals_[WAITING_FOR_PICK].total_ms,
+                metric_totals_[WAITING_FOR_STREAM].total_ms,
                 metric_totals_[WAITING_FOR_TRANSPORT_FC].total_ms,
                 metric_totals_[WAITING_FOR_STREAM_FC].total_ms,
                 metric_totals_[WAITING_FOR_WRITEABLE].total_ms,
