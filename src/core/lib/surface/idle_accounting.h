@@ -44,6 +44,27 @@ enum IdleAccountMetric {
   NUM_METRICS,
 };
 
+const char* MetricToName(IdleAccountMetric metric) {
+  switch (metric) {
+    case SEND_WALL_TIME:
+      return "SEND_WALL_TIME";
+    case RECV_WALL_TIME:
+      return "RECV_WALL_TIME";
+    case WAITING_FOR_PICK:
+      return "WAITING_FOR_PICK";
+    case WAITING_FOR_TRANSPORT_FC:
+      return "WAITING_FOR_TRANSPORT_FC";
+    case WAITING_FOR_STREAM_FC:
+      return "WAITING_FOR_STREAM_FC";
+    case WAITING_FOR_WRITEABLE:
+      return "WAITING_FOR_WRITEABLE";
+    case WAITING_FOR_READABLE:
+      return "WAITING_FOR_READABLE";
+    default:
+      abort();
+  }
+}
+
 class IdleAccount {
  public:
   explicit IdleAccount() {
@@ -54,10 +75,11 @@ class IdleAccount {
   void start(IdleAccountMetric reason) {
     if (metric_totals_[reason].cur_active_++ == 0) {
       metric_totals_[reason].cur_wall_time_start_ = grpc_core::ExecCtx::Get()->Now();
+      gpr_log(GPR_DEBUG, "idle_account:%p metric %s start_ms: %ld", this, MetricToName(reason), metric_totals_[reason].cur_wall_time_start_);
     }
     for (int i = IdleAccountMetric::WAITING_FOR_PICK; i <= IdleAccountMetric::WAITING_FOR_CLIENT_AUTH; i++) {
       if (metric_totals_[i].cur_active_ > 1) {
-        gpr_log(GPR_ERROR, "metric %d max active is 1. have:%d", i, metric_totals_[i].cur_active_);
+        gpr_log(GPR_ERROR, "idle_account:%p metric %d max active is 1. have:%d", this, i, metric_totals_[i].cur_active_);
         abort();
       }
     }
@@ -69,19 +91,21 @@ class IdleAccount {
       abort();
     }
     if (--metric_totals_[reason].cur_active_ == 0) {
-      metric_totals_[reason].total_ms += grpc_core::ExecCtx::Get()->Now() - metric_totals_[reason].cur_wall_time_start_;
+      grpc_millis now = grpc_core::ExecCtx::Get()->Now();
+      metric_totals_[reason].total_ms += (now - metric_totals_[reason].cur_wall_time_start_);
+      gpr_log(GPR_DEBUG, "idle_account:%p metric %s stopped at %ld total_ms: %ld", this, MetricToName(reason), now, metric_totals_[reason].total_ms);
     }
   }
 
-  double get_total_send_wall_ms() {
+  grpc_millis get_total_send_wall_ms() {
     return metric_totals_[IdleAccountMetric::SEND_WALL_TIME].total_ms;
   }
 
-  double get_total_recv_wall_ms() {
+  grpc_millis get_total_recv_wall_ms() {
     return metric_totals_[IdleAccountMetric::RECV_WALL_TIME].total_ms;
   }
 
-  double get_total_send_idle_ms() {
+  grpc_millis get_total_send_idle_ms() {
     return metric_totals_[IdleAccountMetric::WAITING_FOR_PICK].total_ms +
         metric_totals_[IdleAccountMetric::WAITING_FOR_TRANSPORT_FC].total_ms +
         metric_totals_[IdleAccountMetric::WAITING_FOR_STREAM_FC].total_ms +
@@ -94,16 +118,17 @@ class IdleAccount {
 
   std::string as_string() {
     char* out;
-    gpr_asprintf(&out, "idle_account:%p send_wall_time:%lf recv_wall_time:%lf waiting_for_pick:%lf waiting_for_transport_fc:%lf waiting_for_stream_fc:%lf waiting_for_writeable:%lf waiting_for_readable:%lf waiting_for_client_auth:%lf",
+    gpr_asprintf(&out, "idle_account:%p send_wall_time:%ld recv_wall_time:%ld waiting_for_pick:%ld waiting_for_transport_fc:%ld waiting_for_stream_fc:%ld waiting_for_writeable:%ld waiting_for_readable:%ld waiting_for_client_auth:%ld",
                 this,
-                metric_totals_[SEND_WALL_TIME],
-                metric_totals_[RECV_WALL_TIME],
-                metric_totals_[WAITING_FOR_PICK],
-                metric_totals_[WAITING_FOR_TRANSPORT_FC],
-                metric_totals_[WAITING_FOR_STREAM_FC],
-                metric_totals_[WAITING_FOR_WRITEABLE],
-                metric_totals_[WAITING_FOR_READABLE],
-                metric_totals_[WAITING_FOR_CLIENT_AUTH]);
+                metric_totals_[SEND_WALL_TIME].total_ms,
+                metric_totals_[RECV_WALL_TIME].total_ms,
+                metric_totals_[WAITING_FOR_PICK].total_ms,
+                metric_totals_[WAITING_FOR_TRANSPORT_FC].total_ms,
+                metric_totals_[WAITING_FOR_STREAM_FC].total_ms,
+                metric_totals_[WAITING_FOR_WRITEABLE].total_ms,
+                metric_totals_[WAITING_FOR_READABLE].total_ms,
+                metric_totals_[WAITING_FOR_CLIENT_AUTH].total_ms);
+    gpr_log(GPR_DEBUG, "idle account string to return: %s", out);
     auto ret = std::string(out);
     gpr_free(out);
     return ret;
@@ -113,7 +138,7 @@ class IdleAccount {
   struct MetricTotal {
     int cur_active_ = 0;
     grpc_millis cur_wall_time_start_ = 0;
-    double total_ms = 0;
+    grpc_millis total_ms = 0;
   };
 
   std::vector<MetricTotal> metric_totals_;

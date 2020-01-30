@@ -31,6 +31,7 @@
 #include <grpcpp/security/credentials.h>
 
 #include "src/core/lib/transport/byte_stream.h"
+#include "src/core/lib/surface/call.h"
 #include "src/proto/grpc/testing/empty.pb.h"
 #include "src/proto/grpc/testing/messages.pb.h"
 #include "src/proto/grpc/testing/test.grpc.pb.h"
@@ -42,12 +43,12 @@ namespace testing {
 
 namespace {
 // The same value is defined by the Java client.
-const std::vector<int> request_stream_sizes = {27182, 8, 1828, 45904};
+const std::vector<int> request_stream_sizes = {3000000, 3000000, 3000000, 3000000};
 const std::vector<int> response_stream_sizes = {31415, 9, 2653, 58979};
 const int kNumResponseMessages = 2000;
 const int kResponseMessageSize = 1030;
 const int kReceiveDelayMilliSeconds = 20;
-const int kLargeRequestSize = 271828;
+const int kLargeRequestSize = 3718280;
 const int kLargeResponseSize = 314159;
 
 void NoopChecks(const InteropClientContextInspector& /*inspector*/,
@@ -189,10 +190,14 @@ bool InteropClient::PerformLargeUnary(SimpleRequest* request,
     }
   }
 
+  gpr_timespec start = gpr_now(GPR_CLOCK_MONOTONIC);
   Status s = serviceStub_.Get()->UnaryCall(&context, *request, response);
   if (!AssertStatusOk(s, context.debug_error_string())) {
     return false;
   }
+  grpc_millis elapsed = grpc_timespec_to_millis_round_down(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
+
+  gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
 
   custom_checks_fn(inspector, request, response);
 
@@ -695,6 +700,7 @@ bool InteropClient::DoHalfDuplex() {
 bool InteropClient::DoPingPong() {
   gpr_log(GPR_DEBUG, "Sending Ping Pong streaming rpc ...");
 
+  gpr_timespec start = gpr_now(GPR_CLOCK_MONOTONIC);
   ClientContext context;
   std::unique_ptr<ClientReaderWriter<StreamingOutputCallRequest,
                                      StreamingOutputCallResponse>>
@@ -731,6 +737,10 @@ bool InteropClient::DoPingPong() {
   if (!AssertStatusOk(s, context.debug_error_string())) {
     return false;
   }
+
+  grpc_millis elapsed = grpc_timespec_to_millis_round_down(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
+
+  gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
 
   gpr_log(GPR_DEBUG, "Ping pong streaming done.");
   return true;

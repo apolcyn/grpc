@@ -144,7 +144,7 @@ struct grpc_call {
         metadata_batch[i][j].deadline = GRPC_MILLIS_INF_FUTURE;
       }
     }
-    grpc_call_set_context(this, GRPC_CONTEXT_IDLE_ACCOUNT, &idle_account_, nullptr);
+    grpc_call_context_set(this, GRPC_CONTEXT_IDLE_ACCOUNT, &idle_account_, nullptr);
   }
 
   ~grpc_call() {
@@ -265,6 +265,10 @@ struct grpc_call {
 
   grpc_core::IdleAccount idle_account_;
 };
+
+const char* grpc_call_get_idle_account_str(grpc_call* call) {
+  return call->idle_account_.as_string().c_str();
+}
 
 grpc_core::TraceFlag grpc_call_error_trace(false, "call_error");
 grpc_core::TraceFlag grpc_compression_trace(false, "compression");
@@ -1546,7 +1550,7 @@ static void finish_batch(void* bctlp, grpc_error* error) {
     cancel_with_error(call, GRPC_ERROR_REF(error));
   }
   finish_batch_step(bctl);
-  call->idle_account_.stop(grpc_core::IdleAccountMetric.SEND_WALL_TIME);
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_WALL_TIME);
 }
 
 static void free_no_op_completion(void* /*p*/, grpc_cq_completion* completion) {
@@ -1928,7 +1932,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
     GRPC_CLOSURE_INIT(&bctl->finish_batch, finish_batch, bctl,
                       grpc_schedule_on_exec_ctx);
     stream_op->on_complete = &bctl->finish_batch;
-    call->idle_account_.start(grpc_core::IdleAccountMetric.SEND_WALL_TIME);
+    call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_WALL_TIME);
   }
 
   gpr_atm_rel_store(&call->any_ops_sent_atm, 1);
