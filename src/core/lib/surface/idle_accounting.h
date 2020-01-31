@@ -26,6 +26,7 @@
 
 #include <grpc/grpc.h>
 #include <grpc/support/time.h>
+#include <grpc/support/string_util.h>
 #include <grpc/impl/codegen/log.h>
 
 #include "src/core/lib/iomgr/exec_ctx.h"
@@ -36,37 +37,14 @@ enum IdleAccountMetric {
   SEND_WALL_TIME,
   RECV_WALL_TIME,
   WAITING_FOR_PICK,
-  WAITING_FOR_STREAM,
+  WAITING_FOR_CONCURRENT_STREAM,
   WAITING_FOR_TRANSPORT_FC,
   WAITING_FOR_STREAM_FC,
-  WAITING_FOR_WRITEABLE,
+  WAITING_FOR_WRITABLE,
   WAITING_FOR_CLIENT_AUTH,
   WAITING_FOR_READABLE,
   NUM_METRICS,
 };
-
-const char* MetricToName(IdleAccountMetric metric) {
-  switch (metric) {
-    case SEND_WALL_TIME:
-      return "SEND_WALL_TIME";
-    case RECV_WALL_TIME:
-      return "RECV_WALL_TIME";
-    case WAITING_FOR_PICK:
-      return "WAITING_FOR_PICK";
-    case WAITING_FOR_STREAM:
-      return "WAITING_FOR_STREAM";
-    case WAITING_FOR_TRANSPORT_FC:
-      return "WAITING_FOR_TRANSPORT_FC";
-    case WAITING_FOR_STREAM_FC:
-      return "WAITING_FOR_STREAM_FC";
-    case WAITING_FOR_WRITEABLE:
-      return "WAITING_FOR_WRITEABLE";
-    case WAITING_FOR_READABLE:
-      return "WAITING_FOR_READABLE";
-    default:
-      abort();
-  }
-}
 
 class IdleAccount {
  public:
@@ -110,9 +88,10 @@ class IdleAccount {
 
   grpc_millis get_total_send_idle_ms() {
     return metric_totals_[IdleAccountMetric::WAITING_FOR_PICK].total_ms +
+        metric_totals_[IdleAccountMetric::WAITING_FOR_CONCURRENT_STREAM].total_ms +
         metric_totals_[IdleAccountMetric::WAITING_FOR_TRANSPORT_FC].total_ms +
         metric_totals_[IdleAccountMetric::WAITING_FOR_STREAM_FC].total_ms +
-        metric_totals_[IdleAccountMetric::WAITING_FOR_WRITEABLE].total_ms;
+        metric_totals_[IdleAccountMetric::WAITING_FOR_WRITABLE].total_ms;
   }
 
   double get_total_recv_idle_ms() {
@@ -120,25 +99,41 @@ class IdleAccount {
   }
 
   std::string as_string() {
-    char* out;
-    gpr_asprintf(&out, "idle_account:%p send_wall_time:%ld recv_wall_time:%ld waiting_for_pick:%ld waiting_for_stream:%ld waiting_for_transport_fc:%ld waiting_for_stream_fc:%ld waiting_for_writeable:%ld waiting_for_readable:%ld waiting_for_client_auth:%ld",
-                this,
-                metric_totals_[SEND_WALL_TIME].total_ms,
-                metric_totals_[RECV_WALL_TIME].total_ms,
-                metric_totals_[WAITING_FOR_PICK].total_ms,
-                metric_totals_[WAITING_FOR_STREAM].total_ms,
-                metric_totals_[WAITING_FOR_TRANSPORT_FC].total_ms,
-                metric_totals_[WAITING_FOR_STREAM_FC].total_ms,
-                metric_totals_[WAITING_FOR_WRITEABLE].total_ms,
-                metric_totals_[WAITING_FOR_READABLE].total_ms,
-                metric_totals_[WAITING_FOR_CLIENT_AUTH].total_ms);
-    gpr_log(GPR_DEBUG, "idle account string to return: %s", out);
-    auto ret = std::string(out);
-    gpr_free(out);
-    return ret;
+    std::string out = "";
+    for (int i = 0; i < IdleAccountMetric::NUM_METRICS; i++) {
+      out += " " + std::string(MetricToName(static_cast<IdleAccountMetric>(i))) + ":" + std::to_string(metric_totals_[i].total_ms);
+    }
+    return out;
   }
 
  private:
+  const char* name_ = "idle_account";
+
+  const char* MetricToName(IdleAccountMetric metric) {
+    switch (metric) {
+      case SEND_WALL_TIME:
+        return "SEND_WALL_TIME";
+      case RECV_WALL_TIME:
+        return "RECV_WALL_TIME";
+      case WAITING_FOR_PICK:
+        return "WAITING_FOR_PICK";
+      case WAITING_FOR_CONCURRENT_STREAM:
+        return "WAITING_FOR_CONCURRENT_STREAM";
+      case WAITING_FOR_TRANSPORT_FC:
+        return "WAITING_FOR_TRANSPORT_FC";
+      case WAITING_FOR_STREAM_FC:
+        return "WAITING_FOR_STREAM_FC";
+      case WAITING_FOR_CLIENT_AUTH:
+        return "WAITING_FOR_CLIENT_AUTH";
+      case WAITING_FOR_WRITABLE:
+        return "WAITING_FOR_WRITABLE";
+      case WAITING_FOR_READABLE:
+        return "WAITING_FOR_READABLE";
+      default:
+        abort();
+    }
+  }
+
   struct MetricTotal {
     int cur_active_ = 0;
     grpc_millis cur_wall_time_start_ = 0;

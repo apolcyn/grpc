@@ -266,8 +266,8 @@ struct grpc_call {
   grpc_core::IdleAccount idle_account_;
 };
 
-const char* grpc_call_get_idle_account_str(grpc_call* call) {
-  return call->idle_account_.as_string().c_str();
+char* grpc_call_get_idle_account_str(grpc_call* call) {
+  return gpr_strdup(call->idle_account_.as_string().c_str());
 }
 
 grpc_core::TraceFlag grpc_call_error_trace(false, "call_error");

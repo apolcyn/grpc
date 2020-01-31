@@ -20,6 +20,7 @@
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <thread>
 
 #include <grpc/grpc.h>
 #include <grpc/support/alloc.h>
@@ -171,7 +172,15 @@ bool InteropClient::DoEmpty() {
 
 bool InteropClient::PerformLargeUnary(SimpleRequest* request,
                                       SimpleResponse* response) {
-  return PerformLargeUnary(request, response, NoopChecks);
+  std::vector<std::thread> thds;
+  for (int i = 0; i < 2; i++) {
+    thds.push_back(std::thread([this, request, response]() {
+      PerformLargeUnary(request, response, NoopChecks);
+    }));
+  }
+  for (int i = 0; i < thds.size(); i++) {
+    thds[i].join();
+  }
 }
 
 bool InteropClient::PerformLargeUnary(SimpleRequest* request,
@@ -195,7 +204,7 @@ bool InteropClient::PerformLargeUnary(SimpleRequest* request,
   if (!AssertStatusOk(s, context.debug_error_string())) {
     return false;
   }
-  grpc_millis elapsed = grpc_timespec_to_millis_round_down(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
+  grpc_millis elapsed = gpr_time_to_millis(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
 
   gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
 
@@ -413,38 +422,47 @@ bool InteropClient::TransientFailureOrAbort() {
 }
 
 bool InteropClient::DoRequestStreaming() {
-  gpr_log(GPR_DEBUG, "Sending request steaming rpc ...");
+  std::vector<std::thread> thds;
+  for (int i = 0; i < 50; i++) {
+    thds.push_back(std::thread([this]() {
+     gpr_log(GPR_DEBUG, "Sending request steaming rpc ...");
+      gpr_timespec start = gpr_now(GPR_CLOCK_MONOTONIC);
+      ClientContext context;
+      StreamingInputCallRequest request;
+      StreamingInputCallResponse response;
 
-  gpr_timespec start = gpr_now(GPR_CLOCK_MONOTONIC);
-  ClientContext context;
-  StreamingInputCallRequest request;
-  StreamingInputCallResponse response;
+      std::unique_ptr<ClientWriter<StreamingInputCallRequest>> stream(
+          serviceStub_.Get()->StreamingInputCall(&context, &response));
 
-  std::unique_ptr<ClientWriter<StreamingInputCallRequest>> stream(
-      serviceStub_.Get()->StreamingInputCall(&context, &response));
+      int aggregated_payload_size = 0;
+      for (size_t i = 0; i < request_stream_sizes.size(); ++i) {
+        Payload* payload = request.mutable_payload();
+        payload->set_body(grpc::string(request_stream_sizes[i], '\0'));
+        if (!stream->Write(request)) {
+          gpr_log(GPR_ERROR, "DoRequestStreaming(): stream->Write() failed");
+          return TransientFailureOrAbort();
+        }
+        aggregated_payload_size += request_stream_sizes[i];
+      }
+      GPR_ASSERT(stream->WritesDone());
 
-  int aggregated_payload_size = 0;
-  for (size_t i = 0; i < request_stream_sizes.size(); ++i) {
-    Payload* payload = request.mutable_payload();
-    payload->set_body(grpc::string(request_stream_sizes[i], '\0'));
-    if (!stream->Write(request)) {
-      gpr_log(GPR_ERROR, "DoRequestStreaming(): stream->Write() failed");
-      return TransientFailureOrAbort();
-    }
-    aggregated_payload_size += request_stream_sizes[i];
+      Status s = stream->Finish();
+      if (!AssertStatusOk(s, context.debug_error_string())) {
+        return false;
+      }
+
+      grpc_millis elapsed = gpr_time_to_millis(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
+      gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
+
+      GPR_ASSERT(response.aggregated_payload_size() == aggregated_payload_size);
+    }));
+    gpr_sleep_until(gpr_time_add(
+        gpr_now(GPR_CLOCK_REALTIME),
+        gpr_time_from_millis(10, GPR_TIMESPAN)));
   }
-  GPR_ASSERT(stream->WritesDone());
-
-  Status s = stream->Finish();
-  if (!AssertStatusOk(s, context.debug_error_string())) {
-    return false;
+  for (int i = 0; i < thds.size(); i++) {
+    thds[i].join();
   }
-
-  grpc_millis elapsed = grpc_timespec_to_millis_round_down(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start));
-
-  gpr_log(GPR_DEBUG, "call time stats total wall elapsed:%ld : %s", elapsed, grpc_call_get_idle_account_str(context.c_call()));
-
-  GPR_ASSERT(response.aggregated_payload_size() == aggregated_payload_size);
   return true;
 }
 

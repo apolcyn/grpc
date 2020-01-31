@@ -364,6 +364,8 @@ void grpc::testing::interop::RunServer(
       builder.SetOption(std::move((*server_options)[i]));
     }
   }
+  gpr_log(GPR_DEBUG, "set max concurrent streams to 1");
+  //builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, 1);
   if (FLAGS_max_send_message_size >= 0) {
     builder.SetMaxSendMessageSize(FLAGS_max_send_message_size);
   }

@@ -32,7 +32,7 @@
 typedef void (*grpc_ioreq_completion_func)(grpc_call* call, int success,
                                            void* user_data);
 
-const char* grpc_call_get_idle_account_str(grpc_call* call);
+char* grpc_call_get_idle_account_str(grpc_call* call);
 
 typedef struct grpc_call_create_args {
   grpc_channel* channel;
