@@ -49,12 +49,15 @@ EOF
 
 MAKE="make -j8"
 
+set -e
+source ~/.rvm/scripts/rvm
+set -ex
 rvm use 2.7.0
 for v in 2.7.0 ; do
   ccache -c
   rake -f "$CROSS_RUBY" cross-ruby VERSION="$v" HOST=x86_64-darwin11 MAKE="$MAKE"
 done
-rvm use default
+rvm use 2.5.0
 for v in 2.6.0 2.5.0 2.4.0 2.3.0 2.2.2 ; do
   ccache -c
   rake -f "$CROSS_RUBY" cross-ruby VERSION="$v" HOST=x86_64-darwin11 MAKE="$MAKE"
