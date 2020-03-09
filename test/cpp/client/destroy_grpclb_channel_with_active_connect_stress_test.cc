@@ -22,6 +22,10 @@
 #include <random>
 #include <sstream>
 #include <thread>
+#include <asm/types.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <sys/socket.h>
 
 #include <gmock/gmock.h>
 
@@ -117,6 +121,18 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
     threads[i]->join();
   }
   grpc_shutdown();
+}
+
+void BlackHoleIPv6DiscardPrefix() {
+  int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+  struct sockaddr_nl addr;
+  memset(&addr, 0, sizeof(addr));
+  la.nl_family = AF_NETLINK;
+  la.nl_pad = 0;
+  la.nl_pid = getpid();
+  la.nl_groups = 0;
+  int ret = bind(fd, (struct sockaddr*) &la, sizeof(la));
+  struct msghdr;
 }
 
 }  // namespace
