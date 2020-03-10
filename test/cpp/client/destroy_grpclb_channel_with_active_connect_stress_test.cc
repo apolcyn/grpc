@@ -246,9 +246,9 @@ void BlackHoleIPv6DiscardPrefix() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  BlackHoleIPv6DiscardPrefix();
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
-  BlackHoleIPv6DiscardPrefix();
   abort();
   auto result = RUN_ALL_TESTS();
   return result;
