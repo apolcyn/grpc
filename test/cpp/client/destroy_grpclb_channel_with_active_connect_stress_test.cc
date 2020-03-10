@@ -26,6 +26,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 
 #include <gmock/gmock.h>
 
@@ -124,20 +125,72 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
 }
 
 void BlackHoleIPv6DiscardPrefix() {
+  // init the ifinfomsg
+  struct ifinfomsg create_dummy_device_body;
+  memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));
+  create_dummy_device_body.ifi_change = 0xFFFFFFFF;
+  // init the rtattr
+  struct rtattr dummy_device_name;
+  dummy_device_name.rta_type = IFLA_IFNAME;
+  dummy_device_name.rta_len = sizeof(dummy_device_name) + strlen("dummy");
+  // init the nlmsghdr
+  struct nlmsghdr create_dummy_device_header;
+  memset(&create_dummy_device_header, 0, sizeof(create_dummy_device_header));
+  create_dummy_device_header.nlmsg_len = NLMSG_ALIGN(sizeof(struct nlmsghdr) + sizeof(struct ifinfomsg) + dummy_device_name.rta_len);
+  create_dummy_device_header.nlmsg_type = RTM_NEWLINK;
+  create_dummy_device_header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+  // construct the entire RTNETLINK message
+  void* create_dummy_device_request = gpr_zalloc(create_dummy_device_header.nlmsg_len);
+  char* cur = static_cast<char*>(create_dummy_device_request);
+  memcpy(cur, &create_dummy_device_header, sizeof(create_dummy_device_header));
+  cur += sizeof(create_dummy_device_header);
+  memcpy(cur, &create_dummy_device_body, sizeof(create_dummy_device_body));
+  cur += sizeof(create_dummy_device_body);
+  memcpy(cur, &dummy_device_name, sizeof(dummy_device_name));
+  cur += sizeof(dummy_device_name);
+  GPR_ASSERT(cur - static_cast<char*>(create_dummy_device_request) == sizeof(create_dummy_device_header.nlmsg_len));
+  // construct the iovec and the overall msghdr;
+  struct iovec iov;
+  iov.iov_base = create_dummy_device_request;
+  iov.iov_len = create_dummy_device_header.nlmsg_len;
+  struct msghdr create_dummy_device_msghdr;
+  memset(&create_dummy_device_msghdr, 0, sizeof(create_dummy_device_msghdr));
+  struct sockaddr_nl kernel_netlink_addr;
+  memset(&kernel_netlink_addr, 0, sizeof(kernel_netlink_addr));
+  kernel_netlink_addr.nl_family = AF_NETLINK;
+  create_dummy_device_msghdr.msg_name = &kernel_netlink_addr;
+  create_dummy_device_msghdr.msg_namelen = sizeof(kernel_netlink_addr);
+  create_dummy_device_msghdr.msg_iov = &iov;
+  create_dummy_device_msghdr.msg_iovlen = 1;
+  // create a netlink socket
   int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-  struct sockaddr_nl addr;
-  memset(&addr, 0, sizeof(addr));
-  la.nl_family = AF_NETLINK;
-  la.nl_pad = 0;
-  la.nl_pid = getpid();
-  la.nl_groups = 0;
-  int ret = bind(fd, (struct sockaddr*) &la, sizeof(la));
-  struct msghdr;
+  struct sockaddr_nl local_netlink_addr;
+  memset(&local_netlink_addr, 0, sizeof(local_netlink_addr));
+  local_netlink_addr.nl_family = AF_NETLINK;
+  local_netlink_addr.nl_pad = 0;
+  local_netlink_addr.nl_pid = getpid();
+  local_netlink_addr.nl_groups = 0;
+  {
+    int ret = bind(fd, (struct sockaddr*) &local_netlink_addr, sizeof(local_netlink_addr));
+    if (ret == -1) {
+      gpr_log(GPR_ERROR, "got ret:%d error:%d binding netlink socket", ret, errno);
+      abort();
+    }
+  }
+  // send the message msghdr out on the netlink socket
+  {
+    int ret = sendmsg(fd, &create_dummy_device_msghdr, 0);
+    if (ret == -1) {
+      gpr_log(GPR_ERROR, "got ret:%d error:%d sending netlink message", ret, errno);
+      abort();
+    }
+  }
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
+  BlackHoleIPv6DiscardPrefix();
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   auto result = RUN_ALL_TESTS();
