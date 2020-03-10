@@ -127,6 +127,7 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
 void BlackHoleIPv6DiscardPrefix() {
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
+  system("cat /proc/self/status");
   system("echo done cat /proc/net/dev");
   // init the ifinfomsg
   struct ifinfomsg create_dummy_device_body;
