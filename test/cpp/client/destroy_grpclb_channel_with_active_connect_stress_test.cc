@@ -125,12 +125,9 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
 }
 
 void BlackHoleIPv6DiscardPrefix() {
-  system("echo hello");
-  system("which ip");
-  system("ls /sbin");
-  system("ls /usr/sbin");
-  system("echo done");
-  abort();
+  system("echo cat /proc/net/dev");
+  system("cat /proc/net/dev");
+  system("echo done cat /proc/net/dev");
   // init the ifinfomsg
   struct ifinfomsg create_dummy_device_body;
   memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));
@@ -220,18 +217,12 @@ void BlackHoleIPv6DiscardPrefix() {
     struct nlmsghdr* next_nlmsghdr = reinterpret_cast<struct nlmsghdr*>(cur_recv_buf);
     gpr_log(GPR_DEBUG, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
     if (next_nlmsghdr->nlmsg_type == NLMSG_DONE) {
-      break; 
+      break;
     }
     if (next_nlmsghdr->nlmsg_type == NLMSG_ERROR) {
       struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(next_nlmsghdr));
-      int error_attr_size = NLMSG_PAYLOAD(next_nlmsghdr, sizeof(struct nlmsgerr));
-      struct rtattr* cur_attr = static_cast<struct rtattr*>(NLMSG_DATA(next_nlmsghdr) + NLMSG_ALIGN(sizeof(struct nlmsgerr)));
-      gpr_log(GPR_ERROR, "received NLMSG_ERROR error:%d error str:|%s|. process attributes size:%d", -error_msg->error, strerror(-error_msg->error), error_attr_size);
-      while (RTA_OK(cur_attr, error_attr_size)) {
-        gpr_log(GPR_ERROR, "received error attr type:%d", cur_attr->rta_type);
-        cur_attr = RTA_NEXT(cur_attr, error_attr_size);
-      }
-      gpr_log(GPR_ERROR, "processed all MLSG_ERROR attributes");
+      gpr_log(GPR_INFO, "received NLMSG_ERROR error:%d error str:|%s|", -error_msg->error, strerror(-error_msg->error));
+      ASSERT_EQ(error_msg->error, 0);
     }
     cur_recv_buf += ret;
     if (cur_recv_buf - static_cast<char*>(recv_buf) >= recv_buf_size) {
@@ -246,6 +237,9 @@ void BlackHoleIPv6DiscardPrefix() {
        next_nlmsghdr = NLMSG_NEXT(next_nlmsghdr, total_nlmsgs_size)) {
     gpr_log(GPR_INFO, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
   }
+  system("echo cat /proc/net/dev");
+  system("cat /proc/net/dev");
+  system("echo done cat /proc/net/dev");
 }
 
 }  // namespace
@@ -254,6 +248,7 @@ int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   BlackHoleIPv6DiscardPrefix();
+  abort();
   auto result = RUN_ALL_TESTS();
   return result;
 }
