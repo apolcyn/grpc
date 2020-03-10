@@ -125,30 +125,53 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
 }
 
 void BlackHoleIPv6DiscardPrefix() {
+  system("echo hello");
+  system("which ip");
+  system("ls /sbin");
+  system("ls /usr/sbin");
+  system("echo done");
+  abort();
   // init the ifinfomsg
   struct ifinfomsg create_dummy_device_body;
   memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));
   create_dummy_device_body.ifi_change = 0xFFFFFFFF;
-  // init the rtattr
+  // init the dev name rtattr
+  const char* dummy_str = "dummy0";
   struct rtattr dummy_device_name;
   dummy_device_name.rta_type = IFLA_IFNAME;
-  dummy_device_name.rta_len = sizeof(dummy_device_name) + strlen("dummy");
+  dummy_device_name.rta_len = RTA_LENGTH(strlen(dummy_str));
+  // init the dev type rtattr
+  const char* dummy_type_str = "dummy";
+  struct rtattr dummy_device_type;
+  dummy_device_type.rta_type = IFLA_INFO_KIND;
+  dummy_device_type.rta_len = RTA_LENGTH(strlen(dummy_type_str));
+  // init the outer IFLA_LINKINFO attribute
+  struct rtattr ifla_linkinfo_attr;
+  ifla_linkinfo_attr.rta_type = IFLA_LINKINFO;
+  ifla_linkinfo_attr.rta_len = RTA_SPACE(0) + dummy_device_type.rta_len;
   // init the nlmsghdr
   struct nlmsghdr create_dummy_device_header;
   memset(&create_dummy_device_header, 0, sizeof(create_dummy_device_header));
-  create_dummy_device_header.nlmsg_len = NLMSG_ALIGN(sizeof(struct nlmsghdr) + sizeof(struct ifinfomsg) + dummy_device_name.rta_len);
+  create_dummy_device_header.nlmsg_len =
+    NLMSG_SPACE(sizeof(struct ifinfomsg)) + RTA_ALIGN(dummy_device_name.rta_len) + RTA_ALIGN(ifla_linkinfo_attr.rta_len);
   create_dummy_device_header.nlmsg_type = RTM_NEWLINK;
-  create_dummy_device_header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+  create_dummy_device_header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_EXCL | NLM_F_CREATE;
   // construct the entire RTNETLINK message
+  // RTA_LENGTH != RTA_SPACE
   void* create_dummy_device_request = gpr_zalloc(create_dummy_device_header.nlmsg_len);
   char* cur = static_cast<char*>(create_dummy_device_request);
   memcpy(cur, &create_dummy_device_header, sizeof(create_dummy_device_header));
-  cur += sizeof(create_dummy_device_header);
-  memcpy(cur, &create_dummy_device_body, sizeof(create_dummy_device_body));
-  cur += sizeof(create_dummy_device_body);
+  memcpy(NLMSG_DATA(cur), &create_dummy_device_body, sizeof(create_dummy_device_body));
+  cur += NLMSG_SPACE(sizeof(create_dummy_device_body));
   memcpy(cur, &dummy_device_name, sizeof(dummy_device_name));
-  cur += sizeof(dummy_device_name);
-  GPR_ASSERT(cur - static_cast<char*>(create_dummy_device_request) == sizeof(create_dummy_device_header.nlmsg_len));
+  memcpy(RTA_DATA(cur), dummy_str, strlen(dummy_str));
+  cur += RTA_ALIGN(dummy_device_name.rta_len);
+  memcpy(cur, &ifla_linkinfo_attr, sizeof(ifla_linkinfo_attr));
+  cur += RTA_SPACE(0);
+  memcpy(cur, &dummy_device_type, sizeof(dummy_device_type));
+  memcpy(RTA_DATA(cur), dummy_type_str, strlen(dummy_type_str));
+  cur += RTA_ALIGN(dummy_device_type.rta_len);
+  // TODO: fill in kind rtattr
   // construct the iovec and the overall msghdr;
   struct iovec iov;
   iov.iov_base = create_dummy_device_request;
@@ -185,14 +208,52 @@ void BlackHoleIPv6DiscardPrefix() {
       abort();
     }
   }
+  const int recv_buf_size = 8192;
+  void* recv_buf = static_cast<char*>(gpr_zalloc(recv_buf_size));
+  char* cur_recv_buf = static_cast<char*>(recv_buf);
+  for (;;) {
+    int ret = recv(fd, cur_recv_buf, static_cast<char*>(recv_buf) + recv_buf_size - cur_recv_buf, 0);
+    if (ret == -1) {
+      gpr_log(GPR_ERROR, "got ret:%d error:%d recving netlink message", ret, errno);
+      abort();
+    }
+    struct nlmsghdr* next_nlmsghdr = reinterpret_cast<struct nlmsghdr*>(cur_recv_buf);
+    gpr_log(GPR_DEBUG, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
+    if (next_nlmsghdr->nlmsg_type == NLMSG_DONE) {
+      break; 
+    }
+    if (next_nlmsghdr->nlmsg_type == NLMSG_ERROR) {
+      struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(next_nlmsghdr));
+      int error_attr_size = NLMSG_PAYLOAD(next_nlmsghdr, sizeof(struct nlmsgerr));
+      struct rtattr* cur_attr = static_cast<struct rtattr*>(NLMSG_DATA(next_nlmsghdr) + NLMSG_ALIGN(sizeof(struct nlmsgerr)));
+      gpr_log(GPR_ERROR, "received NLMSG_ERROR error:%d error str:|%s|. process attributes size:%d", -error_msg->error, strerror(-error_msg->error), error_attr_size);
+      while (RTA_OK(cur_attr, error_attr_size)) {
+        gpr_log(GPR_ERROR, "received error attr type:%d", cur_attr->rta_type);
+        cur_attr = RTA_NEXT(cur_attr, error_attr_size);
+      }
+      gpr_log(GPR_ERROR, "processed all MLSG_ERROR attributes");
+    }
+    cur_recv_buf += ret;
+    if (cur_recv_buf - static_cast<char*>(recv_buf) >= recv_buf_size) {
+      gpr_log(GPR_ERROR, "out of recv buf space");
+      abort();
+    }
+  }
+  int total_nlmsgs_size = cur_recv_buf - static_cast<char*>(recv_buf);
+  gpr_log(GPR_INFO, "received nlmsghdr buf total size:%d", total_nlmsgs_size);
+  for (struct nlmsghdr* next_nlmsghdr = static_cast<struct nlmsghdr*>(recv_buf);
+       NLMSG_OK(next_nlmsghdr, total_nlmsgs_size);
+       next_nlmsghdr = NLMSG_NEXT(next_nlmsghdr, total_nlmsgs_size)) {
+    gpr_log(GPR_INFO, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
+  }
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-  BlackHoleIPv6DiscardPrefix();
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
+  BlackHoleIPv6DiscardPrefix();
   auto result = RUN_ALL_TESTS();
   return result;
 }
