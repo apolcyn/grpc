@@ -27,6 +27,8 @@
 #include <linux/rtnetlink.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <gmock/gmock.h>
 
@@ -210,37 +212,19 @@ void BlackHoleIPv6DiscardPrefix() {
       abort();
     }
   }
-  const int recv_buf_size = 8192;
-  void* recv_buf = static_cast<char*>(gpr_zalloc(recv_buf_size));
-  char* cur_recv_buf = static_cast<char*>(recv_buf);
-  for (;;) {
-    int ret = recv(fd, cur_recv_buf, static_cast<char*>(recv_buf) + recv_buf_size - cur_recv_buf, 0);
+  {
+    const int recv_buf_size = 8192;
+    void* recv_buf = static_cast<char*>(gpr_zalloc(recv_buf_size));
+    int ret = recv(fd, recv_buf, recv_buf_size, 0);
     if (ret == -1) {
       gpr_log(GPR_ERROR, "got ret:%d error:%d recving netlink message", ret, errno);
       abort();
     }
-    struct nlmsghdr* next_nlmsghdr = reinterpret_cast<struct nlmsghdr*>(cur_recv_buf);
-    gpr_log(GPR_DEBUG, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
-    if (next_nlmsghdr->nlmsg_type == NLMSG_DONE) {
-      break;
-    }
-    if (next_nlmsghdr->nlmsg_type == NLMSG_ERROR) {
-      struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(next_nlmsghdr));
-      gpr_log(GPR_INFO, "received NLMSG_ERROR error:%d error str:|%s|", -error_msg->error, strerror(-error_msg->error));
-      ASSERT_EQ(error_msg->error, 0);
-    }
-    cur_recv_buf += ret;
-    if (cur_recv_buf - static_cast<char*>(recv_buf) >= recv_buf_size) {
-      gpr_log(GPR_ERROR, "out of recv buf space");
-      abort();
-    }
-  }
-  int total_nlmsgs_size = cur_recv_buf - static_cast<char*>(recv_buf);
-  gpr_log(GPR_INFO, "received nlmsghdr buf total size:%d", total_nlmsgs_size);
-  for (struct nlmsghdr* next_nlmsghdr = static_cast<struct nlmsghdr*>(recv_buf);
-       NLMSG_OK(next_nlmsghdr, total_nlmsgs_size);
-       next_nlmsghdr = NLMSG_NEXT(next_nlmsghdr, total_nlmsgs_size)) {
-    gpr_log(GPR_INFO, "received nlmsghdr type:%d", next_nlmsghdr->nlmsg_type);
+    struct nlmsghdr* response = reinterpret_cast<struct nlmsghdr*>(recv_buf);
+    ASSERT_EQ(response->nlmsg_type, NLMSG_ERROR) << "unexpected nlmsghdr type";
+    struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(response));
+    gpr_log(GPR_INFO, "received NLMSG_ERROR error:%d error str:|%s|", -error_msg->error, strerror(-error_msg->error));
+    ASSERT_EQ(error_msg->error, 0);
   }
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
@@ -253,7 +237,7 @@ int main(int argc, char** argv) {
   BlackHoleIPv6DiscardPrefix();
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
-  abort();
   auto result = RUN_ALL_TESTS();
+  abort();
   return result;
 }
