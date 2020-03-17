@@ -129,7 +129,10 @@ void BlackHoleIPv6DiscardPrefix() {
   system("cat /proc/net/dev");
   std::string command = "cat /proc/" + std::to_string(getpid()) + "/status";
   system(command.c_str());
-  system("echo done cat /proc/net/dev");
+  system("cat /proc/ parent ppid status");
+  command = "cat /proc/" + std::to_string(getppid()) + "/status";
+  system(command.c_str());
+  system("echo done all cat /proc/net/dev");
   // init the ifinfomsg
   struct ifinfomsg create_dummy_device_body;
   memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));

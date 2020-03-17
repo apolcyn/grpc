@@ -195,9 +195,10 @@ def grpc_cc_test(name, srcs = [], deps = [], external_deps = [], args = [], data
         native.cc_test(
             name = name,
             testonly = True,
-            tags = (tags + [
-                "no_linux",  # linux supports multiple pollers
-            ]),
+            tags = tags,
+            #tags = (tags + [
+            #    "no_linux",  # linux supports multiple pollers
+            #]),
             **args
         )
 
