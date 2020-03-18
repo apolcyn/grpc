@@ -174,6 +174,7 @@ void BlackHoleIPv6DiscardPrefix() {
   struct ifinfomsg create_dummy_device_body;
   memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));
   create_dummy_device_body.ifi_change = 0xFFFFFFFF;
+  create_dummy_device_body.ifi_flags |= IFF_UP;
   // init the dev name rtattr
   const char* dummy_str = "dummy0";
   struct rtattr dummy_device_name;
@@ -289,7 +290,7 @@ void BlackHoleIPv6DiscardPrefix() {
     int fd = create_netlink_socket();
     int ret = sendmsg(fd, &create_route_msghdr, 0);
     if (ret == -1) {
-      gpr_log(GPR_ERROR, "got ret:%d error:%d (%s) sending netlink message to add a route to the dummy device", ret, errno, strerror(errno), if_nametoindex("dummy0"));
+      gpr_log(GPR_ERROR, "got ret:%d error:%d (%s) sending netlink message to add a route to the dummy device", ret, errno, strerror(errno));
       abort();
     }
     wait_for_netlink_message_ack(fd);
