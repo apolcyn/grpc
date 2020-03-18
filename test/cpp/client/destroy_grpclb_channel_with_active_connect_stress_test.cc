@@ -164,6 +164,7 @@ int create_netlink_socket() {
 void BlackHoleIPv6DiscardPrefix() {
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
+  system("cat /proc/version");
   std::string command = "cat /proc/" + std::to_string(getpid()) + "/status";
   system(command.c_str());
   system("cat /proc/ parent ppid status");
@@ -308,5 +309,6 @@ int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   auto result = RUN_ALL_TESTS();
+  abort();
   return result;
 }
