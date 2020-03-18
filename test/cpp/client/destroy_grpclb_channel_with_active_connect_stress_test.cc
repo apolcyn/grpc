@@ -297,7 +297,7 @@ void BlackHoleIPv6DiscardPrefix() {
   }
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
-  system("echo done cat /proc/net/dev");
+  system("echo donae cat /proc/net/dev");
 }
 
 }  // namespace
