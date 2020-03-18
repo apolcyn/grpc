@@ -29,6 +29,7 @@
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <net/if.h>
 
 #include <gmock/gmock.h>
 
@@ -126,6 +127,40 @@ TEST(DestroyGrpclbChannelWithActiveConnectStressTest,
   grpc_shutdown();
 }
 
+void wait_for_netlink_message_ack(int fd) {
+  const int recv_buf_size = 8192;
+  void* recv_buf = static_cast<char*>(gpr_zalloc(recv_buf_size));
+  int ret = recv(fd, recv_buf, recv_buf_size, 0);
+  if (ret == -1) {
+    gpr_log(GPR_ERROR, "got ret:%d error:%d recving netlink message", ret, errno);
+    abort();
+  }
+  struct nlmsghdr* response = reinterpret_cast<struct nlmsghdr*>(recv_buf);
+  ASSERT_EQ(response->nlmsg_type, NLMSG_ERROR) << "unexpected nlmsghdr type";
+  struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(response));
+  gpr_log(GPR_INFO, "received NLMSG_ERROR error:%d error str:|%s|", -error_msg->error, strerror(-error_msg->error));
+  ASSERT_EQ(error_msg->error, 0);
+}
+
+int create_netlink_socket() {
+  // create a netlink socket
+  int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+  struct sockaddr_nl local_netlink_addr;
+  memset(&local_netlink_addr, 0, sizeof(local_netlink_addr));
+  local_netlink_addr.nl_family = AF_NETLINK;
+  local_netlink_addr.nl_pad = 0;
+  local_netlink_addr.nl_pid = getpid();
+  local_netlink_addr.nl_groups = 0;
+  {
+    int ret = bind(fd, (struct sockaddr*) &local_netlink_addr, sizeof(local_netlink_addr));
+    if (ret == -1) {
+      gpr_log(GPR_ERROR, "got ret:%d error:%d binding netlink socket", ret, errno);
+      abort();
+    }
+  }
+  return fd;
+}
+
 void BlackHoleIPv6DiscardPrefix() {
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
@@ -161,7 +196,6 @@ void BlackHoleIPv6DiscardPrefix() {
   create_dummy_device_header.nlmsg_type = RTM_NEWLINK;
   create_dummy_device_header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_EXCL | NLM_F_CREATE;
   // construct the entire RTNETLINK message
-  // RTA_LENGTH != RTA_SPACE
   void* create_dummy_device_request = gpr_zalloc(create_dummy_device_header.nlmsg_len);
   char* cur = static_cast<char*>(create_dummy_device_request);
   memcpy(cur, &create_dummy_device_header, sizeof(create_dummy_device_header));
@@ -175,7 +209,6 @@ void BlackHoleIPv6DiscardPrefix() {
   memcpy(cur, &dummy_device_type, sizeof(dummy_device_type));
   memcpy(RTA_DATA(cur), dummy_type_str, strlen(dummy_type_str));
   cur += RTA_ALIGN(dummy_device_type.rta_len);
-  // TODO: fill in kind rtattr
   // construct the iovec and the overall msghdr;
   struct iovec iov;
   iov.iov_base = create_dummy_device_request;
@@ -189,42 +222,78 @@ void BlackHoleIPv6DiscardPrefix() {
   create_dummy_device_msghdr.msg_namelen = sizeof(kernel_netlink_addr);
   create_dummy_device_msghdr.msg_iov = &iov;
   create_dummy_device_msghdr.msg_iovlen = 1;
-  // create a netlink socket
-  int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-  struct sockaddr_nl local_netlink_addr;
-  memset(&local_netlink_addr, 0, sizeof(local_netlink_addr));
-  local_netlink_addr.nl_family = AF_NETLINK;
-  local_netlink_addr.nl_pad = 0;
-  local_netlink_addr.nl_pid = getpid();
-  local_netlink_addr.nl_groups = 0;
-  {
-    int ret = bind(fd, (struct sockaddr*) &local_netlink_addr, sizeof(local_netlink_addr));
-    if (ret == -1) {
-      gpr_log(GPR_ERROR, "got ret:%d error:%d binding netlink socket", ret, errno);
-      abort();
-    }
-  }
   // send the message msghdr out on the netlink socket
   {
+    int fd = create_netlink_socket();
     int ret = sendmsg(fd, &create_dummy_device_msghdr, 0);
     if (ret == -1) {
-      gpr_log(GPR_ERROR, "got ret:%d error:%d sending netlink message", ret, errno);
+      gpr_log(GPR_ERROR, "got ret:%d error:%d (%s) sending netlink message to create dummy device", ret, errno, strerror(errno));
       abort();
     }
+    wait_for_netlink_message_ack(fd);
+    close(fd);
+    gpr_log(GPR_INFO, "created dummy device named:%s. interface index:%d", dummy_str, if_nametoindex(dummy_str));
   }
+  // retrieve the interface index of the new dummy device
+  struct rtmsg create_route_body;
+  memset(&create_route_body, 0, sizeof(create_route_body));
+  create_route_body.rtm_family = AF_INET6;
+  create_route_body.rtm_scope = RT_SCOPE_UNIVERSE;
+  create_route_body.rtm_protocol = RTPROT_BOOT;
+  create_route_body.rtm_type = RTN_UNICAST;
+  create_route_body.rtm_table = RT_TABLE_MAIN;
+  // init the destination address attibute
+  struct rtattr dst_addr;
+  memset(&dst_addr, 0, sizeof(dst_addr));
+  dst_addr.rta_type = RTA_DST;
+  dst_addr.rta_len = RTA_LENGTH(16 /* number of bytes in an ipv6 address */);
+  // init the output interface index
+  struct rtattr output_interface_index;
+  output_interface_index.rta_type = RTA_OIF;
+  output_interface_index.rta_len = RTA_LENGTH(sizeof(uint32_t));
+  // init the nlmsghdr
+  struct nlmsghdr create_route_header;
+  memset(&create_route_header, 0, sizeof(create_route_header));
+  create_route_header.nlmsg_type = RTM_NEWROUTE;
+  create_route_header.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_EXCL | NLM_F_CREATE;
+  create_route_header.nlmsg_len =
+    NLMSG_SPACE(sizeof(create_route_body)) + RTA_ALIGN(dst_addr.rta_len) + RTA_ALIGN(output_interface_index.rta_len);
+  // pack the RTNETLINK message
+  void* create_route_request = gpr_zalloc(create_route_header.nlmsg_len);
+  cur = static_cast<char*>(create_route_request);
+  memcpy(cur, &create_route_header, sizeof(create_route_header));
+  memcpy(NLMSG_DATA(cur), &create_route_body, sizeof(create_route_body));
+  cur += NLMSG_SPACE(sizeof(create_route_body));
+  memcpy(cur, &dst_addr, sizeof(dst_addr));
+  ASSERT_EQ(1, inet_pton(AF_INET6, "100::", RTA_DATA(cur)));
+  cur += RTA_ALIGN(dst_addr.rta_len);
+  memcpy(cur, &output_interface_index, sizeof(output_interface_index));
+  uint32_t interface_index = if_nametoindex(dummy_str);
+  ASSERT_NE(0, interface_index);
+  *static_cast<uint32_t*>(RTA_DATA(cur)) = interface_index;
+  cur += RTA_ALIGN(output_interface_index.rta_len);
+  // construct the iovec and the overall msghdr;
+  struct msghdr create_route_msghdr;
+  memset(&iov, 0, sizeof(iov));
+  iov.iov_base = create_route_request;
+  iov.iov_len = create_route_header.nlmsg_len;
+  memset(&create_route_msghdr, 0, sizeof(create_route_msghdr));
+  memset(&kernel_netlink_addr, 0, sizeof(kernel_netlink_addr));
+  kernel_netlink_addr.nl_family = AF_NETLINK;
+  create_route_msghdr.msg_name = &kernel_netlink_addr;
+  create_route_msghdr.msg_namelen = sizeof(kernel_netlink_addr);
+  create_route_msghdr.msg_iov = &iov;
+  create_route_msghdr.msg_iovlen = 1;
+  // send the message msghdr out on the netlink socket
   {
-    const int recv_buf_size = 8192;
-    void* recv_buf = static_cast<char*>(gpr_zalloc(recv_buf_size));
-    int ret = recv(fd, recv_buf, recv_buf_size, 0);
+    int fd = create_netlink_socket();
+    int ret = sendmsg(fd, &create_route_msghdr, 0);
     if (ret == -1) {
-      gpr_log(GPR_ERROR, "got ret:%d error:%d recving netlink message", ret, errno);
+      gpr_log(GPR_ERROR, "got ret:%d error:%d (%s) sending netlink message to add a route to the dummy device", ret, errno, strerror(errno), if_nametoindex("dummy0"));
       abort();
     }
-    struct nlmsghdr* response = reinterpret_cast<struct nlmsghdr*>(recv_buf);
-    ASSERT_EQ(response->nlmsg_type, NLMSG_ERROR) << "unexpected nlmsghdr type";
-    struct nlmsgerr* error_msg = static_cast<struct nlmsgerr*>(NLMSG_DATA(response));
-    gpr_log(GPR_INFO, "received NLMSG_ERROR error:%d error str:|%s|", -error_msg->error, strerror(-error_msg->error));
-    ASSERT_EQ(error_msg->error, 0);
+    wait_for_netlink_message_ack(fd);
+    close(fd);
   }
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
@@ -238,6 +307,5 @@ int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   auto result = RUN_ALL_TESTS();
-  abort();
   return result;
 }
