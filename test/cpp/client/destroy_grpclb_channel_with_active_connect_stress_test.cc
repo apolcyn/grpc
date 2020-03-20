@@ -244,6 +244,7 @@ void BlackHoleIPv6DiscardPrefix() {
   create_route_body.rtm_protocol = RTPROT_BOOT;
   create_route_body.rtm_type = RTN_UNICAST;
   create_route_body.rtm_table = RT_TABLE_MAIN;
+  create_route_body.rtm_dst_len = 64;
   // init the destination address attibute
   struct rtattr dst_addr;
   memset(&dst_addr, 0, sizeof(dst_addr));
