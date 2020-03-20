@@ -273,7 +273,7 @@ void BlackHoleIPv6DiscardPrefix() {
   memcpy(cur, &output_interface_index, sizeof(output_interface_index));
   uint32_t interface_index = if_nametoindex(dummy_str);
   ASSERT_NE(0, interface_index);
-  *static_cast<uint32_t*>(RTA_DATA(cur)) = interface_index;
+  memcpy(RTA_DATA(cur), &interface_index, sizeof(interface_index));
   cur += RTA_ALIGN(output_interface_index.rta_len);
   // construct the iovec and the overall msghdr;
   struct msghdr create_route_msghdr;
