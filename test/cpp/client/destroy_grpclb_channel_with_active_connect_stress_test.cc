@@ -165,6 +165,10 @@ void BlackHoleIPv6DiscardPrefix() {
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
   system("cat /proc/version");
+  system("echo cat /proc/net/if_inet6");
+  system("cat /proc/net/if_inet6");
+  system("echo cat /proc/net/ipv6_route");
+  system("cat /proc/net/ipv6_route");
   std::string command = "cat /proc/" + std::to_string(getpid()) + "/status";
   system(command.c_str());
   system("cat /proc/ parent ppid status");
@@ -299,6 +303,12 @@ void BlackHoleIPv6DiscardPrefix() {
     wait_for_netlink_message_ack(fd);
     close(fd);
   }
+  system("echo cat /proc/net/if_inet6");
+  system("cat /proc/net/if_inet6");
+  system("echo cat /proc/net/ipv6_route");
+  system("cat /proc/net/ipv6_route");
+  system("echo cat /proc/net/fib_trie");
+  system("cat /proc/net/fib_trie");
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
   system("echo donae cat /proc/net/dev");
@@ -313,6 +323,10 @@ int main(int argc, char** argv) {
   auto result = RUN_ALL_TESTS();
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
+  system("echo cat /proc/net/if_inet6");
+  system("cat /proc/net/if_inet6");
+  system("echo cat /proc/net/ipv6_route");
+  system("cat /proc/net/ipv6_route");
   abort();
   return result;
 }
