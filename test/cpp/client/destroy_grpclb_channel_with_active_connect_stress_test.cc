@@ -176,6 +176,7 @@ void BlackHoleIPv6DiscardPrefix() {
   memset(&create_dummy_device_body, 0, sizeof(create_dummy_device_body));
   create_dummy_device_body.ifi_change = 0xFFFFFFFF;
   create_dummy_device_body.ifi_flags |= IFF_UP;
+  create_dummy_device_body.ifi_flags |= IFF_NOARP;
   // init the dev name rtattr
   const char* dummy_str = "dummy0";
   struct rtattr dummy_device_name;
@@ -310,6 +311,8 @@ int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   auto result = RUN_ALL_TESTS();
+  system("echo cat /proc/net/dev");
+  system("cat /proc/net/dev");
   abort();
   return result;
 }
