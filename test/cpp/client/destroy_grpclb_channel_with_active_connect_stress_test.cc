@@ -90,7 +90,7 @@ void TryConnectAndDestroy() {
   // "network unreachable" errors in some test runtime environments.
   char* uri_str;
   GPR_ASSERT(g_blackhole_target != nullptr);
-  gpr_asprintf(&uri_str, "ipv6:[100::1234]:443");//, g_blackhole_target->c_str());
+  gpr_asprintf(&uri_str, "ipv6:[100::1234]:443");
   grpc_uri* lb_uri = grpc_uri_parse(uri_str, true);
   gpr_log(GPR_INFO, "setting lb uri string to: %s", uri_str);
   gpr_free(uri_str);
@@ -364,14 +364,14 @@ int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   std::thread read_thread(ReadTun);
   auto result = RUN_ALL_TESTS();
-  close(g_tun_fd);
-  read_thread.join();
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
   system("echo cat /proc/net/if_inet6");
   system("cat /proc/net/if_inet6");
   system("echo cat /proc/net/ipv6_route");
   system("cat /proc/net/ipv6_route");
+  close(g_tun_fd);
+  read_thread.join();
   abort();
   return result;
 }
