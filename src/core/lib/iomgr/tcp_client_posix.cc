@@ -103,8 +103,8 @@ static void tc_on_alarm(void* acp, grpc_error* error) {
   async_connect* ac = static_cast<async_connect*>(acp);
   if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
     const char* str = grpc_error_string(error);
-    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: on_alarm: error=%s", ac->addr_str,
-            str);
+    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: on_alarm: error=%s ac->fd:%p", ac->addr_str,
+            str, ac->fd);
   }
   gpr_mu_lock(&ac->mu);
   if (ac->fd != nullptr) {
@@ -140,8 +140,8 @@ static void on_writable(void* acp, grpc_error* error) {
 
   if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
     const char* str = grpc_error_string(error);
-    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: on_writable: error=%s", ac->addr_str,
-            str);
+    gpr_log(GPR_INFO, "CLIENT_CONNECT: %s: on_writable: error=%s ac->fd:%p", ac->addr_str,
+            str, ac->fd);
   }
 
   gpr_mu_lock(&ac->mu);
@@ -203,6 +203,7 @@ static void on_writable(void* acp, grpc_error* error) {
       /* We don't really know which syscall triggered the problem here,
          so punt by reporting getsockopt(). */
       error = GRPC_OS_ERROR(so_error, "getsockopt(SO_ERROR)");
+      gpr_log(GPR_ERROR, "SO_ERROR: %s for fd:%p", grpc_error_string(error), fd);
       break;
   }
 
