@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <ifaddrs.h>
 
 #include <gmock/gmock.h>
 
@@ -62,6 +63,21 @@
 
 namespace {
 
+std::string* g_blackhole_target = nullptr;
+int g_tun_fd = -1;
+
+void ReadTun() {
+  char buffer[2000];
+  for (;;) {
+    int bytes = read(g_tun_fd, buffer, sizeof(buffer));
+    if (bytes < 0) {
+      gpr_log(GPR_ERROR, "error reading from tun device: %s", strerror(errno));
+      return;
+    }
+    gpr_log(GPR_INFO, "read %d bytes from tun device", bytes);
+  }
+}
+
 void TryConnectAndDestroy() {
   auto response_generator =
       grpc_core::MakeRefCounted<grpc_core::FakeResolverResponseGenerator>();
@@ -73,8 +89,10 @@ void TryConnectAndDestroy() {
   // since connect() attempts on this address may unfortunately result in
   // "network unreachable" errors in some test runtime environments.
   char* uri_str;
-  gpr_asprintf(&uri_str, "ipv6:[0100::1234]:443");
+  GPR_ASSERT(g_blackhole_target != nullptr);
+  gpr_asprintf(&uri_str, "ipv6:[100::1234]:443");//, g_blackhole_target->c_str());
   grpc_uri* lb_uri = grpc_uri_parse(uri_str, true);
+  gpr_log(GPR_INFO, "setting lb uri string to: %s", uri_str);
   gpr_free(uri_str);
   GPR_ASSERT(lb_uri != nullptr);
   grpc_resolved_address address;
@@ -99,7 +117,7 @@ void TryConnectAndDestroy() {
   // connect timeout code to run at about the same time as when
   // the channel gets destroyed, to try to reproduce a race.
   args.SetInt("grpc.testing.fixed_reconnect_backoff_ms",
-              grpc_test_slowdown_factor() * 100);
+              grpc_test_slowdown_factor() * 5000);
   std::ostringstream uri;
   uri << "fake:///servername_not_used";
   auto channel = ::grpc::CreateCustomChannel(
@@ -109,7 +127,7 @@ void TryConnectAndDestroy() {
   // because the LB we're trying to connect to is unreachable.
   channel->GetState(true /* try_to_connect */);
   GPR_ASSERT(
-      !channel->WaitForConnected(grpc_timeout_milliseconds_to_deadline(100)));
+      !channel->WaitForConnected(grpc_timeout_milliseconds_to_deadline(5000)));
   GPR_ASSERT("grpclb" == channel->GetLoadBalancingPolicyName());
   channel.reset();
 };
@@ -183,19 +201,84 @@ void BlackHoleIPv6DiscardPrefix() {
   // create a tun device
   const char* tun_str = "tun0";
   {
-    int fd = open("/dev/net/tun", O_RDWR);
-    if (fd < 0) {
-      gpr_log(GPR_ERROR, "Error opening /dev/net/tun: %d |%s|", errno, strerror(errno));
+    g_tun_fd = open("/dev/net/tun", O_RDWR);
+    if (g_tun_fd < 0) {
+      gpr_log(GPR_ERROR, "Error opening /dev/net/tun: |%s|", strerror(errno));
       abort();
     }
-    GPR_ASSERT(fd > 0);
-    struct ifreq ifr;
-    memset(&ifr, 0, sizeof(ifr));
-    ifr.ifr_flags = IFF_TUN;
-    strncpy(ifr.ifr_name, tun_str, IFNAMSIZ);
-    if (ioctl(fd, TUNSETIFF, static_cast<void*>(&ifr)) < 0) {
-      gpr_log(GPR_ERROR, "Error performing ioctl to create tun device: %d |%s|", errno, strerror(errno));
-      abort();
+    GPR_ASSERT(g_tun_fd > 0);
+    {
+      struct ifreq ifr;
+      memset(&ifr, 0, sizeof(ifr));
+      ifr.ifr_flags = IFF_TUN;
+      strncpy(ifr.ifr_name, tun_str, IFNAMSIZ);
+      if (ioctl(g_tun_fd, TUNSETIFF, static_cast<void*>(&ifr)) < 0) {
+        gpr_log(GPR_ERROR, "Error performing ioctl to create tun device: |%s|", strerror(errno));
+        abort();
+      }
+      gpr_log(GPR_INFO, "created tun device: %s", ifr.ifr_name);
+      system("echo cat /proc/net/dev");
+      system("cat /proc/net/dev");
+    }
+    {
+      struct ifreq ifr;
+      memset(&ifr, 0, sizeof(ifr));
+      ifr.ifr_flags |= IFF_TUN;
+      ifr.ifr_flags |= IFF_UP;
+      ifr.ifr_flags |= IFF_RUNNING;
+      strncpy(ifr.ifr_name, tun_str, IFNAMSIZ);
+      int sock = socket(AF_INET6, SOCK_DGRAM, 0);
+      if (sock < 0) {
+        gpr_log(GPR_ERROR, "error creating ipv6 udp socket: %s", strerror(errno));
+        abort();
+      }
+      if (ioctl(sock, SIOCSIFFLAGS, static_cast<void*>(&ifr)) < 0) {
+        gpr_log(GPR_ERROR, "Error performing ioctl to put tun device to UP: |%s|", strerror(errno));
+        abort();
+      }
+      close(sock);
+      gpr_log(GPR_INFO, "tun interface: %s is turned up", ifr.ifr_name);
+      system("echo cat /proc/net/if_inet6");
+      system("cat /proc/net/if_inet6");
+      system("echo cat /proc/net/ipv6_route");
+      system("cat /proc/net/ipv6_route");
+    }
+    char* tun_address_str = static_cast<char*>(gpr_zalloc(100));
+    {
+      struct ifaddrs* next = NULL;
+      if (getifaddrs(&next) < 0) {
+        gpr_log(GPR_ERROR, "getifaddrs failed: %s", strerror(errno));
+        abort();
+      }
+      struct ifaddrs* head = next;
+      while (next != NULL) {
+        if (next->ifa_addr == nullptr) {
+          gpr_log(GPR_ERROR, "getifaddrs found interface without address info: %s", next->ifa_name);
+          next = next->ifa_next;
+          continue;
+        }
+        gpr_log(GPR_INFO, "getifaddrs found address with family: %d. interface with name: %s", next->ifa_addr->sa_family, next->ifa_name);
+        if (gpr_stricmp(next->ifa_name, tun_str) == 0 && next->ifa_addr->sa_family == AF_INET6 && strlen(tun_address_str) == 0) {
+          struct sockaddr_in6* s_addr = reinterpret_cast<struct sockaddr_in6*>(next->ifa_addr);
+          if (inet_ntop(AF_INET6, &s_addr->sin6_addr, tun_address_str, 100) == NULL) {
+            gpr_log(GPR_ERROR, "inet_ntop failed: %s", strerror(errno));
+            abort();
+          }
+        }
+        next = next->ifa_next;
+      }
+      if (strlen(tun_address_str) == 0) {
+        gpr_log(GPR_ERROR, "failed to find address of tun interface");
+        abort();
+      } else {
+        gpr_log(GPR_ERROR, "found address of tun interface: %s", tun_address_str);
+        g_blackhole_target = new std::string(tun_address_str);
+      }
+      freeifaddrs(head);
+      system("echo cat /proc/net/if_inet6");
+      system("cat /proc/net/if_inet6");
+      system("echo cat /proc/net/ipv6_route");
+      system("cat /proc/net/ipv6_route");
     }
   }
   // retrieve the interface index of the new tun device
@@ -279,7 +362,10 @@ int main(int argc, char** argv) {
   BlackHoleIPv6DiscardPrefix();
   grpc::testing::TestEnvironment env(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
+  std::thread read_thread(ReadTun);
   auto result = RUN_ALL_TESTS();
+  close(g_tun_fd);
+  read_thread.join();
   system("echo cat /proc/net/dev");
   system("cat /proc/net/dev");
   system("echo cat /proc/net/if_inet6");
