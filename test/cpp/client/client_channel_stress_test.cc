@@ -312,16 +312,22 @@ class ClientChannelStressTest {
 
   void Shutdown() {
     shutdown_ = true;
+    gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown begin join client_threads");
     for (size_t i = 0; i < client_threads_.size(); ++i) {
       client_threads_[i].join();
     }
+    gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown done client_threads begin shutdown balancer_servers_");
     for (size_t i = 0; i < balancers_.size(); ++i) {
       balancers_[i]->Shutdown();
       balancer_servers_[i].Shutdown();
     }
+    gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown done shutdown balancer_servers_ begin shutdown backend_servers_");
     for (size_t i = 0; i < backends_.size(); ++i) {
+      gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown begin shutdown backend_servers_[%ld] out of %ld", i, backends_.size());
       backend_servers_[i].Shutdown();
+      gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown done shutdown backend_servers_[%ld] out of %ld", i, backends_.size());
     }
+    gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown done shutdown backend_servers_");
   }
 
   std::atomic_bool shutdown_{false};
@@ -343,10 +349,17 @@ class ClientChannelStressTest {
 }  // namespace grpc
 
 int main(int argc, char** argv) {
-  grpc::testing::TestEnvironment env(argc, argv);
-  grpc::testing::ClientChannelStressTest test;
-  grpc_init();
-  test.Run();
-  grpc_shutdown();
-  return 0;
+  {
+    grpc::testing::TestEnvironment env(argc, argv);
+    grpc::testing::ClientChannelStressTest test;
+    gpr_log(GPR_DEBUG, "apolcyn main begin grpc_init");
+    grpc_init();
+    gpr_log(GPR_DEBUG, "apolcyn main done grpc_init begin test.Run");
+    test.Run();
+    gpr_log(GPR_DEBUG, "apolcyn main done test.Run begin grpc_shutdown");
+    grpc_shutdown();
+    gpr_log(GPR_DEBUG, "apolcyn main done grpc_shutdown now exit scope");
+  }
+  gpr_log(GPR_DEBUG, "apolcyn main done exit scope now return");
+  return 1;
 }

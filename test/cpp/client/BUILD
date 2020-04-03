@@ -34,8 +34,8 @@ grpc_cc_test(
 
 grpc_cc_test(
     name = "client_channel_stress_test",
-    size = "large",
     srcs = ["client_channel_stress_test.cc"],
+    size = "small",
     # TODO(jtattermusch): test fails frequently on Win RBE, but passes locally
     # reenable the tests once it works reliably on Win RBE.
     tags = [
