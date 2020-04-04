@@ -260,23 +260,23 @@ class ClientChannelStressTest {
   }
 
   void KeepSendingRequests(int i) {
-    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Start sending requests.", this, i);
+    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Start sending requests.", i);
     while (!shutdown_) {
       ClientContext context;
       context.set_deadline(grpc_timeout_milliseconds_to_deadline(1000));
       EchoRequest request;
       request.set_message("test");
       EchoResponse response;
-      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin outer Echo RPC.", this, i);
+      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin outer Echo RPC.", i);
       {
         std::lock_guard<std::mutex> lock(stub_mutex_);
-        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin inner Echo RPC.", this, i);
+        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin inner Echo RPC.", i);
         Status status = stub_->Echo(&context, request, &response);
-        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC.", this, i);
+        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC.", i);
       }
-      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done outer Echo RPC.", this, i);
+      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done outer Echo RPC.", i);
     }
-    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Finish sending requests.", this, i);
+    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Finish sending requests.", i);
   }
 
   void CreateStub() {
