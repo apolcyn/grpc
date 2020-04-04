@@ -402,7 +402,10 @@ class ClientContext {
 
   /// Should be used for framework-level extensions only.
   /// Applications never need to call this method.
-  grpc_call* c_call() { return call_; }
+  grpc_call* c_call() {
+    grpc::internal::MutexLock lock(&mu_);
+    return call_;
+  }
 
   /// EXPERIMENTAL debugging API
   ///
