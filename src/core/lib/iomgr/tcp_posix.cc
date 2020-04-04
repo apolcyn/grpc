@@ -58,6 +58,7 @@
 #include "src/core/lib/profiling/timers.h"
 #include "src/core/lib/slice/slice_internal.h"
 #include "src/core/lib/slice/slice_string_helpers.h"
+#include "src/core/lib/surface/idle_accounting.h"
 
 #ifndef SOL_TCP
 #define SOL_TCP IPPROTO_TCP
@@ -414,6 +415,7 @@ struct grpc_tcp {
                                       on errors anymore */
   TcpZerocopySendCtx tcp_zerocopy_send_ctx;
   TcpZerocopySendRecord* current_zerocopy_send = nullptr;
+  grpc_core::EndpointIdleContext* endpoint_idle_context = nullptr;
 };
 
 struct backup_poller {
@@ -546,6 +548,9 @@ static void notify_on_read(grpc_tcp* tcp) {
 static void notify_on_write(grpc_tcp* tcp) {
   if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
     gpr_log(GPR_INFO, "TCP:%p notify_on_write", tcp);
+  }
+  if (tcp->endpoint_idle_context != nullptr) {
+    tcp->endpoint_idle_context->OnWriteIdleStart();
   }
   if (!grpc_event_engine_run_in_background()) {
     cover_self(tcp);
@@ -1513,10 +1518,14 @@ static bool tcp_flush(grpc_tcp* tcp, grpc_error** error) {
 static void tcp_handle_write(void* arg /* grpc_tcp */, grpc_error* error) {
   grpc_tcp* tcp = static_cast<grpc_tcp*>(arg);
   grpc_closure* cb;
+  if (tcp->endpoint_idle_context != nullptr) {
+    tcp->endpoint_idle_context->OnWriteIdleStop();
+  }
 
   if (error != GRPC_ERROR_NONE) {
     cb = tcp->write_cb;
     tcp->write_cb = nullptr;
+    tcp->endpoint_idle_context = nullptr;
     if (tcp->current_zerocopy_send != nullptr) {
       UnrefMaybePutZerocopySendRecord(tcp, tcp->current_zerocopy_send, 0,
                                       "handle_write_err");
@@ -1542,6 +1551,7 @@ static void tcp_handle_write(void* arg /* grpc_tcp */, grpc_error* error) {
     cb = tcp->write_cb;
     tcp->write_cb = nullptr;
     tcp->current_zerocopy_send = nullptr;
+    tcp->endpoint_idle_context = nullptr;
     if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
       const char* str = grpc_error_string(error);
       gpr_log(GPR_INFO, "write: %s", str);
@@ -1553,7 +1563,7 @@ static void tcp_handle_write(void* arg /* grpc_tcp */, grpc_error* error) {
 }
 
 static void tcp_write(grpc_endpoint* ep, grpc_slice_buffer* buf,
-                      grpc_closure* cb, void* arg) {
+                      grpc_closure* cb, void* arg, grpc_core::EndpointIdleContext* endpoint_idle_context) {
   GPR_TIMER_SCOPE("tcp_write", 0);
   grpc_tcp* tcp = reinterpret_cast<grpc_tcp*>(ep);
   grpc_error* error = GRPC_ERROR_NONE;
@@ -1594,6 +1604,7 @@ static void tcp_write(grpc_endpoint* ep, grpc_slice_buffer* buf,
     tcp->outgoing_byte_idx = 0;
   }
   tcp->outgoing_buffer_arg = arg;
+  tcp->endpoint_idle_context = endpoint_idle_context;
   if (arg) {
     GPR_ASSERT(grpc_event_engine_can_track_errors());
   }

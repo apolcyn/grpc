@@ -52,6 +52,7 @@
 #include "src/core/lib/surface/completion_queue.h"
 #include "src/core/lib/surface/server.h"
 #include "src/core/lib/surface/validate_metadata.h"
+#include "src/core/lib/surface/idle_accounting.h"
 #include "src/core/lib/transport/error_utils.h"
 #include "src/core/lib/transport/metadata.h"
 #include "src/core/lib/transport/static_metadata.h"
@@ -143,6 +144,7 @@ struct grpc_call {
         metadata_batch[i][j].deadline = GRPC_MILLIS_INF_FUTURE;
       }
     }
+    grpc_call_context_set(this, GRPC_CONTEXT_IDLE_ACCOUNT, &idle_account_, nullptr);
   }
 
   ~grpc_call() {
@@ -260,7 +262,14 @@ struct grpc_call {
     For 1, 4: See receiving_initial_metadata_ready() function
     For 2, 3: See receiving_stream_ready() function */
   gpr_atm recv_state = 0;
+
+  grpc_core::IdleAccount idle_account_;
 };
+
+char* grpc_call_get_idle_account_str(grpc_call* call) {
+  grpc_core::ExecCtx exec_ctx;
+  return gpr_strdup(call->idle_account_.as_string().c_str());
+}
 
 grpc_core::TraceFlag grpc_call_error_trace(false, "call_error");
 grpc_core::TraceFlag grpc_compression_trace(false, "compression");
@@ -755,6 +764,7 @@ static void set_final_status(grpc_call* call, grpc_error* error) {
         error != GRPC_ERROR_NONE ||
         reinterpret_cast<grpc_error*>(gpr_atm_acq_load(&call->status_error)) !=
             GRPC_ERROR_NONE;
+    gpr_log(GPR_DEBUG, "setting server cancelled but to %d", *call->final_op.server.cancelled);
     grpc_core::channelz::ServerNode* channelz_server =
         grpc_server_get_channelz_node(call->final_op.server.server);
     if (channelz_server != nullptr) {
@@ -1251,6 +1261,7 @@ static void continue_receiving_slices(batch_control* bctl) {
     if (remaining == 0) {
       call->receiving_message = 0;
       call->receiving_stream.reset();
+      call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
       finish_batch_step(bctl);
       return;
     }
@@ -1264,6 +1275,7 @@ static void continue_receiving_slices(batch_control* bctl) {
         grpc_byte_buffer_destroy(*call->receiving_buffer);
         *call->receiving_buffer = nullptr;
         call->receiving_message = 0;
+        call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
         finish_batch_step(bctl);
         GRPC_ERROR_UNREF(error);
         return;
@@ -1300,6 +1312,7 @@ static void receiving_slice_ready(void* bctlp, grpc_error* error) {
     grpc_byte_buffer_destroy(*call->receiving_buffer);
     *call->receiving_buffer = nullptr;
     call->receiving_message = 0;
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
     finish_batch_step(bctl);
     if (release_error) {
       GRPC_ERROR_UNREF(error);
@@ -1312,6 +1325,7 @@ static void process_data_after_md(batch_control* bctl) {
   if (call->receiving_stream == nullptr) {
     *call->receiving_buffer = nullptr;
     call->receiving_message = 0;
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
     finish_batch_step(bctl);
   } else {
     call->test_only_last_message_flags = call->receiving_stream->flags();
@@ -1516,6 +1530,7 @@ static void receiving_initial_metadata_ready(void* bctlp, grpc_error* error) {
                             GRPC_ERROR_REF(error));
   }
 
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
   finish_batch_step(bctl);
 }
 
@@ -1526,6 +1541,7 @@ static void receiving_trailing_metadata_ready(void* bctlp, grpc_error* error) {
   grpc_metadata_batch* md =
       &call->metadata_batch[1 /* is_receiving */][1 /* is_trailing */];
   recv_trailing_filter(call, md, GRPC_ERROR_REF(error));
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::RECV_WALL_TIME, GRPC_ERROR_NONE);
   finish_batch_step(bctl);
 }
 
@@ -1541,6 +1557,16 @@ static void finish_batch(void* bctlp, grpc_error* error) {
   if (error != GRPC_ERROR_NONE) {
     cancel_with_error(call, GRPC_ERROR_REF(error));
   }
+  if (bctl->op.send_initial_metadata) {
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_MD_WALL_TIME, error);
+  }
+  if (bctl->op.send_message) {
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_MSG_WALL_TIME, error);
+  }
+  if (bctl->op.send_trailing_metadata) {
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_CLOSE_WALL_TIME, error);
+  }
+  call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_WALL_TIME, error);
   finish_batch_step(bctl);
 }
 
@@ -1565,6 +1591,8 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
   GRPC_CALL_LOG_BATCH(GPR_INFO, ops, nops);
 
   if (nops == 0) {
+    call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_ZERO_OPS_WALL_TIME);
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_ZERO_OPS_WALL_TIME, GRPC_ERROR_NONE);
     if (!is_notify_tag_closure) {
       GPR_ASSERT(grpc_cq_begin_op(call->cq, notify_tag));
       grpc_cq_end_op(call->cq, notify_tag, GRPC_ERROR_NONE,
@@ -1600,6 +1628,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
     switch (op->op) {
       case GRPC_OP_SEND_INITIAL_METADATA: {
         /* Flag validation: currently allow no flags */
+        call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_MD_WALL_TIME);
         if (!are_initial_metadata_flags_valid(op->flags, call->is_client)) {
           error = GRPC_CALL_ERROR_INVALID_FLAGS;
           goto done_with_error;
@@ -1675,6 +1704,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
         break;
       }
       case GRPC_OP_SEND_MESSAGE: {
+        call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_MSG_WALL_TIME);
         if (!are_write_flags_valid(op->flags)) {
           error = GRPC_CALL_ERROR_INVALID_FLAGS;
           goto done_with_error;
@@ -1706,6 +1736,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
       }
       case GRPC_OP_SEND_CLOSE_FROM_CLIENT: {
         /* Flag validation: currently allow no flags */
+        call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_CLOSE_WALL_TIME);
         if (op->flags != 0) {
           error = GRPC_CALL_ERROR_INVALID_FLAGS;
           goto done_with_error;
@@ -1727,6 +1758,7 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
       }
       case GRPC_OP_SEND_STATUS_FROM_SERVER: {
         /* Flag validation: currently allow no flags */
+        call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_CLOSE_WALL_TIME);
         if (op->flags != 0) {
           error = GRPC_CALL_ERROR_INVALID_FLAGS;
           goto done_with_error;
@@ -1923,6 +1955,10 @@ static grpc_call_error call_start_batch(grpc_call* call, const grpc_op* ops,
     GRPC_CLOSURE_INIT(&bctl->finish_batch, finish_batch, bctl,
                       grpc_schedule_on_exec_ctx);
     stream_op->on_complete = &bctl->finish_batch;
+    call->idle_account_.start(grpc_core::IdleAccountMetric::SEND_WALL_TIME);
+  }
+  for (int i = 0; i < num_recv_ops; i++) {
+    call->idle_account_.start(grpc_core::IdleAccountMetric::RECV_WALL_TIME);
   }
 
   gpr_atm_rel_store(&call->any_ops_sent_atm, 1);
@@ -1936,14 +1972,17 @@ done_with_error:
   if (stream_op->send_initial_metadata) {
     call->sent_initial_metadata = false;
     grpc_metadata_batch_clear(&call->metadata_batch[0][0]);
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_MD_WALL_TIME, GRPC_ERROR_CREATE_FROM_STATIC_STRING("failed immediately"));
   }
   if (stream_op->send_message) {
     call->sending_message = false;
     call->sending_stream->Orphan();
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_MSG_WALL_TIME, GRPC_ERROR_CREATE_FROM_STATIC_STRING("failed immediately"));
   }
   if (stream_op->send_trailing_metadata) {
     call->sent_final_op = false;
     grpc_metadata_batch_clear(&call->metadata_batch[0][1]);
+    call->idle_account_.stop(grpc_core::IdleAccountMetric::SEND_CLOSE_WALL_TIME, GRPC_ERROR_CREATE_FROM_STATIC_STRING("failed immediately"));
   }
   if (stream_op->recv_initial_metadata) {
     call->received_initial_metadata = false;

@@ -142,6 +142,7 @@ class TestServiceImpl : public TestService::Service {
                    const grpc::testing::Empty* /*request*/,
                    grpc::testing::Empty* /*response*/) {
     MaybeEchoMetadata(context);
+    gpr_log(GPR_DEBUG, "got RPC idle stats: %s", context->idle_stats().c_str());
     return Status::OK;
   }
 
@@ -246,6 +247,10 @@ class TestServiceImpl : public TestService::Service {
       if (request.has_payload()) {
         aggregated_payload_size += request.payload().body().size();
       }
+      gpr_timespec read_sleep_time =
+          gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+                       gpr_time_from_micros(1e6, GPR_TIMESPAN));
+      gpr_sleep_until(read_sleep_time);
     }
     response->set_aggregated_payload_size(aggregated_payload_size);
     return Status::OK;
@@ -270,15 +275,19 @@ class TestServiceImpl : public TestService::Service {
         response.mutable_payload()->set_body(
             grpc::string(request.response_parameters(0).size(), '\0'));
         int time_us;
-        if ((time_us = request.response_parameters(0).interval_us()) > 0) {
+        //if ((time_us = request.response_parameters(0).interval_us()) > 0) {
           // Sleep before response if needed
           gpr_timespec sleep_time =
               gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
-                           gpr_time_from_micros(time_us, GPR_TIMESPAN));
+                           gpr_time_from_micros(1e6, GPR_TIMESPAN));
           gpr_sleep_until(sleep_time);
-        }
+        //}
         write_success = stream->Write(response);
       }
+      gpr_timespec read_sleep_time =
+          gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+                       gpr_time_from_micros(1e6, GPR_TIMESPAN));
+      gpr_sleep_until(read_sleep_time);
     }
     if (write_success) {
       return Status::OK;
@@ -356,6 +365,8 @@ void grpc::testing::interop::RunServer(
       builder.SetOption(std::move((*server_options)[i]));
     }
   }
+  gpr_log(GPR_DEBUG, "set max concurrent streams to 1");
+  //builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, 1);
   if (FLAGS_max_send_message_size >= 0) {
     builder.SetMaxSendMessageSize(FLAGS_max_send_message_size);
   }

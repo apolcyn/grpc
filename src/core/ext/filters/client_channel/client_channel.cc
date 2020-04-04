@@ -63,6 +63,7 @@
 #include "src/core/lib/slice/slice_internal.h"
 #include "src/core/lib/slice/slice_string_helpers.h"
 #include "src/core/lib/surface/channel.h"
+#include "src/core/lib/surface/idle_accounting.h"
 #include "src/core/lib/transport/connectivity_state.h"
 #include "src/core/lib/transport/error_utils.h"
 #include "src/core/lib/transport/metadata.h"
@@ -355,6 +356,10 @@ class CallData {
   // Schedules a callback to process the completed pick.  The callback
   // will not run until after this method returns.
   void AsyncPickDone(grpc_call_element* elem, grpc_error* error);
+
+  grpc_call_context_element* call_context() {
+    return call_context_;
+  }
 
  private:
   class QueuedPickCanceller;
@@ -1909,6 +1914,9 @@ void ChannelData::GetChannelInfo(grpc_channel_element* elem,
 
 void ChannelData::AddQueuedPick(QueuedPick* pick,
                                 grpc_polling_entity* pollent) {
+  CallData* calld = static_cast<CallData*>(pick->elem->call_data);
+  IdleAccount* idle_account = static_cast<IdleAccount*>(calld->call_context()[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(IdleAccountMetric::WAITING_FOR_PICK);
   // Add call to queued picks list.
   pick->next = queued_picks_;
   queued_picks_ = pick;
@@ -1926,6 +1934,9 @@ void ChannelData::RemoveQueuedPick(QueuedPick* to_remove,
        pick = &(*pick)->next) {
     if (*pick == to_remove) {
       *pick = to_remove->next;
+      CallData* calld = static_cast<CallData*>(to_remove->elem->call_data);
+      IdleAccount* idle_account = static_cast<IdleAccount*>(calld->call_context()[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+      idle_account->stop(IdleAccountMetric::WAITING_FOR_PICK, GRPC_ERROR_NONE);
       return;
     }
   }
