@@ -175,12 +175,12 @@ class ClientChannelStressTest {
       // by ServerThread::Start from firing before the wait below is hit.
       grpc::internal::MutexLock lock(&mu);
       port_ = grpc_pick_unused_port_or_die();
-      gpr_log(GPR_INFO, "starting %s server on port %d", type_.c_str(), port_);
+      gpr_log(GPR_INFO, "apolcyn starting %s server on port %d", type_.c_str(), port_);
       grpc::internal::CondVar cond;
       thread_.reset(new std::thread(
           std::bind(&ServerThread::Start, this, server_host, &mu, &cond)));
       cond.Wait(&mu);
-      gpr_log(GPR_INFO, "%s server startup complete", type_.c_str());
+      gpr_log(GPR_INFO, "apolcyn %s server startup complete", type_.c_str());
     }
 
     void Start(const grpc::string& server_host, grpc::internal::Mutex* mu,
@@ -199,10 +199,11 @@ class ClientChannelStressTest {
     }
 
     void Shutdown() {
-      gpr_log(GPR_INFO, "%s about to shutdown", type_.c_str());
+      gpr_log(GPR_INFO, "apolcyn %s about to shutdown", type_.c_str());
       server_->Shutdown(grpc_timeout_milliseconds_to_deadline(0));
+      gpr_log(GPR_INFO, "apolcyn %s done shutdown about to join server thread", type_.c_str());
       thread_->join();
-      gpr_log(GPR_INFO, "%s shutdown completed", type_.c_str());
+      gpr_log(GPR_INFO, "apolcyn %s done join server thread", type_.c_str());
     }
 
     int port_;
@@ -258,20 +259,24 @@ class ClientChannelStressTest {
     response_generator_->SetResponse(std::move(result));
   }
 
-  void KeepSendingRequests() {
-    gpr_log(GPR_INFO, "Start sending requests.");
+  void KeepSendingRequests(int i) {
+    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Start sending requests.", this, i);
     while (!shutdown_) {
       ClientContext context;
       context.set_deadline(grpc_timeout_milliseconds_to_deadline(1000));
       EchoRequest request;
       request.set_message("test");
       EchoResponse response;
+      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin outer Echo RPC.", this, i);
       {
         std::lock_guard<std::mutex> lock(stub_mutex_);
+        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin inner Echo RPC.", this, i);
         Status status = stub_->Echo(&context, request, &response);
+        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC.", this, i);
       }
+      gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done outer Echo RPC.", this, i);
     }
-    gpr_log(GPR_INFO, "Finish sending requests.");
+    gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Finish sending requests.", this, i);
   }
 
   void CreateStub() {
@@ -306,7 +311,7 @@ class ClientChannelStressTest {
     CreateStub();
     for (size_t i = 0; i < kNumClientThreads; ++i) {
       client_threads_.emplace_back(
-          std::thread(&ClientChannelStressTest::KeepSendingRequests, this));
+          std::thread(&ClientChannelStressTest::KeepSendingRequests, this, i));
     }
   }
 
@@ -314,7 +319,9 @@ class ClientChannelStressTest {
     shutdown_ = true;
     gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown begin join client_threads");
     for (size_t i = 0; i < client_threads_.size(); ++i) {
+      gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown begin join client_threads_[%ld] out of %ld", i, client_threads_.size());
       client_threads_[i].join();
+      gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown begin done client_threads_[%ld] out of %ld", i, client_threads_.size());
     }
     gpr_log(GPR_DEBUG, "apolcyn ClientChannelStressTest::Shutdown done client_threads begin shutdown balancer_servers_");
     for (size_t i = 0; i < balancers_.size(); ++i) {

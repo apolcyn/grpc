@@ -877,6 +877,7 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
   }
 
   void DoWork(void* tag, bool ok, bool resources) override {
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::DoWork %p begin", this);
     SyncRequest* sync_req = static_cast<SyncRequest*>(tag);
 
     if (!sync_req) {
@@ -897,11 +898,14 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
       }
 
       GPR_TIMER_SCOPE("cd.Run()", 0);
+      gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::DoWork %p cd->Run begin", this);
       cd->Run(global_callbacks_, resources);
+      gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::DoWork %p cd->Run begin", this);
     }
     // TODO (sreek) If ok is false here (which it isn't in case of
     // grpc_request_registered_call), we should still re-queue the request
     // object
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::DoWork %p done", this);
   }
 
   void AddSyncMethod(grpc::internal::RpcServiceMethod* method, void* tag) {
@@ -928,7 +932,9 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
     // Drain any pending items from the queue
     void* tag;
     bool ok;
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p begin", this);
     while (server_cq_->Next(&tag, &ok)) {
+      gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed ok:%d", this, ok);
       if (ok) {
         // If a request was pulled off the queue, it means that the thread
         // handling the request added it to the completion queue after shutdown
@@ -938,9 +944,12 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
         // which point we are certain no in-flight requests will add more to the
         // queue. This fixes an intermittent memory leak on shutdown.
         SyncRequest* sync_req = static_cast<SyncRequest*>(tag);
+        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup begin", this, ok);
         sync_req->PostShutdownCleanup();
+        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup done", this, ok);
       }
     }
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p done", this);
   }
 
   void Start() {
@@ -1291,34 +1300,50 @@ void Server::Start(grpc::ServerCompletionQueue** cqs, size_t num_cqs) {
 }
 
 void Server::ShutdownInternal(gpr_timespec deadline) {
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal begin acquire lock");
   grpc::internal::MutexLock lock(&mu_);
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done acquire lock check shutdown_");
   if (shutdown_) {
+    gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal checked shutdown_ exit early");
     return;
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal checked shutdown_ continue begin shutdown acceptors");
 
   shutdown_ = true;
 
-  for (auto& acceptor : acceptors_) {
-    acceptor->Shutdown();
+  {
+    size_t i = 0;
+    for (auto& acceptor : acceptors_) {
+      gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal begin shutdown acceptor[%ld] out of %ld", i++, acceptors_.size());
+      acceptor->Shutdown();
+      gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown acceptor[%ld] out of %ld", i, acceptors_.size());
+    }
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown acceptors begin grpc_server_shutdown_and_notify");
 
   /// The completion queue to use for server shutdown completion notification
   grpc::CompletionQueue shutdown_cq;
   grpc::ShutdownTag shutdown_tag;  // Dummy shutdown tag
   grpc_server_shutdown_and_notify(server_, shutdown_cq.cq(), &shutdown_tag);
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done grpc_server_shutdown_and_notify begin server_cq.Shutdown()");
 
   shutdown_cq.Shutdown();
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done server_cq.Shutdown() begin shutdown_cq.AsyncNext");
 
   void* tag;
   bool ok;
   grpc::CompletionQueue::NextStatus status =
       shutdown_cq.AsyncNext(&tag, &ok, deadline);
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown_cq.AsyncNext begin check if status == TIMEOUT");
 
   // If this timed out, it means we are done with the grace period for a clean
   // shutdown. We should force a shutdown now by cancelling all inflight calls
   if (status == grpc::CompletionQueue::NextStatus::TIMEOUT) {
+    gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal status == TIMEOUT begin cancel all calls");
     grpc_server_cancel_all_calls(server_);
+    gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal status == TIMEOUT done cancel all calls");
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done check if status == TIMEOUT begin shutdown sync_req_mgrs_");
   // Else in case of SHUTDOWN or GOT_EVENT, it means that the server has
   // successfully shutdown
 
@@ -1327,11 +1352,18 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
   for (const auto& value : sync_req_mgrs_) {
     value->Shutdown();  // ThreadManager's Shutdown()
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown sync_req_mgrs_ begin wait sync_req_mgrs_");
 
-  // Wait for threads in all ThreadManagers to terminate
-  for (const auto& value : sync_req_mgrs_) {
-    value->Wait();
+  {
+    size_t i = 0;
+    // Wait for threads in all ThreadManagers to terminate
+    for (const auto& value : sync_req_mgrs_) {
+      gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal begin shutdown sync_req_mgrs_[%ld] out of %ld", i++, sync_req_mgrs_.size());
+      value->Wait();
+      gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown sync_req_mgrs_[%ld] out of %ld", i, sync_req_mgrs_.size());
+    }
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done wait sync_req_mgrs_ begin callback_reqs_done_cv_.WaitUntil");
 
   // Wait for all outstanding callback requests to complete
   // (whether waiting for a match or already active).
@@ -1350,6 +1382,7 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
     callback_reqs_done_cv_.WaitUntil(
         &callback_reqs_mu_, [this] { return callback_reqs_outstanding_ == 0; });
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done callback_reqs_done_cv_.WaitUntil begin callback_cq_ check != nullptr");
 
   // Shutdown the callback CQ. The CQ is owned by its own shutdown tag, so it
   // will delete itself at true shutdown.
@@ -1357,12 +1390,14 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
     callback_cq_->Shutdown();
     callback_cq_ = nullptr;
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done callback_cq_ check != nullptr begin shutdown_cq_.Next loop");
 
   // Drain the shutdown queue (if the previous call to AsyncNext() timed out
   // and we didn't remove the tag from the queue yet)
   while (shutdown_cq.Next(&tag, &ok)) {
     // Nothing to be done here. Just ignore ok and tag values
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown_cq_.Next loop begin UnregisterServer on cq_list_");
 
   shutdown_notified_ = true;
   shutdown_cv_.Broadcast();
@@ -1373,8 +1408,11 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
   for (auto* cq : cq_list_) {
     cq->UnregisterServer(this);
   }
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done UnregisterServer begin cq_list.clear");
   cq_list_.clear();
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done cq_list.clear");
 #endif
+  gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done");
 }
 
 void Server::Wait() {
