@@ -36,6 +36,7 @@
 
 typedef struct connected_channel_channel_data {
   grpc_transport* transport;
+  bool is_client;
 } channel_data;
 
 typedef struct {
@@ -99,11 +100,13 @@ static callback_state* get_state_for_batch(
    into transport stream operations */
 static void connected_channel_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* batch) {
-  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
-  idle_account->start(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
-  idle_account->stop(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   call_data* calld = static_cast<call_data*>(elem->call_data);
   channel_data* chand = static_cast<channel_data*>(elem->channel_data);
+  if (chand->is_client) {
+    grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->start(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
+    idle_account->stop(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  }
   if (batch->recv_initial_metadata) {
     callback_state* state = &calld->recv_initial_metadata_ready;
     intercept_callback(
@@ -185,6 +188,15 @@ static grpc_error* connected_channel_init_channel_elem(
   channel_data* cd = static_cast<channel_data*>(elem->channel_data);
   GPR_ASSERT(args->is_last);
   cd->transport = nullptr;
+  const grpc_arg* arg = grpc_channel_args_find(args->channel_args, "grpc.server_uri");
+  bool is_client = false;
+  if (arg != nullptr) {
+    const char* server_uri = grpc_channel_arg_get_string(arg);
+    if (server_uri != nullptr) {
+      is_client = true;
+    }
+  }
+  cd->is_client = is_client;
   return GRPC_ERROR_NONE;
 }
 
