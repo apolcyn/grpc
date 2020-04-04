@@ -169,6 +169,7 @@ grpc_error* grpc_call_stack_init(grpc_channel_stack* channel_stack,
   grpc_error* first_error = GRPC_ERROR_NONE;
   for (size_t i = 0; i < count; i++) {
     call_elems[i].filter = channel_elems[i].filter;
+    gpr_log(GPR_DEBUG, "apolcyn call_stack_init add at index %ld filter.name:%s", i, call_elems[i].filter->name);
     call_elems[i].channel_data = channel_elems[i].channel_data;
     call_elems[i].call_data = user_data;
     user_data +=

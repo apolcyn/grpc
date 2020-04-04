@@ -268,6 +268,9 @@ struct grpc_call {
 
 char* grpc_call_get_idle_account_str(grpc_call* call) {
   grpc_core::ExecCtx exec_ctx;
+  if (call == nullptr) {
+    return gpr_strdup("nullptr call");
+  }
   return gpr_strdup(call->idle_account_.as_string().c_str());
 }
 

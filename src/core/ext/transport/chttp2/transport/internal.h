@@ -671,6 +671,7 @@ struct grpc_chttp2_stream {
 class CHttp2EndpointIdleContext : public grpc_core::EndpointIdleContext {
  public:
   explicit CHttp2EndpointIdleContext(struct grpc_chttp2_transport* t) : t_(t) {}
+  ~CHttp2EndpointIdleContext() {}
 
   void OnWriteIdleStart() override {
     grpc_chttp2_stream_map_for_each(&t_->stream_map, OnStreamWriteIdleStart, nullptr);

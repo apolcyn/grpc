@@ -35,6 +35,7 @@
 namespace grpc_core {
 
 enum IdleAccountMetric {
+  BEGIN_TRANSPORT_SEND_MD,
   SEND_WALL_TIME,
   SEND_MD_WALL_TIME,
   SEND_MSG_WALL_TIME,
@@ -139,6 +140,8 @@ class IdleAccount {
  private:
   const char* MetricToName(const IdleAccountMetric &metric) const {
     switch (metric) {
+      case BEGIN_TRANSPORT_SEND_MD:
+        return "BEGIN_TRANSPORT_SEND_MD";
       case SEND_WALL_TIME:
         return "SEND_WALL_TIME";
       case SEND_MD_WALL_TIME:

@@ -40,6 +40,7 @@ namespace grpc_core {
 
 class EndpointIdleContext {
  public:
+  virtual ~EndpointIdleContext() {}
   virtual void OnWriteIdleStart() = 0;
   virtual void OnWriteIdleStop() = 0;
 };

@@ -1392,6 +1392,11 @@ static void perform_stream_op_locked(void* stream_op,
   }
 
   if (op->send_initial_metadata) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(s->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->start(grpc_core::IdleAccountMetric::BEGIN_TRANSPORT_SEND_MD);
+    idle_account->stop(grpc_core::IdleAccountMetric::BEGIN_TRANSPORT_SEND_MD, GRPC_ERROR_NONE);
     if (t->is_client && t->channelz_socket != nullptr) {
       t->channelz_socket->RecordStreamStartedFromLocal();
     }
@@ -2602,12 +2607,6 @@ static void read_action_locked(void* tp, grpc_error* error) {
   }
 
   GRPC_ERROR_UNREF(error);
-}
-
-static void on_read_idle_start(void* arg, grpc_error* /* error */) {
-}
-
-static void on_read_idle_stop(void* arg, grpc_error* /* error */) {
 }
 
 static void continue_read_action_locked(grpc_chttp2_transport* t) {
