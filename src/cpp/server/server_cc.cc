@@ -928,11 +928,12 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
   }
 
   void Wait() override {
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p begin ThreadManager::Wait", this);
     ThreadManager::Wait();
+    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p done ThreadManager::Wait begin Next loop", this);
     // Drain any pending items from the queue
     void* tag;
     bool ok;
-    gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p begin", this);
     while (server_cq_->Next(&tag, &ok)) {
       gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed ok:%d", this, ok);
       if (ok) {
@@ -1395,6 +1396,7 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
   // Drain the shutdown queue (if the previous call to AsyncNext() timed out
   // and we didn't remove the tag from the queue yet)
   while (shutdown_cq.Next(&tag, &ok)) {
+    gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal inside shutdown_cq.Next loop");
     // Nothing to be done here. Just ignore ok and tag values
   }
   gpr_log(GPR_DEBUG, "apolcyn Server::ShutdownInternal done shutdown_cq_.Next loop begin UnregisterServer on cq_list_");

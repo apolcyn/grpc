@@ -294,7 +294,7 @@ class ClientChannelStressTest {
         Status status = stub_->Echo(&context, request, &response);
         gpr_event_set(&ev, (void*)1);
         watch_dog.join();
-        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC.", i);
+        gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC status:|%s|.", i, context.debug_error_string().c_str());
       }
       gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done outer Echo RPC.", i);
       round++;

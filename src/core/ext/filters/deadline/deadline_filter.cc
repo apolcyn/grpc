@@ -280,6 +280,9 @@ static void deadline_destroy_call_elem(
 // Method for starting a call op for client filter.
 static void deadline_client_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* op) {
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   grpc_deadline_state_client_start_transport_stream_op_batch(elem, op);
   // Chain to next filter.
   grpc_call_next_op(elem, op);

@@ -73,10 +73,15 @@ ThreadManager::~ThreadManager() {
 }
 
 void ThreadManager::Wait() {
+  gpr_log(GPR_DEBUG, "apolcyn ThreadManager::Wait grab lock");
   grpc_core::MutexLock lock(&mu_);
+  gpr_log(GPR_DEBUG, "apolcyn ThreadManager::Wait done grab lock wait for %ld total threads", num_threads_);
   while (num_threads_ != 0) {
+    gpr_log(GPR_DEBUG, "apolcyn ThreadManager::Wait wait for shutdown_cv_.Wait begin. num threads left: %ld", num_threads_);
     shutdown_cv_.Wait(&mu_);
+    gpr_log(GPR_DEBUG, "apolcyn ThreadManager::Wait wait for shutdown_cv_.Wait done. num threads left: %ld", num_threads_);
   }
+  gpr_log(GPR_DEBUG, "apolcyn ThreadManager::Wait done");
 }
 
 void ThreadManager::Shutdown() {

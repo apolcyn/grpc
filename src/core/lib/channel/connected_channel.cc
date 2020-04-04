@@ -99,6 +99,9 @@ static callback_state* get_state_for_batch(
    into transport stream operations */
 static void connected_channel_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* batch) {
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   call_data* calld = static_cast<call_data*>(elem->call_data);
   channel_data* chand = static_cast<channel_data*>(elem->channel_data);
   if (batch->recv_initial_metadata) {

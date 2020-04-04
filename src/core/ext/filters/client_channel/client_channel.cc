@@ -2080,6 +2080,10 @@ void CallData::Destroy(grpc_call_element* elem,
 
 void CallData::StartTransportStreamOpBatch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* batch) {
+  CallData* call_data = static_cast<CallData*>(elem->call_data);
+  IdleAccount* idle_account = static_cast<IdleAccount*>(call_data->call_context()[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   GPR_TIMER_SCOPE("cc_start_transport_stream_op_batch", 0);
   CallData* calld = static_cast<CallData*>(elem->call_data);
   ChannelData* chand = static_cast<ChannelData*>(elem->channel_data);
