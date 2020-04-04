@@ -963,6 +963,7 @@ grpc_cc_library(
         "src/core/lib/surface/completion_queue_factory.h",
         "src/core/lib/surface/event_string.h",
         "src/core/lib/surface/init.h",
+        "src/core/lib/surface/idle_accounting.h",
         "src/core/lib/surface/lame_client.h",
         "src/core/lib/surface/server.h",
         "src/core/lib/surface/validate_metadata.h",
@@ -2195,6 +2196,7 @@ grpc_cc_library(
     deps = [
         "grpc++_internal_hdrs_only",
         "grpc_codegen",
+        "grpc",
     ],
 )
 

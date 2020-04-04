@@ -944,9 +944,9 @@ class Server::SyncRequestThreadManager : public grpc::ThreadManager {
         // which point we are certain no in-flight requests will add more to the
         // queue. This fixes an intermittent memory leak on shutdown.
         SyncRequest* sync_req = static_cast<SyncRequest*>(tag);
-        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup begin", this, ok);
+        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup begin", this);
         sync_req->PostShutdownCleanup();
-        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup done", this, ok);
+        gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p Next just completed PostShutdownCleanup done", this);
       }
     }
     gpr_log(GPR_DEBUG, "apolcyn SyncRequestThreadManager::Wait %p done", this);

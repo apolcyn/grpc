@@ -137,8 +137,6 @@ class IdleAccount {
   IdleAccount* writing_next_ = nullptr;
 
  private:
-  const char* name_ = "idle_account";
-
   const char* MetricToName(const IdleAccountMetric &metric) const {
     switch (metric) {
       case SEND_WALL_TIME:

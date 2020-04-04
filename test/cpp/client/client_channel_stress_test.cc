@@ -261,6 +261,7 @@ class ClientChannelStressTest {
 
   void KeepSendingRequests(int i) {
     gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Start sending requests.", i);
+    int round = 0;
     while (!shutdown_) {
       ClientContext context;
       context.set_deadline(grpc_timeout_milliseconds_to_deadline(1000));
@@ -270,11 +271,21 @@ class ClientChannelStressTest {
       gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin outer Echo RPC.", i);
       {
         std::lock_guard<std::mutex> lock(stub_mutex_);
+        gpr_event ev;
+        gpr_event_init(&ev);
+        std::thread watch_dog = std::thread([i, round, &ev, &context]() {
+          while (!gpr_event_wait(&ev, grpc_timeout_seconds_to_deadline(1))) {
+            gpr_log(GPR_DEBUG, "Echo RPC watchdog for KeepSendingRequests %d round %d context.client_idle_stats(): %s", i, round, context.client_idle_stats().c_str());
+          }
+        });
         gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin inner Echo RPC.", i);
         Status status = stub_->Echo(&context, request, &response);
+        gpr_event_set(&ev, (void*)1);
+        watch_dog.join();
         gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done inner Echo RPC.", i);
       }
       gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d done outer Echo RPC.", i);
+      round++;
     }
     gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d Finish sending requests.", i);
   }
