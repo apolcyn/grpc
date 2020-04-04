@@ -2196,7 +2196,6 @@ grpc_cc_library(
     deps = [
         "grpc++_internal_hdrs_only",
         "grpc_codegen",
-        "grpc",
     ],
 )
 

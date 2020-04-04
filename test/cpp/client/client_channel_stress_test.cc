@@ -275,7 +275,9 @@ class ClientChannelStressTest {
         gpr_event_init(&ev);
         std::thread watch_dog = std::thread([i, round, &ev, &context]() {
           while (!gpr_event_wait(&ev, grpc_timeout_seconds_to_deadline(1))) {
-            gpr_log(GPR_DEBUG, "Echo RPC watchdog for KeepSendingRequests %d round %d context.client_idle_stats(): %s", i, round, context.client_idle_stats().c_str());
+            char* str = grpc_call_get_idle_account_str(context.c_call());
+            gpr_log(GPR_DEBUG, "Echo RPC watchdog for KeepSendingRequests %d round %d context client_idle_stats(): %s", i, round, str);
+            gpr_free(str);
           }
         });
         gpr_log(GPR_INFO, "apolcyn ClientChannelStressTest::KeepSendingRequests client_thread_ %d begin inner Echo RPC.", i);
