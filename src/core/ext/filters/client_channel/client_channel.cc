@@ -2092,6 +2092,8 @@ void CallData::StartTransportStreamOpBatch(
   }
   // If we've previously been cancelled, immediately fail any new batches.
   if (GPR_UNLIKELY(calld->cancel_error_ != GRPC_ERROR_NONE)) {
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_ERROR_EXISTS);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_ERROR_EXISTS, GRPC_ERROR_NONE);
     if (GRPC_TRACE_FLAG_ENABLED(grpc_client_channel_call_trace)) {
       gpr_log(GPR_INFO, "chand=%p calld=%p: failing batch with error: %s",
               chand, calld, grpc_error_string(calld->cancel_error_));
@@ -2103,6 +2105,8 @@ void CallData::StartTransportStreamOpBatch(
   }
   // Handle cancellation.
   if (GPR_UNLIKELY(batch->cancel_stream)) {
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_STREAM);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_STREAM, GRPC_ERROR_NONE);
     // Stash a copy of cancel_error in our call data, so that we can use
     // it for subsequent operations.  This ensures that if the call is
     // cancelled before any batches are passed down (e.g., if the deadline
@@ -2144,6 +2148,8 @@ void CallData::StartTransportStreamOpBatch(
               "chand=%p calld=%p: starting batch on subchannel_call=%p", chand,
               calld, calld->subchannel_call_.get());
     }
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_HAVE_SUBCHANNEL_CALL);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_HAVE_SUBCHANNEL_CALL, GRPC_ERROR_NONE);
     calld->PendingBatchesResume(elem);
     return;
   }
@@ -2156,6 +2162,8 @@ void CallData::StartTransportStreamOpBatch(
               "chand=%p calld=%p: grabbing data plane mutex to perform pick",
               chand, calld);
     }
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL, GRPC_ERROR_NONE);
     PickSubchannel(elem, GRPC_ERROR_NONE);
   } else {
     // For all other batches, release the call combiner.
@@ -3736,8 +3744,13 @@ void CallData::PickDone(void* arg, grpc_error* error) {
               "chand=%p calld=%p: failed to pick subchannel: error=%s", chand,
               calld, grpc_error_string(error));
     }
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUCCEEDED);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_PICK_SUCCEEDED, GRPC_ERROR_NONE);
     calld->PendingBatchesFail(elem, GRPC_ERROR_REF(error), YieldCallCombiner);
     return;
+  } else {
+    idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_PICK_FAILED, GRPC_ERROR_NONE);
   }
   calld->CreateSubchannelCall(elem);
 }
