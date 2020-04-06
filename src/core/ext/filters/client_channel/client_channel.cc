@@ -3738,6 +3738,7 @@ void CallData::PickDone(void* arg, grpc_error* error) {
   grpc_call_element* elem = static_cast<grpc_call_element*>(arg);
   ChannelData* chand = static_cast<ChannelData*>(elem->channel_data);
   CallData* calld = static_cast<CallData*>(elem->call_data);
+  IdleAccount* idle_account = static_cast<IdleAccount*>(calld->call_context()[GRPC_CONTEXT_IDLE_ACCOUNT].value);
   if (error != GRPC_ERROR_NONE) {
     if (GRPC_TRACE_FLAG_ENABLED(grpc_client_channel_routing_trace)) {
       gpr_log(GPR_INFO,
@@ -3745,12 +3746,12 @@ void CallData::PickDone(void* arg, grpc_error* error) {
               calld, grpc_error_string(error));
     }
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUCCEEDED);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_PICK_SUCCEEDED, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUCCEEDED, GRPC_ERROR_NONE);
     calld->PendingBatchesFail(elem, GRPC_ERROR_REF(error), YieldCallCombiner);
     return;
   } else {
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_PICK_FAILED, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED, GRPC_ERROR_NONE);
   }
   calld->CreateSubchannelCall(elem);
 }
