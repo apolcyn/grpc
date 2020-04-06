@@ -56,6 +56,7 @@ static void send_cancel_op_in_call_combiner(void* arg, grpc_error* error) {
                         deadline_state, grpc_schedule_on_exec_ctx));
   batch->cancel_stream = true;
   batch->payload->cancel_stream.cancel_error = GRPC_ERROR_REF(error);
+  batch->payload->context = deadline_state->context;
   elem->filter->start_transport_stream_op_batch(elem, batch);
 }
 
@@ -185,7 +186,31 @@ grpc_deadline_state::grpc_deadline_state(grpc_call_element* elem,
                                          grpc_call_stack* call_stack,
                                          grpc_core::CallCombiner* call_combiner,
                                          grpc_millis deadline)
-    : call_stack(call_stack), call_combiner(call_combiner) {
+    : call_stack(call_stack), call_combiner(call_combiner), idle_account(nullptr) {
+  // Deadline will always be infinite on servers, so the timer will only be
+  // set on clients with a finite deadline.
+  if (deadline != GRPC_MILLIS_INF_FUTURE) {
+    // When the deadline passes, we indicate the failure by sending down
+    // an op with cancel_error set.  However, we can't send down any ops
+    // until after the call stack is fully initialized.  If we start the
+    // timer here, we have no guarantee that the timer won't pop before
+    // call stack initialization is finished.  To avoid that problem, we
+    // create a closure to start the timer, and we schedule that closure
+    // to be run after call stack initialization is done.
+    struct start_timer_after_init_state* state =
+        new start_timer_after_init_state(elem, deadline);
+    GRPC_CLOSURE_INIT(&state->closure, start_timer_after_init, state,
+                      grpc_schedule_on_exec_ctx);
+    grpc_core::ExecCtx::Run(DEBUG_LOCATION, &state->closure, GRPC_ERROR_NONE);
+  }
+}
+
+grpc_deadline_state::grpc_deadline_state(grpc_call_element* elem,
+                                         grpc_call_stack* call_stack,
+                                         grpc_core::CallCombiner* call_combiner,
+                                         grpc_millis deadline,
+                                         grpc_core::IdleAccount* idle_account)
+    : call_stack(call_stack), call_combiner(call_combiner), idle_account(idle_account) {
   // Deadline will always be infinite on servers, so the timer will only be
   // set on clients with a finite deadline.
   if (deadline != GRPC_MILLIS_INF_FUTURE) {
@@ -263,8 +288,9 @@ typedef struct server_call_data {
 // Constructor for call_data.  Used for both client and server filters.
 static grpc_error* deadline_init_call_elem(grpc_call_element* elem,
                                            const grpc_call_element_args* args) {
+  grpc_core::IdleContext* idle_context = static_cast<grpc_core::IdleContext*>(args->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
   new (elem->call_data) grpc_deadline_state(
-      elem, args->call_stack, args->call_combiner, args->deadline);
+      elem, args->call_stack, args->call_combiner, args->deadline, idle_context);
   return GRPC_ERROR_NONE;
 }
 
@@ -280,9 +306,9 @@ static void deadline_destroy_call_elem(
 // Method for starting a call op for client filter.
 static void deadline_client_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* op) {
-  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
-  idle_account->start(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
-  idle_account->stop(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  //grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  //idle_account->start(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
+  //idle_account->stop(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   grpc_deadline_state_client_start_transport_stream_op_batch(elem, op);
   // Chain to next filter.
   grpc_call_next_op(elem, op);

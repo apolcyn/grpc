@@ -34,6 +34,9 @@ struct grpc_deadline_state {
   grpc_deadline_state(grpc_call_element* elem, grpc_call_stack* call_stack,
                       grpc_core::CallCombiner* call_combiner,
                       grpc_millis deadline);
+  grpc_deadline_state(grpc_call_element* elem, grpc_call_stack* call_stack,
+                      grpc_core::CallCombiner* call_combiner,
+                      grpc_millis deadline, grpc_core::IdleAccount* idle_account);
   ~grpc_deadline_state();
 
   // We take a reference to the call stack for the timer callback.
@@ -48,6 +51,7 @@ struct grpc_deadline_state {
   // The original recv_trailing_metadata_ready closure, which we chain to
   // after our own closure is invoked.
   grpc_closure* original_recv_trailing_metadata_ready;
+  grpc_core::IdleContext *idle_context = nullptr;
 };
 
 //

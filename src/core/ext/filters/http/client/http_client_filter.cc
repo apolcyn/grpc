@@ -345,6 +345,9 @@ static void http_client_start_transport_stream_op_batch(
   call_data* calld = static_cast<call_data*>(elem->call_data);
   channel_data* channeld = static_cast<channel_data*>(elem->channel_data);
   GPR_TIMER_SCOPE("http_client_start_transport_stream_op_batch", 0);
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::HTTP_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::HTTP_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
 
   if (batch->recv_initial_metadata) {
     /* substitute our callback for the higher callback */

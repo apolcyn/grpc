@@ -52,6 +52,12 @@ void client_authority_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* batch) {
   channel_data* chand = static_cast<channel_data*>(elem->channel_data);
   call_data* calld = static_cast<call_data*>(elem->call_data);
+  GPR_ASSERT(batch != nullptr);
+  GPR_ASSERT(batch->payload != nullptr);
+  GPR_ASSERT(batch->payload->context != nullptr);
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   // Handle send_initial_metadata.
   auto* initial_metadata =
       batch->payload->send_initial_metadata.send_initial_metadata;

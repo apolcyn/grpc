@@ -98,6 +98,9 @@ static void clr_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* batch) {
   call_data* calld = static_cast<call_data*>(elem->call_data);
   GPR_TIMER_SCOPE("clr_start_transport_stream_op_batch", 0);
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::CLR_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::CLR_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   // Handle send_initial_metadata.
   if (batch->send_initial_metadata) {
     // Grab client stats object from metadata.

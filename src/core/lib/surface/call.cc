@@ -717,6 +717,10 @@ static void cancel_with_error(grpc_call* c, grpc_error* error) {
       grpc_make_transport_stream_op(&state->finish_batch);
   op->cancel_stream = true;
   op->payload->cancel_stream.cancel_error = error;
+  if (c->is_client) {
+    op->payload->context = c->context;
+    GPR_ASSERT(op->payload->context != nullptr);
+  }
   execute_batch(c, op, &state->start_batch);
 }
 

@@ -240,6 +240,9 @@ static void recv_trailing_metadata_ready(void* user_data, grpc_error* error) {
 static void message_size_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* op) {
   call_data* calld = static_cast<call_data*>(elem->call_data);
+  //grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  //idle_account->start(grpc_core::IdleAccountMetric::MESSAGE_SIZE_START_TRANSPORT_STREAM_OP_BATCH);
+  //idle_account->stop(grpc_core::IdleAccountMetric::MESSAGE_SIZE_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   // Check max send message size.
   if (op->send_message && calld->limits.max_send_size >= 0 &&
       op->payload->send_message.send_message->length() >
