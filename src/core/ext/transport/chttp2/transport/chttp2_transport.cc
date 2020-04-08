@@ -1668,6 +1668,9 @@ static void perform_stream_op(grpc_transport* gt, grpc_stream* gs,
     GPR_ASSERT(gpr_asprintf(&str, "%p", t->combiner));
     idle_account->set_property(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP, "t->combiner", std::string(str));
     gpr_free(str);
+    GPR_ASSERT(gpr_asprintf(&str, "%p", s));
+    idle_account->set_property(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP, "stream", std::string(str));
+    gpr_free(str);
   }
 
   if (!t->is_client) {
@@ -1691,9 +1694,11 @@ static void perform_stream_op(grpc_transport* gt, grpc_stream* gs,
 
   GRPC_CHTTP2_STREAM_REF(s, "perform_stream_op");
   op->handler_private.extra_arg = gs;
+  gpr_log(GPR_DEBUG, "apolcyn perform_stream_op begin t->combiner-Run stream:%p t->combiner:%p", s, t->combiner);
   t->combiner->Run(GRPC_CLOSURE_INIT(&op->handler_private.closure,
                                      perform_stream_op_locked, op, nullptr),
                    GRPC_ERROR_NONE);
+  gpr_log(GPR_DEBUG, "apolcyn perform_stream_op done t->combiner-Run stream:%p t->combiner:%p", s, t->combiner);
 }
 
 static void cancel_pings(grpc_chttp2_transport* t, grpc_error* error) {

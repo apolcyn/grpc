@@ -84,7 +84,7 @@ class IdleAccount {
       gpr_log(GPR_ERROR, "different value for key exists");
       abort();
     }
-    if (lookup != m->end()) {
+    if (lookup == m->end()) {
       m->insert({key, val});
     }
     metric_totals_[reason].total_started++;

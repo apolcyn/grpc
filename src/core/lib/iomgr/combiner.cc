@@ -169,12 +169,15 @@ static void move_next() {
 static void offload(void* arg, grpc_error* /*error*/) {
   grpc_core::Combiner* lock = static_cast<grpc_core::Combiner*>(arg);
   push_last_on_exec_ctx(lock);
+  char buf[100];
+  GPR_ASSERT(pthread_getname_np(pthread_self(), buf, sizeof(buf)) == 0);
+  GRPC_COMBINER_TRACE(gpr_log(GPR_INFO, "C:%p offload done picked up by thread:%s", lock, buf));
 }
 
 static void queue_offload(grpc_core::Combiner* lock) {
   GRPC_STATS_INC_COMBINER_LOCKS_OFFLOADED();
   move_next();
-  GRPC_COMBINER_TRACE(gpr_log(GPR_INFO, "C:%p queue_offload", lock));
+  GRPC_COMBINER_TRACE(gpr_log(GPR_INFO, "C:%p queue_offload &lock->offload:%p", lock, &lock->offload));
   grpc_core::Executor::Run(&lock->offload, GRPC_ERROR_NONE);
 }
 

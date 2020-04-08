@@ -22,6 +22,7 @@
 
 #include <string.h>
 
+#include <grpc/support/string_util.h>
 #include <grpc/support/alloc.h>
 #include <grpc/support/cpu.h>
 #include <grpc/support/log.h>
@@ -156,13 +157,17 @@ void Executor::SetThreading(bool threading) {
       gpr_mu_init(&thd_state_[i].mu);
       gpr_cv_init(&thd_state_[i].cv);
       thd_state_[i].id = i;
-      thd_state_[i].name = name_;
+      char *name_str;
+      GPR_ASSERT(gpr_asprintf(&name_str, "%ld-%s", i, name_) != -1);
+      thd_state_[i].name = name_str;
       thd_state_[i].thd = grpc_core::Thread();
       thd_state_[i].elems = GRPC_CLOSURE_LIST_INIT;
     }
 
+    char *str;
+    GPR_ASSERT(gpr_asprintf(&str, "0-%s", name_) != -1);
     thd_state_[0].thd =
-        grpc_core::Thread(name_, &Executor::ThreadMain, &thd_state_[0]);
+        grpc_core::Thread(str, &Executor::ThreadMain, &thd_state_[0]);
     thd_state_[0].thd.Start();
   } else {  // !threading
     if (curr_num_threads == 0) {
@@ -334,6 +339,9 @@ void Executor::Enqueue(grpc_closure* closure, grpc_error* error,
       }
 
       // == Found the thread state (i.e thread) to enqueue this closure! ==
+      EXECUTOR_TRACE(
+          "(%s) found the thead state (%s) to enqueue closure %p"
+          name_, ts->name, closure);
 
       // Also, if this thread has been waiting for closures, wake it up.
       // - If grpc_closure_list_empty() is true and the Executor is not
@@ -366,8 +374,10 @@ void Executor::Enqueue(grpc_closure* closure, grpc_error* error,
         // always increment num_threads under the 'adding_thread_lock')
         gpr_atm_rel_store(&num_threads_, cur_thread_count + 1);
 
+        char* str;
+        GPR_ASSERT(gpr_asprintf(&str, "%ld-%s", cur_thread_count, name_) != -1);
         thd_state_[cur_thread_count].thd = grpc_core::Thread(
-            name_, &Executor::ThreadMain, &thd_state_[cur_thread_count]);
+            str, &Executor::ThreadMain, &thd_state_[cur_thread_count]);
         thd_state_[cur_thread_count].thd.Start();
       }
       gpr_spinlock_unlock(&adding_thread_lock_);
