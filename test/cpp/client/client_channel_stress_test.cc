@@ -244,7 +244,8 @@ class ClientChannelStressTest {
     grpc_core::Resolver::Result result;
     grpc_error* error = GRPC_ERROR_NONE;
     result.service_config = grpc_core::ServiceConfig::Create(
-        "{\"loadBalancingConfig\":[{\"grpclb\":{}}]}", &error);
+                   "{\"loadBalancingConfig\":[{\"grpclb\":{\"childPolicy\":[{"
+                   "\"pick_first\":{}}]}}]}", &error);
     GPR_ASSERT(error == GRPC_ERROR_NONE);
     grpc_core::ServerAddressList balancer_addresses =
         CreateAddressListFromAddressDataList(balancer_address_data);

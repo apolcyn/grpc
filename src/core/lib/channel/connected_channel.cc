@@ -103,9 +103,11 @@ static void connected_channel_start_transport_stream_op_batch(
   call_data* calld = static_cast<call_data*>(elem->call_data);
   channel_data* chand = static_cast<channel_data*>(elem->channel_data);
   //if (chand->is_client) {
+  //  GPR_ASSERT(batch->payload != nullptr);
+  //  GPR_ASSERT(batch->payload->context != nullptr);
   //  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
   //  idle_account->start(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
-  //  idle_account->stop(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  //  idle_account->stop(grpc_core::IdleAccountMetric::CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
   //}
   if (batch->recv_initial_metadata) {
     callback_state* state = &calld->recv_initial_metadata_ready;

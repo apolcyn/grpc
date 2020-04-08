@@ -38,12 +38,15 @@ gpr_atm gpr_counter_atm_add = 0;
 #endif
 
 void gpr_mu_init(gpr_mu* mu) {
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
 #ifdef GRPC_ASAN_ENABLED
-  GPR_ASSERT(pthread_mutex_init(&mu->mutex, nullptr) == 0);
+  GPR_ASSERT(pthread_mutex_init(&mu->mutex, &attr) == 0);
   mu->leak_checker = static_cast<int*>(malloc(sizeof(*mu->leak_checker)));
   GPR_ASSERT(mu->leak_checker != nullptr);
 #else
-  GPR_ASSERT(pthread_mutex_init(mu, nullptr) == 0);
+  GPR_ASSERT(pthread_mutex_init(mu, &attr) == 0);
 #endif
 }
 

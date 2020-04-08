@@ -56,7 +56,8 @@ static void send_cancel_op_in_call_combiner(void* arg, grpc_error* error) {
                         deadline_state, grpc_schedule_on_exec_ctx));
   batch->cancel_stream = true;
   batch->payload->cancel_stream.cancel_error = GRPC_ERROR_REF(error);
-  batch->payload->context = deadline_state->context;
+  GPR_ASSERT(deadline_state->call_context != nullptr);
+  batch->payload->context = deadline_state->call_context;
   elem->filter->start_transport_stream_op_batch(elem, batch);
 }
 
@@ -186,7 +187,7 @@ grpc_deadline_state::grpc_deadline_state(grpc_call_element* elem,
                                          grpc_call_stack* call_stack,
                                          grpc_core::CallCombiner* call_combiner,
                                          grpc_millis deadline)
-    : call_stack(call_stack), call_combiner(call_combiner), idle_account(nullptr) {
+    : call_stack(call_stack), call_combiner(call_combiner), call_context(nullptr) {
   // Deadline will always be infinite on servers, so the timer will only be
   // set on clients with a finite deadline.
   if (deadline != GRPC_MILLIS_INF_FUTURE) {
@@ -209,8 +210,8 @@ grpc_deadline_state::grpc_deadline_state(grpc_call_element* elem,
                                          grpc_call_stack* call_stack,
                                          grpc_core::CallCombiner* call_combiner,
                                          grpc_millis deadline,
-                                         grpc_core::IdleAccount* idle_account)
-    : call_stack(call_stack), call_combiner(call_combiner), idle_account(idle_account) {
+                                         grpc_call_context_element* call_context)
+    : call_stack(call_stack), call_combiner(call_combiner), call_context(call_context) {
   // Deadline will always be infinite on servers, so the timer will only be
   // set on clients with a finite deadline.
   if (deadline != GRPC_MILLIS_INF_FUTURE) {
@@ -288,9 +289,9 @@ typedef struct server_call_data {
 // Constructor for call_data.  Used for both client and server filters.
 static grpc_error* deadline_init_call_elem(grpc_call_element* elem,
                                            const grpc_call_element_args* args) {
-  grpc_core::IdleContext* idle_context = static_cast<grpc_core::IdleContext*>(args->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  grpc_call_context_element* call_context = args->context;
   new (elem->call_data) grpc_deadline_state(
-      elem, args->call_stack, args->call_combiner, args->deadline, idle_context);
+      elem, args->call_stack, args->call_combiner, args->deadline, call_context);
   return GRPC_ERROR_NONE;
 }
 
@@ -306,9 +307,9 @@ static void deadline_destroy_call_elem(
 // Method for starting a call op for client filter.
 static void deadline_client_start_transport_stream_op_batch(
     grpc_call_element* elem, grpc_transport_stream_op_batch* op) {
-  //grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
-  //idle_account->start(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
-  //idle_account->stop(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(op->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+  idle_account->start(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH);
+  idle_account->stop(grpc_core::IdleAccountMetric::DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
   grpc_deadline_state_client_start_transport_stream_op_batch(elem, op);
   // Chain to next filter.
   grpc_call_next_op(elem, op);

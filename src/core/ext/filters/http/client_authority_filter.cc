@@ -57,7 +57,7 @@ void client_authority_start_transport_stream_op_batch(
   GPR_ASSERT(batch->payload->context != nullptr);
   grpc_core::IdleAccount* idle_account = static_cast<grpc_core::IdleAccount*>(batch->payload->context[GRPC_CONTEXT_IDLE_ACCOUNT].value);
   idle_account->start(grpc_core::IdleAccountMetric::AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH);
-  idle_account->stop(grpc_core::IdleAccountMetric::AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  idle_account->stop(grpc_core::IdleAccountMetric::AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
   // Handle send_initial_metadata.
   auto* initial_metadata =
       batch->payload->send_initial_metadata.send_initial_metadata;

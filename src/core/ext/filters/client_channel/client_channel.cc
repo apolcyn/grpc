@@ -2030,7 +2030,7 @@ CallData::CallData(grpc_call_element* elem, const ChannelData& chand,
                       GPR_LIKELY(chand.deadline_checking_enabled())
                           ? args.deadline
                           : GRPC_MILLIS_INF_FUTURE,
-                          static_cast<grpc_core::IdleAccount*>(ags.context[GRPC_CONTEXT_IDLE_ACCOUNT].value)),
+                          args.context),
       path_(grpc_slice_ref_internal(args.path)),
       call_start_time_(args.start_time),
       deadline_(args.deadline),
@@ -2084,7 +2084,7 @@ void CallData::StartTransportStreamOpBatch(
   CallData* call_data = static_cast<CallData*>(elem->call_data);
   IdleAccount* idle_account = static_cast<IdleAccount*>(call_data->call_context()[GRPC_CONTEXT_IDLE_ACCOUNT].value);
   idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH);
-  idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, GRPC_ERROR_NONE);
+  idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
   GPR_TIMER_SCOPE("cc_start_transport_stream_op_batch", 0);
   CallData* calld = static_cast<CallData*>(elem->call_data);
   ChannelData* chand = static_cast<ChannelData*>(elem->channel_data);
@@ -2094,7 +2094,7 @@ void CallData::StartTransportStreamOpBatch(
   // If we've previously been cancelled, immediately fail any new batches.
   if (GPR_UNLIKELY(calld->cancel_error_ != GRPC_ERROR_NONE)) {
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_ERROR_EXISTS);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_ERROR_EXISTS, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_ERROR_EXISTS, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
     if (GRPC_TRACE_FLAG_ENABLED(grpc_client_channel_call_trace)) {
       gpr_log(GPR_INFO, "chand=%p calld=%p: failing batch with error: %s",
               chand, calld, grpc_error_string(calld->cancel_error_));
@@ -2107,7 +2107,7 @@ void CallData::StartTransportStreamOpBatch(
   // Handle cancellation.
   if (GPR_UNLIKELY(batch->cancel_stream)) {
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_STREAM);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_STREAM, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_CANCEL_STREAM, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
     // Stash a copy of cancel_error in our call data, so that we can use
     // it for subsequent operations.  This ensures that if the call is
     // cancelled before any batches are passed down (e.g., if the deadline
@@ -2150,7 +2150,7 @@ void CallData::StartTransportStreamOpBatch(
               calld, calld->subchannel_call_.get());
     }
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_HAVE_SUBCHANNEL_CALL);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_HAVE_SUBCHANNEL_CALL, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_HAVE_SUBCHANNEL_CALL, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
     calld->PendingBatchesResume(elem);
     return;
   }
@@ -2164,7 +2164,7 @@ void CallData::StartTransportStreamOpBatch(
               chand, calld);
     }
     idle_account->start(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL);
-    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL, GRPC_ERROR_NONE);
+    idle_account->stop(IdleAccountMetric::CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL, batch->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
     PickSubchannel(elem, GRPC_ERROR_NONE);
   } else {
     // For all other batches, release the call combiner.

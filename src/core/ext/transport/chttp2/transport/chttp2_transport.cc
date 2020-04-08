@@ -1357,6 +1357,13 @@ static void perform_stream_op_locked(void* stream_op,
       static_cast<grpc_chttp2_stream*>(op->handler_private.extra_arg);
   grpc_transport_stream_op_batch_payload* op_payload = op->payload;
   grpc_chttp2_transport* t = s->t;
+  if (t->is_client) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(op_payload->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->start(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP_LOCKED);
+    idle_account->stop(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP_LOCKED, op->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
+  }
 
   GRPC_STATS_INC_HTTP2_OP_BATCHES();
 
@@ -1651,6 +1658,17 @@ static void perform_stream_op(grpc_transport* gt, grpc_stream* gs,
   GPR_TIMER_SCOPE("perform_stream_op", 0);
   grpc_chttp2_transport* t = reinterpret_cast<grpc_chttp2_transport*>(gt);
   grpc_chttp2_stream* s = reinterpret_cast<grpc_chttp2_stream*>(gs);
+  if (t->is_client) {
+    grpc_core::IdleAccount *idle_account =
+        static_cast<grpc_core::IdleAccount*>(
+            static_cast<grpc_call_context_element*>(op->payload->context)[GRPC_CONTEXT_IDLE_ACCOUNT].value);
+    idle_account->start(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP);
+    idle_account->stop(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP, op->cancel_stream ? GRPC_ERROR_CANCELLED : GRPC_ERROR_NONE);
+    char* str;
+    GPR_ASSERT(gpr_asprintf(&str, "%p", t->combiner));
+    idle_account->set_property(grpc_core::IdleAccountMetric::CHTTP2_BEGIN_PERFORM_STREAM_OP, "t->combiner", std::string(str));
+    gpr_free(str);
+  }
 
   if (!t->is_client) {
     if (op->send_initial_metadata) {

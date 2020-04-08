@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <grpc/grpc.h>
 #include <grpc/support/time.h>
@@ -39,6 +40,8 @@ enum IdleAccountMetric {
   BEGIN_TRANSPORT_SEND_MD,
   CLR_START_TRANSPORT_STREAM_OP_BATCH,
   DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH,
+  CHTTP2_BEGIN_PERFORM_STREAM_OP,
+  CHTTP2_BEGIN_PERFORM_STREAM_OP_LOCKED,
   CLIENT_CHANNEL_CREATE_SUBCHANNEL_CALL_PENDING_BATCHES_FAIL,
   CLIENT_CHANNEL_CREATE_SUBCHANNEL_CALL_PENDING_BATCHES_RESUME,
   CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH,
@@ -48,6 +51,7 @@ enum IdleAccountMetric {
   CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUBCHANNEL,
   CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUCCEEDED,
   CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED,
+  CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH,
   HTTP_CLIENT_START_TRANSPORT_STREAM_OP_BATCH,
   SEND_WALL_TIME,
   SEND_MD_WALL_TIME,
@@ -71,6 +75,20 @@ class IdleAccount {
     metric_totals_.resize(IdleAccountMetric::NUM_METRICS);
   }
   ~IdleAccount() {}
+
+  void set_property(IdleAccountMetric reason, const std::string& key, const std::string& val) {
+    grpc_core::MutexLock lock(&mu_);
+    auto m = &metric_totals_[reason].properties;
+    auto lookup = m->find(key);
+    if (lookup != m->end() && lookup->second != val) {
+      gpr_log(GPR_ERROR, "different value for key exists");
+      abort();
+    }
+    if (lookup != m->end()) {
+      m->insert({key, val});
+    }
+    metric_totals_[reason].total_started++;
+  }
 
   void start(IdleAccountMetric reason) {
     grpc_core::MutexLock lock(&mu_);
@@ -98,7 +116,9 @@ class IdleAccount {
       metric_totals_[reason].total_ms += (now - metric_totals_[reason].cur_wall_time_start_);
       //gpr_log(GPR_DEBUG, "idle_account:%p metric %s stopped at %ld total_ms: %ld", this, MetricToName(reason), now, metric_totals_[reason].total_ms);
     }
-    if (error != GRPC_ERROR_NONE) {
+    if (error == GRPC_ERROR_CANCELLED) {
+      metric_totals_[reason].total_cancelled++;
+    } else if (error != GRPC_ERROR_NONE) {
       metric_totals_[reason].total_errors++;
     }
   }
@@ -137,12 +157,18 @@ class IdleAccount {
         grpc_millis now = grpc_core::ExecCtx::Get()->Now();
         val = now - metric_totals_[i].cur_wall_time_start_;
       }
+      std::string props = "";
+      for (auto it = metric_totals_[i].properties.begin(); it != metric_totals_[i].properties.end(); it++) {
+        props += ("{" + it->first + "," + it->second + "}");
+      }
       out += " "
           + std::string(MetricToName(static_cast<IdleAccountMetric>(i)))
           + "=(ms:" + std::to_string(val)
           + " cur_active:" + std::to_string(metric_totals_[i].cur_active_)
           + " total_started:" + std::to_string(metric_totals_[i].total_started)
           + " total_errors:" + std::to_string(metric_totals_[i].total_errors)
+          + " total_cancelled:" + std::to_string(metric_totals_[i].total_cancelled)
+          + " properties:" + props
           + ")";
     }
     return out;
@@ -157,6 +183,10 @@ class IdleAccount {
         return "AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH";
       case BEGIN_TRANSPORT_SEND_MD:
         return "BEGIN_TRANSPORT_SEND_MD";
+      case CHTTP2_BEGIN_PERFORM_STREAM_OP:
+        return "CHTTP2_BEGIN_PERFORM_STREAM_OP";
+      case CHTTP2_BEGIN_PERFORM_STREAM_OP_LOCKED:
+        return "CHTTP2_BEGIN_PERFORM_STREAM_OP_LOCKED";
       case CLR_START_TRANSPORT_STREAM_OP_BATCH:
         return "CLR_START_TRANSPORT_STREAM_OP_BATCH";
       case DEADLINE_CLIENT_START_TRANSPORT_STREAM_OP_BATCH:
@@ -179,6 +209,8 @@ class IdleAccount {
         return "CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_SUCCEEDED";
       case CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED:
         return "CLIENT_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH_PICK_FAILED";
+      case CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH:
+        return "CONNECTED_CHANNEL_START_TRANSPORT_STREAM_OP_BATCH";
       case HTTP_CLIENT_START_TRANSPORT_STREAM_OP_BATCH:
         return "HTTP_CLIENT_START_TRANSPORT_STREAM_OP_BATCH";
       case SEND_WALL_TIME:
@@ -218,6 +250,8 @@ class IdleAccount {
     grpc_millis total_ms = 0;
     int total_started = 0;
     int total_errors = 0;
+    int total_cancelled = 0;
+    std::map<std::string, std::string> properties;
   };
 
   std::vector<MetricTotal> metric_totals_;
