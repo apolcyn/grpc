@@ -340,7 +340,7 @@ void Executor::Enqueue(grpc_closure* closure, grpc_error* error,
 
       // == Found the thread state (i.e thread) to enqueue this closure! ==
       EXECUTOR_TRACE(
-          "(%s) found the thead state (%s) to enqueue closure %p"
+          "(%s) found the thead state (%s) to enqueue closure %p",
           name_, ts->name, closure);
 
       // Also, if this thread has been waiting for closures, wake it up.
