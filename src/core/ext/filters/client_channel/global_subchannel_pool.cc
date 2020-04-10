@@ -21,6 +21,7 @@
 #include "src/core/ext/filters/client_channel/global_subchannel_pool.h"
 
 #include "src/core/ext/filters/client_channel/subchannel.h"
+#include "src/core/lib/surface/idle_accounting.h"
 
 namespace grpc_core {
 
@@ -56,6 +57,7 @@ RefCountedPtr<GlobalSubchannelPool> GlobalSubchannelPool::instance() {
 
 Subchannel* GlobalSubchannelPool::RegisterSubchannel(SubchannelKey* key,
                                                      Subchannel* constructed) {
+  grpc_core::TimeAndCpuCounter tracker("RegisterSubchannel");
   Subchannel* c = nullptr;
   // Compare and swap (CAS) loop:
   while (c == nullptr) {
@@ -98,6 +100,7 @@ Subchannel* GlobalSubchannelPool::RegisterSubchannel(SubchannelKey* key,
 }
 
 void GlobalSubchannelPool::UnregisterSubchannel(SubchannelKey* key) {
+  grpc_core::TimeAndCpuCounter tracker("UnregisterSubchannel");
   bool done = false;
   // Compare and swap (CAS) loop:
   while (!done) {

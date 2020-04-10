@@ -35,6 +35,26 @@
 
 namespace grpc_core {
 
+class TimeAndCpuCounter {
+ public:
+  explicit TimeAndCpuCounter(const std::string& name) {
+    start_ = gpr_now(GPR_CLOCK_MONOTONIC);
+    char buf[100];
+    GPR_ASSERT(pthread_getname_np(pthread_self(), buf, sizeof(buf)) == 0);
+    name_ = name + "-" + std::string(buf);
+    gpr_log(GPR_DEBUG, "apolcyn time counter %p %s start", this, name_.c_str());
+  }
+
+  ~TimeAndCpuCounter() {
+    gpr_timespec elapsed = gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), start_);
+    double elapsed_us = gpr_timespec_to_micros(elapsed);
+    gpr_log(GPR_DEBUG, "apolcyn time counter %p %s elapsed us: %lf", this, name_.c_str(), elapsed_us);
+  }
+
+  gpr_timespec start_;
+  std::string name_;
+};
+
 enum IdleAccountMetric {
   AUTHORITY_START_TRANSPORT_STREAM_OP_BATCH,
   BEGIN_TRANSPORT_SEND_MD,
