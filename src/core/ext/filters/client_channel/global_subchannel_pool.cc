@@ -59,6 +59,8 @@ Subchannel* GlobalSubchannelPool::RegisterSubchannel(SubchannelKey* key,
                                                      Subchannel* constructed) {
   grpc_core::TimeAndCpuCounter tracker("RegisterSubchannel");
   Subchannel* c = nullptr;
+  int spins = 0;
+  bool reused = false;
   // Compare and swap (CAS) loop:
   while (c == nullptr) {
     // Ref the shared map to have a local copy.
@@ -73,6 +75,7 @@ Subchannel* GlobalSubchannelPool::RegisterSubchannel(SubchannelKey* key,
       if (c != nullptr) {
         GRPC_SUBCHANNEL_UNREF(constructed,
                               "subchannel_register+found_existing");
+        reused = true;
         // Exit the CAS loop without modifying the shared map.
       }  // Else, reuse failed, so retry CAS loop.
     } else {
@@ -95,13 +98,16 @@ Subchannel* GlobalSubchannelPool::RegisterSubchannel(SubchannelKey* key,
       grpc_avl_unref(new_map, nullptr);
     }
     grpc_avl_unref(old_map, nullptr);
+    if (c == nullptr) spins++;
   }
+  gpr_log(GPR_DEBUG, "apolcyn RegisterSubchannel spin count:%d reused:%d", spins, reused);
   return c;
 }
 
 void GlobalSubchannelPool::UnregisterSubchannel(SubchannelKey* key) {
   grpc_core::TimeAndCpuCounter tracker("UnregisterSubchannel");
   bool done = false;
+  int spins = 0;
   // Compare and swap (CAS) loop:
   while (!done) {
     // Ref the shared map to have a local copy.
@@ -124,7 +130,9 @@ void GlobalSubchannelPool::UnregisterSubchannel(SubchannelKey* key) {
     gpr_mu_unlock(&mu_);
     grpc_avl_unref(new_map, nullptr);
     grpc_avl_unref(old_map, nullptr);
+    if (!done) spins++;
   }
+  gpr_log(GPR_DEBUG, "apolcyn UnregisterSubchannel spin count:%d", spins);
 }
 
 Subchannel* GlobalSubchannelPool::FindSubchannel(SubchannelKey* key) {
