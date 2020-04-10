@@ -10,12 +10,17 @@ def timestamp_to_ms(ts):
   ms = float(m.group(4)[:3])
   return ms + s * 1e3 + mi * 60 * 1e3 + h * 24 * 60 * 1e3
 
+def get_tid(line):
+  m = re.match(r'(\S+)\s+(\S+)\s+(\S+).*', line)
+  return m.group(3)
+
 def get_thread_and_elapsed(key, line):
   idx = 0
   for token in line.split():
     if token.startswith(key):
       subtokens = token.split('-')
       thread = '-'.join(subtokens[1:])
+      thread += ('-tid-%s' % get_tid(line))
       m = re.match(r'.*elapsed us: (.*)', line)
       if m is None:
         us = None
@@ -36,6 +41,8 @@ pending_unregister_starts = {}
 last_ts_ms = None
 reached_end = False
 timeout = None
+executor_wait_times = {}
+pending_executor_waits = {}
 with open('k', 'r') as f:
   for l in f.readlines():
     if 'apolcyn main begin grpc_init' in l:
@@ -47,11 +54,11 @@ with open('k', 'r') as f:
       last_ts_ms = timestamp_to_ms(l.split()[1])
     if 'apolcyn time counter' in l and 'RegisterSubchannel' in l and 'elapsed us' not in l:
       thread, _ = get_thread_and_elapsed('RegisterSubchannel', l)
-      assert not pending_register_starts.get(thread)
+      assert not pending_register_starts.get(thread), ('register subchannel for thread %s started without prior one finishing on line %s' % (thread, l))
       pending_register_starts[thread] = timestamp_to_ms(l.split()[1])
     elif 'apolcyn time counter' in l and 'UnregisterSubchannel' in l and 'elapsed us' not in l:
       thread, _ = get_thread_and_elapsed('UnregisterSubchannel', l)
-      assert not pending_unregister_starts.get(thread)
+      assert not pending_unregister_starts.get(thread), ('unregister subchannel for thread %s started without prior one finishing on line %s' % (thread, l))
       pending_unregister_starts[thread] = timestamp_to_ms(l.split()[1])
     elif 'apolcyn time counter' in l and 'RegisterSubchannel' in l and 'elapsed us' in l:
       thread, us = get_thread_and_elapsed('RegisterSubchannel', l)
@@ -70,16 +77,34 @@ with open('k', 'r') as f:
     elif 'TIMEOUT in' in l:
       m = re.match(r'.*TIMEOUT in (.+?)s', l)
       timeout = float(m.group(1))
+    elif 'EXECUTOR' in l and 'execute' in l:
+      m = re.match(r'.*EXECUTOR \((.+?)\) (.+?) execute', l)
+      executor = m.group(1)
+      assert pending_executor_waits[executor]
+      if executor_wait_times.get(executor) is None:
+        executor_wait_times[executor] = 0
+      executor_wait_times[executor] += timestamp_to_ms(l.split()[1]) - pending_executor_waits[executor]
+      pending_executor_waits[executor] = False
+    elif 'EXECUTOR' in l and 'step' in l:
+      m = re.match(r'.*EXECUTOR \((.+?)\) (.+?) step', l)
+      executor = m.group(1)
+      assert not pending_executor_waits.get(executor), ('executor %s steps without executing on line %s' % (executor, l))
+      pending_executor_waits[executor] = timestamp_to_ms(l.split()[1])
+
+
 for k in register_elapsed.keys():
   print('thread %s spent %lf ms in RegisterSubchannel' % (k, register_elapsed[k] / 1e3))
 for k in unregister_elapsed.keys():
   print('thread %s spent %lf ms in UnregisterSubchannel' % (k, unregister_elapsed[k] / 1e3))
+timeout_ms = start_time_ms + timeout * 1e3
 for k in pending_register_starts.keys():
   if pending_register_starts[k]:
-    print('thread %s started RegisterSubchannel %lf ms ago' % (k, last_ts_ms - pending_register_starts[k]))
+    print('thread %s started RegisterSubchannel %lf ms ago that never finished' % (k, timeout_ms - pending_register_starts[k]))
 for k in pending_unregister_starts.keys():
   if pending_unregister_starts[k]:
-    print('thread %s started UnregisterSubchannel %ld ms ago' % (k, last_ts_ms - pending_unregister_starts[k]))
+    print('thread %s started UnregisterSubchannel %ld ms ago that never finished' % (k, timeout_ms - pending_unregister_starts[k]))
 print('last log printed by test was %lf ms in' % (last_ts_ms - start_time_ms))
 print('test timed out in %lf seconds' % timeout)
 print('start time ms: %lf last time ms: %lf' % (start_time_ms, last_ts_ms))
+for k in executor_wait_times.keys():
+  print('executor %s spent %lf ms waiting for work that eventually arrived' % (executor, executor_wait_times[k]))

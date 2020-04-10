@@ -96,6 +96,7 @@ class TraceFlag {
 #ifdef GRPC_THREADSAFE_TRACER
     gpr_atm_no_barrier_store(&value_, enabled);
 #else
+    abort();
     value_ = enabled;
 #endif
   }

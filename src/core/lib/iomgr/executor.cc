@@ -39,16 +39,12 @@
 
 #define EXECUTOR_TRACE(format, ...)                       \
   do {                                                    \
-    if (GRPC_TRACE_FLAG_ENABLED(executor_trace)) {        \
-      gpr_log(GPR_INFO, "EXECUTOR " format, __VA_ARGS__); \
-    }                                                     \
+    gpr_log(GPR_INFO, "EXECUTOR " format, __VA_ARGS__); \
   } while (0)
 
 #define EXECUTOR_TRACE0(str)                       \
   do {                                             \
-    if (GRPC_TRACE_FLAG_ENABLED(executor_trace)) { \
-      gpr_log(GPR_INFO, "EXECUTOR " str);          \
-    }                                              \
+    gpr_log(GPR_INFO, "EXECUTOR " str);          \
   } while (0)
 
 namespace grpc_core {
@@ -224,6 +220,8 @@ void Executor::ThreadMain(void* arg) {
   grpc_core::ExecCtx exec_ctx(GRPC_EXEC_CTX_FLAG_IS_INTERNAL_THREAD);
 
   size_t subtract_depth = 0;
+  EXECUTOR_TRACE("(%s) [%" PRIdPTR "]: ThreadMain ",
+                 ts->name, ts->id);
   for (;;) {
     EXECUTOR_TRACE("(%s) [%" PRIdPTR "]: step (sub_depth=%" PRIdPTR ")",
                    ts->name, ts->id, subtract_depth);
