@@ -34,7 +34,9 @@ pending = {}
 latencies = []
 latencies = sorted(latencies)
 register_elapsed = {}
+register_counts = {}
 unregister_elapsed = {}
+unregister_counts = {}
 start_time_ms = None
 pending_register_starts = {}
 pending_unregister_starts = {}
@@ -64,14 +66,18 @@ with open('k', 'r') as f:
       thread, us = get_thread_and_elapsed('RegisterSubchannel', l)
       if register_elapsed.get(thread) is None:
         register_elapsed[thread] = 0
+        register_counts[thread] = 0
       register_elapsed[thread] += us
+      register_counts[thread] += 1
       assert pending_register_starts[thread]
       pending_register_starts[thread] = False
     elif 'apolcyn time counter' in l and 'UnregisterSubchannel' in l and 'elapsed us' in l:
       thread, us = get_thread_and_elapsed('UnregisterSubchannel', l)
       if unregister_elapsed.get(thread) is None:
         unregister_elapsed[thread] = 0
+        unregister_counts[thread] = 0
       unregister_elapsed[thread] += us
+      unregister_counts[thread] += 1
       assert pending_unregister_starts[thread]
       pending_unregister_starts[thread] = False
     elif 'TIMEOUT in' in l:
@@ -93,9 +99,9 @@ with open('k', 'r') as f:
 
 
 for k in register_elapsed.keys():
-  print('thread %s spent %lf ms in RegisterSubchannel' % (k, register_elapsed[k] / 1e3))
+  print('thread %s spent %lf ms in RegisterSubchannel across %d calls' % (k, register_elapsed[k] / 1e3, register_counts[k]))
 for k in unregister_elapsed.keys():
-  print('thread %s spent %lf ms in UnregisterSubchannel' % (k, unregister_elapsed[k] / 1e3))
+  print('thread %s spent %lf ms in UnregisterSubchannel across %d calls' % (k, unregister_elapsed[k] / 1e3, unregister_counts[k]))
 timeout_ms = start_time_ms + timeout * 1e3
 for k in pending_register_starts.keys():
   if pending_register_starts[k]:
