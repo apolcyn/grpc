@@ -29,3 +29,6 @@ sudo service docker restart
 export DOCKERHUB_ORGANIZATION=grpctesting
 
 git submodule update --init
+
+set +x  # rvm script is very verbose
+time rvm install 2.5
