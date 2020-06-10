@@ -50,6 +50,7 @@ typedef struct grpc_event_engine_vtable {
 
   grpc_fd* (*fd_create)(int fd, const char* name, bool track_err);
   int (*fd_wrapped_fd)(grpc_fd* fd);
+  int (*fd_num_times_polled)(grpc_fd* fd);
   void (*fd_orphan)(grpc_fd* fd, grpc_closure* on_done, int* release_fd,
                     const char* reason);
   void (*fd_shutdown)(grpc_fd* fd, grpc_error* why);
@@ -124,6 +125,8 @@ grpc_fd* grpc_fd_create(int fd, const char* name, bool track_err);
 
 /* Return the wrapped fd, or -1 if it has been released or closed. */
 int grpc_fd_wrapped_fd(grpc_fd* fd);
+
+int grpc_fd_num_times_polled(grpc_fd* fd);
 
 /* Releases fd to be asynchronously destroyed.
    on_done is called when the underlying file descriptor is definitely close()d.

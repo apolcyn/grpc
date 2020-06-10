@@ -370,6 +370,9 @@ class Subchannel {
   gpr_atm RefMutate(gpr_atm delta,
                     int barrier GRPC_SUBCHANNEL_REF_MUTATE_EXTRA_ARGS);
 
+  std::string debug_id_;
+  gpr_timespec ctor_time_;
+
   // The subchannel pool this subchannel is in.
   RefCountedPtr<SubchannelPoolInterface> subchannel_pool_;
   // TODO(juanlishen): Consider using args_ as key_ directly.

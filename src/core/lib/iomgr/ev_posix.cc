@@ -261,6 +261,13 @@ int grpc_fd_wrapped_fd(grpc_fd* fd) {
   return g_event_engine->fd_wrapped_fd(fd);
 }
 
+int grpc_fd_num_times_polled(grpc_fd* fd) {
+  if (g_event_engine->fd_num_times_polled == nullptr) {
+    return -1;
+  }
+  return g_event_engine->fd_num_times_polled(fd);
+}
+
 void grpc_fd_orphan(grpc_fd* fd, grpc_closure* on_done, int* release_fd,
                     const char* reason) {
   GRPC_POLLING_API_TRACE("fd_orphan(%d, %p, %p, %s)", grpc_fd_wrapped_fd(fd),

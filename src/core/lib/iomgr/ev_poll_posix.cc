@@ -88,6 +88,9 @@ struct grpc_fd {
   gpr_atm pollhup;
   grpc_error* shutdown_error;
 
+  gpr_mu num_times_polled_mu;
+  int num_times_polled;
+
   /* The watcher list.
 
      The following watcher related fields are protected by watcher_mu.
@@ -353,6 +356,7 @@ static void unref_by(grpc_fd* fd, int n) {
   gpr_atm old = gpr_atm_full_fetch_add(&fd->refst, -n);
   if (old == n) {
     gpr_mu_destroy(&fd->mu);
+    gpr_mu_destroy(&fd->num_times_polled_mu);
     grpc_iomgr_unregister_object(&fd->iomgr_object);
     fork_fd_list_remove_node(fd->fork_fd_list);
     if (fd->shutdown) GRPC_ERROR_UNREF(fd->shutdown_error);
@@ -379,6 +383,8 @@ static grpc_fd* fd_create(int fd, const char* name, bool track_err) {
   r->on_done_closure = nullptr;
   r->closed = 0;
   r->released = 0;
+  gpr_mu_init(&r->num_times_polled_mu);
+  r->num_times_polled = 0;
   gpr_atm_no_barrier_store(&r->pollhup, 0);
 
   char* name2;
@@ -445,6 +451,11 @@ static int fd_wrapped_fd(grpc_fd* fd) {
   } else {
     return fd->fd;
   }
+}
+
+static int fd_num_times_polled(grpc_fd* fd) {
+  grpc_core::MutexLock lock(&fd->num_times_polled_mu);
+  return fd->num_times_polled;
 }
 
 static void fd_orphan(grpc_fd* fd, grpc_closure* on_done, int* release_fd,
@@ -605,6 +616,10 @@ static uint32_t fd_begin_poll(grpc_fd* fd, grpc_pollset* pollset,
   /* keep track of pollers that have requested our events, in case they change
    */
   GRPC_FD_REF(fd, "poll");
+  {
+    grpc_core::MutexLock lock(&fd->num_times_polled_mu);
+    fd->num_times_polled++;
+  }
 
   gpr_mu_lock(&fd->mu);
 
@@ -1352,6 +1367,7 @@ static const grpc_event_engine_vtable vtable = {
 
     fd_create,
     fd_wrapped_fd,
+    fd_num_times_polled,
     fd_orphan,
     fd_shutdown,
     fd_notify_on_read,

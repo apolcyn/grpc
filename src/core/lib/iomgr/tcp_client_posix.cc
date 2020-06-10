@@ -206,7 +206,9 @@ static void on_writable(void* acp, grpc_error* error) {
   }
 
 finish:
+  int num_times_polled = -2;
   if (fd != nullptr) {
+    num_times_polled = grpc_fd_num_times_polled(fd);
     grpc_pollset_set_del_fd(ac->interested_parties, fd);
     grpc_fd_orphan(fd, nullptr, nullptr, "tcp_client_orphan");
     fd = nullptr;
@@ -222,7 +224,7 @@ finish:
     bool ret = grpc_error_get_str(error, GRPC_ERROR_STR_DESCRIPTION, &str);
     GPR_ASSERT(ret);
     char* desc = grpc_slice_to_c_string(str);
-    gpr_asprintf(&error_descr, "Failed to connect to remote host: %s", desc);
+    gpr_asprintf(&error_descr, "Failed to connect to remote host: %s. num_times_polled=%d", desc, num_times_polled);
     error = grpc_error_set_str(error, GRPC_ERROR_STR_DESCRIPTION,
                                grpc_slice_from_copied_string(error_descr));
     gpr_free(error_descr);

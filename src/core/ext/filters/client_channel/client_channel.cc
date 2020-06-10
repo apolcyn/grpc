@@ -198,6 +198,11 @@ class ChannelData {
   void RemoveConnectivityWatcher(
       AsyncConnectivityStateWatcherInterface* watcher);
 
+  std::string debug_id_;
+  grpc_core::Mutex debug_counters_mu_;
+  int num_calls_started_ = 0;
+  int num_calls_destroyed_ = 0;
+
  private:
   class SubchannelWrapper;
   class ClientChannelControlHelper;
@@ -567,7 +572,7 @@ class CallData {
   };
 
   CallData(grpc_call_element* elem, const ChannelData& chand,
-           const grpc_call_element_args& args);
+           const grpc_call_element_args& args, ChannelData* chand_ptr);
   ~CallData();
 
   // Caches data for send ops so that it can be retried later, if not
@@ -842,6 +847,7 @@ class CallData {
   bool seen_send_trailing_metadata_ = false;
   grpc_linked_mdelem* send_trailing_metadata_storage_ = nullptr;
   grpc_metadata_batch send_trailing_metadata_;
+  ChannelData *chand_ptr_ = nullptr;
 };
 
 //
@@ -1444,9 +1450,17 @@ ChannelData::ChannelData(grpc_channel_element_args* args, grpc_error** error)
                                &new_args);
   target_uri_.reset(proxy_name != nullptr ? proxy_name
                                           : gpr_strdup(server_uri));
-  channel_args_ = new_args != nullptr
+  grpc_channel_args* first_args = new_args != nullptr
                       ? new_args
                       : grpc_channel_args_copy(args->channel_args);
+  const char* parent_channel_debug_id = const_cast<char*>(grpc_channel_args_find_string(first_args, "grpc.channel_debug_id"));
+  parent_channel_debug_id = parent_channel_debug_id != nullptr ? parent_channel_debug_id : "(nullptr)";
+  debug_id_ = std::to_string((uintptr_t)this) + "-" + std::to_string(gpr_time_to_millis(gpr_now(GPR_CLOCK_MONOTONIC))) + "-" + server_uri + ",parent-channel=" + parent_channel_debug_id;
+  gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s ctor", debug_id_.c_str());
+  grpc_arg debug_id_arg = grpc_channel_arg_string_create(const_cast<char*>("grpc.channel_debug_id"), const_cast<char*>(debug_id_.c_str()));
+  const char* args_to_remove[] = {"grpc.channel_debug_id"};
+  channel_args_ = grpc_channel_args_copy_and_add_and_remove(first_args, args_to_remove, 1, &debug_id_arg, 1);
+  grpc_channel_args_destroy(first_args);
   if (!ResolverRegistry::IsValidTarget(target_uri_.get())) {
     *error =
         GRPC_ERROR_CREATE_FROM_STATIC_STRING("the target uri is not valid.");
@@ -1456,6 +1470,7 @@ ChannelData::ChannelData(grpc_channel_element_args* args, grpc_error** error)
 }
 
 ChannelData::~ChannelData() {
+  gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s dtor", debug_id_.c_str());
   if (GRPC_TRACE_FLAG_ENABLED(grpc_client_channel_routing_trace)) {
     gpr_log(GPR_INFO, "chand=%p: destroying channel", this);
   }
@@ -1979,7 +1994,7 @@ void ChannelData::RemoveConnectivityWatcher(
 // - add census stats for retries
 
 CallData::CallData(grpc_call_element* elem, const ChannelData& chand,
-                   const grpc_call_element_args& args)
+                   const grpc_call_element_args& args, ChannelData* chand_ptr)
     : deadline_state_(elem, args.call_stack, args.call_combiner,
                       GPR_LIKELY(chand.deadline_checking_enabled())
                           ? args.deadline
@@ -1997,9 +2012,17 @@ CallData::CallData(grpc_call_element* elem, const ChannelData& chand,
       pending_send_trailing_metadata_(false),
       enable_retries_(chand.enable_retries()),
       retry_committed_(false),
-      last_attempt_got_server_pushback_(false) {}
+      last_attempt_got_server_pushback_(false),
+      chand_ptr_(chand_ptr) {
+  grpc_core::MutexLock lock(&chand_ptr_->debug_counters_mu_);
+  chand_ptr_->num_calls_started_++;
+}
 
 CallData::~CallData() {
+  {
+    grpc_core::MutexLock lock(&chand_ptr_->debug_counters_mu_);
+    chand_ptr_->num_calls_destroyed_++;
+  }
   grpc_slice_unref_internal(path_);
   GRPC_ERROR_UNREF(cancel_error_);
   if (backend_metric_data_ != nullptr) {
@@ -2015,7 +2038,7 @@ CallData::~CallData() {
 grpc_error* CallData::Init(grpc_call_element* elem,
                            const grpc_call_element_args* args) {
   ChannelData* chand = static_cast<ChannelData*>(elem->channel_data);
-  new (elem->call_data) CallData(elem, *chand, *args);
+  new (elem->call_data) CallData(elem, *chand, *args, chand);
   return GRPC_ERROR_NONE;
 }
 
@@ -3883,6 +3906,11 @@ bool CallData::PickSubchannelLocked(grpc_call_element* elem,
     // Queue the pick, so that it will be attempted once the channel
     // becomes connected.
     AddCallToQueuedPicksLocked(elem);
+    {
+      grpc_core::MutexLock lock(&chand->debug_counters_mu_);
+      gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s PickSubchannelLocked async picker() == nullptr. chand->num_calls_started_=%d chand->num_calls_destroyed_=%d",
+              chand->debug_id_.c_str(), chand->num_calls_started_, chand->num_calls_destroyed_);
+    }
     return false;
   }
   // Apply service config to call if needed.
@@ -3929,6 +3957,11 @@ bool CallData::PickSubchannelLocked(grpc_call_element* elem,
         GRPC_ERROR_UNREF(result.error);
         if (pick_queued_) RemoveCallFromQueuedPicksLocked(elem);
         *error = GRPC_ERROR_REF(disconnect_error);
+        {
+          grpc_core::MutexLock lock(&chand->debug_counters_mu_);
+          gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s call_data=%p PickSubchannelLocked done but pick PICK_FAILED with disconnect_error_. chand->num_calls_started_=%d chand->num_calls_destroyed_=%d",
+                  chand->debug_id_.c_str(), this, chand->num_calls_started_, chand->num_calls_destroyed_);
+        }
         return true;
       }
       // If wait_for_ready is false, then the error indicates the RPC
@@ -3950,6 +3983,11 @@ bool CallData::PickSubchannelLocked(grpc_call_element* elem,
           *error = new_error;
         }
         if (pick_queued_) RemoveCallFromQueuedPicksLocked(elem);
+        {
+          grpc_core::MutexLock lock(&chand->debug_counters_mu_);
+          gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s call_data=%p PickSubchannelLocked done PICK_FAILED with error=%s. chand->num_calls_started_=%d chand->num_calls_destroyed_=%d",
+                  chand->debug_id_.c_str(), this, grpc_error_string(*error), chand->num_calls_started_, chand->num_calls_destroyed_);
+        }
         return !retried;
       }
       // If wait_for_ready is true, then queue to retry when we get a new
@@ -3959,6 +3997,11 @@ bool CallData::PickSubchannelLocked(grpc_call_element* elem,
     // Fallthrough
     case LoadBalancingPolicy::PickResult::PICK_QUEUE:
       if (!pick_queued_) AddCallToQueuedPicksLocked(elem);
+      {
+        grpc_core::MutexLock lock(&chand->debug_counters_mu_);
+        gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s call_data=%p PickSubchannelLocked async PICK_QUEUE result or PICK_FAILED with wait_for_ready. chand->num_calls_started_=%d chand->num_calls_destroyed_=%d",
+                chand->debug_id_.c_str(), this, chand->num_calls_started_, chand->num_calls_destroyed_);
+      }
       return false;
     default:  // PICK_COMPLETE
       if (pick_queued_) RemoveCallFromQueuedPicksLocked(elem);
@@ -3977,6 +4020,11 @@ bool CallData::PickSubchannelLocked(grpc_call_element* elem,
       }
       lb_recv_trailing_metadata_ready_ = result.recv_trailing_metadata_ready;
       *error = result.error;
+      {
+        grpc_core::MutexLock lock(&chand->debug_counters_mu_);
+        gpr_log(GPR_INFO, "apolcyn channel debug_id_=%s call_data=%p PickSubchannelLocked done. chand->num_calls_started_=%d chand->num_calls_destroyed_=%d",
+                  chand->debug_id_.c_str(), this, chand->num_calls_started_, chand->num_calls_destroyed_);
+      }
       return true;
   }
 }

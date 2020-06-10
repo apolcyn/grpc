@@ -649,6 +649,9 @@ Subchannel::Subchannel(SubchannelKey* key,
     : key_(key),
       connector_(std::move(connector)),
       backoff_(ParseArgsForBackoffValues(args, &min_connect_timeout_ms_)) {
+  const char* addr_uri_str = GetUriFromSubchannelAddressArg(args);
+  debug_id_ = std::to_string((uintptr_t)this) + "-" + addr_uri_str + ",parent_channel_debug_id_=" + grpc_channel_args_find_string(args, "grpc.channel_debug_id");
+  ctor_time_ = gpr_now(GPR_CLOCK_MONOTONIC);
   GRPC_STATS_INC_CLIENT_SUBCHANNELS_CREATED();
   gpr_atm_no_barrier_store(&ref_pair_, 1 << INTERNAL_REF_BITS);
   pollset_set_ = grpc_pollset_set_create();
@@ -691,6 +694,7 @@ Subchannel::Subchannel(SubchannelKey* key,
 }
 
 Subchannel::~Subchannel() {
+  gpr_log(GPR_INFO, "apolcyn subchannel=%s dtor ms_since_ctor=%d", debug_id_.c_str(), gpr_time_to_millis(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), ctor_time_)));
   if (channelz_node_ != nullptr) {
     channelz_node_->AddTraceEvent(
         channelz::ChannelTrace::Severity::Info,
@@ -1005,6 +1009,7 @@ void Subchannel::OnRetryAlarm(void* arg, grpc_error* error) {
 }
 
 void Subchannel::ContinueConnectingLocked() {
+  gpr_log(GPR_INFO, "apolcyn continue connecting locked subchannel=%s ms_since_ctor=%d", debug_id_.c_str(), gpr_time_to_millis(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), ctor_time_)));
   SubchannelConnector::Args args;
   args.interested_parties = pollset_set_;
   const grpc_millis min_deadline =
@@ -1018,6 +1023,7 @@ void Subchannel::ContinueConnectingLocked() {
 
 void Subchannel::OnConnectingFinished(void* arg, grpc_error* error) {
   auto* c = static_cast<Subchannel*>(arg);
+  gpr_log(GPR_INFO, "apolcyn on connecting finished subchannel=%s error=%s ms_since_ctor=%d", c->debug_id_.c_str(), grpc_error_string(error), gpr_time_to_millis(gpr_time_sub(gpr_now(GPR_CLOCK_MONOTONIC), c->ctor_time_)));
   const grpc_channel_args* delete_channel_args =
       c->connecting_result_.channel_args;
   GRPC_SUBCHANNEL_WEAK_REF(c, "on_connecting_finished");

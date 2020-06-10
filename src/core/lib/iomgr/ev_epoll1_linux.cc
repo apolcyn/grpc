@@ -1275,6 +1275,7 @@ static const grpc_event_engine_vtable vtable = {
 
     fd_create,
     fd_wrapped_fd,
+    nullptr,
     fd_orphan,
     fd_shutdown,
     fd_notify_on_read,
