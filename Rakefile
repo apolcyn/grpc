@@ -32,9 +32,9 @@ Rake::ExtensionTask.new('grpc_c', spec) do |ext|
   ext.lib_dir = File.join('src', 'ruby', 'lib', 'grpc')
   ext.cross_compile = true
   ext.cross_platform = [
-    'x86-mingw32', 'x64-mingw32',
-    'x86_64-linux', 'x86-linux',
-    'universal-darwin'
+    #'x86-mingw32', 'x64-mingw32',
+    'x86_64-linux', #'x86-linux',
+    #'universal-darwin'
   ]
   ext.cross_compiling do |spec|
     spec.files = %w( etc/roots.pem grpc_c.32.ruby grpc_c.64.ruby )

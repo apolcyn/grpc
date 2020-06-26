@@ -56,6 +56,10 @@ typedef struct callback_params {
 
 static VALUE grpc_rb_call_credentials_callback(VALUE callback_args) {
   VALUE result = rb_hash_new();
+  VALUE callback_details = rb_funcall(rb_ary_entry(callback_args, 0), rb_intern("source_location"), 0);
+  VALUE line_number_as_string = rb_funcall(rb_ary_entry(callback_details, 1), rb_intern("to_s"), 0);
+  VALUE source_file = rb_ary_entry(callback_details, 0);
+  gpr_log(GPR_INFO, "apolcyn - call creds invocation - filename:%s line:%s", StringValueCStr(source_file), StringValueCStr(line_number_as_string));
   VALUE metadata = rb_funcall(rb_ary_entry(callback_args, 0), rb_intern("call"),
                               1, rb_ary_entry(callback_args, 1));
   rb_hash_aset(result, rb_str_new2("metadata"), metadata);
