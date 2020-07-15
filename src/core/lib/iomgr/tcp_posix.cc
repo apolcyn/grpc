@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <algorithm>
 #include <unordered_map>
@@ -883,6 +884,9 @@ static void tcp_continue_read(grpc_tcp* tcp) {
 
 static void tcp_handle_read(void* arg /* grpc_tcp */, grpc_error* error) {
   grpc_tcp* tcp = static_cast<grpc_tcp*>(arg);
+  size_t bytes_in_buffer = 0;
+  bool ioctl_success = ioctl(tcp->fd, FIONREAD, &bytes_in_buffer);
+  gpr_log(GPR_DEBUG, "tcp_handle_read fd:%d ioctl_success:%d bytes_in_buffer:%ld", tcp->fd, ioctl_success, bytes_in_buffer);
   if (GRPC_TRACE_FLAG_ENABLED(grpc_tcp_trace)) {
     gpr_log(GPR_INFO, "TCP:%p got_read: %s", tcp, grpc_error_string(error));
   }

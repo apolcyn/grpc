@@ -216,12 +216,14 @@ grpc_core::Resolver::Result BuildResolverResponse(
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 2;
+  const int kNumCalls = 100;
   std::vector<std::unique_ptr<TestServer>> test_servers;
   std::vector<std::unique_ptr<TestCall>> test_calls;
   const std::string kSharedUnconnectableAddress = grpc_core::JoinHostPort("[::1]", grpc_pick_unused_port_or_die());
+  gpr_log(GPR_DEBUG, "created unconnectable address:%s", kSharedUnconnectableAddress.c_str());
   for (int i = 0; i < kNumCalls; i++) {
     auto test_server = absl::make_unique<TestServer>();
+    gpr_log(GPR_DEBUG, "created test_server with address:%s", test_server->address().c_str());
     grpc_arg service_config_arg;
     service_config_arg.type = GRPC_ARG_STRING;
     service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
@@ -257,7 +259,8 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
     test_servers.push_back(std::move(test_server));
   }
   auto start_server_responses_thread = std::thread([&test_servers]() {
-    gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
+    gpr_sleep_until(grpc_timeout_seconds_to_deadline(4));
+    gpr_log(GPR_DEBUG, "now cancel server side calls");
     for (auto& test_server : test_servers){
       test_server->CancelCall();
     }
