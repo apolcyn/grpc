@@ -649,6 +649,7 @@ Subchannel::Subchannel(SubchannelKey* key,
     : key_(key),
       connector_(std::move(connector)),
       backoff_(ParseArgsForBackoffValues(args, &min_connect_timeout_ms_)) {
+  gpr_log(GPR_DEBUG, "apolcyn subchannel ctor");
   GRPC_STATS_INC_CLIENT_SUBCHANNELS_CREATED();
   gpr_atm_no_barrier_store(&ref_pair_, 1 << INTERNAL_REF_BITS);
   pollset_set_ = grpc_pollset_set_create();

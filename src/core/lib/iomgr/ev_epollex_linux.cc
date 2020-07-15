@@ -26,6 +26,8 @@
 #ifdef GRPC_LINUX_EPOLL_CREATE1
 
 #include "src/core/lib/iomgr/ev_epollex_linux.h"
+#include "src/core/lib/iomgr/resolve_address.h"
+#include "src/core/lib/iomgr/sockaddr_utils.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -66,7 +68,7 @@
 // TODO(juanlishen): We use a greater-than-one value here as a workaround fix to
 // a keepalive ping timeout issue. We may want to revert https://github
 // .com/grpc/grpc/pull/14943 once we figure out the root cause.
-#define MAX_EPOLL_EVENTS_HANDLED_EACH_POLL_CALL 16
+#define MAX_EPOLL_EVENTS_HANDLED_EACH_POLL_CALL 1
 #define MAX_FDS_IN_CACHE 32
 
 grpc_core::DebugOnlyTraceFlag grpc_trace_pollable_refcount(false,
@@ -427,8 +429,8 @@ static void fd_global_shutdown(void) {
 }
 
 static grpc_fd* fd_create(int fd, const char* name, bool track_err) {
-  grpc_fd* new_fd = nullptr;
 
+  grpc_fd* new_fd = nullptr;
   gpr_mu_lock(&fd_freelist_mu);
   if (fd_freelist != nullptr) {
     new_fd = fd_freelist;
@@ -440,7 +442,21 @@ static grpc_fd* fd_create(int fd, const char* name, bool track_err) {
     new_fd = static_cast<grpc_fd*>(gpr_malloc(sizeof(grpc_fd)));
   }
 
-  return new (new_fd) grpc_fd(fd, name, track_err);
+  auto ret = new (new_fd) grpc_fd(fd, name, track_err);
+  //std::string addr_str;
+  //{
+  //  grpc_resolved_address addr;
+  //  memset(&addr, 0, sizeof(addr));
+  //  addr.len = static_cast<socklen_t>(sizeof(struct sockaddr_storage));
+  //  if (getpeername(fd, reinterpret_cast<struct sockaddr*>(addr.addr),
+  //                  &(addr.len)) < 0) {
+  //    gpr_log(GPR_ERROR, "Failed getpeername: %s", strerror(errno));
+  //    GPR_ASSERT(0);
+  //  }
+  //  addr_str = grpc_sockaddr_to_uri(&addr);
+  //}
+  gpr_log(GPR_DEBUG, "apolcyn fd_create grpc_fd:%p name:%s", ret, name);
+  return ret;
 }
 
 static int fd_wrapped_fd(grpc_fd* fd) {
@@ -527,6 +543,7 @@ static void fd_shutdown(grpc_fd* fd, grpc_error* why) {
 }
 
 static void fd_notify_on_read(grpc_fd* fd, grpc_closure* closure) {
+  gpr_log(GPR_DEBUG, "fd_notify_on_read grpc_fd:%p", fd);
   fd->read_closure.NotifyOn(closure);
 }
 
@@ -813,7 +830,10 @@ static int poll_deadline_to_millis_timeout(grpc_millis millis) {
     return static_cast<int>(delta);
 }
 
-static void fd_become_readable(grpc_fd* fd) { fd->read_closure.SetReady(); }
+static void fd_become_readable(grpc_fd* fd) {
+  gpr_log(GPR_DEBUG, "fd_become_readable grpc_fd:%p", fd);
+  fd->read_closure.SetReady();
+}
 
 static void fd_become_writable(grpc_fd* fd) { fd->write_closure.SetReady(); }
 
@@ -1131,8 +1151,10 @@ static grpc_error* pollset_work(grpc_pollset* pollset,
     if (begin_worker(pollset, WORKER_PTR, worker_hdl, deadline)) {
       gpr_tls_set(&g_current_thread_pollset, (intptr_t)pollset);
       gpr_tls_set(&g_current_thread_worker, (intptr_t)WORKER_PTR);
+      bool polled = false;
       if (WORKER_PTR->pollable_obj->event_cursor ==
           WORKER_PTR->pollable_obj->event_count) {
+        polled = true;
         append_error(&error, pollable_epoll(WORKER_PTR->pollable_obj, deadline),
                      err_desc);
       }
@@ -1140,6 +1162,13 @@ static grpc_error* pollset_work(grpc_pollset* pollset,
           &error,
           pollable_process_events(pollset, WORKER_PTR->pollable_obj, false),
           err_desc);
+      for (int i = WORKER_PTR->pollable_obj->event_cursor; i < WORKER_PTR->pollable_obj->event_count; i++) {
+        struct epoll_event ev = WORKER_PTR->pollable_obj->events[i];
+        grpc_fd* fd =
+          reinterpret_cast<grpc_fd*>(reinterpret_cast<intptr_t>(ev.data.ptr) & ~2);
+        gpr_log(GPR_DEBUG, "apolcyn epfd:%d polled_this_round:%d got event %d/%d on grpc_fd:%p readable:%d writable:%d",
+                WORKER_PTR->pollable_obj->epfd, polled, i, WORKER_PTR->pollable_obj->event_count, fd, ev.events & EPOLLIN, ev.events & EPOLLOUT);
+      }
       grpc_core::ExecCtx::Get()->Flush();
       gpr_tls_set(&g_current_thread_pollset, 0);
       gpr_tls_set(&g_current_thread_worker, 0);
@@ -1424,6 +1453,7 @@ static grpc_error* add_fds_to_pollsets(grpc_fd** fds, size_t fd_count,
                                        size_t pollset_count,
                                        const char* err_desc, grpc_fd** out_fds,
                                        size_t* out_fd_count) {
+  gpr_log(GPR_DEBUG, "add %d grpc_fds to pollsets (some may be orphaned)", fd_count);
   GPR_TIMER_SCOPE("add_fds_to_pollsets", 0);
   grpc_error* error = GRPC_ERROR_NONE;
   for (size_t i = 0; i < fd_count; i++) {

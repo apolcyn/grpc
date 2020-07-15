@@ -126,6 +126,7 @@ static void run_poller(void* arg, grpc_error* error) {
     backup_poller_shutdown_unref(p);
     return;
   }
+  gpr_log(GPR_DEBUG, "now run backup poller work");
   grpc_error* err =
       grpc_pollset_work(p->pollset, nullptr, grpc_core::ExecCtx::Get()->Now());
   gpr_mu_unlock(p->pollset_mu);

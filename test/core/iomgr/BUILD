@@ -366,3 +366,18 @@ grpc_cc_test(
         "//test/core/util:grpc_test_util",
     ],
 )
+
+grpc_cc_test(
+    name = "stranded_event_test",
+    srcs = ["stranded_event_test.cc"],
+    language = "C++",
+    deps = [
+        "//:gpr",
+        "//:grpc",
+        "//test/core/util:grpc_test_util",
+        "//test/core/end2end:cq_verifier",
+    ],
+    external_deps = [
+        "gtest",
+    ],
+)
