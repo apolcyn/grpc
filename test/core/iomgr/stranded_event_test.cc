@@ -265,6 +265,7 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       test_server->CancelCall();
     }
   });
+  gpr_log(GPR_DEBUG, "now finish client side calls");
   for (int i = test_calls.size() - 1; i >= 0 ; i--) {
     FinishCall(test_calls[i].get());
   }
