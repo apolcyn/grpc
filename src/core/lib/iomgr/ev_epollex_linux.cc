@@ -20,6 +20,8 @@
 
 #include "src/core/lib/iomgr/port.h"
 
+#include <vector>
+
 #include <grpc/support/log.h>
 
 /* This polling engine is only relevant on linux kernels supporting epoll() */
@@ -995,6 +997,13 @@ static grpc_error* pollable_epoll(pollable* p, grpc_millis deadline) {
     gpr_log(GPR_INFO, "POLLABLE:%p got %d events", p, r);
   }
 
+  std::vector<struct epoll_event> tmp;
+  for (int i = r - 1; i >= 0; i--) {
+    tmp.push_back(p->events[i]);
+  } 
+  for (int i = 0; i < r; i++) {
+    p->events[i] = tmp[i];
+  }
   p->event_cursor = 0;
   p->event_count = r;
 

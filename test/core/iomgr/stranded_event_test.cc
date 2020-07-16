@@ -269,78 +269,90 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 10;
+  const int kNumCalls = 1;
   gpr_event send_initial_metadata_event;
   gpr_event_init(&send_initial_metadata_event);
   gpr_event send_status_event;
   gpr_event_init(&send_status_event);
+  int num_initial_metadata_received = 0;
+  grpc_core::Mutex num_initial_metadata_received_mu;
+  grpc_core::CondVar num_initial_metadata_received_cv;
   std::vector<std::unique_ptr<TestServer>> test_servers;
   for (int i = 0; i < kNumCalls; i++) {
     test_servers.push_back(absl::make_unique<TestServer>(&send_initial_metadata_event, &send_status_event));
+    gpr_log(GPR_DEBUG, "created test_server with address:%s", test_servers.back()->address().c_str());
   }
-  std::vector<std::unique_ptr<TestCall>> test_calls;
   const std::string kSharedUnconnectableAddress = grpc_core::JoinHostPort("127.0.0.1", grpc_pick_unused_port_or_die());
   gpr_log(GPR_DEBUG, "created unconnectable address:%s", kSharedUnconnectableAddress.c_str());
-  int server_index = 0;
+  std::vector<std::thread> threads;
   for (int i = 0; i < kNumCalls; i++) {
-    auto test_server = test_servers[server_index++].get();
-    gpr_log(GPR_DEBUG, "created test_server with address:%s", test_server->address().c_str());
-    grpc_arg service_config_arg;
-    service_config_arg.type = GRPC_ARG_STRING;
-    service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
-    service_config_arg.value.string = const_cast<char*>("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}");
-    auto fake_resolver_response_generator = grpc_core::MakeRefCounted<grpc_core::FakeResolverResponseGenerator>();
-    {
-      grpc_core::ExecCtx exec_ctx;
-      fake_resolver_response_generator->SetResponse(
-          BuildResolverResponse({
-            absl::StrCat("ipv4:", kSharedUnconnectableAddress),
-            absl::StrCat("ipv4:", test_server->address())
-          }));
+    auto test_server = test_servers[i].get();
+    threads.push_back(std::thread([&test_server, kSharedUnconnectableAddress, &send_status_event, &num_initial_metadata_received, &num_initial_metadata_received_mu, &num_initial_metadata_received_cv]() {
+      grpc_arg service_config_arg;
+      service_config_arg.type = GRPC_ARG_STRING;
+      service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
+      service_config_arg.value.string = const_cast<char*>("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}");
+      auto fake_resolver_response_generator = grpc_core::MakeRefCounted<grpc_core::FakeResolverResponseGenerator>();
+      {
+        grpc_core::ExecCtx exec_ctx;
+        fake_resolver_response_generator->SetResponse(
+            BuildResolverResponse({
+              absl::StrCat("ipv4:", kSharedUnconnectableAddress),
+              absl::StrCat("ipv4:", test_server->address())
+            }));
+      }
+      grpc_arg fake_resolver_arg = grpc_core::FakeResolverResponseGenerator::MakeChannelArg(fake_resolver_response_generator.get());
+      grpc_channel_args* args = grpc_channel_args_copy_and_add(nullptr, &service_config_arg, 1);
+      args = grpc_channel_args_copy_and_add(args, &fake_resolver_arg, 1);
+      grpc_channel* channel = grpc_insecure_channel_create("fake:///test.server.com", args, nullptr);
+      grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
+      grpc_call* call = grpc_channel_create_call(channel, nullptr, GRPC_PROPAGATE_DEFAULTS, cq,
+        grpc_slice_from_static_string("/foo"), nullptr,
+        grpc_timeout_seconds_to_deadline(60), nullptr);
+      auto test_call = absl::make_unique<TestCall>(channel, call, cq, test_server->address());
+      // Start a call, and ensure that round_robin load balancing is configured
+      StartCall(test_call.get());
+      // Make sure the test is doing what it's meant to be doing
+      grpc_channel_info channel_info;
+      memset(&channel_info, 0, sizeof(channel_info));
+      char* lb_policy_name = nullptr;
+      channel_info.lb_policy_name = &lb_policy_name;
+      grpc_channel_get_info(channel, &channel_info);
+      EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
+      gpr_free(lb_policy_name);
+      // Flush out any previously pending events
+      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
+      grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
+                                                    nullptr);
+      GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
+      // Receive initial metadata
+      gpr_log(GPR_DEBUG, "now receive initial metadata on call with server address:%s", test_server->address().c_str());
+      ReceiveInitialMetadata(test_call.get(), grpc_timeout_seconds_to_deadline(30));
+      {
+        grpc_core::MutexLock lock(&num_initial_metadata_received_mu);
+        num_initial_metadata_received++;
+	num_initial_metadata_received_cv.Broadcast();
+      }
+      // Don't start receiving status yet, until we get a signal to proceed
+      gpr_event_wait(&send_status_event, gpr_inf_future(GPR_CLOCK_REALTIME));
+      FinishCall(test_call.get());
+      GPR_ASSERT(test_call->status.has_value());
+      GPR_ASSERT(test_call->status.value() == GRPC_STATUS_PERMISSION_DENIED);
+    }));
+  }
+  gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
+  gpr_log(GPR_DEBUG, "now let servers send initial metadata");
+  gpr_event_set(&send_initial_metadata_event, (void*)1);
+  {
+    grpc_core::MutexLock lock(&num_initial_metadata_received_mu);
+    while (num_initial_metadata_received != test_servers.size()) {
+      num_initial_metadata_received_cv.Wait(&num_initial_metadata_received_mu);
     }
-    grpc_arg fake_resolver_arg = grpc_core::FakeResolverResponseGenerator::MakeChannelArg(fake_resolver_response_generator.get());
-    grpc_channel_args* args = grpc_channel_args_copy_and_add(nullptr, &service_config_arg, 1);
-    args = grpc_channel_args_copy_and_add(args, &fake_resolver_arg, 1);
-    grpc_channel* channel = grpc_insecure_channel_create("fake:///test.server.com", args, nullptr);
-    grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
-    grpc_call* call = grpc_channel_create_call(channel, nullptr, GRPC_PROPAGATE_DEFAULTS, cq,
-      grpc_slice_from_static_string("/foo"), nullptr,
-      grpc_timeout_seconds_to_deadline(60), nullptr);
-    auto test_call = absl::make_unique<TestCall>(channel, call, cq, test_server->address());
-    StartCall(test_call.get());
-    // Make sure the test is doing what it's meant to be doing
-    grpc_channel_info channel_info;
-    memset(&channel_info, 0, sizeof(channel_info));
-    char* lb_policy_name = nullptr;
-    channel_info.lb_policy_name = &lb_policy_name;
-    grpc_channel_get_info(channel, &channel_info);
-    EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
-    gpr_free(lb_policy_name);
-    test_calls.push_back(std::move(test_call));
   }
-  // Flush out any previously pending events
-  gpr_log(GPR_DEBUG, "now flush pending events");
-  for (auto& test_call : test_calls) {
-    grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-                                      nullptr);
-    GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
-  }
-  auto trigger_send_initial_metadata_thread = std::thread([&send_initial_metadata_event]() {
-    gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
-    gpr_log(GPR_DEBUG, "now cancel server side calls");
-    gpr_event_set(&send_initial_metadata_event, (void*)1);
-  });
-  gpr_log(GPR_DEBUG, "now receive initial md on some client side calls, first one is for this server:%s", test_calls[kNumCalls - 1]->server_address.c_str());
-  ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(kNumCalls - 1, kNumCalls, 1, test_calls);
-  gpr_log(GPR_DEBUG, "now receive initial md on some client side calls");
-  ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(1, kNumCalls - 1, 1, test_calls);
-  gpr_log(GPR_DEBUG, "now inspect call statuses");
-  trigger_send_initial_metadata_thread.join();
+  gpr_log(GPR_DEBUG, "now let servers send statuses");
   gpr_event_set(&send_status_event, (void*)1);
-  for (const auto& test_call : test_calls ){
-    FinishCall(test_call.get());
-    EXPECT_TRUE(test_call->status.has_value());
-    EXPECT_EQ(test_call->status.value(), GRPC_STATUS_PERMISSION_DENIED);
+  for (auto& thread : threads) {
+    thread.join();
   }
 }
 
