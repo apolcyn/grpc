@@ -269,25 +269,27 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 1;
+  const int kNumCalls = 2;
   gpr_event send_initial_metadata_event;
   gpr_event_init(&send_initial_metadata_event);
   gpr_event send_status_event;
   gpr_event_init(&send_status_event);
-  int num_initial_metadata_received = 0;
+  size_t num_initial_metadata_received = 0;
   grpc_core::Mutex num_initial_metadata_received_mu;
   grpc_core::CondVar num_initial_metadata_received_cv;
-  std::vector<std::unique_ptr<TestServer>> test_servers;
-  for (int i = 0; i < kNumCalls; i++) {
-    test_servers.push_back(absl::make_unique<TestServer>(&send_initial_metadata_event, &send_status_event));
-    gpr_log(GPR_DEBUG, "created test_server with address:%s", test_servers.back()->address().c_str());
-  }
   const std::string kSharedUnconnectableAddress = grpc_core::JoinHostPort("127.0.0.1", grpc_pick_unused_port_or_die());
   gpr_log(GPR_DEBUG, "created unconnectable address:%s", kSharedUnconnectableAddress.c_str());
   std::vector<std::thread> threads;
   for (int i = 0; i < kNumCalls; i++) {
-    auto test_server = test_servers[i].get();
-    threads.push_back(std::thread([&test_server, kSharedUnconnectableAddress, &send_status_event, &num_initial_metadata_received, &num_initial_metadata_received_mu, &num_initial_metadata_received_cv]() {
+    threads.push_back(std::thread([
+			    kSharedUnconnectableAddress,
+			    &send_initial_metadata_event,
+			    &send_status_event,
+			    &num_initial_metadata_received,
+			    &num_initial_metadata_received_mu,
+			    &num_initial_metadata_received_cv]() {
+      auto test_server = absl::make_unique<TestServer>(&send_initial_metadata_event, &send_status_event);
+      gpr_log(GPR_DEBUG, "created test_server with address:%s", test_server->address().c_str());
       grpc_arg service_config_arg;
       service_config_arg.type = GRPC_ARG_STRING;
       service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
@@ -345,7 +347,8 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_event_set(&send_initial_metadata_event, (void*)1);
   {
     grpc_core::MutexLock lock(&num_initial_metadata_received_mu);
-    while (num_initial_metadata_received != test_servers.size()) {
+    while (num_initial_metadata_received != kNumCalls) {
+      gpr_log(GPR_DEBUG, "now wait for %ld more calls to receive initial metadata", kNumCalls - num_initial_metadata_received);
       num_initial_metadata_received_cv.Wait(&num_initial_metadata_received_mu);
     }
   }
