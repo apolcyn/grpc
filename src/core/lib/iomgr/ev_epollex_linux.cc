@@ -666,6 +666,8 @@ static grpc_error* pollable_add_fd(pollable* p, grpc_fd* fd) {
       default:
         append_error(&error, GRPC_OS_ERROR(errno, "epoll_ctl"), err_desc);
     }
+  } else {
+    gpr_log(GPR_DEBUG, "apolcyn epoll_ctl_add add fd:%d to epfd:%d.", fd->fd, epfd);
   }
 
   return error;
@@ -1099,6 +1101,7 @@ static void end_worker(grpc_pollset* pollset, grpc_pollset_worker* worker,
   GPR_TIMER_SCOPE("end_worker", 0);
   gpr_mu_lock(&pollset->mu);
   gpr_mu_lock(&worker->pollable_obj->mu);
+  int oldepfd = worker->pollable_obj->epfd;
   switch (worker_remove(&worker->pollable_obj->root_worker, worker,
                         PWLINK_POLLABLE)) {
     case WRR_NEW_ROOT: {
@@ -1111,6 +1114,7 @@ static void end_worker(grpc_pollset* pollset, grpc_pollset_worker* worker,
     case WRR_EMPTIED:
       if (pollset->active_pollable != worker->pollable_obj) {
         // pollable no longer being polled: flush events
+	gpr_log(GPR_DEBUG, "apolcyn end_worker flush_events epfd:%d", oldepfd);
         pollable_process_events(pollset, worker->pollable_obj, true);
       }
       break;

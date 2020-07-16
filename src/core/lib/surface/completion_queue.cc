@@ -1051,8 +1051,10 @@ static grpc_event cq_next(grpc_completion_queue* cq, gpr_timespec deadline,
     /* The main polling work happens in grpc_pollset_work */
     gpr_mu_lock(cq->mu);
     cq->num_polls++;
+    gpr_log(GPR_DEBUG, "apolcyn pollset->work begin");
     grpc_error* err = cq->poller_vtable->work(POLLSET_FROM_CQ(cq), nullptr,
                                               iteration_deadline);
+    gpr_log(GPR_DEBUG, "apolcyn pollset->work done begin");
     gpr_mu_unlock(cq->mu);
 
     if (err != GRPC_ERROR_NONE) {
