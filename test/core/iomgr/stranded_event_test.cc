@@ -322,7 +322,7 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       grpc_channel_get_info(channel, &channel_info);
       EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
       gpr_free(lb_policy_name);
-      // Flush out any previously pending events
+      // Flush out any potentially pending events
       gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
       grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
                                                     nullptr);
