@@ -61,6 +61,8 @@
 
 namespace {
 
+const int kNumMessagePingPongsPerCall = 10000;
+
 struct TestCall {
   explicit TestCall(grpc_channel* channel, grpc_call* call, grpc_completion_queue* cq, std::string server_address)
       : channel(channel), call(call), cq(cq), server_address(server_address) {}
@@ -103,6 +105,49 @@ void StartCall(TestCall* test_call) {
   cq_verifier* cqv = cq_verifier_create(test_call->cq);
   CQ_EXPECT_COMPLETION(cqv, tag, 1);
   cq_verify(cqv);
+}
+
+void SendMessage(grpc_call* call, grpc_completion_queue* cq) {
+  grpc_slice request_payload_slice =
+    grpc_slice_from_copied_string("hello");
+  grpc_byte_buffer* request_payload =
+    grpc_raw_byte_buffer_create(&request_payload_slice, 1);
+  grpc_op ops[6];
+  grpc_op* op;
+  memset(ops, 0, sizeof(ops));
+  op = ops;
+  op->op = GRPC_OP_SEND_MESSAGE;
+  op->data.send_message.send_message = request_payload;
+  op->reserved = nullptr;
+  op++;
+  void* tag = call;
+  grpc_call_error error = grpc_call_start_batch(
+		  call, ops, static_cast<size_t>(op - ops), tag, nullptr);
+  GPR_ASSERT(GRPC_CALL_OK == error);
+  cq_verifier* cqv = cq_verifier_create(cq);
+  CQ_EXPECT_COMPLETION(cqv, tag, 1);
+  cq_verify(cqv);
+  grpc_byte_buffer_destroy(request_payload);
+}
+
+void ReceiveMessage(grpc_call* call, grpc_completion_queue* cq) {
+  grpc_byte_buffer* request_payload = nullptr;
+  grpc_op ops[6];
+  grpc_op* op;
+  memset(ops, 0, sizeof(ops));
+  op = ops;
+  op->op = GRPC_OP_RECV_MESSAGE;
+  op->data.recv_message.recv_message = &request_payload;
+  op->reserved = nullptr;
+  op++;
+  void* tag = call;
+  grpc_call_error error = grpc_call_start_batch(
+		  call, ops, static_cast<size_t>(op - ops), tag, nullptr);
+  GPR_ASSERT(GRPC_CALL_OK == error);
+  cq_verifier* cqv = cq_verifier_create(cq);
+  CQ_EXPECT_COMPLETION(cqv, tag, 1);
+  cq_verify(cqv);
+  grpc_byte_buffer_destroy(request_payload);
 }
 
 void ReceiveInitialMetadata(TestCall* test_call, gpr_timespec deadline) {
@@ -157,7 +202,7 @@ void FinishCall(TestCall* test_call) {
 
 class TestServer {
  public:
-  explicit TestServer(gpr_event* send_initial_metadata_event, gpr_event* send_status_event) : send_initial_metadata_event_(send_initial_metadata_event), send_status_event_(send_status_event) {
+  explicit TestServer() {
     cq_ = grpc_completion_queue_create_for_next(nullptr);
     cqv_ = cq_verifier_create(cq_);
     server_ = grpc_server_create(nullptr, nullptr);
@@ -171,10 +216,6 @@ class TestServer {
   }
 
   ~TestServer() {
-    if (gpr_event_get(send_initial_metadata_event_) != reinterpret_cast<void*>(1)) {
-      gpr_log(GPR_ERROR, "TestServer being dtor'd without SetServerThreadsReadyToRespond having been called");
-      GPR_ASSERT(0);
-    }
     grpc_server_shutdown_and_notify(server_, cq_, nullptr);
     thread_.join();
     grpc_completion_queue_shutdown(cq_);
@@ -204,7 +245,6 @@ class TestServer {
     GPR_ASSERT(event.success);
     GPR_ASSERT(event.tag == tag);
     // send initial metadata after getting the signal to do so
-    gpr_event_wait(send_initial_metadata_event_, gpr_inf_future(GPR_CLOCK_REALTIME));
     grpc_op ops[6];
     grpc_op* op;
     memset(ops, 0, sizeof(ops));
@@ -221,7 +261,10 @@ class TestServer {
     GPR_ASSERT(event.success);
     GPR_ASSERT(event.tag == tag);
     // wait until ok to finish the call
-    gpr_event_wait(send_status_event_, gpr_inf_future(GPR_CLOCK_REALTIME));
+    for (int i = 0; i < kNumMessagePingPongsPerCall; i++) {
+      ReceiveMessage(call_, cq_);
+      SendMessage(call_, cq_);
+    }
     grpc_call_cancel_with_status(call_, GRPC_STATUS_PERMISSION_DENIED, "test status",
                                  nullptr);
   }
@@ -229,8 +272,6 @@ class TestServer {
   grpc_server* server_;
   grpc_completion_queue* cq_;
   cq_verifier *cqv_;
-  gpr_event* send_initial_metadata_event_;
-  gpr_event* send_status_event_;
   std::string address_;
   std::thread thread_;
   grpc_call* call_;
@@ -269,28 +310,22 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 8;
-  gpr_event send_initial_metadata_event;
-  gpr_event_init(&send_initial_metadata_event);
-  gpr_event send_status_event;
-  gpr_event_init(&send_status_event);
-  size_t num_initial_metadata_received = 0;
-  size_t num_status_received = 0;
-  grpc_core::Mutex call_phase_counters_mu;
-  grpc_core::CondVar call_phase_counters_cv;
+  const int kNumCalls = 32;
+  size_t ping_pong_round = 0;
+  size_t ping_pongs_done = 0;
+  grpc_core::Mutex ping_pong_round_mu;
+  grpc_core::CondVar ping_pong_round_cv;
   const std::string kSharedUnconnectableAddress = grpc_core::JoinHostPort("127.0.0.1", grpc_pick_unused_port_or_die());
   gpr_log(GPR_DEBUG, "created unconnectable address:%s", kSharedUnconnectableAddress.c_str());
   std::vector<std::thread> threads;
   for (int i = 0; i < kNumCalls; i++) {
     threads.push_back(std::thread([
 			    kSharedUnconnectableAddress,
-			    &send_initial_metadata_event,
-			    &send_status_event,
-			    &num_initial_metadata_received,
-			    &num_status_received,
-			    &call_phase_counters_mu,
-			    &call_phase_counters_cv]() {
-      auto test_server = absl::make_unique<TestServer>(&send_initial_metadata_event, &send_status_event);
+			    &ping_pong_round,
+			    &ping_pongs_done,
+			    &ping_pong_round_mu,
+			    &ping_pong_round_cv]() {
+      auto test_server = absl::make_unique<TestServer>();
       gpr_log(GPR_DEBUG, "created test_server with address:%s", test_server->address().c_str());
       grpc_arg service_config_arg;
       service_config_arg.type = GRPC_ARG_STRING;
@@ -312,7 +347,7 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       grpc_completion_queue* cq = grpc_completion_queue_create_for_next(nullptr);
       grpc_call* call = grpc_channel_create_call(channel, nullptr, GRPC_PROPAGATE_DEFAULTS, cq,
         grpc_slice_from_static_string("/foo"), nullptr,
-        grpc_timeout_seconds_to_deadline(60), nullptr);
+        gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
       auto test_call = absl::make_unique<TestCall>(channel, call, cq, test_server->address());
       // Start a call, and ensure that round_robin load balancing is configured
       StartCall(test_call.get());
@@ -324,55 +359,45 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       grpc_channel_get_info(channel, &channel_info);
       EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
       gpr_free(lb_policy_name);
-      //// Flush out any potentially pending events
-      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
-      GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-                                                    nullptr).type == GRPC_QUEUE_TIMEOUT);
       // Receive initial metadata
       gpr_log(GPR_DEBUG, "now receive initial metadata on call with server address:%s", test_server->address().c_str());
       ReceiveInitialMetadata(test_call.get(), grpc_timeout_seconds_to_deadline(30));
-      {
-        grpc_core::MutexLock lock(&call_phase_counters_mu);
-        num_initial_metadata_received++;
-	call_phase_counters_cv.Broadcast();
-	while (num_initial_metadata_received < kNumCalls) {
-          call_phase_counters_cv.Wait(&call_phase_counters_mu);
+      for (int i = 1; i <= kNumMessagePingPongsPerCall; i++) {
+        {
+          grpc_core::MutexLock lock(&ping_pong_round_mu);
+	  ping_pong_round_cv.Broadcast();
+	  while (ping_pong_round != i) {
+            gpr_log(GPR_DEBUG, "WAIT since ping pong round:%d is not %d", ping_pong_round, i);
+            ping_pong_round_cv.Wait(&ping_pong_round_mu);
+	  }
+	}
+        SendMessage(test_call->call, test_call->cq);
+        ReceiveMessage(test_call->call, test_call->cq);
+        {
+          grpc_core::MutexLock lock(&ping_pong_round_mu);
+	  ping_pongs_done++;
+	  ping_pong_round_cv.Broadcast();
 	}
       }
-      //// Flush out any potentially pending events
-      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
-      GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-                                                    nullptr).type == GRPC_QUEUE_TIMEOUT);
-      //GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
       gpr_log(GPR_DEBUG, "now receive status on call with server address:%s", test_server->address().c_str());
       FinishCall(test_call.get());
       GPR_ASSERT(test_call->status.has_value());
       GPR_ASSERT(test_call->status.value() == GRPC_STATUS_PERMISSION_DENIED);
-      gpr_log(GPR_DEBUG, "now wait for other calls to received status, this one has server address:%s", test_server->address().c_str());
-      {
-        grpc_core::MutexLock lock(&call_phase_counters_mu);
-        num_status_received++;
-	call_phase_counters_cv.Broadcast();
-	while (num_status_received < kNumCalls) {
-          call_phase_counters_cv.Wait(&call_phase_counters_mu);
-	}
-      }
-      gpr_log(GPR_DEBUG, "now destruct call with server address:%s", test_server->address().c_str());
     }));
   }
-  gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
-  gpr_log(GPR_DEBUG, "now let servers send initial metadata");
-  gpr_event_set(&send_initial_metadata_event, (void*)1);
-  {
-    grpc_core::MutexLock lock(&call_phase_counters_mu);
-    while (num_initial_metadata_received != kNumCalls) {
-      gpr_log(GPR_DEBUG, "now wait for %ld more calls to receive initial metadata", kNumCalls - num_initial_metadata_received);
-      call_phase_counters_cv.Wait(&call_phase_counters_mu);
+  for (size_t i = 1; i <= kNumMessagePingPongsPerCall; i++) {
+    {
+      grpc_core::MutexLock lock(&ping_pong_round_mu);
+      while (ping_pongs_done < ping_pong_round * kNumCalls) {
+	gpr_log(GPR_DEBUG, "WAIT since ping pings done: %d < %d", ping_pongs_done, ping_pong_round * kNumCalls);
+        ping_pong_round_cv.Wait(&ping_pong_round_mu);
+      }
+      ping_pong_round++;
+      ping_pong_round_cv.Broadcast();
+      gpr_log(GPR_DEBUG, "initiate ping pong round: %d", ping_pong_round);
     }
   }
-  gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
   gpr_log(GPR_DEBUG, "now let servers send statuses");
-  gpr_event_set(&send_status_event, (void*)1);
   for (auto& thread : threads) {
     thread.join();
   }
