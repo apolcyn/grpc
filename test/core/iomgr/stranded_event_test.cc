@@ -269,14 +269,15 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 100;
+  const int kNumCalls = 64;
   gpr_event send_initial_metadata_event;
   gpr_event_init(&send_initial_metadata_event);
   gpr_event send_status_event;
   gpr_event_init(&send_status_event);
   size_t num_initial_metadata_received = 0;
-  grpc_core::Mutex num_initial_metadata_received_mu;
-  grpc_core::CondVar num_initial_metadata_received_cv;
+  size_t num_status_received = 0;
+  grpc_core::Mutex call_phase_counters_mu;
+  grpc_core::CondVar call_phase_counters_cv;
   const std::string kSharedUnconnectableAddress = grpc_core::JoinHostPort("127.0.0.1", grpc_pick_unused_port_or_die());
   gpr_log(GPR_DEBUG, "created unconnectable address:%s", kSharedUnconnectableAddress.c_str());
   std::vector<std::thread> threads;
@@ -286,8 +287,9 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
 			    &send_initial_metadata_event,
 			    &send_status_event,
 			    &num_initial_metadata_received,
-			    &num_initial_metadata_received_mu,
-			    &num_initial_metadata_received_cv]() {
+			    &num_status_received,
+			    &call_phase_counters_mu,
+			    &call_phase_counters_cv]() {
       auto test_server = absl::make_unique<TestServer>(&send_initial_metadata_event, &send_status_event);
       gpr_log(GPR_DEBUG, "created test_server with address:%s", test_server->address().c_str());
       grpc_arg service_config_arg;
@@ -322,36 +324,54 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       grpc_channel_get_info(channel, &channel_info);
       EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
       gpr_free(lb_policy_name);
-      // Flush out any potentially pending events
-      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
-      grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-                                                    nullptr);
-      GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
+      //// Flush out any potentially pending events
+      //gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
+      //grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
+      //                                              nullptr);
+      //GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
       // Receive initial metadata
       gpr_log(GPR_DEBUG, "now receive initial metadata on call with server address:%s", test_server->address().c_str());
       ReceiveInitialMetadata(test_call.get(), grpc_timeout_seconds_to_deadline(30));
       {
-        grpc_core::MutexLock lock(&num_initial_metadata_received_mu);
+        grpc_core::MutexLock lock(&call_phase_counters_mu);
         num_initial_metadata_received++;
-	num_initial_metadata_received_cv.Broadcast();
+	call_phase_counters_cv.Broadcast();
+	while (num_initial_metadata_received < kNumCalls) {
+          call_phase_counters_cv.Wait(&call_phase_counters_mu);
+	}
       }
-      // Don't start receiving status yet, until we get a signal to proceed
-      gpr_event_wait(&send_status_event, gpr_inf_future(GPR_CLOCK_REALTIME));
+      //// Flush out any potentially pending events
+      //gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
+      //grpc_event event = grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
+      //                                              nullptr);
+      //GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
+      gpr_log(GPR_DEBUG, "now receive status on call with server address:%s", test_server->address().c_str());
       FinishCall(test_call.get());
       GPR_ASSERT(test_call->status.has_value());
       GPR_ASSERT(test_call->status.value() == GRPC_STATUS_PERMISSION_DENIED);
+      gpr_log(GPR_DEBUG, "now wait for other calls to received status, this one has server address:%s", test_server->address().c_str());
+      {
+        grpc_core::MutexLock lock(&call_phase_counters_mu);
+        num_status_received++;
+	call_phase_counters_cv.Broadcast();
+	while (num_status_received < kNumCalls) {
+          call_phase_counters_cv.Wait(&call_phase_counters_mu);
+	}
+      }
+      gpr_log(GPR_DEBUG, "now destruct call with server address:%s", test_server->address().c_str());
     }));
   }
   gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
   gpr_log(GPR_DEBUG, "now let servers send initial metadata");
   gpr_event_set(&send_initial_metadata_event, (void*)1);
   {
-    grpc_core::MutexLock lock(&num_initial_metadata_received_mu);
+    grpc_core::MutexLock lock(&call_phase_counters_mu);
     while (num_initial_metadata_received != kNumCalls) {
       gpr_log(GPR_DEBUG, "now wait for %ld more calls to receive initial metadata", kNumCalls - num_initial_metadata_received);
-      num_initial_metadata_received_cv.Wait(&num_initial_metadata_received_mu);
+      call_phase_counters_cv.Wait(&call_phase_counters_mu);
     }
   }
+  gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
   gpr_log(GPR_DEBUG, "now let servers send statuses");
   gpr_event_set(&send_status_event, (void*)1);
   for (auto& thread : threads) {
