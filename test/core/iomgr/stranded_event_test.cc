@@ -61,7 +61,7 @@
 
 namespace {
 
-const int kNumMessagePingPongsPerCall = 1000;
+const int kNumMessagePingPongsPerCall = 4000;
 
 struct TestCall {
   explicit TestCall(grpc_channel* channel, grpc_call* call, grpc_completion_queue* cq, std::string server_address)
@@ -310,7 +310,7 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 100;
+  const int kNumCalls = 64;
   size_t ping_pong_round = 0;
   size_t ping_pongs_done = 0;
   grpc_core::Mutex ping_pong_round_mu;
