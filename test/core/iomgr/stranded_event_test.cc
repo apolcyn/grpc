@@ -269,7 +269,7 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 2;
+  const int kNumCalls = 100;
   gpr_event send_initial_metadata_event;
   gpr_event_init(&send_initial_metadata_event);
   gpr_event send_status_event;
@@ -357,6 +357,7 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   for (auto& thread : threads) {
     thread.join();
   }
+  gpr_log(GPR_DEBUG, "All, RPCs completed!");
 }
 
 }  // namespace
