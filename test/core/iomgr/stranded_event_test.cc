@@ -269,7 +269,7 @@ void ReceiveInitialMetadataOnCallsDivisibleByAndStartingFrom(int start, int stop
 // grpc_call_cancel_with_status
 TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   gpr_log(GPR_DEBUG, "test thread");
-  const int kNumCalls = 4;
+  const int kNumCalls = 8;
   gpr_event send_initial_metadata_event;
   gpr_event_init(&send_initial_metadata_event);
   gpr_event send_status_event;
@@ -325,9 +325,9 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       EXPECT_EQ(std::string(lb_policy_name), "round_robin") << "not using round robin; this test has a low chance of hitting the bug that it's meant to try to hit";
       gpr_free(lb_policy_name);
       //// Flush out any potentially pending events
-      //gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
-      //GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-      //                                              nullptr).type == GRPC_QUEUE_TIMEOUT);
+      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
+      GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
+                                                    nullptr).type == GRPC_QUEUE_TIMEOUT);
       // Receive initial metadata
       gpr_log(GPR_DEBUG, "now receive initial metadata on call with server address:%s", test_server->address().c_str());
       ReceiveInitialMetadata(test_call.get(), grpc_timeout_seconds_to_deadline(30));
@@ -340,9 +340,9 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
 	}
       }
       //// Flush out any potentially pending events
-      //gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
-      //GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
-      //                                              nullptr).type == GRPC_QUEUE_TIMEOUT);
+      gpr_log(GPR_DEBUG, "now flush pending events on call with server address:%s", test_server->address().c_str());
+      GPR_ASSERT(grpc_completion_queue_next(test_call->cq, gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC), gpr_time_from_millis(100, GPR_TIMESPAN)),
+                                                    nullptr).type == GRPC_QUEUE_TIMEOUT);
       //GPR_ASSERT(event.type == GRPC_QUEUE_TIMEOUT);
       gpr_log(GPR_DEBUG, "now receive status on call with server address:%s", test_server->address().c_str());
       FinishCall(test_call.get());
