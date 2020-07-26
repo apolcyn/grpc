@@ -1005,13 +1005,23 @@ class CSharpLanguage(object):
             if self.config.build_config != 'gcov' or self.platform != 'windows':
                 # normally, run each test as a separate process
                 for test in tests_by_assembly[assembly]:
-                    cmdline = runtime_cmd + [assembly_file,
-                                             '--test=%s' % test] + nunit_args
-                    specs.append(
-                        self.config.job_spec(
-                            cmdline,
-                            shortname='csharp.%s' % test,
-                            environ=_FORCE_ENVIRON_FOR_WRAPPERS))
+                    if 'ExternalDnsWithTracing' not in test:
+                        cmdline = runtime_cmd + [assembly_file,
+                                                 '--test=%s' % test] + nunit_args
+                        specs.append(
+                            self.config.job_spec(
+                                cmdline,
+                                shortname='csharp.%s' % test,
+                                environ=_FORCE_ENVIRON_FOR_WRAPPERS))
+                    else:
+                        for i in range(0, 200):
+                            cmdline = runtime_cmd + [assembly_file,
+                                                     '--test=%s' % test] + nunit_args
+                            specs.append(
+                                self.config.job_spec(
+                                    cmdline,
+                                    shortname='csharp.%s-iteration-%d' % (test, i),
+                                    environ=_FORCE_ENVIRON_FOR_WRAPPERS))
             else:
                 # For C# test coverage, run all tests from the same assembly at once
                 # using OpenCover.Console (only works on Windows).
