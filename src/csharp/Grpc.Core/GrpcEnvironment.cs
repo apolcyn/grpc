@@ -195,6 +195,9 @@ namespace Grpc.Core
             logger = customLogger;
         }
 
+        /// <summary>
+        /// Resets the application-wide logger used by grpc to its default value.
+        /// </summary>
 	public static void ResetLogger()
 	{
 		NativeMethods.Get().grpcsharp_reset_logging();
