@@ -195,6 +195,11 @@ namespace Grpc.Core
             logger = customLogger;
         }
 
+	public static void ResetLogger()
+	{
+		NativeMethods.Get().grpcsharp_reset_logging();
+	}
+
         /// <summary>
         /// Sets the number of threads in the gRPC thread pool that polls for internal RPC events.
         /// Can be only invoked before the <c>GrpcEnviroment</c> is started and cannot be changed afterwards.

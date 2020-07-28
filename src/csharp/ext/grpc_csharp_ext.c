@@ -1208,6 +1208,10 @@ GPR_EXPORT void GPR_CALLTYPE grpcsharp_redirect_log(grpcsharp_log_func func) {
   gpr_set_log_function(grpcsharp_log_handler);
 }
 
+GPR_EXPORT void GPR_CALLTYPE grpcsharp_reset_logging() {
+  gpr_set_log_function(NULL);
+}
+
 typedef void(GPR_CALLTYPE* test_callback_funcptr)(int32_t success);
 
 /* Slice buffer functionality */

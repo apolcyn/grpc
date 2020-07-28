@@ -302,6 +302,10 @@ void grpcsharp_redirect_log() {
   fprintf(stderr, "Should never reach here");
   abort();
 }
+void grpcsharp_reset_logging() {
+  fprintf(stderr, "Should never reach here");
+  abort();
+}
 void grpcsharp_native_callback_dispatcher_init() {
   fprintf(stderr, "Should never reach here");
   abort();

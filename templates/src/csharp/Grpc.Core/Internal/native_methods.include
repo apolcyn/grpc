@@ -70,6 +70,7 @@ native_method_signatures = [
     'IntPtr grpcsharp_metadata_array_get_value(IntPtr metadataArray, UIntPtr index, out UIntPtr valueLength)',
     'void grpcsharp_metadata_array_destroy_full(IntPtr array)',
     'void grpcsharp_redirect_log(GprLogDelegate callback)',
+    'void grpcsharp_reset_logging()',
     'void grpcsharp_native_callback_dispatcher_init(NativeCallbackDispatcherCallback dispatcher)',
     'CallCredentialsSafeHandle grpcsharp_metadata_credentials_create_from_plugin(IntPtr nativeCallbackTag)',
     'void grpcsharp_metadata_credentials_notify_from_plugin(IntPtr callbackPtr, IntPtr userData, MetadataArraySafeHandle metadataArray, StatusCode statusCode, string errorDetails)',

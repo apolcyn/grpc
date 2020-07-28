@@ -104,6 +104,7 @@ namespace Grpc.Core.Internal
         public readonly Delegates.grpcsharp_metadata_array_get_value_delegate grpcsharp_metadata_array_get_value;
         public readonly Delegates.grpcsharp_metadata_array_destroy_full_delegate grpcsharp_metadata_array_destroy_full;
         public readonly Delegates.grpcsharp_redirect_log_delegate grpcsharp_redirect_log;
+        public readonly Delegates.grpcsharp_reset_logging_delegate grpcsharp_reset_logging;
         public readonly Delegates.grpcsharp_native_callback_dispatcher_init_delegate grpcsharp_native_callback_dispatcher_init;
         public readonly Delegates.grpcsharp_metadata_credentials_create_from_plugin_delegate grpcsharp_metadata_credentials_create_from_plugin;
         public readonly Delegates.grpcsharp_metadata_credentials_notify_from_plugin_delegate grpcsharp_metadata_credentials_notify_from_plugin;
@@ -213,6 +214,7 @@ namespace Grpc.Core.Internal
             this.grpcsharp_metadata_array_get_value = GetMethodDelegate<Delegates.grpcsharp_metadata_array_get_value_delegate>(library);
             this.grpcsharp_metadata_array_destroy_full = GetMethodDelegate<Delegates.grpcsharp_metadata_array_destroy_full_delegate>(library);
             this.grpcsharp_redirect_log = GetMethodDelegate<Delegates.grpcsharp_redirect_log_delegate>(library);
+            this.grpcsharp_reset_logging = GetMethodDelegate<Delegates.grpcsharp_reset_logging_delegate>(library);
             this.grpcsharp_native_callback_dispatcher_init = GetMethodDelegate<Delegates.grpcsharp_native_callback_dispatcher_init_delegate>(library);
             this.grpcsharp_metadata_credentials_create_from_plugin = GetMethodDelegate<Delegates.grpcsharp_metadata_credentials_create_from_plugin_delegate>(library);
             this.grpcsharp_metadata_credentials_notify_from_plugin = GetMethodDelegate<Delegates.grpcsharp_metadata_credentials_notify_from_plugin_delegate>(library);
@@ -321,6 +323,7 @@ namespace Grpc.Core.Internal
             this.grpcsharp_metadata_array_get_value = DllImportsFromStaticLib.grpcsharp_metadata_array_get_value;
             this.grpcsharp_metadata_array_destroy_full = DllImportsFromStaticLib.grpcsharp_metadata_array_destroy_full;
             this.grpcsharp_redirect_log = DllImportsFromStaticLib.grpcsharp_redirect_log;
+            this.grpcsharp_reset_logging = DllImportsFromStaticLib.grpcsharp_reset_logging;
             this.grpcsharp_native_callback_dispatcher_init = DllImportsFromStaticLib.grpcsharp_native_callback_dispatcher_init;
             this.grpcsharp_metadata_credentials_create_from_plugin = DllImportsFromStaticLib.grpcsharp_metadata_credentials_create_from_plugin;
             this.grpcsharp_metadata_credentials_notify_from_plugin = DllImportsFromStaticLib.grpcsharp_metadata_credentials_notify_from_plugin;
@@ -429,6 +432,7 @@ namespace Grpc.Core.Internal
             this.grpcsharp_metadata_array_get_value = DllImportsFromSharedLib.grpcsharp_metadata_array_get_value;
             this.grpcsharp_metadata_array_destroy_full = DllImportsFromSharedLib.grpcsharp_metadata_array_destroy_full;
             this.grpcsharp_redirect_log = DllImportsFromSharedLib.grpcsharp_redirect_log;
+            this.grpcsharp_reset_logging = DllImportsFromSharedLib.grpcsharp_reset_logging;
             this.grpcsharp_native_callback_dispatcher_init = DllImportsFromSharedLib.grpcsharp_native_callback_dispatcher_init;
             this.grpcsharp_metadata_credentials_create_from_plugin = DllImportsFromSharedLib.grpcsharp_metadata_credentials_create_from_plugin;
             this.grpcsharp_metadata_credentials_notify_from_plugin = DllImportsFromSharedLib.grpcsharp_metadata_credentials_notify_from_plugin;
@@ -540,6 +544,7 @@ namespace Grpc.Core.Internal
             public delegate IntPtr grpcsharp_metadata_array_get_value_delegate(IntPtr metadataArray, UIntPtr index, out UIntPtr valueLength);
             public delegate void grpcsharp_metadata_array_destroy_full_delegate(IntPtr array);
             public delegate void grpcsharp_redirect_log_delegate(GprLogDelegate callback);
+            public delegate void grpcsharp_reset_logging_delegate();
             public delegate void grpcsharp_native_callback_dispatcher_init_delegate(NativeCallbackDispatcherCallback dispatcher);
             public delegate CallCredentialsSafeHandle grpcsharp_metadata_credentials_create_from_plugin_delegate(IntPtr nativeCallbackTag);
             public delegate void grpcsharp_metadata_credentials_notify_from_plugin_delegate(IntPtr callbackPtr, IntPtr userData, MetadataArraySafeHandle metadataArray, StatusCode statusCode, string errorDetails);
@@ -792,6 +797,9 @@ namespace Grpc.Core.Internal
             
             [DllImport(ImportName)]
             public static extern void grpcsharp_redirect_log(GprLogDelegate callback);
+            
+            [DllImport(ImportName)]
+            public static extern void grpcsharp_reset_logging();
             
             [DllImport(ImportName)]
             public static extern void grpcsharp_native_callback_dispatcher_init(NativeCallbackDispatcherCallback dispatcher);
@@ -1112,6 +1120,9 @@ namespace Grpc.Core.Internal
             
             [DllImport(ImportName)]
             public static extern void grpcsharp_redirect_log(GprLogDelegate callback);
+            
+            [DllImport(ImportName)]
+            public static extern void grpcsharp_reset_logging();
             
             [DllImport(ImportName)]
             public static extern void grpcsharp_native_callback_dispatcher_init(NativeCallbackDispatcherCallback dispatcher);
