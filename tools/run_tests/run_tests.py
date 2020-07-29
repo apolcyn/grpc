@@ -1014,7 +1014,7 @@ class CSharpLanguage(object):
                                 shortname='csharp.%s' % test,
                                 environ=_FORCE_ENVIRON_FOR_WRAPPERS))
                     else:
-                        for i in range(0, 1000):
+                        for i in range(0, 500):
                             cmdline = runtime_cmd + [assembly_file,
                                                      '--test=%s' % test] + nunit_args
                             specs.append(
