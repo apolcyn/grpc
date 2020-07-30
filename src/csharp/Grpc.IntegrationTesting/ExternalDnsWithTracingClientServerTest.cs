@@ -82,7 +82,6 @@ namespace Grpc.IntegrationTesting
         {
             channel.ShutdownAsync().Wait();
             server.ShutdownAsync().Wait();
-            GrpcEnvironment.ResetLogger();
         }
 
         [Test]
