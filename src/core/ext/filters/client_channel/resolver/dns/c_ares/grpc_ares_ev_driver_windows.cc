@@ -58,10 +58,10 @@ std::string GetProcCpuString() {
     gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
     GPR_ASSERT(0);
   }
-  auto userString = absl::StrFormat("user_time_hms: %ld:%ld:%ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond);
+  auto userString = absl::StrFormat("user_time_hms: %ld:%ld:%ld.%ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
   SYSTEMTIME kernelSystemTime;
   GPR_ASSERT(FileTimeToSystemTime(&kernelTime, &kernelSystemTime) != -1);
-  auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond);
+  auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
   return absl::StrCat(userString, " ", kernelString);
 }
 
