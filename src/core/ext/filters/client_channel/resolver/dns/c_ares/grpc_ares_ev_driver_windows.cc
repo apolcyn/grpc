@@ -94,7 +94,7 @@ std::string GetProcCpuString() {
   SYSTEMTIME kernelSystemTime;
   GPR_ASSERT(FileTimeToSystemTime(&kernelTime, &kernelSystemTime) != -1);
   auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
-  return absl::StrCat(userString, " ", kernelString, " ", GetSystemTimes());
+  return absl::StrCat(userString, " ", kernelString, " ", GetSystemCpuString());
 }
 
 /* TODO(apolcyn): remove this hack after fixing upstream.
