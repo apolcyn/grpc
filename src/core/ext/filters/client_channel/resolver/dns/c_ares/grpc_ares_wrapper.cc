@@ -644,8 +644,8 @@ static grpc_ares_request* grpc_dns_lookup_ares_locked_impl(
   r->pending_queries = 0;
   GRPC_CARES_TRACE_LOG(
       "request:%p c-ares grpc_dns_lookup_ares_locked_impl name=%s, "
-      "default_port=%s",
-      r, name, default_port);
+      "default_port=%s cpu:|%s|",
+      r, name, default_port, GetProcCpuString().c_str());
   // Early out if the target is an ipv4 or ipv6 literal.
   if (resolve_as_ip_literal_locked(name, default_port, addrs)) {
     grpc_ares_complete_request_locked(r);

@@ -25,6 +25,8 @@
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/lib/iomgr/pollset_set.h"
 
+std::string GetProcCpuString();
+
 typedef struct grpc_ares_ev_driver grpc_ares_ev_driver;
 
 /* Start \a ev_driver. It will keep working until all IO on its ares_channel is

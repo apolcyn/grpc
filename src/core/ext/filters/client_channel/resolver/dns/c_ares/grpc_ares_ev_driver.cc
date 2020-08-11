@@ -105,8 +105,8 @@ static void grpc_ares_ev_driver_unref(grpc_ares_ev_driver* ev_driver) {
   GRPC_CARES_TRACE_LOG("request:%p Unref ev_driver %p", ev_driver->request,
                        ev_driver);
   if (gpr_unref(&ev_driver->refs)) {
-    GRPC_CARES_TRACE_LOG("request:%p destroy ev_driver %p", ev_driver->request,
-                         ev_driver);
+    GRPC_CARES_TRACE_LOG("request:%p destroy ev_driver %p cpu:|%s|", ev_driver->request,
+                         ev_driver, GetProcCpuString().c_str());
     GPR_ASSERT(ev_driver->fds == nullptr);
     ares_destroy(ev_driver->channel);
     grpc_ares_complete_request_locked(ev_driver->request);
@@ -155,7 +155,7 @@ grpc_error* grpc_ares_ev_driver_create_locked(
   opts.flags |= ARES_FLAG_STAYOPEN;
   int status = ares_init_options(&(*ev_driver)->channel, &opts, ARES_OPT_FLAGS);
   grpc_ares_test_only_inject_config((*ev_driver)->channel);
-  GRPC_CARES_TRACE_LOG("request:%p grpc_ares_ev_driver_create_locked", request);
+  GRPC_CARES_TRACE_LOG("request:%p grpc_ares_ev_driver_create_locked cpu:|%s|", request, GetProcCpuString().c_str());
   if (status != ARES_SUCCESS) {
     grpc_error* err = GRPC_ERROR_CREATE_FROM_COPIED_STRING(
         absl::StrCat("Failed to init ares channel. C-ares error: ",

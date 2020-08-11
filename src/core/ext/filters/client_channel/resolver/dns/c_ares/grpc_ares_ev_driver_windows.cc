@@ -43,6 +43,21 @@
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 
+std::string GetProcCpuString() {
+  FILETIME createTime;
+  FILETIME exitTime;
+  FILETIME kernelTime;
+  FILETIME userTime;
+  GPR_ASSERT(GetProcessTimes(GetCurrentProcess(), &createTime, &exitTime, &kernelTime, &userTime) != -1);
+  SYSTEMTIME userSystemTime;
+  GPR_ASSERT(FileTimeToSystemTime(&userTime, &userSystemTime) != -1);
+  auto userString = absl::StrFormat("user_time_hms: %d:%d:%d", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond);
+  SYSTEMTIME kernelSystemTime;
+  GPR_ASSERT(FileTimeToSystemTime(&kernelTime, &kernelSystemTime) != -1);
+  auto kernelString = absl::StrFormat("kernel_time_hms: %d:%d:%d", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond);
+  return absl::StrCat(userString, " ", kernelString);
+}
+
 /* TODO(apolcyn): remove this hack after fixing upstream.
  * Our grpc/c-ares code on Windows uses the ares_set_socket_functions API,
  * which uses "struct iovec" type, which on Windows is defined inside of
@@ -801,8 +816,8 @@ class SockToPolledFdMap {
     // See https://github.com/grpc/grpc/pull/20284, this trace log is
     // intentionally placed to attempt to trigger a crash in case of a
     // use after free on polled_fd.
-    GRPC_CARES_TRACE_LOG("CloseSocket called for socket: %s",
-                         polled_fd->GetName());
+    GRPC_CARES_TRACE_LOG("CloseSocket called for socket: %s cpu:|%s|",
+                         polled_fd->GetName(), GetProcCpuString().c_str());
     // If a gRPC polled fd has not made it in to the driver's list yet, then
     // the driver has not and will never see this socket.
     if (!polled_fd->gotten_into_driver_list()) {
