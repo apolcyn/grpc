@@ -44,6 +44,38 @@
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_ev_driver.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 
+std::string GetSystemCpuString() {
+  FILETIME idleTime;
+  FILETIME kernelTime;
+  FILETIME userTime;
+  if (!GetSystemTimes(&idleTime, &kernelTime, &userTime)) {
+    gpr_log(GPR_ERROR, "GetSystemTimes failed: %d", WSAGetLastError());
+    GPR_ASSERT(0);
+  }
+  SYSTEMTIME idleSystemTime;
+  if (FileTimeToSystemTime(&idleTime, &idleSystemTime) == 0) {
+    gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
+    GPR_ASSERT(0);
+  }
+  auto idleString = absl::StrFormat("system_idle_time_hms: %ld:%ld:%ld.%ld", idleSystemTime.wHour, idleSystemTime.wMinute, idleSystemTime.wSecond, idleSystemTime.wMilliseconds);
+  SYSTEMTIME userSystemTime;
+  if (FileTimeToSystemTime(&userTime, &userSystemTime) == 0) {
+    gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
+    GPR_ASSERT(0);
+  }
+  auto userString = absl::StrFormat("system_user_time_hms: %ld:%ld:%ld.%ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
+  SYSTEMTIME kernelSystemTime;
+  if (FileTimeToSystemTime(&kernelTime, &kernelSystemTime) == 0) {
+    gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
+    GPR_ASSERT(0);
+  }
+  auto kernelString = absl::StrFormat("system_kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  auto numCoresString = absl::StrFormat("num_cores: %ld", si.dwNumberOfProcessors);
+  return absl::StrCat(idleString, " ", userString, " ", kernelString, " ", numCoresString);
+}
+
 std::string GetProcCpuString() {
   FILETIME createTime;
   FILETIME exitTime;
@@ -62,7 +94,7 @@ std::string GetProcCpuString() {
   SYSTEMTIME kernelSystemTime;
   GPR_ASSERT(FileTimeToSystemTime(&kernelTime, &kernelSystemTime) != -1);
   auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
-  return absl::StrCat(userString, " ", kernelString);
+  return absl::StrCat(userString, " ", kernelString, " ", GetSystemTimes());
 }
 
 /* TODO(apolcyn): remove this hack after fixing upstream.
