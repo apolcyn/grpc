@@ -21,6 +21,7 @@
 #if GRPC_ARES == 1 && defined(GRPC_WINDOWS_SOCKET_ARES_EV_DRIVER)
 
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_cat.h"
 
 #include <ares.h>
 
