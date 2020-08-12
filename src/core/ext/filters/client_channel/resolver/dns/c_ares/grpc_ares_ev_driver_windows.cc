@@ -57,19 +57,19 @@ std::string GetSystemCpuString() {
     gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
     GPR_ASSERT(0);
   }
-  auto idleString = absl::StrFormat("system_idle_time_hms: %ld:%ld:%ld.%ld", idleSystemTime.wHour, idleSystemTime.wMinute, idleSystemTime.wSecond, idleSystemTime.wMilliseconds);
+  auto idleString = absl::StrFormat("system_idle_time_hms: %ld:%ld:%ld.%3ld", idleSystemTime.wHour, idleSystemTime.wMinute, idleSystemTime.wSecond, idleSystemTime.wMilliseconds);
   SYSTEMTIME userSystemTime;
   if (FileTimeToSystemTime(&userTime, &userSystemTime) == 0) {
     gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
     GPR_ASSERT(0);
   }
-  auto userString = absl::StrFormat("system_user_time_hms: %ld:%ld:%ld.%ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
+  auto userString = absl::StrFormat("system_user_time_hms: %ld:%ld:%ld.%3ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
   SYSTEMTIME kernelSystemTime;
   if (FileTimeToSystemTime(&kernelTime, &kernelSystemTime) == 0) {
     gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
     GPR_ASSERT(0);
   }
-  auto kernelString = absl::StrFormat("system_kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
+  auto kernelString = absl::StrFormat("system_kernel_time_hms: %ld:%ld:%ld.%3ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
   SYSTEM_INFO si;
   GetSystemInfo(&si);
   auto numCoresString = absl::StrFormat("num_cores: %ld", si.dwNumberOfProcessors);
@@ -90,10 +90,10 @@ std::string GetProcCpuString() {
     gpr_log(GPR_ERROR, "FileTimeToSystemTime failed: %d", WSAGetLastError());
     GPR_ASSERT(0);
   }
-  auto userString = absl::StrFormat("user_time_hms: %ld:%ld:%ld.%ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
+  auto userString = absl::StrFormat("user_time_hms: %ld:%ld:%ld.%3ld", userSystemTime.wHour, userSystemTime.wMinute, userSystemTime.wSecond, userSystemTime.wMilliseconds);
   SYSTEMTIME kernelSystemTime;
   GPR_ASSERT(FileTimeToSystemTime(&kernelTime, &kernelSystemTime) != -1);
-  auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld.%ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
+  auto kernelString = absl::StrFormat("kernel_time_hms: %ld:%ld:%ld.%3ld", kernelSystemTime.wHour, kernelSystemTime.wMinute, kernelSystemTime.wSecond, kernelSystemTime.wMilliseconds);
   return absl::StrCat(userString, " ", kernelString, " ", GetSystemCpuString());
 }
 
