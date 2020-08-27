@@ -140,77 +140,124 @@ static bool stream_list_add(grpc_chttp2_transport* t, grpc_chttp2_stream* s,
 
 bool grpc_chttp2_list_add_writable_stream(grpc_chttp2_transport* t,
                                           grpc_chttp2_stream* s) {
+  gpr_log(GPR_DEBUG, "grpc_chttp2_list_add_writable_stream is_client:%d", t->is_client);
   GPR_ASSERT(s->id != 0);
   return stream_list_add(t, s, GRPC_CHTTP2_LIST_WRITABLE);
 }
 
 bool grpc_chttp2_list_pop_writable_stream(grpc_chttp2_transport* t,
                                           grpc_chttp2_stream** s) {
+  gpr_log(GPR_DEBUG, "grpc_chttp2_list_pop_writable_stream is_client:%d", t->is_client);
   return stream_list_pop(t, s, GRPC_CHTTP2_LIST_WRITABLE);
 }
 
 bool grpc_chttp2_list_remove_writable_stream(grpc_chttp2_transport* t,
                                              grpc_chttp2_stream* s) {
-  return stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WRITABLE);
+  bool ret = stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WRITABLE);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_remove_writable_stream is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 bool grpc_chttp2_list_add_writing_stream(grpc_chttp2_transport* t,
                                          grpc_chttp2_stream* s) {
-  return stream_list_add(t, s, GRPC_CHTTP2_LIST_WRITING);
+  bool ret = stream_list_add(t, s, GRPC_CHTTP2_LIST_WRITING);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_add_writing_stream is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 bool grpc_chttp2_list_have_writing_streams(grpc_chttp2_transport* t) {
-  return !stream_list_empty(t, GRPC_CHTTP2_LIST_WRITING);
+  bool ret = !stream_list_empty(t, GRPC_CHTTP2_LIST_WRITING);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_have_writing_streams is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 bool grpc_chttp2_list_pop_writing_stream(grpc_chttp2_transport* t,
                                          grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_WRITING);
+  bool ret = stream_list_pop(t, s, GRPC_CHTTP2_LIST_WRITING);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_pop_writing_stream is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 void grpc_chttp2_list_add_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream* s) {
-  stream_list_add(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  bool ret = stream_list_add(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_add_waiting_for_concurrency is_client:%d", t->is_client);
+  }
 }
 
 bool grpc_chttp2_list_pop_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  bool ret = stream_list_pop(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_pop_waiting_for_concurrency is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 void grpc_chttp2_list_remove_waiting_for_concurrency(grpc_chttp2_transport* t,
                                                      grpc_chttp2_stream* s) {
-  stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  bool ret = stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_WAITING_FOR_CONCURRENCY);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_remove_waiting_for_concurrency is_client:%d", t->is_client);
+  }
 }
 
 void grpc_chttp2_list_add_stalled_by_transport(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream* s) {
   GPR_ASSERT(t->flow_control->flow_control_enabled());
-  stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  bool ret = stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_add_stalled_by_transport is_client:%d", t->is_client);
+  }
 }
 
 bool grpc_chttp2_list_pop_stalled_by_transport(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  bool ret = stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  if (ret) {
+   gpr_log(GPR_DEBUG, "grpc_chttp2_list_pop_stalled_by_transport is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 void grpc_chttp2_list_remove_stalled_by_transport(grpc_chttp2_transport* t,
                                                   grpc_chttp2_stream* s) {
-  stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT);
+  if (stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_TRANSPORT)) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_remove_stalled_by_transport is_client:%d", t->is_client);
+  }
 }
 
 void grpc_chttp2_list_add_stalled_by_stream(grpc_chttp2_transport* t,
                                             grpc_chttp2_stream* s) {
   GPR_ASSERT(t->flow_control->flow_control_enabled());
-  stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  if (stream_list_add(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM)) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_add_stalled_by_stream is_client:%d", t->is_client);
+  }
 }
 
 bool grpc_chttp2_list_pop_stalled_by_stream(grpc_chttp2_transport* t,
                                             grpc_chttp2_stream** s) {
-  return stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  bool ret = stream_list_pop(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_pop_stalled_by_stream is_client:%d", t->is_client);
+  }
+  return ret;
 }
 
 bool grpc_chttp2_list_remove_stalled_by_stream(grpc_chttp2_transport* t,
                                                grpc_chttp2_stream* s) {
-  return stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  bool ret = stream_list_maybe_remove(t, s, GRPC_CHTTP2_LIST_STALLED_BY_STREAM);
+  if (ret) {
+    gpr_log(GPR_DEBUG, "grpc_chttp2_list_remove_stalled_by_stream is_client:%d", t->is_client);
+  }
+  return ret;
 }

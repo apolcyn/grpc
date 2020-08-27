@@ -652,6 +652,7 @@ grpc_chttp2_stream::grpc_chttp2_stream(grpc_chttp2_transport* t,
 }
 
 grpc_chttp2_stream::~grpc_chttp2_stream() {
+  gpr_log(GPR_DEBUG, "apolcyn grpc_chttp2_stream:%p dtor begin is_client:%d", this, t->is_client);
   if (t->channelz_socket != nullptr) {
     if ((t->is_client && eos_received) || (!t->is_client && eos_sent)) {
       t->channelz_socket->RecordStreamSucceeded();
@@ -722,6 +723,13 @@ static void destroy_stream_locked(void* sp, grpc_error* /*error*/) {
   s->~grpc_chttp2_stream();
 }
 
+static void run_stream_dtor_after_delay(void* arg, grpc_error* /*error*/) {
+  grpc_chttp2_stream* s = static_cast<grpc_chttp2_stream*>(arg);
+  s->t->combiner->Run(
+      GRPC_CLOSURE_INIT(&s->destroy_stream, destroy_stream_locked, s, nullptr),
+      GRPC_ERROR_NONE);
+}
+
 static void destroy_stream(grpc_transport* gt, grpc_stream* gs,
                            grpc_closure* then_schedule_closure) {
   GPR_TIMER_SCOPE("destroy_stream", 0);
@@ -741,9 +749,7 @@ static void destroy_stream(grpc_transport* gt, grpc_stream* gs,
   }
 
   s->destroy_stream_arg = then_schedule_closure;
-  t->combiner->Run(
-      GRPC_CLOSURE_INIT(&s->destroy_stream, destroy_stream_locked, s, nullptr),
-      GRPC_ERROR_NONE);
+  grpc_timer_init(&s->run_stream_dtor_after_delay_timer, grpc_core::ExecCtx::Get()->Now() + 2, GRPC_CLOSURE_CREATE(run_stream_dtor_after_delay, s, nullptr));
 }
 
 grpc_chttp2_stream* grpc_chttp2_parsing_accept_stream(grpc_chttp2_transport* t,
@@ -2568,6 +2574,28 @@ static void read_action_locked(void* tp, grpc_error* error) {
 
   GRPC_ERROR_UNREF(error);
 }
+
+//static void continue_read_action_after_delay_locked(void* arg, grpc_error* error) {
+//  if (error != GRPC_ERROR_NONE) {
+//    gpr_log(GPR_ERROR, "continue_read_action_after_delay_locked skipped due to closuer error:%s", grpc_error_string(error));
+//  }
+//  grpc_chttp2_transport* t = static_cast<grpc_chttp2_transport*>(arg);
+//  const bool urgent = t->goaway_error != GRPC_ERROR_NONE;
+//  GRPC_CLOSURE_INIT(&t->read_action_locked, read_action, t,
+//                    grpc_schedule_on_exec_ctx);
+//  grpc_endpoint_read(t->ep, &t->read_buffer, &t->read_action_locked, urgent);
+//  grpc_chttp2_act_on_flowctl_action(t->flow_control->MakeAction(), t, nullptr);
+//}
+//
+//static void continue_read_action_after_delay(void* arg, grpc_error* error) {
+//  grpc_chttp2_transport* t = static_cast<grpc_chttp2_transport*>(arg);
+//  t->combiner->Run(GRPC_CLOSURE_CREATE(continue_read_action_after_delay_locked, t, nullptr),
+//                   GRPC_ERROR_REF(error));
+//}
+//
+//static void continue_read_action_locked(grpc_chttp2_transport* t) {
+//  grpc_timer_init(&t->continue_read_action_after_delay_locked_timer, grpc_core::ExecCtx::Get()->Now() + 1000, GRPC_CLOSURE_CREATE(continue_read_action_after_delay, t, grpc_schedule_on_exec_ctx));
+//}
 
 static void continue_read_action_locked(grpc_chttp2_transport* t) {
   const bool urgent = t->goaway_error != GRPC_ERROR_NONE;

@@ -507,6 +507,8 @@ class StreamWriteContext {
 
     DataSendContext data_send_context(write_context_, t_, s_);
 
+    gpr_log(GPR_DEBUG, "apolcyn FlushData for stream:%p is_client:%d transport_remote_window:%ld stream_remote_window:%ld",
+            s_, t_->is_client, t_->flow_control->remote_window(), data_send_context.stream_remote_window());
     if (!data_send_context.AnyOutgoing()) {
       if (t_->flow_control->remote_window() <= 0) {
         report_stall(t_, s_, "transport");
@@ -661,12 +663,13 @@ grpc_chttp2_begin_write_result grpc_chttp2_begin_write(
       }
     }
     if (stream_ctx.stream_became_writable()) {
-      if (!grpc_chttp2_list_add_writing_stream(t, s)) {
-        /* already in writing list: drop ref */
-        GRPC_CHTTP2_STREAM_UNREF(s, "chttp2_writing:already_writing");
-      } else {
-        /* ref will be dropped at end of write */
-      }
+      GPR_ASSERT(grpc_chttp2_list_add_writing_stream(t, s));
+      //if (!grpc_chttp2_list_add_writing_stream(t, s)) {
+      //  /* already in writing list: drop ref */
+      //  GRPC_CHTTP2_STREAM_UNREF(s, "chttp2_writing:already_writing");
+      //} else {
+      //  /* ref will be dropped at end of write */
+      //}
     } else {
       GRPC_CHTTP2_STREAM_UNREF(s, "chttp2_writing:no_write");
     }

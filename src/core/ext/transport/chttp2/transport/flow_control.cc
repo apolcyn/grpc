@@ -355,7 +355,12 @@ FlowControlAction TransportFlowControl::PeriodicUpdate() {
     // target might change based on how much memory pressure we are under
     // TODO(ncteisen): experiment with setting target to be huge under low
     // memory pressure.
-    const double target = pow(2, SmoothLogBdp(TargetLogBdp()));
+    //const double target = pow(2, SmoothLogBdp(TargetLogBdp()));
+    double target = kDefaultWindow;
+    if (target_initial_window_size_ == kDefaultWindow) {
+      target = 512;
+    }
+    gpr_log(GPR_DEBUG, "apolcyn flow control PeriodicUpdate target_initial_window_size_:%ld target:%lf", target_initial_window_size_, target);
 
     // Though initial window 'could' drop to 0, we keep the floor at 128
     target_initial_window_size_ =

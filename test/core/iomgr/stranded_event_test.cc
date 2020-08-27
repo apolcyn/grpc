@@ -40,6 +40,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/types/optional.h"
 
+#include "src/core/ext/transport/chttp2/transport/frame_ping.h"
 #include "src/core/ext/filters/client_channel/resolver/fake/fake_resolver.h"
 #include "src/core/lib/gpr/useful.h"
 #include "src/core/lib/gprpp/host_port.h"
@@ -60,7 +61,7 @@
 
 namespace {
 
-const int kNumMessagePingPongsPerCall = 4000;
+const int kNumMessagePingPongsPerCall = 2;
 
 struct TestCall {
   explicit TestCall(grpc_channel* channel, grpc_call* call,
@@ -71,7 +72,7 @@ struct TestCall {
   TestCall& operator=(const TestCall& other) = delete;
 
   ~TestCall() {
-    grpc_call_cancel(call, nullptr);
+    //grpc_call_cancel(call, nullptr);
     grpc_call_unref(call);
     grpc_channel_destroy(channel);
     grpc_completion_queue_shutdown(cq);
@@ -109,8 +110,12 @@ void StartCall(TestCall* test_call) {
   cq_verifier_destroy(cqv);
 }
 
-void SendMessage(grpc_call* call, grpc_completion_queue* cq) {
-  grpc_slice request_payload_slice = grpc_slice_from_copied_string("a");
+bool SendMessage(grpc_call* call, grpc_completion_queue* cq, bool poll) {
+  std::string send = "";
+  for (int i = 0; i < 4 * 1e6; i++) {
+    send += "a";
+  }
+  grpc_slice request_payload_slice = grpc_slice_from_copied_string(send.c_str());
   grpc_byte_buffer* request_payload =
       grpc_raw_byte_buffer_create(&request_payload_slice, 1);
   grpc_op ops[6];
@@ -125,14 +130,17 @@ void SendMessage(grpc_call* call, grpc_completion_queue* cq) {
   grpc_call_error error = grpc_call_start_batch(
       call, ops, static_cast<size_t>(op - ops), tag, nullptr);
   GPR_ASSERT(GRPC_CALL_OK == error);
-  cq_verifier* cqv = cq_verifier_create(cq);
-  CQ_EXPECT_COMPLETION(cqv, tag, 1);
-  cq_verify(cqv);
-  cq_verifier_destroy(cqv);
-  grpc_byte_buffer_destroy(request_payload);
+  if (poll) {
+    auto ev = grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
+    GPR_ASSERT(ev.type == GRPC_OP_COMPLETE);
+    gpr_log(GPR_ERROR, "got tag: %p wanted tag: %p", ev.tag, tag);
+    grpc_byte_buffer_destroy(request_payload);
+    return ev.success;
+  }
+  return false;
 }
 
-void ReceiveMessage(grpc_call* call, grpc_completion_queue* cq) {
+bool ReceiveMessage(grpc_call* call, grpc_completion_queue* cq) {
   grpc_byte_buffer* request_payload = nullptr;
   grpc_op ops[6];
   grpc_op* op;
@@ -146,11 +154,14 @@ void ReceiveMessage(grpc_call* call, grpc_completion_queue* cq) {
   grpc_call_error error = grpc_call_start_batch(
       call, ops, static_cast<size_t>(op - ops), tag, nullptr);
   GPR_ASSERT(GRPC_CALL_OK == error);
-  cq_verifier* cqv = cq_verifier_create(cq);
-  CQ_EXPECT_COMPLETION(cqv, tag, 1);
-  cq_verify(cqv);
-  cq_verifier_destroy(cqv);
+  auto ev = grpc_completion_queue_next(cq, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr);
+  GPR_ASSERT(ev.type == GRPC_OP_COMPLETE);
+  if (ev.tag != tag) {
+    gpr_log(GPR_ERROR, "got tag: %p wanted tag: %p", ev.tag, tag);
+    GPR_ASSERT(0);
+  }
   grpc_byte_buffer_destroy(request_payload);
+  return ev.success;
 }
 
 void ReceiveInitialMetadata(TestCall* test_call, gpr_timespec deadline) {
@@ -214,6 +225,15 @@ class TestServer {
  public:
   explicit TestServer() {
     cq_ = grpc_completion_queue_create_for_next(nullptr);
+    //grpc_arg keepalive_arg_elems[2];
+    //keepalive_arg_elems[0].type = GRPC_ARG_INTEGER;
+    //keepalive_arg_elems[0].key = const_cast<char*>(GRPC_ARG_KEEPALIVE_TIME_MS);
+    //keepalive_arg_elems[0].value.integer = 1000;
+    //keepalive_arg_elems[1].type = GRPC_ARG_INTEGER;
+    //keepalive_arg_elems[1].key = const_cast<char*>(GRPC_ARG_KEEPALIVE_TIMEOUT_MS);
+    //keepalive_arg_elems[1].value.integer = 1000;
+    //grpc_channel_args keepalive_args = {GPR_ARRAY_SIZE(keepalive_arg_elems),
+    //                                    keepalive_arg_elems};
     server_ = grpc_server_create(nullptr, nullptr);
     address_ =
         grpc_core::JoinHostPort("127.0.0.1", grpc_pick_unused_port_or_die());
@@ -225,9 +245,9 @@ class TestServer {
 
   ~TestServer() {
     grpc_server_shutdown_and_notify(server_, cq_, nullptr);
-    thread_.join();
     grpc_server_destroy(server_);
     grpc_completion_queue_shutdown(cq_);
+    thread_.join();
     while (grpc_completion_queue_next(cq_, gpr_inf_future(GPR_CLOCK_REALTIME),
                                       nullptr)
                .type != GRPC_QUEUE_SHUTDOWN)
@@ -269,15 +289,33 @@ class TestServer {
     GPR_ASSERT(event.type == GRPC_OP_COMPLETE);
     GPR_ASSERT(event.success);
     GPR_ASSERT(event.tag == tag);
-    for (int i = 0; i < kNumMessagePingPongsPerCall; i++) {
-      ReceiveMessage(call, cq_);
-      SendMessage(call, cq_);
-    }
-    grpc_call_cancel_with_status(call, GRPC_STATUS_PERMISSION_DENIED,
-                                 "test status", nullptr);
+    //gpr_log(GPR_DEBUG, "server first SendMessage...");
+    //SendMessage(call, cq_, true /* poll */);
+    //gpr_log(GPR_DEBUG, "server first SendMessage done. Now send second message...");
+    //std::thread cancel_thread([call, &request_metadata_recv, &call_details]() {
+    //  gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+    //                  gpr_time_from_seconds(2, GPR_TIMESPAN)));
+    //  grpc_metadata_array_destroy(&request_metadata_recv);
+    //  grpc_call_details_destroy(&call_details);
+    //});
+    SendMessage(call, cq_, false /* poll */);
+    std::thread poller([this]() {
+      while (grpc_completion_queue_next(cq_, gpr_inf_future(GPR_CLOCK_REALTIME), nullptr).type != GRPC_QUEUE_SHUTDOWN) {
+        gpr_log(GPR_DEBUG, "received spurious event server poller thread");
+      }
+    });
+    gpr_log(GPR_DEBUG, "server second SendMessage poll=false done.");
+    //cancel_thread.join();
     grpc_metadata_array_destroy(&request_metadata_recv);
     grpc_call_details_destroy(&call_details);
+    //gpr_log(GPR_DEBUG, "now sleep 2 before cancel and unref server call");
+    //gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+    //                gpr_time_from_seconds(3, GPR_TIMESPAN)));
+    gpr_log(GPR_DEBUG, "now do call unref.");
+    grpc_call_cancel_with_status(call, GRPC_STATUS_UNAVAILABLE,
+                                 "test status", nullptr);
     grpc_call_unref(call);
+    poller.join();
   }
 
   grpc_server* server_;
@@ -310,7 +348,7 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
   /* 64 is a somewhat arbitary number, the important thing is that it
    * exceeds the value of MAX_EPOLL_EVENTS_HANDLED_EACH_POLL_CALL (16), which
    * is enough to repro a bug at time of writing. */
-  const int kNumCalls = 64;
+  const int kNumCalls = 1000;
   size_t ping_pong_round = 0;
   size_t ping_pongs_done = 0;
   grpc_core::Mutex ping_pong_round_mu;
@@ -339,19 +377,19 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       gpr_log(GPR_DEBUG, "using test_server with address:%s",
               test_server->address().c_str());
       std::vector<grpc_arg> args;
-      grpc_arg service_config_arg;
-      service_config_arg.type = GRPC_ARG_STRING;
-      service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
-      service_config_arg.value.string =
-          const_cast<char*>("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}");
-      args.push_back(service_config_arg);
+      //grpc_arg service_config_arg;
+      //service_config_arg.type = GRPC_ARG_STRING;
+      //service_config_arg.key = const_cast<char*>(GRPC_ARG_SERVICE_CONFIG);
+      //service_config_arg.value.string =
+      //    const_cast<char*>("{\"loadBalancingConfig\":[{\"round_robin\":{}}]}");
+      //args.push_back(service_config_arg);
       auto fake_resolver_response_generator =
           grpc_core::MakeRefCounted<grpc_core::FakeResolverResponseGenerator>();
       {
         grpc_core::ExecCtx exec_ctx;
         fake_resolver_response_generator->SetResponse(BuildResolverResponse(
-            {absl::StrCat("ipv4:", kSharedUnconnectableAddress),
-             absl::StrCat("ipv4:", test_server->address())}));
+            //{absl::StrCat("ipv4:", kSharedUnconnectableAddress),
+              {absl::StrCat("ipv4:", test_server->address())}));
       }
       args.push_back(grpc_core::FakeResolverResponseGenerator::MakeChannelArg(
           fake_resolver_response_generator.get()));
@@ -375,9 +413,9 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
       char* lb_policy_name = nullptr;
       channel_info.lb_policy_name = &lb_policy_name;
       grpc_channel_get_info(channel, &channel_info);
-      EXPECT_EQ(std::string(lb_policy_name), "round_robin")
-          << "not using round robin; this test has a low chance of hitting the "
-             "bug that it's meant to try to hit";
+      //EXPECT_EQ(std::string(lb_policy_name), "round_robin")
+      //    << "not using round robin; this test has a low chance of hitting the "
+      //       "bug that it's meant to try to hit";
       gpr_free(lb_policy_name);
       // Receive initial metadata
       gpr_log(GPR_DEBUG,
@@ -385,44 +423,52 @@ TEST(Pollers, TestReadabilityNotificationsDontGetStrandedOnOneCq) {
               test_server->address().c_str());
       ReceiveInitialMetadata(test_call.get(),
                              grpc_timeout_seconds_to_deadline(30));
-      for (int i = 1; i <= kNumMessagePingPongsPerCall; i++) {
-        {
-          grpc_core::MutexLock lock(&ping_pong_round_mu);
-          ping_pong_round_cv.Broadcast();
-          while (ping_pong_round != i) {
-            ping_pong_round_cv.Wait(&ping_pong_round_mu);
-          }
-        }
-        SendMessage(test_call->call, test_call->cq);
-        ReceiveMessage(test_call->call, test_call->cq);
-        {
-          grpc_core::MutexLock lock(&ping_pong_round_mu);
-          ping_pongs_done++;
-          ping_pong_round_cv.Broadcast();
-        }
-      }
+      ReceiveMessage(test_call->call, test_call->cq);
+      gpr_log(GPR_DEBUG, "apolcyn begin client sleep 4");
+      gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+                      gpr_time_from_seconds(4, GPR_TIMESPAN)));
+      gpr_log(GPR_DEBUG, "apolcyn end client sleep 4. Now finish call....");
+      //for (int i = 1; i <= kNumMessagePingPongsPerCall; i++) {
+      //  {
+      //    grpc_core::MutexLock lock(&ping_pong_round_mu);
+      //    ping_pong_round_cv.Broadcast();
+      //    while (ping_pong_round != i) {
+      //      ping_pong_round_cv.Wait(&ping_pong_round_mu);
+      //    }
+      //  }
+      //  //SendMessage(test_call->call, test_call->cq);
+      //  ReceiveMessage(test_call->call, test_call->cq);
+      //  {
+      //    grpc_core::MutexLock lock(&ping_pong_round_mu);
+      //    ping_pongs_done++;
+      //    ping_pong_round_cv.Broadcast();
+      //  }
+      //}
+      gpr_log(GPR_DEBUG, "now destroy client channel and cancel call");
+      grpc_call_cancel(test_call->call, nullptr);
       gpr_log(GPR_DEBUG, "now receive status on call with server address:%s",
               test_server->address().c_str());
       FinishCall(test_call.get());
+      gpr_log(GPR_DEBUG, "finish client call done");
       GPR_ASSERT(test_call->status.has_value());
-      GPR_ASSERT(test_call->status.value() == GRPC_STATUS_PERMISSION_DENIED);
+      //GPR_ASSERT(test_call->status.value() == GRPC_STATUS_UNAVAILABLE);
       {
         grpc_core::ExecCtx exec_ctx;
         fake_resolver_response_generator.reset();
       }
     }));
   }
-  for (size_t i = 1; i <= kNumMessagePingPongsPerCall; i++) {
-    {
-      grpc_core::MutexLock lock(&ping_pong_round_mu);
-      while (ping_pongs_done < ping_pong_round * kNumCalls) {
-        ping_pong_round_cv.Wait(&ping_pong_round_mu);
-      }
-      ping_pong_round++;
-      ping_pong_round_cv.Broadcast();
-      gpr_log(GPR_DEBUG, "initiate ping pong round: %ld", ping_pong_round);
-    }
-  }
+  //for (size_t i = 1; i <= kNumMessagePingPongsPerCall; i++) {
+  //  {
+  //    grpc_core::MutexLock lock(&ping_pong_round_mu);
+  //    while (ping_pongs_done < ping_pong_round * kNumCalls) {
+  //      ping_pong_round_cv.Wait(&ping_pong_round_mu);
+  //    }
+  //    ping_pong_round++;
+  //    ping_pong_round_cv.Broadcast();
+  //    gpr_log(GPR_DEBUG, "initiate ping pong round: %ld", ping_pong_round);
+  //  }
+  //}
   for (auto& thread : threads) {
     thread.join();
   }

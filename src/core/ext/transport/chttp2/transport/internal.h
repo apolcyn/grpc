@@ -291,6 +291,7 @@ struct grpc_chttp2_transport {
   grpc_core::RefCount refs;
   grpc_endpoint* ep;
   std::string peer_string;
+  grpc_timer continue_read_action_after_delay_locked_timer;
 
   grpc_resource_user* resource_user;
 
@@ -516,6 +517,7 @@ struct grpc_chttp2_stream {
 
   grpc_closure destroy_stream;
   grpc_closure* destroy_stream_arg;
+  grpc_timer run_stream_dtor_after_delay_timer;
 
   grpc_chttp2_stream_link links[STREAM_LIST_COUNT];
   uint8_t included[STREAM_LIST_COUNT] = {};

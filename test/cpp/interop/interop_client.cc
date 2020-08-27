@@ -46,8 +46,8 @@ namespace testing {
 
 namespace {
 // The same value is defined by the Java client.
-const std::vector<int> request_stream_sizes = {27182, 8, 1828, 45904};
-const std::vector<int> response_stream_sizes = {31415, 9, 2653, 58979};
+const std::vector<int> request_stream_sizes = {2718200, 8, 1828, 45904};
+const std::vector<int> response_stream_sizes = {3141500, 9, 2653, 58979};
 const int kNumResponseMessages = 2000;
 const int kResponseMessageSize = 1030;
 const int kReceiveDelayMilliSeconds = 20;
@@ -714,6 +714,10 @@ bool InteropClient::DoPingPong() {
       gpr_log(GPR_ERROR, "DoPingPong(): stream->Write() failed. i: %d", i);
       return TransientFailureOrAbort();
     }
+    gpr_log(GPR_DEBUG, "just wrote ping pong request, now sleep 10");
+    gpr_sleep_until(
+        gpr_time_add(gpr_now(GPR_CLOCK_REALTIME),
+                     gpr_time_from_seconds(10, GPR_TIMESPAN)));
 
     if (!stream->Read(&response)) {
       gpr_log(GPR_ERROR, "DoPingPong(): stream->Read() failed. i:%d", i);
