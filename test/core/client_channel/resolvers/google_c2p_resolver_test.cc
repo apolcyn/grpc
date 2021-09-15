@@ -38,14 +38,19 @@
 #include <grpcpp/server_builder.h>
 
 #include "src/core/lib/gprpp/thd.h"
+#include "src/core/lib/gpr/env.h"
+
 #include "test/core/util/port.h"
+#include "test/core/util/fake_tcp_server.h"
 #include "test/core/util/test_config.h"
 
 namespace {
 
-void TryConnectAndDestroy() {
+void TryConnectAndDestroy(const char* fake_metadata_server_address) {
   grpc::ChannelArguments args;
   std::string target = "google-c2p:///servername_not_used";
+  args.SetInt("grpc.testing.force_running_on_gcp", 1);
+  args.SetString("grpc.testing.google_c2p_resolver_metadata_server_override", fake_metadata_server_address);
   auto channel = ::grpc::CreateCustomChannel(
       target, grpc::InsecureChannelCredentials(), args);
   // Start connecting, and give some time for the google-c2p resolver to begin
@@ -59,6 +64,10 @@ void TryConnectAndDestroy() {
 TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
      LoopTryConnectAndDestroy) {
   grpc_init();
+  // Create a fake metadata server which hangs.
+  FakeTcpServer fake_metadata_server(
+      FakeTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
+      FakeTcpServer::CloseSocketUponCloseFromPeer);
   std::vector<std::unique_ptr<std::thread>> threads;
   // 100 is picked for number of threads just
   // because it's enough to reproduce a certain crash almost 100%
@@ -66,7 +75,7 @@ TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
   const int kNumThreads = 1;
   threads.reserve(kNumThreads);
   for (int i = 0; i < kNumThreads; i++) {
-    threads.emplace_back(new std::thread(TryConnectAndDestroy));
+    threads.emplace_back(new std::thread(TryConnectAndDestroy, fake_metadata_server.address()));
   }
   for (size_t i = 0; i < threads.size(); i++) {
     threads[i]->join();
@@ -78,6 +87,7 @@ TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
 
 int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
+  gpr_setenv("GRPC_EXPERIMENTAL_GOOGLE_C2P_RESOLVER", "true");
   ::testing::InitGoogleTest(&argc, argv);
   auto result = RUN_ALL_TESTS();
   return result;

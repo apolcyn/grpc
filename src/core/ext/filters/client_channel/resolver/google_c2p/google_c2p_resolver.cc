@@ -105,6 +105,8 @@ class GoogleCloud2ProdResolver : public Resolver {
 
   OrphanablePtr<IPv6Query> ipv6_query_;
   absl::optional<bool> supports_ipv6_;
+
+  std::string metadata_server_address_ = "metadata.google.internal";
 };
 
 //
@@ -123,7 +125,7 @@ GoogleCloud2ProdResolver::MetadataQuery::MetadataQuery(
   memset(&request, 0, sizeof(grpc_httpcli_request));
   grpc_http_header header = {const_cast<char*>("Metadata-Flavor"),
                              const_cast<char*>("Google")};
-  request.host = const_cast<char*>("metadata.google.internal");
+  request.host = const_cast<char*>(resolver->metadata_server_address_.c_str());
   request.http.path = const_cast<char*>(path);
   request.http.hdr_count = 1;
   request.http.hdrs = &header;
@@ -236,13 +238,17 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
   absl::string_view name_to_resolve = absl::StripPrefix(args.uri.path(), "/");
   // If we're not running on GCP, we can't use DirectPath, so delegate
   // to the DNS resolver.
-  if (!grpc_alts_is_running_on_gcp() ||
+  bool test_only_force_running_on_gcp = grpc_channel_args_find_bool(args.args, "grpc.testing.force_running_on_gcp", false);
+  bool running_on_gcp = test_only_force_running_on_gcp || grpc_alts_is_running_on_gcp();
+  gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver");
+  if (!running_on_gcp ||
       // If the client is already using xDS, we can't use it here, because
       // they may be talking to a completely different xDS server than we
       // want to.
       // TODO(roth): When we implement xDS federation, remove this constraint.
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP")) != nullptr ||
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP_CONFIG")) != nullptr) {
+    gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver falling back to dns resolver");
     using_dns_ = true;
     child_resolver_ = ResolverRegistry::CreateResolver(
         absl::StrCat("dns:", name_to_resolve).c_str(), args.args,
@@ -250,6 +256,11 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
     GPR_ASSERT(child_resolver_ != nullptr);
     return;
   }
+  char* test_only_metadata_server_override = const_cast<char*>(grpc_channel_args_find_string(args.args, "grpc.testing.google_c2p_resolver_metadata_server_override"));
+  if (test_only_metadata_server_override != nullptr && strlen(test_only_metadata_server_override) > 0) {
+    metadata_server_address_ = std::string(test_only_metadata_server_override);
+  }
+  gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver using xds resolver");
   // Create xds resolver.
   child_resolver_ = ResolverRegistry::CreateResolver(
       absl::StrCat("xds:", name_to_resolve).c_str(), args.args,
