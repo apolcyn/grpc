@@ -3453,6 +3453,14 @@ targets:
   - test/core/end2end/goaway_server_test.cc
   deps:
   - grpc_test_util
+- name: google_c2p_resolver_test
+  build: test
+  language: c
+  headers: []
+  src:
+  - test/core/client_channel/resolvers/google_c2p_resolver_test.cc
+  deps:
+  - grpc++_test_util
 - name: grpc_alts_credentials_options_test
   build: test
   language: c
