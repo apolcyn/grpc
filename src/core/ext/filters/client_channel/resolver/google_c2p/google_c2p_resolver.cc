@@ -161,19 +161,18 @@ void GoogleCloud2ProdResolver::MetadataQuery::MaybeCallOnDone(
   if (!on_done_called_.compare_exchange_strong(expected, true,
                                                std::memory_order_relaxed,
                                                std::memory_order_relaxed)) {
-    // We've already called OnDone(), so just clean up.
-    GRPC_ERROR_UNREF(error);
-    Unref();
+    // Hop back into WorkSerializer to call OnDone().
+    // Note: We implicitly pass our ref to the callback here.
+    resolver_->work_serializer_->Run(
+        [this, error]() {
+          OnDone(resolver_.get(), &response_, error);
+          Unref();
+        },
+        DEBUG_LOCATION);
     return;
   }
-  // Hop back into WorkSerializer to call OnDone().
-  // Note: We implicitly pass our ref to the callback here.
-  resolver_->work_serializer_->Run(
-      [this, error]() {
-        OnDone(resolver_.get(), &response_, error);
-        Unref();
-      },
-      DEBUG_LOCATION);
+  Unref();
+  GRPC_ERROR_UNREF(error);
 }
 
 //
