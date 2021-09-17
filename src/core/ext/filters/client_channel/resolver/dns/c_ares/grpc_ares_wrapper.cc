@@ -1140,7 +1140,41 @@ void grpc_ares_cleanup(void) {}
  * grpc_resolve_address_ares related structs and functions
  */
 
-typedef struct grpc_resolve_address_ares_request {
+class GrpcResolveAddressAresRequest : grpc_core::AsyncResolveAddress {
+ public:
+  ~GrpcResolveAddressAresRequest() {
+    gpr_free(ares_request);
+  }
+
+  void Orphan() override {
+    Ref();
+    work_serializer->Run([this]() {
+      grpc_cancel_ares_request_locked(ares_request);
+      Unref();
+    }, DEBUG_LOCATION);
+  }
+
+  static void OnDnsLookupDoneLocked(GrpcResolveAddressAresRequest* r,
+                                    grpc_error_handle error) {
+    grpc_resolved_addresses** resolved_addresses = r->addrs_out;
+    if (r->addresses == nullptr || r->addresses->empty()) {
+      *resolved_addresses = nullptr;
+    } else {
+      *resolved_addresses = static_cast<grpc_resolved_addresses*>(
+          gpr_zalloc(sizeof(grpc_resolved_addresses)));
+      (*resolved_addresses)->naddrs = r->addresses->size();
+      (*resolved_addresses)->addrs =
+          static_cast<grpc_resolved_address*>(gpr_zalloc(
+              sizeof(grpc_resolved_address) * (*resolved_addresses)->naddrs));
+      for (size_t i = 0; i < (*resolved_addresses)->naddrs; ++i) {
+        memcpy(&(*resolved_addresses)->addrs[i], &(*r->addresses)[i].address(),
+               sizeof(grpc_resolved_address));
+      }
+    }
+    grpc_core::ExecCtx::Run(DEBUG_LOCATION, r->on_resolve_address_done, error);
+    Unref();
+  }
+
   /* work_serializer that queries and related callbacks run under */
   std::shared_ptr<grpc_core::WorkSerializer> work_serializer;
   /** the pointer to receive the resolved addresses */
@@ -1162,39 +1196,17 @@ typedef struct grpc_resolve_address_ares_request {
   grpc_ares_request* ares_request = nullptr;
 } grpc_resolve_address_ares_request;
 
-static void on_dns_lookup_done_locked(grpc_resolve_address_ares_request* r,
-                                      grpc_error_handle error) {
-  gpr_free(r->ares_request);
-  grpc_resolved_addresses** resolved_addresses = r->addrs_out;
-  if (r->addresses == nullptr || r->addresses->empty()) {
-    *resolved_addresses = nullptr;
-  } else {
-    *resolved_addresses = static_cast<grpc_resolved_addresses*>(
-        gpr_zalloc(sizeof(grpc_resolved_addresses)));
-    (*resolved_addresses)->naddrs = r->addresses->size();
-    (*resolved_addresses)->addrs =
-        static_cast<grpc_resolved_address*>(gpr_zalloc(
-            sizeof(grpc_resolved_address) * (*resolved_addresses)->naddrs));
-    for (size_t i = 0; i < (*resolved_addresses)->naddrs; ++i) {
-      memcpy(&(*resolved_addresses)->addrs[i], &(*r->addresses)[i].address(),
-             sizeof(grpc_resolved_address));
-    }
-  }
-  grpc_core::ExecCtx::Run(DEBUG_LOCATION, r->on_resolve_address_done, error);
-  delete r;
-}
-
 static void on_dns_lookup_done(void* arg, grpc_error_handle error) {
-  grpc_resolve_address_ares_request* r =
-      static_cast<grpc_resolve_address_ares_request*>(arg);
+  GrpcResolveAddressAresRequest* r =
+      static_cast<GrpcResolveAddressAresRequest*>(arg);
   GRPC_ERROR_REF(error);  // ref owned by lambda
-  r->work_serializer->Run([r, error]() { on_dns_lookup_done_locked(r, error); },
+  r->work_serializer->Run([r, error]() { GrpcResolveAddressAresRequest::OnDnsLookupDoneLocked(r, error); },
                           DEBUG_LOCATION);
 }
 
 static void grpc_resolve_address_invoke_dns_lookup_ares_locked(void* arg) {
-  grpc_resolve_address_ares_request* r =
-      static_cast<grpc_resolve_address_ares_request*>(arg);
+  GrpcResolveAddressAresRequest* r =
+      static_cast<GrpcResolveAddressAresRequest*>(arg);
   GRPC_CLOSURE_INIT(&r->on_dns_lookup_done_locked, on_dns_lookup_done, r,
                     grpc_schedule_on_exec_ctx);
   r->ares_request = grpc_dns_lookup_ares_locked(
@@ -1204,11 +1216,12 @@ static void grpc_resolve_address_invoke_dns_lookup_ares_locked(void* arg) {
       GRPC_DNS_ARES_DEFAULT_QUERY_TIMEOUT_MS, r->work_serializer);
 }
 
-static void grpc_resolve_address_ares_impl(const char* name,
-                                           const char* default_port,
-                                           grpc_pollset_set* interested_parties,
-                                           grpc_closure* on_done,
-                                           grpc_resolved_addresses** addrs) {
+static std::unique_ptr<AsyncResolveAddress> grpc_resolve_address_ares_impl(
+    const char* name,
+    const char* default_port,
+    grpc_pollset_set* interested_parties,
+    grpc_closure* on_done,
+    grpc_resolved_addresses** addrs) {
   grpc_resolve_address_ares_request* r =
       new grpc_resolve_address_ares_request();
   r->work_serializer = std::make_shared<grpc_core::WorkSerializer>();
@@ -1222,7 +1235,7 @@ static void grpc_resolve_address_ares_impl(const char* name,
       DEBUG_LOCATION);
 }
 
-void (*grpc_resolve_address_ares)(
+OrphanablePtr<AsyncResolveAddress> (*grpc_resolve_address_ares)(
     const char* name, const char* default_port,
     grpc_pollset_set* interested_parties, grpc_closure* on_done,
     grpc_resolved_addresses** addrs) = grpc_resolve_address_ares_impl;

@@ -97,6 +97,7 @@ class NativeDnsResolver : public Resolver {
   BackOff backoff_;
   /// currently resolving addresses
   grpc_resolved_addresses* addresses_ = nullptr;
+  OrphanablePtr<AsyncResolveAddress> async_resolve_address_;
 };
 
 NativeDnsResolver::NativeDnsResolver(ResolverArgs args)
