@@ -32,7 +32,7 @@ void grpc_set_resolver_impl(grpc_address_resolver_vtable* vtable) {
   grpc_resolve_address_impl = vtable;
 }
 
-OrphanablePtr<AsyncResolveAddress> grpc_resolve_address(
+std::unique_ptr<grpc_core::AsyncResolveAddress> grpc_resolve_address(
     const char* addr, const char* default_port,
     grpc_pollset_set* interested_parties,
     grpc_closure* on_done,

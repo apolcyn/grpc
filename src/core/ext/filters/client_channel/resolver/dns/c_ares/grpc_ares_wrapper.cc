@@ -1140,13 +1140,13 @@ void grpc_ares_cleanup(void) {}
  * grpc_resolve_address_ares related structs and functions
  */
 
-class GrpcResolveAddressAresRequest : grpc_core::AsyncResolveAddress {
+class GrpcResolveAddressAresRequest : public grpc_core::InternallyRefCounted<grpc_core::AsyncResolveAddress> {
  public:
   ~GrpcResolveAddressAresRequest() {
     gpr_free(ares_request);
   }
 
-  void Orphan() override {
+  bool TryCancel() override {
     Ref();
     work_serializer->Run([this]() {
       grpc_cancel_ares_request_locked(ares_request);
