@@ -110,8 +110,8 @@ struct grpc_ares_ev_driver {
   /** refcount of the event driver */
   gpr_refcount refs;
 
-  /** work_serializer to synchronize c-ares and I/O callbacks on */
-  std::shared_ptr<grpc_core::WorkSerializer> work_serializer;
+  /** mutex to synchronize c-ares and I/O callbacks on */
+  grpc_core::Mutex mu;
   /** a list of grpc_fd that this event driver is currently using. */
   fd_node* fds;
   /** is this event driver being shut down */
@@ -285,8 +285,8 @@ static void on_timeout_locked(grpc_ares_ev_driver* driver,
 static void on_timeout(void* arg, grpc_error_handle error) {
   grpc_ares_ev_driver* driver = static_cast<grpc_ares_ev_driver*>(arg);
   GRPC_ERROR_REF(error);  // ref owned by lambda
-  driver->work_serializer->Run(
-      [driver, error]() { on_timeout_locked(driver, error); }, DEBUG_LOCATION);
+  grpc_core::MutexLock lock(&driver->mu);
+  on_timeout_locked(driver, error);
 }
 
 static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver);
@@ -297,9 +297,8 @@ static void on_ares_backup_poll_alarm_locked(grpc_ares_ev_driver* driver,
 static void on_ares_backup_poll_alarm(void* arg, grpc_error_handle error) {
   grpc_ares_ev_driver* driver = static_cast<grpc_ares_ev_driver*>(arg);
   GRPC_ERROR_REF(error);
-  driver->work_serializer->Run(
-      [driver, error]() { on_ares_backup_poll_alarm_locked(driver, error); },
-      DEBUG_LOCATION);
+  grpc_core::MutexLock lock(&driver->mu);
+  on_ares_backup_poll_alarm_locked(driver, error);
 }
 
 /* In case of non-responsive DNS servers, dropped packets, etc., c-ares has
@@ -380,8 +379,8 @@ static void on_readable_locked(fd_node* fdn, grpc_error_handle error) {
 static void on_readable(void* arg, grpc_error_handle error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   GRPC_ERROR_REF(error); /* ref owned by lambda */
-  fdn->ev_driver->work_serializer->Run(
-      [fdn, error]() { on_readable_locked(fdn, error); }, DEBUG_LOCATION);
+  grpc_core::MutexLock lock(&fdn->ev_driver->mu);
+  on_readable_locked(fdn, error);
 }
 
 static void on_writable_locked(fd_node* fdn, grpc_error_handle error) {
@@ -410,8 +409,8 @@ static void on_writable_locked(fd_node* fdn, grpc_error_handle error) {
 static void on_writable(void* arg, grpc_error_handle error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   GRPC_ERROR_REF(error); /* ref owned by lambda */
-  fdn->ev_driver->work_serializer->Run(
-      [fdn, error]() { on_writable_locked(fdn, error); }, DEBUG_LOCATION);
+  grpc_core::MutexLock lock(&fdn->ev_driver->mu);
+  on_writable_locked(fdn, error);
 }
 
 // Get the file descriptors used by the ev_driver's ares channel, register
@@ -431,7 +430,7 @@ static void grpc_ares_notify_on_event_locked(grpc_ares_ev_driver* ev_driver) {
           fdn = static_cast<fd_node*>(gpr_malloc(sizeof(fd_node)));
           fdn->grpc_polled_fd =
               ev_driver->polled_fd_factory->NewGrpcPolledFdLocked(
-                  socks[i], ev_driver->pollset_set, ev_driver->work_serializer);
+                  socks[i], ev_driver->pollset_set, &ev_driver->mu);
           GRPC_CARES_TRACE_LOG("request:%p new fd: %s", ev_driver->request,
                                fdn->grpc_polled_fd->GetName());
           fdn->ev_driver = ev_driver;
@@ -1069,6 +1068,7 @@ static grpc_ares_request* grpc_dns_lookup_ares_locked_impl(
   r->service_config_json_out = service_config_json;
   r->error = GRPC_ERROR_NONE;
   r->pending_queries = 0;
+  grpc_core::MutexLock lock(&r->mu);
   GRPC_CARES_TRACE_LOG(
       "request:%p c-ares grpc_dns_lookup_ares_locked_impl name=%s, "
       "default_port=%s",

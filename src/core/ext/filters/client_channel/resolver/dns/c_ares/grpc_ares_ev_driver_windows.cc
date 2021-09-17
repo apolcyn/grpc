@@ -41,7 +41,6 @@
 #include "src/core/lib/iomgr/sockaddr_windows.h"
 #include "src/core/lib/iomgr/socket_windows.h"
 #include "src/core/lib/iomgr/tcp_windows.h"
-#include "src/core/lib/iomgr/work_serializer.h"
 #include "src/core/lib/slice/slice_internal.h"
 
 /* TODO(apolcyn): remove this hack after fixing upstream.
@@ -101,9 +100,9 @@ class GrpcPolledFdWindows {
   };
 
   GrpcPolledFdWindows(ares_socket_t as,
-                      std::shared_ptr<WorkSerializer> work_serializer,
+                      grpc_core::Mutex* mu,
                       int address_family, int socket_type)
-      : work_serializer_(std::move(work_serializer)),
+      : mu_(mu),
         read_buf_(grpc_empty_slice()),
         write_buf_(grpc_empty_slice()),
         tcp_write_state_(WRITE_IDLE),
@@ -869,12 +868,12 @@ class GrpcPolledFdWindowsWrapper : public GrpcPolledFd {
 class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
  public:
   explicit GrpcPolledFdFactoryWindows(
-      std::shared_ptr<WorkSerializer> work_serializer)
-      : sock_to_polled_fd_map_(std::move(work_serializer)) {}
+      grpc_core::Mutex* mu)
+      : sock_to_polled_fd_map_(mu) {}
 
   GrpcPolledFd* NewGrpcPolledFdLocked(
       ares_socket_t as, grpc_pollset_set* driver_pollset_set,
-      std::shared_ptr<WorkSerializer> work_serializer) override {
+      grpc_core::Mutex* /* mu */) override {
     GrpcPolledFdWindows* polled_fd = sock_to_polled_fd_map_.LookupPolledFd(as);
     // Set a flag so that the virtual socket "close" method knows it
     // doesn't need to call ShutdownLocked, since now the driver will.
@@ -892,9 +891,8 @@ class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
 };
 
 std::unique_ptr<GrpcPolledFdFactory> NewGrpcPolledFdFactory(
-    std::shared_ptr<WorkSerializer> work_serializer) {
-  return absl::make_unique<GrpcPolledFdFactoryWindows>(
-      std::move(work_serializer));
+    grpc_core::Mutex* mu) {
+  return absl::make_unique<GrpcPolledFdFactoryWindows>(mu);
 }
 
 }  // namespace grpc_core
