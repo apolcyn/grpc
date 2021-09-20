@@ -378,7 +378,7 @@ static void on_readable_locked(fd_node* fdn, grpc_error_handle error) {
 static void on_readable(void* arg, grpc_error_handle error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   GRPC_ERROR_REF(error); /* ref owned by lambda */
-  grpc_core::MutexLock lock(fdn->ev_driver->request);
+  grpc_core::MutexLock lock(fdn->ev_driver->request->mu);
   on_readable_locked(fdn, error);
 }
 
@@ -408,7 +408,7 @@ static void on_writable_locked(fd_node* fdn, grpc_error_handle error) {
 static void on_writable(void* arg, grpc_error_handle error) {
   fd_node* fdn = static_cast<fd_node*>(arg);
   GRPC_ERROR_REF(error); /* ref owned by lambda */
-  grpc_core::MutexLock lock(fdn->ev_driver->request);
+  grpc_core::MutexLock lock(fdn->ev_driver->request->mu);
   on_writable_locked(fdn, error);
 }
 
@@ -544,7 +544,7 @@ grpc_error_handle grpc_ares_ev_driver_create_locked(
   (*ev_driver)->shutting_down = false;
   (*ev_driver)->request = request;
   (*ev_driver)->polled_fd_factory =
-      grpc_core::NewGrpcPolledFdFactory(ev_driver->request->mu);
+      grpc_core::NewGrpcPolledFdFactory((*ev_driver)->request->mu);
   (*ev_driver)
       ->polled_fd_factory->ConfigureAresChannelLocked((*ev_driver)->channel);
   (*ev_driver)->query_timeout_ms = query_timeout_ms;
@@ -1144,7 +1144,7 @@ typedef struct grpc_resolve_address_ares_request {
   grpc_closure* on_resolve_address_done;
   /** a closure wrapping on_resolve_address_done, which should be invoked when
      the grpc_dns_lookup_ares_locked operation is done. */
-  grpc_closure on_dns_lookup_done_locked;
+  grpc_closure on_dns_lookup_done;
   /* target name */
   const char* name;
   /* default port to use if none is specified */
@@ -1155,8 +1155,8 @@ typedef struct grpc_resolve_address_ares_request {
   grpc_ares_request* ares_request = nullptr;
 } grpc_resolve_address_ares_request;
 
-static void on_dns_lookup_done(grpc_resolve_address_ares_request* r,
-                               grpc_error_handle error) {
+static void on_dns_lookup_done(void* arg, grpc_error_handle error) {
+  grpc_resolve_address_ares_request *r = static_cast<grpc_resolve_address_ares_request*>(arg);
   gpr_free(r->ares_request);
   grpc_resolved_addresses** resolved_addresses = r->addrs_out;
   if (r->addresses == nullptr || r->addresses->empty()) {
@@ -1181,7 +1181,7 @@ static void on_dns_lookup_done(grpc_resolve_address_ares_request* r,
 static void grpc_resolve_address_invoke_dns_lookup_ares_locked(void* arg) {
   grpc_resolve_address_ares_request* r =
       static_cast<grpc_resolve_address_ares_request*>(arg);
-  GRPC_CLOSURE_INIT(&r->on_dns_lookup_done_locked, on_dns_lookup_done, r,
+  GRPC_CLOSURE_INIT(&r->on_dns_lookup_done, on_dns_lookup_done, r,
                     grpc_schedule_on_exec_ctx);
   r->ares_request = grpc_dns_lookup_ares_locked(
       nullptr /* dns_server */, r->name, r->default_port, r->interested_parties,
@@ -1197,17 +1197,18 @@ static void grpc_resolve_address_ares_impl(const char* name,
                                            grpc_resolved_addresses** addrs) {
   grpc_resolve_address_ares_request* r =
       new grpc_resolve_address_ares_request();
-  r->work_serializer = std::make_shared<grpc_core::WorkSerializer>();
   r->addrs_out = addrs;
   r->on_resolve_address_done = on_done;
   r->name = name;
   r->default_port = default_port;
   r->interested_parties = interested_parties;
+  GRPC_CLOSURE_INIT(&r->on_dns_lookup_done, on_dns_lookup_done, r,
+                    grpc_schedule_on_exec_ctx);
   r->ares_request = grpc_dns_lookup_ares_locked(
       nullptr /* dns_server */, name, default_port, interested_parties,
       &r->on_dns_lookup_done, &r->addresses,
       nullptr /* balancer_addresses */, nullptr /* service_config_json */,
-      GRPC_DNS_ARES_DEFAULT_QUERY_TIMEOUT_MS, r->work_serializer);
+      GRPC_DNS_ARES_DEFAULT_QUERY_TIMEOUT_MS);
 }
 
 void (*grpc_resolve_address_ares)(

@@ -68,8 +68,7 @@ extern grpc_ares_request* (*grpc_dns_lookup_ares_locked)(
     grpc_pollset_set* interested_parties, grpc_closure* on_done,
     std::unique_ptr<grpc_core::ServerAddressList>* addresses,
     std::unique_ptr<grpc_core::ServerAddressList>* balancer_addresses,
-    char** service_config_json, int query_timeout_ms,
-    std::shared_ptr<grpc_core::WorkSerializer> work_serializer);
+    char** service_config_json, int query_timeout_ms);
 
 /* Cancel the pending grpc_ares_request \a request */
 extern void (*grpc_cancel_ares_request_locked)(grpc_ares_request* request);
