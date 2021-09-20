@@ -73,6 +73,10 @@ extern grpc_ares_request* (*grpc_dns_lookup_ares_locked)(
 /* Cancel the pending grpc_ares_request \a request */
 extern void (*grpc_cancel_ares_request_locked)(grpc_ares_request* request);
 
+/* Destroys an ares_request. It is safe to call this after the on_done
+ * callback passed to grpc_dns_lookup_ares_locked has completed. */
+extern void (*grpc_destroy_ares_request)(grpc_ares_request* request);
+
 /* Initialize gRPC ares wrapper. Must be called at least once before
    grpc_resolve_address_ares(). */
 grpc_error_handle grpc_ares_init(void);
