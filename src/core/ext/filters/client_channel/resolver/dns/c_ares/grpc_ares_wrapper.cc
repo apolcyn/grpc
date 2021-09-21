@@ -1140,18 +1140,19 @@ void grpc_ares_cleanup(void) {}
  * grpc_resolve_address_ares related structs and functions
  */
 
-class GrpcResolveAddressAresRequest : public grpc_core::InternallyRefCounted<grpc_core::AsyncResolveAddress> {
+class GrpcResolveAddressAresRequest
+    : public grpc_core::InternallyRefCounted<grpc_core::AsyncResolveAddress> {
  public:
-  ~GrpcResolveAddressAresRequest() {
-    gpr_free(ares_request);
-  }
+  ~GrpcResolveAddressAresRequest() { gpr_free(ares_request); }
 
   bool TryCancel() override {
     Ref();
-    work_serializer->Run([this]() {
-      grpc_cancel_ares_request_locked(ares_request);
-      Unref();
-    }, DEBUG_LOCATION);
+    work_serializer->Run(
+        [this]() {
+          grpc_cancel_ares_request_locked(ares_request);
+          Unref();
+        },
+        DEBUG_LOCATION);
   }
 
   static void OnDnsLookupDoneLocked(GrpcResolveAddressAresRequest* r,
@@ -1200,8 +1201,11 @@ static void on_dns_lookup_done(void* arg, grpc_error_handle error) {
   GrpcResolveAddressAresRequest* r =
       static_cast<GrpcResolveAddressAresRequest*>(arg);
   GRPC_ERROR_REF(error);  // ref owned by lambda
-  r->work_serializer->Run([r, error]() { GrpcResolveAddressAresRequest::OnDnsLookupDoneLocked(r, error); },
-                          DEBUG_LOCATION);
+  r->work_serializer->Run(
+      [r, error]() {
+        GrpcResolveAddressAresRequest::OnDnsLookupDoneLocked(r, error);
+      },
+      DEBUG_LOCATION);
 }
 
 static void grpc_resolve_address_invoke_dns_lookup_ares_locked(void* arg) {
@@ -1217,10 +1221,8 @@ static void grpc_resolve_address_invoke_dns_lookup_ares_locked(void* arg) {
 }
 
 static std::unique_ptr<AsyncResolveAddress> grpc_resolve_address_ares_impl(
-    const char* name,
-    const char* default_port,
-    grpc_pollset_set* interested_parties,
-    grpc_closure* on_done,
+    const char* name, const char* default_port,
+    grpc_pollset_set* interested_parties, grpc_closure* on_done,
     grpc_resolved_addresses** addrs) {
   grpc_resolve_address_ares_request* r =
       new grpc_resolve_address_ares_request();
