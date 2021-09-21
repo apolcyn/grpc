@@ -115,22 +115,32 @@ void ArgsFinish(ArgsStruct* args) {
   gpr_free(args->pollset);
 }
 
+grpc_millis NSecDeadline(int seconds) {
+  return grpc_timespec_to_millis_round_up(
+      grpc_timeout_seconds_to_deadline(seconds));
+}
+
 void PollPollsetUntilRequestDone(ArgsStruct* args) {
+  // Try to give enough time for c-ares to run through its retries
+  // a few times if needed.
+  grpc_millis deadline = NSecDeadline(90);
   while (true) {
-    bool done = gpr_atm_acq_load(&args->done_atm) != 0;
-    if (done) {
-      break;
-    }
-    grpc_pollset_worker* worker = nullptr;
     grpc_core::ExecCtx exec_ctx;
-    gpr_mu_lock(args->mu);
-    GRPC_LOG_IF_ERROR(
-        "pollset_work",
-        grpc_pollset_work(args->pollset, &worker,
-                          grpc_timespec_to_millis_round_up(
-                              gpr_inf_future(GPR_CLOCK_REALTIME))));
-    gpr_mu_unlock(args->mu);
+    {
+      grpc_core::MutexLockForGprMu lock(args->mu);
+      if (args->done) {
+        break;
+      }
+      grpc_millis time_left = deadline - grpc_core::ExecCtx::Get()->Now();
+      gpr_log(GPR_DEBUG, "done=%d, time_left=%" PRId64, args->done, time_left);
+      GPR_ASSERT(time_left >= 0);
+      grpc_pollset_worker* worker = nullptr;
+      GRPC_LOG_IF_ERROR(
+          "pollset_work",
+          grpc_pollset_work(args->pollset, &worker, NSecDeadline(1)));
+    }
   }
+  gpr_event_set(&args->ev, reinterpret_cast<void*>(1));
 }
 
 class AssertFailureResultHandler : public grpc_core::Resolver::ResultHandler {
@@ -206,6 +216,35 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveDNSQuery) {
   ArgsStruct args;
   ArgsInit(&args);
   TestCancelActiveDNSQuery(&args);
+}
+
+void OnResolveAddressDone(void* arg, grpc_error_handle error) {
+  ArgsStruct* args = static_cast<ArgsStruct*>(arg);
+  gpr_atm_rel_store(&args->done_atm, 1);
+  grpc_core::MutexLockForGprMu lock(args->mu);
+  GRPC_LOG_IF_ERROR("pollset_kick",
+                    grpc_pollset_kick(args_->pollset, nullptr));
+}
+
+TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
+  grpc_resolved_addresses* resolved_addresses;
+  grpc_closure on_done;
+  {
+    grpc_core::ExecCtx exec_ctx;
+    ArgsStruct args;
+    ArgsInit(&args);
+    GRPC_CLOSURE_INIT(&on_done, OnResolveAddressDone, nullptr, grpc_schedule_on_exec_ctx);
+    int fake_dns_port = grpc_pick_unused_port_or_die();
+    grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
+    std::string client_target = absl::StrFormat(
+        "dns://[::1]:%d/dont-care-since-wont-be-resolved.test.com:1234",
+        fake_dns_port);
+    std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_handle = grpc_resolve_address(
+        client_target.c_str(), "https", args.pollset_set, &on_done, &resolved_addresses);
+    resolve_address_handle->TryCancel();
+  }
+  PollPollsetUntilRequestDone();
+  grpc_resolved_addresses_destroy(resolved_addresses);
 }
 
 #ifdef GPR_WINDOWS
