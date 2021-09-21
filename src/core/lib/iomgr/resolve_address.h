@@ -24,6 +24,7 @@
 #include <stddef.h>
 
 #include "src/core/lib/iomgr/port.h"
+#include "src/core/lib/gprpp/orphanable.h"
 
 #ifdef GRPC_WINSOCK_SOCKET
 #include <ws2tcpip.h>
@@ -50,16 +51,16 @@ namespace grpc_core {
 extern const char* kDefaultSecurePort;
 constexpr int kDefaultSecurePortInt = 443;
 
-class AsyncResolveAddress {
+class AsyncResolveAddress : InternallyRefCounted<AsyncResolveAddress> {
  public:
   ~AsyncResolveAddress() {}
-  virtual bool TryCancel() = 0;
+  virtual void Orphan() = 0;
 };
 
 }  // namespace grpc_core
 
 typedef struct grpc_address_resolver_vtable {
-  std::unique_ptr<grpc_core::AsyncResolveAddress> (*resolve_address)(
+  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> (*resolve_address)(
       const char* addr, const char* default_port,
       grpc_pollset_set* interested_parties,
       grpc_closure* on_done,
@@ -74,7 +75,7 @@ void grpc_set_resolver_impl(grpc_address_resolver_vtable* vtable);
 /* Asynchronously resolve addr. Use default_port if a port isn't designated
    in addr, otherwise use the port in addr. */
 /* TODO(apolcyn): add a timeout here */
-std::unique_ptr<grpc_core::AsyncResolveAddress> grpc_resolve_address(
+grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> grpc_resolve_address(
     const char* addr, const char* default_port,
     grpc_pollset_set* interested_parties,
     grpc_closure* on_done,

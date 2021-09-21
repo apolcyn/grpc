@@ -228,7 +228,7 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
   grpc_closure on_done;
   ArgsStruct args;
   ArgsInit(&args);
-  std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_handle;
+  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
   {
     grpc_core::ExecCtx exec_ctx;
     int fake_dns_port = grpc_pick_unused_port_or_die();
@@ -239,7 +239,7 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
     GRPC_CLOSURE_INIT(&on_done, OnResolveAddressDone, &args, grpc_schedule_on_exec_ctx);
     resolve_address_handle = grpc_resolve_address(
         client_target.c_str(), "https", args.pollset_set, &on_done, &resolved_addresses);
-    //GPR_ASSERT(!resolve_address_handle->TryCancel());
+    //GPR_ASSERT(!resolve_address_handle.reset());
   }
   PollPollsetUntilRequestDone(&args);
   grpc_resolved_addresses_destroy(resolved_addresses);
