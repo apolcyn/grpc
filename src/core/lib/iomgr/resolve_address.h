@@ -59,8 +59,7 @@ class AsyncResolveAddress {
 typedef struct grpc_address_resolver_vtable {
   std::unique_ptr<grpc_core::AsyncResolveAddress> (*resolve_address)(
       const char* addr, const char* default_port,
-      grpc_pollset_set* interested_parties,
-      grpc_closure* on_done,
+      grpc_pollset_set* interested_parties, grpc_closure* on_done,
       grpc_resolved_addresses** addresses);
   grpc_error_handle (*blocking_resolve_address)(
       const char* name, const char* default_port,
@@ -74,8 +73,7 @@ void grpc_set_resolver_impl(grpc_address_resolver_vtable* vtable);
 /* TODO(apolcyn): add a timeout here */
 std::unique_ptr<grpc_core::AsyncResolveAddress> grpc_resolve_address(
     const char* addr, const char* default_port,
-    grpc_pollset_set* interested_parties,
-    grpc_closure* on_done,
+    grpc_pollset_set* interested_parties, grpc_closure* on_done,
     grpc_resolved_addresses** addresses);
 
 /* Destroy resolved addresses */
