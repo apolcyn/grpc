@@ -81,8 +81,8 @@ void EndTest(grpc_channel* client, grpc_completion_queue* cq) {
 }
 
 struct ArgsStruct {
-  gpr_atm done_atm;
   gpr_mu* mu;
+  bool done = false;
   grpc_pollset* pollset;
   grpc_pollset_set* pollset_set;
   std::shared_ptr<grpc_core::WorkSerializer> lock;
@@ -95,7 +95,6 @@ void ArgsInit(ArgsStruct* args) {
   args->pollset_set = grpc_pollset_set_create();
   grpc_pollset_set_add_pollset(args->pollset_set, args->pollset);
   args->lock = std::make_shared<grpc_core::WorkSerializer>();
-  gpr_atm_rel_store(&args->done_atm, 0);
   args->channel_args = nullptr;
 }
 
@@ -140,7 +139,6 @@ void PollPollsetUntilRequestDone(ArgsStruct* args) {
           grpc_pollset_work(args->pollset, &worker, NSecDeadline(1)));
     }
   }
-  gpr_event_set(&args->ev, reinterpret_cast<void*>(1));
 }
 
 class AssertFailureResultHandler : public grpc_core::Resolver::ResultHandler {
@@ -148,11 +146,10 @@ class AssertFailureResultHandler : public grpc_core::Resolver::ResultHandler {
   explicit AssertFailureResultHandler(ArgsStruct* args) : args_(args) {}
 
   ~AssertFailureResultHandler() override {
-    gpr_atm_rel_store(&args_->done_atm, 1);
-    gpr_mu_lock(args_->mu);
+    grpc_core::MutexLockForGprMu lock(args_->mu);
+    args_->done = true;
     GRPC_LOG_IF_ERROR("pollset_kick",
                       grpc_pollset_kick(args_->pollset, nullptr));
-    gpr_mu_unlock(args_->mu);
   }
 
   void ReturnResult(grpc_core::Resolver::Result /*result*/) override {
@@ -220,30 +217,31 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveDNSQuery) {
 
 void OnResolveAddressDone(void* arg, grpc_error_handle error) {
   ArgsStruct* args = static_cast<ArgsStruct*>(arg);
-  gpr_atm_rel_store(&args->done_atm, 1);
   grpc_core::MutexLockForGprMu lock(args->mu);
+  args->done = true;
   GRPC_LOG_IF_ERROR("pollset_kick",
-                    grpc_pollset_kick(args_->pollset, nullptr));
+                    grpc_pollset_kick(args->pollset, nullptr));
 }
 
 TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
-  grpc_resolved_addresses* resolved_addresses;
+  grpc_resolved_addresses* resolved_addresses = nullptr;
   grpc_closure on_done;
+  ArgsStruct args;
+  ArgsInit(&args);
+  std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_handle;
   {
     grpc_core::ExecCtx exec_ctx;
-    ArgsStruct args;
-    ArgsInit(&args);
-    GRPC_CLOSURE_INIT(&on_done, OnResolveAddressDone, nullptr, grpc_schedule_on_exec_ctx);
     int fake_dns_port = grpc_pick_unused_port_or_die();
     grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
     std::string client_target = absl::StrFormat(
         "dns://[::1]:%d/dont-care-since-wont-be-resolved.test.com:1234",
         fake_dns_port);
-    std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_handle = grpc_resolve_address(
+    GRPC_CLOSURE_INIT(&on_done, OnResolveAddressDone, &args, grpc_schedule_on_exec_ctx);
+    resolve_address_handle = grpc_resolve_address(
         client_target.c_str(), "https", args.pollset_set, &on_done, &resolved_addresses);
-    resolve_address_handle->TryCancel();
+    //GPR_ASSERT(!resolve_address_handle->TryCancel());
   }
-  PollPollsetUntilRequestDone();
+  PollPollsetUntilRequestDone(&args);
   grpc_resolved_addresses_destroy(resolved_addresses);
 }
 

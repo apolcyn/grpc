@@ -63,6 +63,7 @@ struct internal_request {
   grpc_closure done_write;
   grpc_closure connected;
   grpc_error_handle overall_error;
+  std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_handle;
 };
 static grpc_httpcli_get_override g_get_override = nullptr;
 static grpc_httpcli_post_override g_post_override = nullptr;
@@ -107,6 +108,7 @@ static void finish(internal_request* req, grpc_error_handle error) {
   GRPC_ERROR_UNREF(req->overall_error);
   grpc_resource_quota_unref_internal(req->resource_quota);
   gpr_free(req);
+  req->resolve_address_handle.reset();
 }
 
 static void append_error(internal_request* req, grpc_error_handle error) {
@@ -257,7 +259,7 @@ static void internal_request_begin(grpc_httpcli_context* context,
   GPR_ASSERT(pollent);
   grpc_polling_entity_add_to_pollset_set(req->pollent,
                                          req->context->pollset_set);
-  grpc_resolve_address(
+  req->resolve_address_handle = grpc_resolve_address(
       request->host, req->handshaker->default_port, req->context->pollset_set,
       GRPC_CLOSURE_CREATE(on_resolved, req, grpc_schedule_on_exec_ctx),
       &req->addresses);

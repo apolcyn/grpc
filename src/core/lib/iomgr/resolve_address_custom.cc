@@ -138,7 +138,16 @@ static grpc_error_handle blocking_resolve_address_impl(
   return err;
 }
 
-static void resolve_address_impl(const char* name, const char* default_port,
+namespace grpc_core {
+
+class CustomAsyncResolveAddress : public AsyncResolveAddress {
+ public:
+  bool TryCancel() override { return false; }
+};
+
+} // namespace grpc_core
+
+static std::unique_ptr<grpc_core::AsyncResolveAddress> resolve_address_impl(const char* name, const char* default_port,
                                  grpc_pollset_set* /*interested_parties*/,
                                  grpc_closure* on_done,
                                  grpc_resolved_addresses** addrs) {
@@ -148,7 +157,7 @@ static void resolve_address_impl(const char* name, const char* default_port,
   grpc_error_handle err = try_split_host_port(name, default_port, &host, &port);
   if (err != GRPC_ERROR_NONE) {
     grpc_core::ExecCtx::Run(DEBUG_LOCATION, on_done, err);
-    return;
+    return absl::make_unique<grpc_core::CustomAsyncResolveAddress>();
   }
   grpc_custom_resolver* r = new grpc_custom_resolver();
   r->on_done = on_done;
@@ -158,6 +167,7 @@ static void resolve_address_impl(const char* name, const char* default_port,
 
   /* Call getaddrinfo */
   resolve_address_vtable->resolve_async(r, r->host.c_str(), r->port.c_str());
+  return absl::make_unique<grpc_core::CustomAsyncResolveAddress>();
 }
 
 static grpc_address_resolver_vtable custom_resolver_vtable = {

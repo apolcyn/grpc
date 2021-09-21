@@ -153,7 +153,18 @@ static void do_request_thread(void* rp, grpc_error_handle /*error*/) {
   gpr_free(r);
 }
 
-static void posix_resolve_address(const char* name, const char* default_port,
+namespace grpc_core {
+
+class NativeAsyncResolveAddress : public AsyncResolveAddress {
+ public:
+  // Force caller to wait for the callback's completion. Note
+  // that no polling work is required for the resolution to finish.
+  bool TryCancel() override { return false; }
+};
+
+} // namespace grpc_core
+
+static std::unique_ptr<grpc_core::AsyncResolveAddress> posix_resolve_address(const char* name, const char* default_port,
                                   grpc_pollset_set* /*interested_parties*/,
                                   grpc_closure* on_done,
                                   grpc_resolved_addresses** addrs) {
@@ -165,6 +176,7 @@ static void posix_resolve_address(const char* name, const char* default_port,
   r->addrs_out = addrs;
   grpc_core::Executor::Run(&r->request_closure, GRPC_ERROR_NONE,
                            grpc_core::ExecutorType::RESOLVER);
+  return absl::make_unique<grpc_core::NativeAsyncResolveAddress>();
 }
 
 grpc_address_resolver_vtable grpc_posix_resolver_vtable = {
