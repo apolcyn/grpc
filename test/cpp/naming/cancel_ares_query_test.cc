@@ -34,6 +34,7 @@
 
 #include "src/core/ext/filters/client_channel/resolver.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/dns_resolver_selection.h"
+#include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
 #include "src/core/lib/channel/channel_args.h"
 #include "src/core/lib/debug/stats.h"
@@ -119,10 +120,7 @@ grpc_millis NSecDeadline(int seconds) {
       grpc_timeout_seconds_to_deadline(seconds));
 }
 
-void PollPollsetUntilRequestDone(ArgsStruct* args) {
-  // Try to give enough time for c-ares to run through its retries
-  // a few times if needed.
-  grpc_millis deadline = NSecDeadline(90);
+void PollPollsetUntilRequestDone(ArgsStruct* args, grpc_millis deadline) {
   while (true) {
     grpc_core::ExecCtx exec_ctx;
     {
@@ -179,7 +177,7 @@ void TestCancelActiveDNSQuery(ArgsStruct* args) {
   // PollPollsetUntilRequestDone call should never finish.
   resolver.reset();
   grpc_core::ExecCtx::Get()->Flush();
-  PollPollsetUntilRequestDone(args);
+  PollPollsetUntilRequestDone(args, NSecDeadline(90));
   ArgsFinish(args);
 }
 
@@ -215,6 +213,22 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveDNSQuery) {
   TestCancelActiveDNSQuery(&args);
 }
 
+int g_fake_non_responsive_dns_server_port;
+
+void InjectNonResponsiveDNSServer(ares_channel channel) {
+  gpr_log(GPR_DEBUG,
+          "Injecting broken nameserver list. Bad server address:|[::1]:%d|.",
+          g_fake_non_responsive_dns_server_port);
+  // Configure a non-responsive DNS server at the front of c-ares's nameserver list.
+  struct ares_addr_port_node dns_server_addrs[1];
+  dns_server_addrs[0].family = AF_INET6;
+  (reinterpret_cast<char*>(&dns_server_addrs[0].addr.addr6))[15] = 0x1;
+  dns_server_addrs[0].tcp_port = g_fake_non_responsive_dns_server_port;
+  dns_server_addrs[0].udp_port = g_fake_non_responsive_dns_server_port;
+  dns_server_addrs[0].next = nullptr;
+  GPR_ASSERT(ares_set_servers_ports(channel, dns_server_addrs) == ARES_SUCCESS);
+}
+
 void OnResolveAddressDone(void* arg, grpc_error_handle error) {
   ArgsStruct* args = static_cast<ArgsStruct*>(arg);
   grpc_core::MutexLockForGprMu lock(args->mu);
@@ -224,6 +238,11 @@ void OnResolveAddressDone(void* arg, grpc_error_handle error) {
 }
 
 TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
+  int fake_dns_port = grpc_pick_unused_port_or_die();
+  grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
+  g_fake_non_responsive_dns_server_port = fake_dns_port;
+  void (*prev_test_only_inject_config)(ares_channel channel) = grpc_ares_test_only_inject_config;
+  grpc_ares_test_only_inject_config = InjectNonResponsiveDNSServer;
   grpc_resolved_addresses* resolved_addresses = nullptr;
   grpc_closure on_done;
   ArgsStruct args;
@@ -231,18 +250,15 @@ TEST_F(CancelDuringAresQuery, TestCancelActiveResolveAddress) {
   grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
   {
     grpc_core::ExecCtx exec_ctx;
-    int fake_dns_port = grpc_pick_unused_port_or_die();
-    grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
-    std::string client_target = absl::StrFormat(
-        "dns://[::1]:%d/dont-care-since-wont-be-resolved.test.com:1234",
-        fake_dns_port);
+    std::string client_target = "dont-care-since-wont-be-resolved.test.com:1234";
     GRPC_CLOSURE_INIT(&on_done, OnResolveAddressDone, &args, grpc_schedule_on_exec_ctx);
     resolve_address_handle = grpc_resolve_address(
         client_target.c_str(), "https", args.pollset_set, &on_done, &resolved_addresses);
-    //GPR_ASSERT(!resolve_address_handle.reset());
+    resolve_address_handle.reset();
   }
-  PollPollsetUntilRequestDone(&args);
+  PollPollsetUntilRequestDone(&args, NSecDeadline(20));
   grpc_resolved_addresses_destroy(resolved_addresses);
+  grpc_ares_test_only_inject_config = prev_test_only_inject_config;
 }
 
 #ifdef GPR_WINDOWS

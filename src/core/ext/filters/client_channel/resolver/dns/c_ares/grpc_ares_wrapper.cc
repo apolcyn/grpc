@@ -1100,6 +1100,7 @@ grpc_ares_request* (*grpc_dns_lookup_ares_locked)(
     grpc_dns_lookup_ares_locked_impl;
 
 static void grpc_cancel_ares_request_locked_impl(grpc_ares_request* r) {
+  gpr_log(GPR_DEBUG, "apolcyn request: %p grpc_cancel_ares_request_locked is called", r);
   GPR_ASSERT(r != nullptr);
   grpc_core::MutexLock lock(&r->mu);
   if (r->ev_driver != nullptr) {
@@ -1195,7 +1196,7 @@ static grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> grpc_resolve_add
   GRPC_CLOSURE_INIT(&r->on_dns_lookup_done, on_dns_lookup_done, r.get(),
                     grpc_schedule_on_exec_ctx);
   r->ares_request = grpc_dns_lookup_ares_locked(
-      nullptr /* dns_server */, name, default_port, interested_parties,
+      "" /* dns_server */, name, default_port, interested_parties,
       &r->on_dns_lookup_done, &r->addresses,
       nullptr /* balancer_addresses */, nullptr /* service_config_json */,
       GRPC_DNS_ARES_DEFAULT_QUERY_TIMEOUT_MS);
