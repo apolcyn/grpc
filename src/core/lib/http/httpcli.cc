@@ -63,7 +63,8 @@ struct internal_request {
   grpc_closure done_write;
   grpc_closure connected;
   grpc_error_handle overall_error;
-  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
+  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress>
+      resolve_address_handle;
 };
 static grpc_httpcli_get_override g_get_override = nullptr;
 static grpc_httpcli_post_override g_post_override = nullptr;

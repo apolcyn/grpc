@@ -26,8 +26,8 @@
 #include <grpc/support/string_util.h>
 #include <grpc/support/sync.h>
 
-#include "src/core/lib/iomgr/iomgr.h"
 #include "src/core/ext/filters/client_channel/resolver/dns/c_ares/grpc_ares_wrapper.h"
+#include "src/core/lib/iomgr/iomgr.h"
 #include "test/core/util/port.h"
 #include "test/core/util/subprocess.h"
 #include "test/core/util/test_config.h"
@@ -158,7 +158,8 @@ void InjectNonResponsiveDNSServer(ares_channel channel) {
   gpr_log(GPR_DEBUG,
           "Injecting broken nameserver list. Bad server address:|[::1]:%d|.",
           g_fake_non_responsive_dns_server_port);
-  // Configure a non-responsive DNS server at the front of c-ares's nameserver list.
+  // Configure a non-responsive DNS server at the front of c-ares's nameserver
+  // list.
   struct ares_addr_port_node dns_server_addrs[1];
   dns_server_addrs[0].family = AF_INET6;
   (reinterpret_cast<char*>(&dns_server_addrs[0].addr.addr6))[15] = 0x1;
@@ -173,7 +174,8 @@ static void test_cancel_get_during_dns_resolution() {
   int fake_dns_port = grpc_pick_unused_port_or_die();
   grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
   g_fake_non_responsive_dns_server_port = fake_dns_port;
-  void (*prev_test_only_inject_config)(ares_channel channel) = grpc_ares_test_only_inject_config;
+  void (*prev_test_only_inject_config)(ares_channel channel) =
+      grpc_ares_test_only_inject_config;
   grpc_ares_test_only_inject_config = InjectNonResponsiveDNSServer;
   {
     grpc_httpcli_request req;
@@ -189,18 +191,21 @@ static void test_cancel_get_during_dns_resolution() {
 
     grpc_http_response response;
     response = {};
-    grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_cancel_get_during_dns_resolution");
-    grpc_httpcli_get(
-        &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
-        GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
-        &response);
+    grpc_resource_quota* resource_quota =
+        grpc_resource_quota_create("test_cancel_get_during_dns_resolution");
+    grpc_httpcli_get(&g_context, &g_pops, resource_quota, &req,
+                     n_seconds_time(15),
+                     GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response,
+                                         grpc_schedule_on_exec_ctx),
+                     &response);
     grpc_httpcli_cancel(&g_context);
     gpr_mu_lock(g_mu);
     while (!g_done) {
       grpc_pollset_worker* worker = nullptr;
       GPR_ASSERT(GRPC_LOG_IF_ERROR(
-          "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
-                                            &worker, n_seconds_time(1))));
+          "pollset_work",
+          grpc_pollset_work(grpc_polling_entity_pollset(&g_pops), &worker,
+                            n_seconds_time(1))));
       gpr_mu_unlock(g_mu);
 
       gpr_mu_lock(g_mu);
@@ -230,21 +235,24 @@ static void test_cancel_get_while_reading_response() {
 
     grpc_http_response response;
     response = {};
-    grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_cancel_get_while_reading_response");
-    grpc_httpcli_get(
-        &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
-        GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
-        &response);
+    grpc_resource_quota* resource_quota =
+        grpc_resource_quota_create("test_cancel_get_while_reading_response");
+    grpc_httpcli_get(&g_context, &g_pops, resource_quota, &req,
+                     n_seconds_time(15),
+                     GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response,
+                                         grpc_schedule_on_exec_ctx),
+                     &response);
     gpr_mu_lock(g_mu);
     bool cancelled = false;
     while (!g_done) {
       grpc_pollset_worker* worker = nullptr;
       GPR_ASSERT(GRPC_LOG_IF_ERROR(
-          "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
-                                            &worker, n_seconds_time(1))));
+          "pollset_work",
+          grpc_pollset_work(grpc_polling_entity_pollset(&g_pops), &worker,
+                            n_seconds_time(1))));
       if (!cancelled) {
-        // cancel now that we've done some polling and likely gotten into the phase
-        // that we've sent our request and are trying to send a response.
+        // cancel now that we've done some polling and likely gotten into the
+        // phase that we've sent our request and are trying to send a response.
         grpc_httpcli_cancel(&g_context);
         cancelled = true;
       }
@@ -277,7 +285,7 @@ int main(int argc, char** argv) {
     int arg_shift = 0;
     /* figure out where we are */
     char* root;
-    //if (lslash != nullptr) {
+    // if (lslash != nullptr) {
     //  /* Hack for bazel target */
     //  if (static_cast<unsigned>(lslash - me) >= (sizeof("http") - 1) &&
     //      strncmp(me + (lslash - me) - sizeof("http") + 1, "http",
@@ -289,7 +297,7 @@ int main(int argc, char** argv) {
     //  memcpy(root, me, static_cast<size_t>(lslash - me));
     //  memcpy(root + (lslash - me), "/../..", sizeof("/../.."));
     //} else {
-      root = gpr_strdup(".");
+    root = gpr_strdup(".");
     //}
 
     GPR_ASSERT(argc <= 2);
@@ -321,9 +329,9 @@ int main(int argc, char** argv) {
     grpc_pollset_init(pollset, &g_mu);
     g_pops = grpc_polling_entity_create_from_pollset(pollset);
 
-    //test_get(port);
-    //test_post(port);
-    //test_cancel_get_during_dns_resolution();
+    // test_get(port);
+    // test_post(port);
+    // test_cancel_get_during_dns_resolution();
     test_cancel_get_while_reading_response();
 
     grpc_httpcli_context_destroy(&g_context);
