@@ -62,6 +62,7 @@ struct internal_request {
   grpc_closure on_read;
   grpc_closure done_write;
   grpc_closure connected;
+  grpc_error_handle cancelled_error;
   grpc_error_handle overall_error;
   grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
 };
@@ -108,7 +109,11 @@ static void finish(internal_request* req, grpc_error_handle error) {
   GRPC_ERROR_UNREF(req->overall_error);
   grpc_resource_quota_unref_internal(req->resource_quota);
   gpr_free(req);
-  req->resolve_address_handle.reset();
+  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
+  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
+  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
+  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
+  //req->resolve_address_handle.reset();
 }
 
 static void append_error(internal_request* req, grpc_error_handle error) {
@@ -206,6 +211,10 @@ static void next_address(internal_request* req, grpc_error_handle error) {
                "Failed HTTP requests to all targets", &req->overall_error, 1));
     return;
   }
+  if (req->cancelled_error != GRPC_ERROR_NONE) {
+    finish(req, GRPC_ERROR_REF(req->cancelled_error));
+    return;
+  }
   addr = &req->addresses->addrs[req->next_address++];
   GRPC_CLOSURE_INIT(&req->connected, on_connected, req,
                     grpc_schedule_on_exec_ctx);
@@ -244,7 +253,9 @@ static void internal_request_begin(grpc_httpcli_context* context,
   req->handshaker =
       request->handshaker ? request->handshaker : &grpc_httpcli_plaintext;
   req->context = context;
+  context->req = req; // TODO(apolcyn): cleaner way to set backpointer
   req->pollent = pollent;
+  req->cancelled_error = GRPC_ERROR_NONE;
   req->overall_error = GRPC_ERROR_NONE;
   req->resource_quota = resource_quota;
   GRPC_CLOSURE_INIT(&req->on_read, on_read, req, grpc_schedule_on_exec_ctx);
@@ -263,10 +274,13 @@ static void internal_request_begin(grpc_httpcli_context* context,
       request->host, req->handshaker->default_port, req->context->pollset_set,
       GRPC_CLOSURE_CREATE(on_resolved, req, grpc_schedule_on_exec_ctx),
       &req->addresses);
+  gpr_log(GPR_DEBUG, "apolcyn resolve address handle now: %p", req->resolve_address_handle.get());
 }
 
-void grpc_httpcli_cancel(grpc_httpcli_context* context) {
+void grpc_httpcli_cancel(grpc_httpcli_context* context, grpc_error_handle error) {
   gpr_log(GPR_DEBUG, "apolcyn grpc_httpcli_cancel is called");
+  context->req->cancelled_error = error;
+  context->req->resolve_address_handle.reset();
 }
 
 void grpc_httpcli_get(grpc_httpcli_context* context,

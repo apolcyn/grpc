@@ -67,7 +67,7 @@ static void on_finish_expect_cancelled(void* arg, grpc_error_handle error) {
   grpc_http_response* response = static_cast<grpc_http_response*>(arg);
   gpr_log(GPR_INFO, "response status=%d error=%s", response->status,
           grpc_error_std_string(error).c_str());
-  GPR_ASSERT(error == GRPC_ERROR_CANCELLED);
+  GPR_ASSERT(error != GRPC_ERROR_NONE);
   gpr_mu_lock(g_mu);
   g_done = 1;
   GPR_ASSERT(GRPC_LOG_IF_ERROR(
@@ -177,13 +177,12 @@ static void test_cancel_get_during_dns_resolution() {
   grpc_ares_test_only_inject_config = InjectNonResponsiveDNSServer;
   {
     grpc_httpcli_request req;
-    char* host;
     grpc_core::ExecCtx exec_ctx;
     g_done = 0;
     gpr_log(GPR_INFO, "test_cancel_get_during_dns_resolution");
 
     memset(&req, 0, sizeof(req));
-    req.host = "dont-care-since-wont-be-resolver.test.com:443";
+    req.host = const_cast<char*>("dont-care-since-wont-be-resolver.test.com:443");
     req.http.path = const_cast<char*>("/get");
     req.handshaker = &grpc_httpcli_plaintext;
 
@@ -194,7 +193,7 @@ static void test_cancel_get_during_dns_resolution() {
         &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
         GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
         &response);
-    grpc_httpcli_cancel(&g_context);
+    grpc_httpcli_cancel(&g_context, GRPC_ERROR_CANCELLED);
     gpr_mu_lock(g_mu);
     while (!g_done) {
       grpc_pollset_worker* worker = nullptr;
@@ -206,7 +205,6 @@ static void test_cancel_get_during_dns_resolution() {
       gpr_mu_lock(g_mu);
     }
     gpr_mu_unlock(g_mu);
-    gpr_free(host);
     grpc_http_response_destroy(&response);
   }
   grpc_ares_test_only_inject_config = prev_test_only_inject_config;
@@ -245,7 +243,7 @@ static void test_cancel_get_while_reading_response() {
       if (!cancelled) {
         // cancel now that we've done some polling and likely gotten into the phase
         // that we've sent our request and are trying to send a response.
-        grpc_httpcli_cancel(&g_context);
+        grpc_httpcli_cancel(&g_context, GRPC_ERROR_CANCELLED);
         cancelled = true;
       }
       exec_ctx.Flush();
@@ -323,8 +321,8 @@ int main(int argc, char** argv) {
 
     //test_get(port);
     //test_post(port);
-    //test_cancel_get_during_dns_resolution();
-    test_cancel_get_while_reading_response();
+    test_cancel_get_during_dns_resolution();
+    //test_cancel_get_while_reading_response();
 
     grpc_httpcli_context_destroy(&g_context);
     GRPC_CLOSURE_INIT(&destroyed, destroy_pops, &g_pops,
