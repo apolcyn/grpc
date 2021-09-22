@@ -47,11 +47,24 @@ static void on_finish(void* arg, grpc_error_handle error) {
       "<body><p>This is a test</p></body></html>";
   grpc_http_response* response = static_cast<grpc_http_response*>(arg);
   GPR_ASSERT(response);
+  GPR_ASSERT(error == GRPC_ERROR_NONE);
   gpr_log(GPR_INFO, "response status=%d error=%s", response->status,
           grpc_error_std_string(error).c_str());
   GPR_ASSERT(response->status == 200);
   GPR_ASSERT(response->body_length == strlen(expect));
   GPR_ASSERT(0 == memcmp(expect, response->body, response->body_length));
+  gpr_mu_lock(g_mu);
+  g_done = 1;
+  GPR_ASSERT(GRPC_LOG_IF_ERROR(
+      "pollset_kick",
+      grpc_pollset_kick(grpc_polling_entity_pollset(&g_pops), nullptr)));
+  gpr_mu_unlock(g_mu);
+}
+
+static void on_finish_expect_cancelled(void* arg, grpc_error_handle error) {
+  gpr_log(GPR_INFO, "response status=%d error=%s", response->status,
+          grpc_error_std_string(error).c_str());
+  GPR_ASSERT(error == GRPC_ERROR_CANCELLED);
   gpr_mu_lock(g_mu);
   g_done = 1;
   GPR_ASSERT(GRPC_LOG_IF_ERROR(
@@ -136,7 +149,82 @@ static void test_post(int port) {
   grpc_http_response_destroy(&response);
 }
 
+static void test_cancel_get() {
+  grpc_httpcli_request req;
+  char* host;
+  grpc_core::ExecCtx exec_ctx;
+
+  g_done = 0;
+  gpr_log(GPR_INFO, "test_get");
+
+  // TODO(apolcyn): start up fake non responsive TCP server
+  gpr_asprintf(&host, "localhost:%d", port);
+  gpr_log(GPR_INFO, "requesting from %s", host);
+
+  memset(&req, 0, sizeof(req));
+  req.host = host;
+  req.http.path = const_cast<char*>("/get");
+  req.handshaker = &grpc_httpcli_plaintext;
+
+  grpc_http_response response;
+  response = {};
+  grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_get");
+  grpc_httpcli_get(
+      &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
+      GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
+      &response);
+  grpc_httpcli_cancel(&g_context);
+  gpr_mu_lock(g_mu);
+  while (!g_done) {
+    grpc_pollset_worker* worker = nullptr;
+    GPR_ASSERT(GRPC_LOG_IF_ERROR(
+        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
+                                          &worker, n_seconds_time(1))));
+    gpr_mu_unlock(g_mu);
+
+    gpr_mu_lock(g_mu);
+  }
+  gpr_mu_unlock(g_mu);
+  gpr_free(host);
+  grpc_http_response_destroy(&response);
+}
+
 static void destroy_pops(void* p, grpc_error_handle /*error*/) {
+  grpc_httpcli_request req;
+  char* host;
+  grpc_core::ExecCtx exec_ctx;
+
+  g_done = 0;
+  gpr_log(GPR_INFO, "test_get");
+
+  gpr_asprintf(&host, "localhost:%d", port);
+  gpr_log(GPR_INFO, "requesting from %s", host);
+
+  memset(&req, 0, sizeof(req));
+  req.host = host;
+  req.http.path = const_cast<char*>("/get");
+  req.handshaker = &grpc_httpcli_plaintext;
+
+  grpc_http_response response;
+  response = {};
+  grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_get");
+  grpc_httpcli_get(
+      &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
+      GRPC_CLOSURE_CREATE(on_finish, &response, grpc_schedule_on_exec_ctx),
+      &response);
+  gpr_mu_lock(g_mu);
+  while (!g_done) {
+    grpc_pollset_worker* worker = nullptr;
+    GPR_ASSERT(GRPC_LOG_IF_ERROR(
+        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
+                                          &worker, n_seconds_time(1))));
+    gpr_mu_unlock(g_mu);
+
+    gpr_mu_lock(g_mu);
+  }
+  gpr_mu_unlock(g_mu);
+  gpr_free(host);
+  grpc_http_response_destroy(&response);
   grpc_pollset_destroy(
       grpc_polling_entity_pollset(static_cast<grpc_polling_entity*>(p)));
 }
