@@ -265,6 +265,10 @@ static void internal_request_begin(grpc_httpcli_context* context,
       &req->addresses);
 }
 
+void grpc_httpcli_cancel(grpc_httpcli_context* context) {
+  gpr_log(GPR_DEBUG, "apolcyn grpc_httpcli_cancel is called");
+}
+
 void grpc_httpcli_get(grpc_httpcli_context* context,
                       grpc_polling_entity* pollent,
                       grpc_resource_quota* resource_quota,

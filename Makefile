@@ -46513,6 +46513,7 @@ test/cpp/naming/dns_test_util.o: test/cpp/naming/dns_test_util.cc.o
 
 # target to build an object file
 test/cpp/naming/dns_test_util.cc.o:
+	$(MAKE) -f CMakeFiles/httpcli_test.dir/build.make CMakeFiles/httpcli_test.dir/test/cpp/naming/dns_test_util.cc.o
 	$(MAKE) -f CMakeFiles/cancel_ares_query_test.dir/build.make CMakeFiles/cancel_ares_query_test.dir/test/cpp/naming/dns_test_util.cc.o
 .PHONY : test/cpp/naming/dns_test_util.cc.o
 
@@ -46522,6 +46523,7 @@ test/cpp/naming/dns_test_util.i: test/cpp/naming/dns_test_util.cc.i
 
 # target to preprocess a source file
 test/cpp/naming/dns_test_util.cc.i:
+	$(MAKE) -f CMakeFiles/httpcli_test.dir/build.make CMakeFiles/httpcli_test.dir/test/cpp/naming/dns_test_util.cc.i
 	$(MAKE) -f CMakeFiles/cancel_ares_query_test.dir/build.make CMakeFiles/cancel_ares_query_test.dir/test/cpp/naming/dns_test_util.cc.i
 .PHONY : test/cpp/naming/dns_test_util.cc.i
 
@@ -46531,6 +46533,7 @@ test/cpp/naming/dns_test_util.s: test/cpp/naming/dns_test_util.cc.s
 
 # target to generate assembly for a file
 test/cpp/naming/dns_test_util.cc.s:
+	$(MAKE) -f CMakeFiles/httpcli_test.dir/build.make CMakeFiles/httpcli_test.dir/test/cpp/naming/dns_test_util.cc.s
 	$(MAKE) -f CMakeFiles/cancel_ares_query_test.dir/build.make CMakeFiles/cancel_ares_query_test.dir/test/cpp/naming/dns_test_util.cc.s
 .PHONY : test/cpp/naming/dns_test_util.cc.s
 
