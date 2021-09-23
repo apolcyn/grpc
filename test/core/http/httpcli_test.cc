@@ -31,7 +31,7 @@
 #include "test/core/util/port.h"
 #include "test/core/util/subprocess.h"
 #include "test/core/util/test_config.h"
-#include "test/cpp/naming/dns_test_util.h"
+#include "test/core/util/fake_tcp_server.h"
 
 static int g_done = 0;
 static grpc_httpcli_context g_context;
@@ -170,9 +170,10 @@ void InjectNonResponsiveDNSServer(ares_channel channel) {
 
 static void test_cancel_get_during_dns_resolution() {
   // Inject an unresponsive DNS server into the resolver's DNS server config
-  int fake_dns_port = grpc_pick_unused_port_or_die();
-  grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_dns_port);
-  g_fake_non_responsive_dns_server_port = fake_dns_port;
+  FakeTcpServer fake_dns_server(
+      FakeTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
+      FakeTcpServer::CloseSocketUponCloseFromPeer);
+  g_fake_non_responsive_dns_server_port = fake_dns_server.port();
   void (*prev_test_only_inject_config)(ares_channel channel) = grpc_ares_test_only_inject_config;
   grpc_ares_test_only_inject_config = InjectNonResponsiveDNSServer;
   {
@@ -211,18 +212,17 @@ static void test_cancel_get_during_dns_resolution() {
 }
 
 static void test_cancel_get_while_reading_response() {
-  int fake_server_port = grpc_pick_unused_port_or_die();
-  // TODO(apolcyn): rename DNS server to UDPAndTCPServer
-  grpc::testing::FakeNonResponsiveDNSServer fake_dns_server(fake_server_port);
+  FakeTcpServer fake_http_server(
+      FakeTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
+      FakeTcpServer::CloseSocketUponCloseFromPeer);
   {
     grpc_httpcli_request req;
     grpc_core::ExecCtx exec_ctx;
     g_done = 0;
     gpr_log(GPR_INFO, "test_cancel_get_while_reading_response");
 
-    std::string host = absl::StrCat("localhost:", fake_server_port);
     memset(&req, 0, sizeof(req));
-    req.host = const_cast<char*>(host.c_str());
+    req.host = const_cast<char*>(fake_http_server.address());
     req.http.path = const_cast<char*>("/get");
     req.handshaker = &grpc_httpcli_plaintext;
 
@@ -233,6 +233,7 @@ static void test_cancel_get_while_reading_response() {
         &g_context, &g_pops, resource_quota, &req, n_seconds_time(15),
         GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
         &response);
+    exec_ctx.Flush();
     gpr_mu_lock(g_mu);
     bool cancelled = false;
     while (!g_done) {
@@ -240,13 +241,14 @@ static void test_cancel_get_while_reading_response() {
       GPR_ASSERT(GRPC_LOG_IF_ERROR(
           "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
                                             &worker, n_seconds_time(1))));
+      exec_ctx.Flush();
       if (!cancelled) {
         // cancel now that we've done some polling and likely gotten into the phase
         // that we've sent our request and are trying to send a response.
         grpc_httpcli_cancel(&g_context, GRPC_ERROR_CANCELLED);
         cancelled = true;
+        exec_ctx.Flush();
       }
-      exec_ctx.Flush();
       gpr_mu_unlock(g_mu);
 
       gpr_mu_lock(g_mu);

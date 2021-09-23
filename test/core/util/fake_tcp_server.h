@@ -71,11 +71,16 @@ class FakeTcpServer {
       const std::function<ProcessReadResult(int, int, int)>& process_read_cb)
       : accept_mode_(accept_mode), process_read_cb_(process_read_cb) {
     port_ = grpc_pick_unused_port_or_die();
+    udp_socket_ = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (udp_socket_ == -1) {
+      gpr_log(GPR_DEBUG, "Failed to create UDP ipv6 socket: %d", errno);
+      abort();
+    }
     accept_socket_ = socket(AF_INET6, SOCK_STREAM, 0);
     address_ = absl::StrCat("[::]:", port_);
     GPR_ASSERT(accept_socket_ != -1);
     if (accept_socket_ == -1) {
-      gpr_log(GPR_ERROR, "Failed to create socket: %d", errno);
+      gpr_log(GPR_ERROR, "Failed to create TCP IPv6 socket: %d", errno);
       abort();
     }
     int val = 1;
@@ -95,9 +100,14 @@ class FakeTcpServer {
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(port_);
     (reinterpret_cast<char*>(&addr.sin6_addr))[15] = 1;
+    if (bind(udp_socket_, reinterpret_cast<const sockaddr*>(&addr),
+             sizeof(addr)) != 0) {
+      gpr_log(GPR_DEBUG, "Failed to bind UDP ipv6 socket to [::1]:%d", port_);
+      abort();
+    }
     if (bind(accept_socket_, reinterpret_cast<const sockaddr*>(&addr),
              sizeof(addr)) != 0) {
-      gpr_log(GPR_ERROR, "Failed to bind socket to [::1]:%d : %d", port_,
+      gpr_log(GPR_ERROR, "Failed to bind TCP socket to [::1]:%d : %d", port_,
               errno);
       abort();
     }
@@ -119,9 +129,13 @@ class FakeTcpServer {
     gpr_log(GPR_DEBUG,
             "FakeTcpServer join server "
             "thread complete");
+    close(accept_socket_);
+    close(udp_socket_);
   }
 
   const char* address() { return address_.c_str(); }
+
+  int port() { return port_; };
 
   static ProcessReadResult CloseSocketUponReceivingBytesFromPeer(
       int bytes_received_size, int read_error, int s) {
@@ -243,11 +257,11 @@ class FakeTcpServer {
       gpr_sleep_until(gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
                                    gpr_time_from_millis(10, GPR_TIMESPAN)));
     }
-    close(self->accept_socket_);
   }
 
  private:
   int accept_socket_;
+  int udp_socket_;
   int port_;
   gpr_event stop_ev_;
   std::string address_;

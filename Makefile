@@ -326,19 +326,6 @@ writes_per_rpc_test/fast:
 .PHONY : writes_per_rpc_test/fast
 
 #=============================================================================
-# Target rules for targets named work_serializer_test
-
-# Build rule for target.
-work_serializer_test: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 work_serializer_test
-.PHONY : work_serializer_test
-
-# fast build rule for target.
-work_serializer_test/fast:
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/build
-.PHONY : work_serializer_test/fast
-
-#=============================================================================
 # Target rules for targets named wire_writer_test
 
 # Build rule for target.
@@ -1364,6 +1351,19 @@ grpc_php_plugin: cmake_check_build_system
 grpc_php_plugin/fast:
 	$(MAKE) -f CMakeFiles/grpc_php_plugin.dir/build.make CMakeFiles/grpc_php_plugin.dir/build
 .PHONY : grpc_php_plugin/fast
+
+#=============================================================================
+# Target rules for targets named grpc_node_plugin
+
+# Build rule for target.
+grpc_node_plugin: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 grpc_node_plugin
+.PHONY : grpc_node_plugin
+
+# fast build rule for target.
+grpc_node_plugin/fast:
+	$(MAKE) -f CMakeFiles/grpc_node_plugin.dir/build.make CMakeFiles/grpc_node_plugin.dir/build
+.PHONY : grpc_node_plugin/fast
 
 #=============================================================================
 # Target rules for targets named uri_parser_test
@@ -5227,6 +5227,32 @@ global_config_test/fast:
 .PHONY : global_config_test/fast
 
 #=============================================================================
+# Target rules for targets named work_serializer_test
+
+# Build rule for target.
+work_serializer_test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 work_serializer_test
+.PHONY : work_serializer_test
+
+# fast build rule for target.
+work_serializer_test/fast:
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/build
+.PHONY : work_serializer_test/fast
+
+#=============================================================================
+# Target rules for targets named google_c2p_resolver_test
+
+# Build rule for target.
+google_c2p_resolver_test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 google_c2p_resolver_test
+.PHONY : google_c2p_resolver_test
+
+# fast build rule for target.
+google_c2p_resolver_test/fast:
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/build
+.PHONY : google_c2p_resolver_test/fast
+
+#=============================================================================
 # Target rules for targets named grpc_csharp_plugin
 
 # Build rule for target.
@@ -5238,19 +5264,6 @@ grpc_csharp_plugin: cmake_check_build_system
 grpc_csharp_plugin/fast:
 	$(MAKE) -f CMakeFiles/grpc_csharp_plugin.dir/build.make CMakeFiles/grpc_csharp_plugin.dir/build
 .PHONY : grpc_csharp_plugin/fast
-
-#=============================================================================
-# Target rules for targets named grpc_node_plugin
-
-# Build rule for target.
-grpc_node_plugin: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 grpc_node_plugin
-.PHONY : grpc_node_plugin
-
-# fast build rule for target.
-grpc_node_plugin/fast:
-	$(MAKE) -f CMakeFiles/grpc_node_plugin.dir/build.make CMakeFiles/grpc_node_plugin.dir/build
-.PHONY : grpc_node_plugin/fast
 
 #=============================================================================
 # Target rules for targets named strerror
@@ -33757,6 +33770,33 @@ test/core/client_channel/resolvers/fake_resolver_test.cc.s:
 	$(MAKE) -f CMakeFiles/fake_resolver_test.dir/build.make CMakeFiles/fake_resolver_test.dir/test/core/client_channel/resolvers/fake_resolver_test.cc.s
 .PHONY : test/core/client_channel/resolvers/fake_resolver_test.cc.s
 
+test/core/client_channel/resolvers/google_c2p_resolver_test.o: test/core/client_channel/resolvers/google_c2p_resolver_test.cc.o
+
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.o
+
+# target to build an object file
+test/core/client_channel/resolvers/google_c2p_resolver_test.cc.o:
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/test/core/client_channel/resolvers/google_c2p_resolver_test.cc.o
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.cc.o
+
+test/core/client_channel/resolvers/google_c2p_resolver_test.i: test/core/client_channel/resolvers/google_c2p_resolver_test.cc.i
+
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.i
+
+# target to preprocess a source file
+test/core/client_channel/resolvers/google_c2p_resolver_test.cc.i:
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/test/core/client_channel/resolvers/google_c2p_resolver_test.cc.i
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.cc.i
+
+test/core/client_channel/resolvers/google_c2p_resolver_test.s: test/core/client_channel/resolvers/google_c2p_resolver_test.cc.s
+
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.s
+
+# target to generate assembly for a file
+test/core/client_channel/resolvers/google_c2p_resolver_test.cc.s:
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/test/core/client_channel/resolvers/google_c2p_resolver_test.cc.s
+.PHONY : test/core/client_channel/resolvers/google_c2p_resolver_test.cc.s
+
 test/core/client_channel/resolvers/sockaddr_resolver_test.o: test/core/client_channel/resolvers/sockaddr_resolver_test.cc.o
 
 .PHONY : test/core/client_channel/resolvers/sockaddr_resolver_test.o
@@ -48029,7 +48069,6 @@ third_party/googletest/googlemock/src/gmock-all.cc.o:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
@@ -48240,6 +48279,8 @@ third_party/googletest/googlemock/src/gmock-all.cc.o:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.o
 .PHONY : third_party/googletest/googlemock/src/gmock-all.cc.o
 
 third_party/googletest/googlemock/src/gmock-all.i: third_party/googletest/googlemock/src/gmock-all.cc.i
@@ -48261,7 +48302,6 @@ third_party/googletest/googlemock/src/gmock-all.cc.i:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
@@ -48472,6 +48512,8 @@ third_party/googletest/googlemock/src/gmock-all.cc.i:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.i
 .PHONY : third_party/googletest/googlemock/src/gmock-all.cc.i
 
 third_party/googletest/googlemock/src/gmock-all.s: third_party/googletest/googlemock/src/gmock-all.cc.s
@@ -48493,7 +48535,6 @@ third_party/googletest/googlemock/src/gmock-all.cc.s:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
@@ -48704,6 +48745,8 @@ third_party/googletest/googlemock/src/gmock-all.cc.s:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googlemock/src/gmock-all.cc.s
 .PHONY : third_party/googletest/googlemock/src/gmock-all.cc.s
 
 third_party/googletest/googletest/src/gtest-all.o: third_party/googletest/googletest/src/gtest-all.cc.o
@@ -48725,7 +48768,6 @@ third_party/googletest/googletest/src/gtest-all.cc.o:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
@@ -48936,6 +48978,8 @@ third_party/googletest/googletest/src/gtest-all.cc.o:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googletest/src/gtest-all.cc.o
 .PHONY : third_party/googletest/googletest/src/gtest-all.cc.o
 
 third_party/googletest/googletest/src/gtest-all.i: third_party/googletest/googletest/src/gtest-all.cc.i
@@ -48957,7 +49001,6 @@ third_party/googletest/googletest/src/gtest-all.cc.i:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
@@ -49168,6 +49211,8 @@ third_party/googletest/googletest/src/gtest-all.cc.i:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googletest/src/gtest-all.cc.i
 .PHONY : third_party/googletest/googletest/src/gtest-all.cc.i
 
 third_party/googletest/googletest/src/gtest-all.s: third_party/googletest/googletest/src/gtest-all.cc.s
@@ -49189,7 +49234,6 @@ third_party/googletest/googletest/src/gtest-all.cc.s:
 	$(MAKE) -f CMakeFiles/xds_certificate_provider_test.dir/build.make CMakeFiles/xds_certificate_provider_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/xds_bootstrap_test.dir/build.make CMakeFiles/xds_bootstrap_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/writes_per_rpc_test.dir/build.make CMakeFiles/writes_per_rpc_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
-	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/wire_writer_test.dir/build.make CMakeFiles/wire_writer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/wire_reader_test.dir/build.make CMakeFiles/wire_reader_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/window_overflow_bad_client_test.dir/build.make CMakeFiles/window_overflow_bad_client_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
@@ -49400,6 +49444,8 @@ third_party/googletest/googletest/src/gtest-all.cc.s:
 	$(MAKE) -f CMakeFiles/file_watcher_certificate_provider_factory_test.dir/build.make CMakeFiles/file_watcher_certificate_provider_factory_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/for_each_test.dir/build.make CMakeFiles/for_each_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 	$(MAKE) -f CMakeFiles/global_config_test.dir/build.make CMakeFiles/global_config_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
+	$(MAKE) -f CMakeFiles/work_serializer_test.dir/build.make CMakeFiles/work_serializer_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
+	$(MAKE) -f CMakeFiles/google_c2p_resolver_test.dir/build.make CMakeFiles/google_c2p_resolver_test.dir/third_party/googletest/googletest/src/gtest-all.cc.s
 .PHONY : third_party/googletest/googletest/src/gtest-all.cc.s
 
 third_party/upb/upb/decode.o: third_party/upb/upb/decode.c.o
@@ -49693,7 +49739,6 @@ help:
 	@echo "... xds_certificate_provider_test"
 	@echo "... xds_bootstrap_test"
 	@echo "... writes_per_rpc_test"
-	@echo "... work_serializer_test"
 	@echo "... wire_writer_test"
 	@echo "... wire_reader_test"
 	@echo "... window_overflow_bad_client_test"
@@ -49774,6 +49819,7 @@ help:
 	@echo "... grpclb_end2end_test"
 	@echo "... grpc_python_plugin"
 	@echo "... grpc_php_plugin"
+	@echo "... grpc_node_plugin"
 	@echo "... uri_parser_test"
 	@echo "... public_headers_must_be_c89"
 	@echo "... grpc++_alts"
@@ -50074,8 +50120,9 @@ help:
 	@echo "... for_each_test"
 	@echo "... lame_client_test"
 	@echo "... global_config_test"
+	@echo "... work_serializer_test"
+	@echo "... google_c2p_resolver_test"
 	@echo "... grpc_csharp_plugin"
-	@echo "... grpc_node_plugin"
 	@echo "... strerror"
 	@echo "... scoped_set_env"
 	@echo "... periodic_sampler"
@@ -52805,6 +52852,9 @@ help:
 	@echo "... test/core/client_channel/resolvers/fake_resolver_test.o"
 	@echo "... test/core/client_channel/resolvers/fake_resolver_test.i"
 	@echo "... test/core/client_channel/resolvers/fake_resolver_test.s"
+	@echo "... test/core/client_channel/resolvers/google_c2p_resolver_test.o"
+	@echo "... test/core/client_channel/resolvers/google_c2p_resolver_test.i"
+	@echo "... test/core/client_channel/resolvers/google_c2p_resolver_test.s"
 	@echo "... test/core/client_channel/resolvers/sockaddr_resolver_test.o"
 	@echo "... test/core/client_channel/resolvers/sockaddr_resolver_test.i"
 	@echo "... test/core/client_channel/resolvers/sockaddr_resolver_test.s"
