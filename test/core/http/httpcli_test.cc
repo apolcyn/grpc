@@ -234,27 +234,25 @@ static void test_cancel_get_while_reading_response() {
         GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &response, grpc_schedule_on_exec_ctx),
         &response);
     exec_ctx.Flush();
+    std::thread cancel_thread([]() {
+      gpr_sleep_until(grpc_timeout_seconds_to_deadline(1));
+      grpc_core::ExecCtx exec_ctx;
+      gpr_log(GPR_DEBUG, "now cancel http request using grpc_httpcli_cancel");
+      grpc_httpcli_cancel(&g_context, GRPC_ERROR_CANCELLED);
+    });
     gpr_mu_lock(g_mu);
-    bool cancelled = false;
     while (!g_done) {
       grpc_pollset_worker* worker = nullptr;
       GPR_ASSERT(GRPC_LOG_IF_ERROR(
           "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&g_pops),
                                             &worker, n_seconds_time(1))));
-      exec_ctx.Flush();
-      if (!cancelled) {
-        // cancel now that we've done some polling and likely gotten into the phase
-        // that we've sent our request and are trying to send a response.
-        grpc_httpcli_cancel(&g_context, GRPC_ERROR_CANCELLED);
-        cancelled = true;
-        exec_ctx.Flush();
-      }
       gpr_mu_unlock(g_mu);
 
       gpr_mu_lock(g_mu);
     }
     gpr_mu_unlock(g_mu);
     grpc_http_response_destroy(&response);
+    cancel_thread.join();
   }
 }
 

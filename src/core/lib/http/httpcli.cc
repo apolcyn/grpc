@@ -132,7 +132,7 @@ static void do_read(internal_request* req) {
 }
 
 static void on_read(void* user_data, grpc_error_handle error) {
-
+  gpr_log(GPR_DEBUG, "apolcyn on_read error: %s", grpc_error_string(error));
   internal_request* req = static_cast<internal_request*>(user_data);
   size_t i;
 
