@@ -321,8 +321,8 @@ int main(int argc, char** argv) {
 
     //test_get(port);
     //test_post(port);
-    test_cancel_get_during_dns_resolution();
-    //test_cancel_get_while_reading_response();
+    //test_cancel_get_during_dns_resolution();
+    test_cancel_get_while_reading_response();
 
     grpc_httpcli_context_destroy(&g_context);
     GRPC_CLOSURE_INIT(&destroyed, destroy_pops, &g_pops,

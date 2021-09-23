@@ -65,6 +65,7 @@ struct internal_request {
   grpc_error_handle cancelled_error;
   grpc_error_handle overall_error;
   grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
+  bool connect_pending;
 };
 static grpc_httpcli_get_override g_get_override = nullptr;
 static grpc_httpcli_post_override g_post_override = nullptr;
@@ -131,6 +132,7 @@ static void do_read(internal_request* req) {
 }
 
 static void on_read(void* user_data, grpc_error_handle error) {
+
   internal_request* req = static_cast<internal_request*>(user_data);
   size_t i;
 
@@ -158,6 +160,7 @@ static void on_read(void* user_data, grpc_error_handle error) {
 static void on_written(internal_request* req) { do_read(req); }
 
 static void done_write(void* arg, grpc_error_handle error) {
+  gpr_log(GPR_DEBUG, "apolcyn done_write error: %s", grpc_error_string(error));
   internal_request* req = static_cast<internal_request*>(arg);
   if (error == GRPC_ERROR_NONE) {
     on_written(req);
@@ -173,6 +176,7 @@ static void start_write(internal_request* req) {
 }
 
 static void on_handshake_done(void* arg, grpc_endpoint* ep) {
+  gpr_log(GPR_DEBUG, "apolcyn on_handshake_done");
   internal_request* req = static_cast<internal_request*>(arg);
 
   if (!ep) {
@@ -181,11 +185,17 @@ static void on_handshake_done(void* arg, grpc_endpoint* ep) {
     return;
   }
 
+  req->connect_pending = false;
+  if (req->cancelled_error != GRPC_ERROR_NONE) {
+    finish(req, GRPC_ERROR_REF(req->cancelled_error));
+    return;
+  }
   req->ep = ep;
   start_write(req);
 }
 
 static void on_connected(void* arg, grpc_error_handle error) {
+  gpr_log(GPR_DEBUG, "apolcyn on_connected error: %s", grpc_error_string(error));
   internal_request* req = static_cast<internal_request*>(arg);
 
   if (!req->ep) {
@@ -202,19 +212,20 @@ static void next_address(internal_request* req, grpc_error_handle error) {
   if (error != GRPC_ERROR_NONE) {
     append_error(req, error);
   }
+  if (req->cancelled_error != GRPC_ERROR_NONE) {
+    finish(req, GRPC_ERROR_REF(req->cancelled_error));
+    return;
+  }
   if (req->next_address == req->addresses->naddrs) {
     finish(req,
            GRPC_ERROR_CREATE_REFERENCING_FROM_STATIC_STRING(
                "Failed HTTP requests to all targets", &req->overall_error, 1));
     return;
   }
-  if (req->cancelled_error != GRPC_ERROR_NONE) {
-    finish(req, GRPC_ERROR_REF(req->cancelled_error));
-    return;
-  }
   addr = &req->addresses->addrs[req->next_address++];
   GRPC_CLOSURE_INIT(&req->connected, on_connected, req,
                     grpc_schedule_on_exec_ctx);
+  req->connect_pending = true;
   grpc_tcp_client_connect(&req->connected, &req->ep,
                           grpc_slice_allocator_create(
                               req->resource_quota, grpc_sockaddr_to_uri(addr)),
@@ -267,6 +278,7 @@ static void internal_request_begin(grpc_httpcli_context* context,
   GPR_ASSERT(pollent);
   grpc_polling_entity_add_to_pollset_set(req->pollent,
                                          req->context->pollset_set);
+  req->connect_pending = false;
   req->resolve_address_handle = grpc_resolve_address(
       request->host, req->handshaker->default_port, req->context->pollset_set,
       GRPC_CLOSURE_CREATE(on_resolved, req, grpc_schedule_on_exec_ctx),
@@ -278,6 +290,12 @@ void grpc_httpcli_cancel(grpc_httpcli_context* context, grpc_error_handle error)
   gpr_log(GPR_DEBUG, "apolcyn grpc_httpcli_cancel is called");
   context->req->cancelled_error = error;
   context->req->resolve_address_handle.reset();
+  // TODO(apolcyn): fix leak bug where previous endpoint isn't destroyed, also
+  // fix all races
+  if (!context->req->connect_pending && context->req->ep != nullptr) {
+    gpr_log(GPR_DEBUG, "apolcyn shutdown active endpoint");
+    grpc_endpoint_shutdown(context->req->ep, GRPC_ERROR_CREATE_FROM_STATIC_STRING("http request cancelled"));
+  }
 }
 
 void grpc_httpcli_get(grpc_httpcli_context* context,
