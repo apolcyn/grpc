@@ -44,7 +44,7 @@ class GoogleCloud2ProdResolver : public Resolver {
   class MetadataQuery : public InternallyRefCounted<MetadataQuery> {
    public:
     MetadataQuery(RefCountedPtr<GoogleCloud2ProdResolver> resolver,
-                  const char* path, grpc_polling_entity* pollent);
+                  const char* metadata_server_address, const char* path, grpc_polling_entity* pollent);
     ~MetadataQuery() override;
 
     void Orphan() override;
@@ -71,6 +71,7 @@ class GoogleCloud2ProdResolver : public Resolver {
   class ZoneQuery : public MetadataQuery {
    public:
     ZoneQuery(RefCountedPtr<GoogleCloud2ProdResolver> resolver,
+              const char* metadata_server_address,
               grpc_polling_entity* pollent);
 
    private:
@@ -83,6 +84,7 @@ class GoogleCloud2ProdResolver : public Resolver {
   class IPv6Query : public MetadataQuery {
    public:
     IPv6Query(RefCountedPtr<GoogleCloud2ProdResolver> resolver,
+              const char* metadata_server_address,
               grpc_polling_entity* pollent);
 
    private:
@@ -105,6 +107,8 @@ class GoogleCloud2ProdResolver : public Resolver {
 
   OrphanablePtr<IPv6Query> ipv6_query_;
   absl::optional<bool> supports_ipv6_;
+
+  std::string metadata_server_address_ = "metadata.google.internal";
 };
 
 //
@@ -112,7 +116,7 @@ class GoogleCloud2ProdResolver : public Resolver {
 //
 
 GoogleCloud2ProdResolver::MetadataQuery::MetadataQuery(
-    RefCountedPtr<GoogleCloud2ProdResolver> resolver, const char* path,
+    RefCountedPtr<GoogleCloud2ProdResolver> resolver, const char* metadata_server_address, const char* path,
     grpc_polling_entity* pollent)
     : resolver_(std::move(resolver)) {
   grpc_httpcli_context_init(&context_);
@@ -123,7 +127,7 @@ GoogleCloud2ProdResolver::MetadataQuery::MetadataQuery(
   memset(&request, 0, sizeof(grpc_httpcli_request));
   grpc_http_header header = {const_cast<char*>("Metadata-Flavor"),
                              const_cast<char*>("Google")};
-  request.host = const_cast<char*>("metadata.google.internal");
+  request.host = const_cast<char*>(metadata_server_address);
   request.http.path = const_cast<char*>(path);
   request.http.hdr_count = 1;
   request.http.hdrs = &header;
@@ -157,19 +161,18 @@ void GoogleCloud2ProdResolver::MetadataQuery::MaybeCallOnDone(
   if (!on_done_called_.compare_exchange_strong(expected, true,
                                                std::memory_order_relaxed,
                                                std::memory_order_relaxed)) {
-    // We've already called OnDone(), so just clean up.
-    GRPC_ERROR_UNREF(error);
-    Unref();
+    // Hop back into WorkSerializer to call OnDone().
+    // Note: We implicitly pass our ref to the callback here.
+    resolver_->work_serializer_->Run(
+        [this, error]() {
+          OnDone(resolver_.get(), &response_, error);
+          Unref();
+        },
+        DEBUG_LOCATION);
     return;
   }
-  // Hop back into WorkSerializer to call OnDone().
-  // Note: We implicitly pass our ref to the callback here.
-  resolver_->work_serializer_->Run(
-      [this, error]() {
-        OnDone(resolver_.get(), &response_, error);
-        Unref();
-      },
-      DEBUG_LOCATION);
+  Unref();
+  GRPC_ERROR_UNREF(error);
 }
 
 //
@@ -178,8 +181,9 @@ void GoogleCloud2ProdResolver::MetadataQuery::MaybeCallOnDone(
 
 GoogleCloud2ProdResolver::ZoneQuery::ZoneQuery(
     RefCountedPtr<GoogleCloud2ProdResolver> resolver,
+    const char* metadata_server_address,
     grpc_polling_entity* pollent)
-    : MetadataQuery(std::move(resolver), "/computeMetadata/v1/instance/zone",
+    : MetadataQuery(std::move(resolver), metadata_server_address, "/computeMetadata/v1/instance/zone",
                     pollent) {}
 
 void GoogleCloud2ProdResolver::ZoneQuery::OnDone(
@@ -210,8 +214,10 @@ void GoogleCloud2ProdResolver::ZoneQuery::OnDone(
 
 GoogleCloud2ProdResolver::IPv6Query::IPv6Query(
     RefCountedPtr<GoogleCloud2ProdResolver> resolver,
+    const char* metadata_server_address,
     grpc_polling_entity* pollent)
     : MetadataQuery(std::move(resolver),
+                    metadata_server_address,
                     "/computeMetadata/v1/instance/network-interfaces/0/ipv6s",
                     pollent) {}
 
@@ -236,13 +242,17 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
   absl::string_view name_to_resolve = absl::StripPrefix(args.uri.path(), "/");
   // If we're not running on GCP, we can't use DirectPath, so delegate
   // to the DNS resolver.
-  if (!grpc_alts_is_running_on_gcp() ||
+  bool test_only_force_running_on_gcp = grpc_channel_args_find_bool(args.args, "grpc.testing.force_running_on_gcp", false);
+  bool running_on_gcp = test_only_force_running_on_gcp || grpc_alts_is_running_on_gcp();
+  gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver");
+  if (!running_on_gcp ||
       // If the client is already using xDS, we can't use it here, because
       // they may be talking to a completely different xDS server than we
       // want to.
       // TODO(roth): When we implement xDS federation, remove this constraint.
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP")) != nullptr ||
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP_CONFIG")) != nullptr) {
+    gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver falling back to dns resolver");
     using_dns_ = true;
     child_resolver_ = ResolverRegistry::CreateResolver(
         absl::StrCat("dns:", name_to_resolve).c_str(), args.args,
@@ -250,6 +260,11 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
     GPR_ASSERT(child_resolver_ != nullptr);
     return;
   }
+  char* test_only_metadata_server_override = const_cast<char*>(grpc_channel_args_find_string(args.args, "grpc.testing.google_c2p_resolver_metadata_server_override"));
+  if (test_only_metadata_server_override != nullptr && strlen(test_only_metadata_server_override) > 0) {
+    metadata_server_address_ = std::string(test_only_metadata_server_override);
+  }
+  gpr_log(GPR_INFO, "apolcyn initializing google-c2p resolver using xds resolver");
   // Create xds resolver.
   child_resolver_ = ResolverRegistry::CreateResolver(
       absl::StrCat("xds:", name_to_resolve).c_str(), args.args,
@@ -263,8 +278,8 @@ void GoogleCloud2ProdResolver::StartLocked() {
     return;
   }
   // Using xDS.  Start metadata server queries.
-  zone_query_ = MakeOrphanable<ZoneQuery>(Ref(), &pollent_);
-  ipv6_query_ = MakeOrphanable<IPv6Query>(Ref(), &pollent_);
+  zone_query_ = MakeOrphanable<ZoneQuery>(Ref(), metadata_server_address_.c_str(), &pollent_);
+  ipv6_query_ = MakeOrphanable<IPv6Query>(Ref(), metadata_server_address_.c_str(), &pollent_);
 }
 
 void GoogleCloud2ProdResolver::RequestReresolutionLocked() {
