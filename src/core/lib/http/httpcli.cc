@@ -108,12 +108,9 @@ static void finish(internal_request* req, grpc_error_handle error) {
   grpc_slice_buffer_destroy_internal(&req->outgoing);
   GRPC_ERROR_UNREF(req->overall_error);
   grpc_resource_quota_unref_internal(req->resource_quota);
+  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
+  req->resolve_address_handle.reset();
   gpr_free(req);
-  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
-  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
-  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
-  gpr_log(GPR_DEBUG, "apolcyn do reset resolve address handle now: %p", req->resolve_address_handle.get());
-  //req->resolve_address_handle.reset();
 }
 
 static void append_error(internal_request* req, grpc_error_handle error) {
