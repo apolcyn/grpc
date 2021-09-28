@@ -38,36 +38,49 @@ static grpc_millis n_seconds_time(int seconds) {
       grpc_timeout_seconds_to_deadline(seconds));
 }
 
-struct TestArg {
-  TestArg() {
+struct TestPollingArg {
+  TestPollingArg() {
     grpc_core::ExecCtx exec_ctx;
-    grpc_httpcli_context_init(&context);
     grpc_pollset* pollset =
         static_cast<grpc_pollset*>(gpr_zalloc(grpc_pollset_size()));
     grpc_pollset_init(pollset, &mu);
     pops = grpc_polling_entity_create_from_pollset(pollset);
   }
 
+  ~TestPollingArg() {
+    grpc_core::ExecCtx exec_ctx;
+    grpc_pollset_shutdown(
+        grpc_polling_entity_pollset(&pops),
+        GRPC_CLOSURE_CREATE(DestroyPops, &pops, grpc_schedule_on_exec_ctx));
+  }
+
+  static void DestroyPops(void* p, grpc_error_handle /*error*/) {
+    grpc_polling_entity* pops = static_cast<grpc_polling_entity*>(p);
+    grpc_pollset_destroy(
+        grpc_polling_entity_pollset(pops));
+    gpr_free(grpc_polling_entity_pollset(pops));
+  }
+
+  gpr_mu *mu;
+  grpc_polling_entity pops;
+};
+
+struct TestArg {
+  TestArg(TestPollingArg* polling_arg) : polling_arg(polling_arg) {
+    grpc_core::ExecCtx exec_ctx;
+    grpc_httpcli_context_init(&context);
+  }
+
   ~TestArg() {
     grpc_core::ExecCtx exec_ctx;
     grpc_httpcli_context_destroy(&context);
     grpc_http_response_destroy(&response);
-    grpc_pollset_shutdown(
-        grpc_polling_entity_pollset(&pops),
-        GRPC_CLOSURE_CREATE(DestroyPops, &pops, grpc_schedule_on_exec_ctx));
-    gpr_free(grpc_polling_entity_pollset(&pops));
   }
 
-  static void DestroyPops(void* p, grpc_error_handle /*error*/) {
-    grpc_pollset_destroy(
-        grpc_polling_entity_pollset(static_cast<grpc_polling_entity*>(p)));
-  }
-
-  gpr_mu *mu;
+  TestPollingArg* polling_arg;
   bool done = false;
   grpc_http_response response = {};
   grpc_httpcli_context context;
-  grpc_polling_entity pops;
 };
 
 static void on_finish(void* arg, grpc_error_handle error) {
@@ -82,11 +95,11 @@ static void on_finish(void* arg, grpc_error_handle error) {
   GPR_ASSERT(response.status == 200);
   GPR_ASSERT(response.body_length == strlen(expect));
   GPR_ASSERT(0 == memcmp(expect, response.body, response.body_length));
-  grpc_core::MutexLockForGprMu lock(test_arg->mu);
+  grpc_core::MutexLockForGprMu lock(test_arg->polling_arg->mu);
   test_arg->done = true;
   GPR_ASSERT(GRPC_LOG_IF_ERROR(
       "pollset_kick",
-      grpc_pollset_kick(grpc_polling_entity_pollset(&test_arg->pops), nullptr)));
+      grpc_pollset_kick(grpc_polling_entity_pollset(&test_arg->polling_arg->pops), nullptr)));
 }
 
 static void on_finish_expect_cancelled(void* arg, grpc_error_handle error) {
@@ -95,15 +108,16 @@ static void on_finish_expect_cancelled(void* arg, grpc_error_handle error) {
   gpr_log(GPR_INFO, "response status=%d error=%s", response.status,
           grpc_error_std_string(error).c_str());
   GPR_ASSERT(error != GRPC_ERROR_NONE);
-  grpc_core::MutexLockForGprMu lock(test_arg->mu);
+  grpc_core::MutexLockForGprMu lock(test_arg->polling_arg->mu);
   test_arg->done = true;
   GPR_ASSERT(GRPC_LOG_IF_ERROR(
       "pollset_kick",
-      grpc_pollset_kick(grpc_polling_entity_pollset(&test_arg->pops), nullptr)));
+      grpc_pollset_kick(grpc_polling_entity_pollset(&test_arg->polling_arg->pops), nullptr)));
 }
 
 static void test_get(int port) {
-  TestArg test_arg;
+  TestPollingArg polling_arg;
+  TestArg test_arg(&polling_arg);
   grpc_httpcli_request req;
   char* host;
   grpc_core::ExecCtx exec_ctx;
@@ -120,24 +134,25 @@ static void test_get(int port) {
 
   grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_get");
   grpc_httpcli_get(
-      &test_arg.context, &test_arg.pops, resource_quota, &req, n_seconds_time(15),
+      &test_arg.context, &test_arg.polling_arg->pops, resource_quota, &req, n_seconds_time(15),
       GRPC_CLOSURE_CREATE(on_finish, &test_arg, grpc_schedule_on_exec_ctx),
       &test_arg.response);
-  gpr_mu_lock(test_arg.mu);
+  gpr_mu_lock(test_arg.polling_arg->mu);
   while (!test_arg.done) {
     grpc_pollset_worker* worker = nullptr;
     GPR_ASSERT(GRPC_LOG_IF_ERROR(
-        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.pops),
+        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.polling_arg->pops),
                                           &worker, n_seconds_time(1))));
-    gpr_mu_unlock(test_arg.mu);
-    gpr_mu_lock(test_arg.mu);
+    gpr_mu_unlock(test_arg.polling_arg->mu);
+    gpr_mu_lock(test_arg.polling_arg->mu);
   }
-  gpr_mu_unlock(test_arg.mu);
+  gpr_mu_unlock(test_arg.polling_arg->mu);
   gpr_free(host);
 }
 
 static void test_post(int port) {
-  TestArg test_arg;
+  TestPollingArg polling_arg;
+  TestArg test_arg(&polling_arg);
   grpc_httpcli_request req;
   char* host;
   grpc_core::ExecCtx exec_ctx;
@@ -154,19 +169,19 @@ static void test_post(int port) {
 
   grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_post");
   grpc_httpcli_post(
-      &test_arg.context, &test_arg.pops, resource_quota, &req, "hello", 5, n_seconds_time(15),
+      &test_arg.context, &test_arg.polling_arg->pops, resource_quota, &req, "hello", 5, n_seconds_time(15),
       GRPC_CLOSURE_CREATE(on_finish, &test_arg, grpc_schedule_on_exec_ctx),
       &test_arg.response);
-  gpr_mu_lock(test_arg.mu);
+  gpr_mu_lock(test_arg.polling_arg->mu);
   while (!test_arg.done) {
     grpc_pollset_worker* worker = nullptr;
     GPR_ASSERT(GRPC_LOG_IF_ERROR(
-        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.pops),
+        "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.polling_arg->pops),
                                           &worker, n_seconds_time(1))));
-    gpr_mu_unlock(test_arg.mu);
-    gpr_mu_lock(test_arg.mu);
+    gpr_mu_unlock(test_arg.polling_arg->mu);
+    gpr_mu_lock(test_arg.polling_arg->mu);
   }
-  gpr_mu_unlock(test_arg.mu);
+  gpr_mu_unlock(test_arg.polling_arg->mu);
   gpr_free(host);
 }
 
@@ -197,9 +212,10 @@ static void test_cancel_get_during_dns_resolution() {
   // Run the same test on several threads in parallel to try to trigger races
   // etc.
   std::vector<std::thread> threads;
+  TestPollingArg polling_arg;
   for (int i = 0; i < 100; i++) {
-    threads.push_back(std::thread([](){
-      TestArg test_arg;
+    threads.push_back(std::thread([&polling_arg](){
+      TestArg test_arg(&polling_arg);
       grpc_httpcli_request req;
       grpc_core::ExecCtx exec_ctx;
       gpr_log(GPR_INFO, "test_cancel_get_during_dns_resolution");
@@ -211,7 +227,7 @@ static void test_cancel_get_during_dns_resolution() {
 
       grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_cancel_get_during_dns_resolution");
       grpc_httpcli_get(
-          &test_arg.context, &test_arg.pops, resource_quota, &req, n_seconds_time(15),
+          &test_arg.context, &test_arg.polling_arg->pops, resource_quota, &req, n_seconds_time(15),
           GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &test_arg, grpc_schedule_on_exec_ctx),
           &test_arg.response);
       std::thread cancel_thread([&test_arg]() {
@@ -220,16 +236,16 @@ static void test_cancel_get_during_dns_resolution() {
         gpr_log(GPR_DEBUG, "now cancel http request using grpc_httpcli_cancel");
         grpc_httpcli_cancel(&test_arg.context, GRPC_ERROR_CANCELLED);
       });
-      gpr_mu_lock(test_arg.mu);
+      gpr_mu_lock(test_arg.polling_arg->mu);
       while (!test_arg.done) {
         grpc_pollset_worker* worker = nullptr;
         GPR_ASSERT(GRPC_LOG_IF_ERROR(
-            "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.pops),
+            "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.polling_arg->pops),
                                               &worker, n_seconds_time(1))));
-        gpr_mu_unlock(test_arg.mu);
-        gpr_mu_lock(test_arg.mu);
+        gpr_mu_unlock(test_arg.polling_arg->mu);
+        gpr_mu_lock(test_arg.polling_arg->mu);
       }
-      gpr_mu_unlock(test_arg.mu);
+      gpr_mu_unlock(test_arg.polling_arg->mu);
       cancel_thread.join();
     }));
   }
@@ -244,10 +260,11 @@ static void test_cancel_get_while_reading_response() {
       FakeTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
       FakeTcpServer::CloseSocketUponCloseFromPeer);
   std::vector<std::thread> threads;
+  TestPollingArg polling_arg;
   for (int i = 0; i < 100; i++) {
     FakeTcpServer *fake_http_server_ptr = &fake_http_server;
-    threads.push_back(std::thread([fake_http_server_ptr]() {
-      TestArg test_arg;
+    threads.push_back(std::thread([&polling_arg, fake_http_server_ptr]() {
+      TestArg test_arg(&polling_arg);
       grpc_httpcli_request req;
       grpc_core::ExecCtx exec_ctx;
       gpr_log(GPR_INFO, "test_cancel_get_while_reading_response");
@@ -259,7 +276,7 @@ static void test_cancel_get_while_reading_response() {
 
       grpc_resource_quota* resource_quota = grpc_resource_quota_create("test_cancel_get_while_reading_response");
       grpc_httpcli_get(
-          &test_arg.context, &test_arg.pops, resource_quota, &req, n_seconds_time(15),
+          &test_arg.context, &test_arg.polling_arg->pops, resource_quota, &req, n_seconds_time(15),
           GRPC_CLOSURE_CREATE(on_finish_expect_cancelled, &test_arg, grpc_schedule_on_exec_ctx),
           &test_arg.response);
       exec_ctx.Flush();
@@ -269,16 +286,16 @@ static void test_cancel_get_while_reading_response() {
         gpr_log(GPR_DEBUG, "now cancel http request using grpc_httpcli_cancel");
         grpc_httpcli_cancel(&test_arg.context, GRPC_ERROR_CANCELLED);
       });
-      gpr_mu_lock(test_arg.mu);
+      gpr_mu_lock(test_arg.polling_arg->mu);
       while (!test_arg.done) {
         grpc_pollset_worker* worker = nullptr;
         GPR_ASSERT(GRPC_LOG_IF_ERROR(
-            "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.pops),
+            "pollset_work", grpc_pollset_work(grpc_polling_entity_pollset(&test_arg.polling_arg->pops),
                                               &worker, n_seconds_time(1))));
-        gpr_mu_unlock(test_arg.mu);
-        gpr_mu_lock(test_arg.mu);
+        gpr_mu_unlock(test_arg.polling_arg->mu);
+        gpr_mu_lock(test_arg.polling_arg->mu);
       }
-      gpr_mu_unlock(test_arg.mu);
+      gpr_mu_unlock(test_arg.polling_arg->mu);
       cancel_thread.join();
     }));
   }
