@@ -85,7 +85,8 @@ FakeNonResponsiveDNSServer::FakeNonResponsiveDNSServer(int port) {
     gpr_log(GPR_DEBUG, "Failed to listen on TCP ipv6 socket to [::1]:%d", port);
     abort();
   }
-  gpr_log(GPR_DEBUG, "apolcyn fake udp and tcp server listening on port: %d", port);
+  gpr_log(GPR_DEBUG, "apolcyn fake udp and tcp server listening on port: %d",
+          port);
 }
 
 FakeNonResponsiveDNSServer::~FakeNonResponsiveDNSServer() {

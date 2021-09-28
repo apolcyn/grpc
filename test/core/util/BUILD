@@ -215,11 +215,11 @@ grpc_cc_library(
     name = "fake_tcp_server",
     testonly = 1,
     hdrs = ["fake_tcp_server.h"],
-    language = "C++",
     external_deps = [
         "absl/strings:str_format",
     ],
+    language = "C++",
     deps = [
         "//:gpr",
-    ]
+    ],
 )

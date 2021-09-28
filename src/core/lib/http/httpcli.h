@@ -43,7 +43,7 @@ typedef struct internal_request internal_request;
 
 typedef struct grpc_httpcli_context {
   grpc_pollset_set* pollset_set;
-  internal_request* req; // TODO(apolcyn): cleaner way to do this
+  internal_request* req;  // TODO(apolcyn): cleaner way to do this
 } grpc_httpcli_context;
 
 struct grpc_httpcli_handshaker {
@@ -76,7 +76,8 @@ void grpc_httpcli_context_init(grpc_httpcli_context* context);
 void grpc_httpcli_context_destroy(grpc_httpcli_context* context);
 
 // TODO(apolcyn): this should take an error param to plumb down
-void grpc_httpcli_cancel(grpc_httpcli_context* context, grpc_error_handle error);
+void grpc_httpcli_cancel(grpc_httpcli_context* context,
+                         grpc_error_handle error);
 
 /* Asynchronously perform a HTTP GET.
    'context' specifies the http context under which to do the get

@@ -79,9 +79,9 @@ grpc_cc_test(
         "//:gpr",
         "//:grpc",
         "//test/core/end2end:ssl_test_data",
-        "//test/core/util:grpc_test_util",
         "//test/core/util:fake_tcp_server",
-        "//test/cpp/naming:dns_test_util"
+        "//test/core/util:grpc_test_util",
+        "//test/cpp/naming:dns_test_util",
     ],
 )
 
