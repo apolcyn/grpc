@@ -64,7 +64,8 @@ struct internal_request {
   grpc_closure connected;
   grpc_error_handle cancelled_error;
   grpc_error_handle overall_error;
-  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress> resolve_address_handle;
+  grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress>
+      resolve_address_handle;
   bool connect_pending;
 };
 static grpc_httpcli_get_override g_get_override = nullptr;
@@ -194,7 +195,8 @@ static void on_handshake_done(void* arg, grpc_endpoint* ep) {
 }
 
 static void on_connected(void* arg, grpc_error_handle error) {
-  gpr_log(GPR_DEBUG, "apolcyn on_connected error: %s", grpc_error_string(error));
+  gpr_log(GPR_DEBUG, "apolcyn on_connected error: %s",
+          grpc_error_string(error));
   internal_request* req = static_cast<internal_request*>(arg);
 
   if (!req->ep) {
@@ -260,7 +262,7 @@ static void internal_request_begin(grpc_httpcli_context* context,
   req->handshaker =
       request->handshaker ? request->handshaker : &grpc_httpcli_plaintext;
   req->context = context;
-  context->req = req; // TODO(apolcyn): cleaner way to set backpointer
+  context->req = req;  // TODO(apolcyn): cleaner way to set backpointer
   req->pollent = pollent;
   req->cancelled_error = GRPC_ERROR_NONE;
   req->overall_error = GRPC_ERROR_NONE;
@@ -282,10 +284,12 @@ static void internal_request_begin(grpc_httpcli_context* context,
       request->host, req->handshaker->default_port, req->context->pollset_set,
       GRPC_CLOSURE_CREATE(on_resolved, req, grpc_schedule_on_exec_ctx),
       &req->addresses);
-  gpr_log(GPR_DEBUG, "apolcyn resolve address handle now: %p", req->resolve_address_handle.get());
+  gpr_log(GPR_DEBUG, "apolcyn resolve address handle now: %p",
+          req->resolve_address_handle.get());
 }
 
-void grpc_httpcli_cancel(grpc_httpcli_context* context, grpc_error_handle error) {
+void grpc_httpcli_cancel(grpc_httpcli_context* context,
+                         grpc_error_handle error) {
   gpr_log(GPR_DEBUG, "apolcyn grpc_httpcli_cancel is called");
   context->req->cancelled_error = error;
   context->req->resolve_address_handle.reset();
@@ -293,7 +297,9 @@ void grpc_httpcli_cancel(grpc_httpcli_context* context, grpc_error_handle error)
   // fix all races
   if (!context->req->connect_pending && context->req->ep != nullptr) {
     gpr_log(GPR_DEBUG, "apolcyn shutdown active endpoint");
-    grpc_endpoint_shutdown(context->req->ep, GRPC_ERROR_CREATE_FROM_STATIC_STRING("http request cancelled"));
+    grpc_endpoint_shutdown(
+        context->req->ep,
+        GRPC_ERROR_CREATE_FROM_STATIC_STRING("http request cancelled"));
   }
 }
 
