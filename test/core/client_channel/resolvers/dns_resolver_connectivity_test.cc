@@ -40,7 +40,7 @@ namespace grpc_core {
 class MyAsyncResolveAddress {
  public:
   // cancellation not implemented
-  void Orphan() override {}
+  void Orphan() {}
 };
 
 }  // namespace grpc_core
