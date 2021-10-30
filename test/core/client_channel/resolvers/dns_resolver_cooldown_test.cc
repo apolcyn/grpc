@@ -61,7 +61,7 @@ namespace grpc_core {
 class TestAsyncResolveAddress {
  public:
   // cancellation not implemented
-  void Orphan() override {}
+  void Orphan() {}
 };
 
 }  // namespace grpc_core

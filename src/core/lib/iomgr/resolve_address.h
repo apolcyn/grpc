@@ -53,7 +53,7 @@ constexpr int kDefaultSecurePortInt = 443;
 
 class AsyncResolveAddress : public InternallyRefCounted<AsyncResolveAddress> {
  public:
-  virtual ~AsyncResolveAddress() {}
+  ~AsyncResolveAddress() override {}
 };
 
 }  // namespace grpc_core
