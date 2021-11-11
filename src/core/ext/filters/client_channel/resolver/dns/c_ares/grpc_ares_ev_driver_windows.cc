@@ -99,8 +99,8 @@ class GrpcPolledFdWindows {
     WRITE_WAITING_FOR_VERIFICATION_UPON_RETRY,
   };
 
-  GrpcPolledFdWindows(ares_socket_t as, Mutex* mu,
-                      int address_family, int socket_type)
+  GrpcPolledFdWindows(ares_socket_t as, Mutex* mu, int address_family,
+                      int socket_type)
       : mu_(mu),
         read_buf_(grpc_empty_slice()),
         write_buf_(grpc_empty_slice()),
@@ -854,8 +854,7 @@ class GrpcPolledFdWindowsWrapper : public GrpcPolledFd {
 
 class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
  public:
-  explicit GrpcPolledFdFactoryWindows(Mutex* mu)
-      : sock_to_polled_fd_map_(mu) {}
+  explicit GrpcPolledFdFactoryWindows(Mutex* mu) : sock_to_polled_fd_map_(mu) {}
 
   GrpcPolledFd* NewGrpcPolledFdLocked(
       ares_socket_t as, grpc_pollset_set* driver_pollset_set) override {
@@ -875,8 +874,7 @@ class GrpcPolledFdFactoryWindows : public GrpcPolledFdFactory {
   SockToPolledFdMap sock_to_polled_fd_map_;
 };
 
-std::unique_ptr<GrpcPolledFdFactory> NewGrpcPolledFdFactory(
-    Mutex* mu) {
+std::unique_ptr<GrpcPolledFdFactory> NewGrpcPolledFdFactory(Mutex* mu) {
   return absl::make_unique<GrpcPolledFdFactoryWindows>(mu);
 }
 
