@@ -16,10 +16,10 @@
 
 import argparse
 import os
-import six
 import ssl
 import sys
 
+import six
 from six.moves.BaseHTTPServer import BaseHTTPRequestHandler
 from six.moves.BaseHTTPServer import HTTPServer
 
