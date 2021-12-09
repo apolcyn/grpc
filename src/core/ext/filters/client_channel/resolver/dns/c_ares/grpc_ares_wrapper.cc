@@ -1117,7 +1117,7 @@ namespace grpc_core {
  * grpc_resolve_address_ares related structs and functions
  */
 
-class ResolveAddressAresRequest : public grpc_core::AsyncResolveAddress {
+class ResolveAddressAresRequest : public AsyncResolveAddress {
  public:
   ResolveAddressAresRequest(const char* name, const char* default_port,
                             grpc_pollset_set* interested_parties,
@@ -1150,11 +1150,11 @@ class ResolveAddressAresRequest : public grpc_core::AsyncResolveAddress {
     Unref();
   }
 
-  static grpc_core::OrphanablePtr<grpc_core::AsyncResolveAddress>
+  static OrphanablePtr<AsyncResolveAddress>
   ResolveAddress(const char* name, const char* default_port,
                  grpc_pollset_set* interested_parties, grpc_closure* on_done,
                  grpc_resolved_addresses** addrs) {
-    return grpc_core::MakeOrphanable<ResolveAddressAresRequest>(
+    return MakeOrphanable<ResolveAddressAresRequest>(
         name, default_port, interested_parties, on_done, addrs);
   }
 
@@ -1180,7 +1180,7 @@ class ResolveAddressAresRequest : public grpc_core::AsyncResolveAddress {
       }
     }
     GRPC_ERROR_REF(error);
-    grpc_core::ExecCtx::Run(DEBUG_LOCATION, r->on_resolve_address_done_,
+    ExecCtx::Run(DEBUG_LOCATION, r->on_resolve_address_done_,
                             GRPC_ERROR_REF(error));
     r->Unref();
   }
