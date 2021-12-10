@@ -138,9 +138,9 @@ class FuzzerDNSRequest : public grpc_core::DNSRequest {
       addrs->addrs = static_cast<grpc_resolved_address*>(
           gpr_malloc(sizeof(*addrs->addrs)));
       addrs->addrs[0].len = 0;
-      new grpc_core::DNSResolverExecCtxScheduler(std::move(on_done_), addrs);
+      new grpc_core::DNSCallbackExecCtxScheduler(std::move(on_done_), addrs);
     } else {
-      new grpc_core::DNSResolverExecCtxScheduler(
+      new grpc_core::DNSCallbackExecCtxScheduler(
           std::move(on_done), absl::UnknownError("Resolution failed"));
     }
     self->Unref();
@@ -179,7 +179,7 @@ grpc_ares_request* my_dns_lookup_ares(
   addr_req* r = new addr_req();
   r->addr = gpr_strdup(addr);
   r->on_done = on_done;
-  r->addrs = nullptr;
+  r->addr = nullptr;
   r->addresses = addresses;
   grpc_timer_init(
       &r->timer, GPR_MS_PER_SEC + grpc_core::ExecCtx::Get()->Now(),

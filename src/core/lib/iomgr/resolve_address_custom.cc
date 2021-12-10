@@ -81,7 +81,7 @@ void CustomDNSRequest::ResolveCallback(grpc_resolved_addresses* result,
   if (error == GRPC_ERROR_NONE) {
     // since we can't guarantee that we're not being called inline from
     // Start(), run the callback on the ExecCtx.
-    new DNSCallbackExecCtxScheduler(std::move(on_done_), result);
+    new DNSCallbackExecCtxScheduler(on_done_, result);
     return;
   } else {
     auto numeric_port_or = NamedPortToNumeric(port_);
@@ -93,8 +93,7 @@ void CustomDNSRequest::ResolveCallback(grpc_resolved_addresses* result,
       return;
     }
   }
-  new DNSCallbackExecCtxScheduler(std::move(on_done_),
-                                  grpc_error_to_absl_status(error));
+  new DNSCallbackExecCtxScheduler(on_done_, grpc_error_to_absl_status(error));
 }
 
 namespace {
@@ -150,8 +149,7 @@ void CustomDNSRequest::Start() {
   absl::Status parse_status =
       TrySplitHostPort(name_, default_port_, &host_, &port_);
   if (!parse_status.ok()) {
-    new DNSCallbackExecCtxScheduler(std::move(on_done_),
-                                    std::move(parse_status));
+    new DNSCallbackExecCtxScheduler(on_done_, std::move(parse_status));
     return;
   }
   // Call getaddrinfo
