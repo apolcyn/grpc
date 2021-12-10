@@ -22,7 +22,7 @@
 #include <grpc/support/port_platform.h>
 
 #include "src/core/lib/iomgr/port.h"
-#ifdef GRPC_POSIX_SOCKET_RESOLVE_ADDRESS
+#ifdef GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_POSIX_H
 
 #include <string.h>
 #include <sys/types.h>
@@ -59,8 +59,8 @@ class NativeDNSRequest : public DNSRequest {
   // Starts the resolution
   void Start() override {
     Ref().release();  // ref held by callback
-    grpc_core::Executor::Run(&request_closure_, GRPC_ERROR_NONE,
-                             grpc_core::ExecutorType::RESOLVER);
+    Executor::Run(&request_closure_, GRPC_ERROR_NONE,
+                             ExecutorType::RESOLVER);
   }
 
   // This is a no-op for the native resolver. Note
@@ -83,7 +83,7 @@ class NativeDNSResolver : public DNSResolver {
   // Gets the singleton instance, creating it first if it doesn't exist
   static NativeDNSResolver* GetOrCreate();
 
-  virtual OrphanablePtr<DNSRequest> CreateDNSRequest(
+  OrphanablePtr<DNSRequest> CreateDNSRequest(
       absl::string_view name, absl::string_view default_port,
       grpc_pollset_set* /* interested_parties */,
       std::function<void(absl::StatusOr<grpc_resolved_addresses*>)> on_done)
@@ -98,5 +98,5 @@ class NativeDNSResolver : public DNSResolver {
 
 }  // namespace grpc_core
 
-#endif  // GRPC_POSIX_SOCKET_RESOLVE_ADDRESS
+#endif  // GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_POSIX_H
 #endif  // GRPC_CORE_LIB_IOMGR_RESOLVE_ADDRESS_POSIX_H
