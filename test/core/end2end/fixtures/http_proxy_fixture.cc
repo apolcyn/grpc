@@ -521,8 +521,8 @@ static void on_read_request_done_locked(void* arg, grpc_error_handle error) {
   }
   // Resolve address.
   absl::StatusOr<grpc_resolved_addresses*> addresses_or =
-      grpc_core::GetDNSResolver()->ResolveNameBlocking(
-          conn->http_request.path, "80");
+      grpc_core::GetDNSResolver()->ResolveNameBlocking(conn->http_request.path,
+                                                       "80");
   if (!addresses_or.ok()) {
     proxy_connection_failed(conn, SETUP_FAILED, "HTTP proxy DNS lookup",
                             GRPC_ERROR_REF(error));
