@@ -104,9 +104,8 @@ OrphanablePtr<DNSResolver::Request> NativeDNSResolver::ResolveName(
                                           std::move(on_done));
 }
 
-absl::StatusOr<grpc_resolved_addresses*>
-NativeDNSResolver::ResolveNameBlocking(absl::string_view name,
-                                          absl::string_view default_port) {
+absl::StatusOr<grpc_resolved_addresses*> NativeDNSResolver::ResolveNameBlocking(
+    absl::string_view name, absl::string_view default_port) {
   ExecCtx exec_ctx;
   struct addrinfo hints;
   struct addrinfo *result = NULL, *resp;

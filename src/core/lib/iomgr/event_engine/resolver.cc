@@ -120,14 +120,14 @@ OrphanablePtr<DNSResolver::Request> EventEngineDNSResolver::ResolveName(
 
 absl::StatusOr<grpc_resolved_addresses*>
 EventEngineDNSResolver::ResolveNameBlocking(absl::string_view name,
-                                               absl::string_view default_port) {
+                                            absl::string_view default_port) {
   grpc_closure on_done;
   Promise<absl::StatusOr<grpc_resolved_addresses*>> evt;
-  auto r = ResolveName(
-      name, default_port,
-      [&evt](void(absl::StatusOr<grpc_resolved_addresses*> result) {
-        evt.Set(std::move(result));
-      }));
+  auto r =
+      ResolveName(name, default_port,
+                  [&evt](void(absl::StatusOr<grpc_resolved_addresses*> result) {
+                    evt.Set(std::move(result));
+                  }));
   r->Start();
   return evt.Get();
 }
