@@ -137,10 +137,10 @@ class FuzzerDNSRequest : public grpc_core::DNSResolver::Request {
       std::vector<grpc_resolved_address> addrs =
           static_cast<std::vector<grpc_resolved_address>>(
               gpr_malloc(sizeof(*addrs)));
-      addrs->naddrs = 1;
-      addrs->addrs = static_cast<grpc_resolved_address*>(
-          gpr_malloc(sizeof(*addrs->addrs)));
-      addrs->addrs[0].len = 0;
+      addrs.naddrs = 1;
+      addrs.addrs =
+          static_cast<grpc_resolved_address*>(gpr_malloc(sizeof(*addrs.addrs)));
+      addrs.addrs[0].len = 0;
       self->on_done_(addrs);
     } else {
       self->on_done_(absl::UnknownError("Resolution failed"));
