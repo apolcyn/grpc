@@ -77,16 +77,16 @@ class TestDNSRequest : public grpc_core::DNSResolver::Request {
       std::vector<grpc_resolved_address> addrs =
           static_cast<std::vector<grpc_resolved_address>>(
               gpr_malloc(sizeof(*addrs)));
-      addrs->naddrs = 1;
-      addrs->addrs = static_cast<grpc_resolved_address*>(
-          gpr_malloc(sizeof(*addrs->addrs)));
-      memset(addrs->addrs, 0, sizeof(*addrs->addrs));
+      addrs.naddrs = 1;
+      addrs.addrs =
+          static_cast<grpc_resolved_address*>(gpr_malloc(sizeof(*addrs.addrs)));
+      memset(addrs.addrs, 0, sizeof(*addrs.addrs));
       grpc_sockaddr_in* sa =
-          reinterpret_cast<grpc_sockaddr_in*>(addrs->addrs[0].addr);
+          reinterpret_cast<grpc_sockaddr_in*>(addrs.addrs[0].addr);
       sa->sin_family = GRPC_AF_INET;
       sa->sin_addr.s_addr = 0x100007f;
       sa->sin_port = grpc_htons(static_cast<uint16_t>(g_resolve_port));
-      addrs->addrs[0].len = static_cast<socklen_t>(sizeof(*sa));
+      addrs.addrs[0].len = static_cast<socklen_t>(sizeof(*sa));
       gpr_mu_unlock(&g_mu);
       new grpc_core::DNSCallbackExecCtxScheduler(std::move(on_done_), addrs);
     }

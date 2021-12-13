@@ -103,7 +103,7 @@ class Args {
   void MustSucceed(absl::StatusOr<std::vector<grpc_resolved_address>> result) {
     GPR_ASSERT(result.ok());
     GPR_ASSERT(*result != nullptr);
-    GPR_ASSERT((*result)->naddrs > 0);
+    GPR_ASSERT((*result).naddrs > 0);
     Finish();
   }
 
@@ -130,9 +130,9 @@ class Args {
       absl::StatusOr<std::vector<grpc_resolved_address>> result) {
     GPR_ASSERT(result.ok());
     GPR_ASSERT(*result != nullptr);
-    GPR_ASSERT((*result)->naddrs > 0);
+    GPR_ASSERT((*result).naddrs > 0);
     const struct sockaddr* first_address =
-        reinterpret_cast<const struct sockaddr*>((*result)->addrs[0].addr);
+        reinterpret_cast<const struct sockaddr*>((*result).addrs[0].addr);
     GPR_ASSERT(first_address->sa_family == AF_INET6);
     Finish();
   }
@@ -141,9 +141,9 @@ class Args {
       absl::StatusOr<std::vector<grpc_resolved_address>> result) {
     GPR_ASSERT(result.ok());
     GPR_ASSERT(*result != nullptr);
-    GPR_ASSERT((*result)->naddrs > 0);
+    GPR_ASSERT((*result).naddrs > 0);
     const struct sockaddr* first_address =
-        reinterpret_cast<const struct sockaddr*>((*result)->addrs[0].addr);
+        reinterpret_cast<const struct sockaddr*>((*result).addrs[0].addr);
     GPR_ASSERT(first_address->sa_family == AF_INET);
     Finish();
   }

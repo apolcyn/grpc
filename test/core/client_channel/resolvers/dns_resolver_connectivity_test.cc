@@ -57,10 +57,10 @@ class TestDNSRequest : public grpc_core::DNSResolver::Request {
       std::vector<grpc_resolved_address> addrs =
           static_cast<std::vector<grpc_resolved_address>>(
               gpr_malloc(sizeof(*addrs)));
-      addrs->naddrs = 1;
-      addrs->addrs = static_cast<grpc_resolved_address*>(
-          gpr_malloc(sizeof(*addrs->addrs)));
-      addrs->addrs[0].len = 123;
+      addrs.naddrs = 1;
+      addrs.addrs =
+          static_cast<grpc_resolved_address*>(gpr_malloc(sizeof(*addrs.addrs)));
+      addrs.addrs[0].len = 123;
       new grpc_core::DNSCallbackExecCtxScheduler(std::move(on_done_), addrs);
     }
   }
