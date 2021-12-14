@@ -65,7 +65,7 @@ struct TestPollingArg {
 };
 
 struct TestArg {
-  TestArg(TestPollingArg* polling_arg) : polling_arg(polling_arg) {
+  explicit TestArg(TestPollingArg* polling_arg) : polling_arg(polling_arg) {
     grpc_core::ExecCtx exec_ctx;
   }
 
@@ -132,8 +132,8 @@ static void test_get(int port) {
 
   grpc_core::OrphanablePtr<grpc_core::HttpCliRequest> httpcli_request =
       grpc_core::HttpCliRequest::Get(
-          &test_arg.polling_arg->pops, grpc_core::ResourceQuota::Default(), &req,
-          n_seconds_time(15),
+          &test_arg.polling_arg->pops, grpc_core::ResourceQuota::Default(),
+          &req, n_seconds_time(15),
           GRPC_CLOSURE_CREATE(on_finish, &test_arg, grpc_schedule_on_exec_ctx),
           &test_arg.response);
   httpcli_request->Start();
@@ -170,8 +170,8 @@ static void test_post(int port) {
 
   grpc_core::OrphanablePtr<grpc_core::HttpCliRequest> httpcli_request =
       grpc_core::HttpCliRequest::Post(
-          &test_arg.polling_arg->pops, grpc_core::ResourceQuota::Default(), &req,
-          "hello", 5, n_seconds_time(15),
+          &test_arg.polling_arg->pops, grpc_core::ResourceQuota::Default(),
+          &req, "hello", 5, n_seconds_time(15),
           GRPC_CLOSURE_CREATE(on_finish, &test_arg, grpc_schedule_on_exec_ctx),
           &test_arg.response);
   httpcli_request->Start();
@@ -209,7 +209,8 @@ void InjectNonResponsiveDNSServer(ares_channel channel) {
 static void test_cancel_get_during_dns_resolution() {
   // Inject an unresponsive DNS server into the resolver's DNS server config
   grpc_core::testing::FakeUdpAndTcpServer fake_dns_server(
-      grpc_core::testing::FakeUdpAndTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
+      grpc_core::testing::FakeUdpAndTcpServer::AcceptMode::
+          kWaitForClientToSendFirstBytes,
       grpc_core::testing::FakeUdpAndTcpServer::CloseSocketUponCloseFromPeer);
   g_fake_non_responsive_dns_server_port = fake_dns_server.port();
   void (*prev_test_only_inject_config)(ares_channel channel) =
@@ -219,6 +220,7 @@ static void test_cancel_get_during_dns_resolution() {
   // etc.
   std::vector<std::thread> threads;
   TestPollingArg polling_arg;
+  threads.reserve(100);
   for (int i = 0; i < 100; i++) {
     threads.push_back(std::thread([&polling_arg]() {
       TestArg test_arg(&polling_arg);
@@ -268,12 +270,14 @@ static void test_cancel_get_during_dns_resolution() {
 
 static void test_cancel_get_while_reading_response() {
   grpc_core::testing::FakeUdpAndTcpServer fake_http_server(
-      grpc_core::testing::FakeUdpAndTcpServer::AcceptMode::kWaitForClientToSendFirstBytes,
+      grpc_core::testing::FakeUdpAndTcpServer::AcceptMode::
+          kWaitForClientToSendFirstBytes,
       grpc_core::testing::FakeUdpAndTcpServer::CloseSocketUponCloseFromPeer);
   std::vector<std::thread> threads;
   TestPollingArg polling_arg;
   for (int i = 0; i < 100; i++) {
-    grpc_core::testing::FakeUdpAndTcpServer* fake_http_server_ptr = &fake_http_server;
+    grpc_core::testing::FakeUdpAndTcpServer* fake_http_server_ptr =
+        &fake_http_server;
     threads.push_back(std::thread([&polling_arg, fake_http_server_ptr]() {
       TestArg test_arg(&polling_arg);
       grpc_httpcli_request req;
