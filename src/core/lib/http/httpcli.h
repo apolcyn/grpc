@@ -133,7 +133,7 @@ class HttpCliRequest : public InternallyRefCounted<HttpCliRequest> {
                  grpc_closure* on_done, grpc_polling_entity* pollent,
                  const char* name);
 
-  ~HttpCliRequest();
+  ~HttpCliRequest() override;
 
   void Start();
 
