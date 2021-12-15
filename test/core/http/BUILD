@@ -64,28 +64,27 @@ licenses(["notice"])
 grpc_cc_test(
     name = "httpcli_test",
     srcs = ["httpcli_test.cc"],
-    external_deps = ["gtest"],
     data = [
         "python_wrapper.sh",
         "test_server.py",
         "//src/core/tsi/test_creds:server1.key",
         "//src/core/tsi/test_creds:server1.pem",
     ],
+    external_deps = ["gtest"],
     language = "C++",
     tags = ["no_windows"],
     deps = [
         "//:gpr",
         "//:grpc",
         "//test/core/end2end:ssl_test_data",
-        "//test/core/util:grpc_test_util",
         "//test/core/util:fake_udp_and_tcp_server",
+        "//test/core/util:grpc_test_util",
     ],
 )
 
 grpc_cc_test(
     name = "httpscli_test",
     srcs = ["httpscli_test.cc"],
-    external_deps = ["gtest"],
     data = [
         "python_wrapper.sh",
         "test_server.py",
@@ -93,6 +92,7 @@ grpc_cc_test(
         "//src/core/tsi/test_creds:server1.key",
         "//src/core/tsi/test_creds:server1.pem",
     ],
+    external_deps = ["gtest"],
     language = "C++",
     tags = ["no_windows"],
     deps = [
