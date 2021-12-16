@@ -288,6 +288,7 @@ TEST_F(HttpCliTest, CancelGetDuringDNSResolution) {
   // Run the same test on several threads in parallel to try to trigger races
   // etc.
   std::vector<std::thread> threads;
+  threads.reserve(100);
   for (int i = 0; i < 100; i++) {
     threads.push_back(std::thread([this]() {
       RequestArgs request_args(this);
