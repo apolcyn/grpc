@@ -156,14 +156,14 @@ HttpCliRequest::~HttpCliRequest() {
 }
 
 void HttpCliRequest::Start() {
-  grpc_core::MutexLock lock(&mu_);
+  MutexLock lock(&mu_);
   Ref().release();  // ref held by pending request
   dns_request_->Start();
 }
 
 void HttpCliRequest::Orphan() {
   {
-    grpc_core::MutexLock lock(&mu_);
+    MutexLock lock(&mu_);
     cancelled_ = true;
     dns_request_.reset();  // cancel potentially pending DNS resolution
     if (own_endpoint_ && ep_ != nullptr) {
@@ -215,7 +215,7 @@ void HttpCliRequest::OnReadInternal(grpc_error_handle error)
 void HttpCliRequest::ContinueDoneWriteAfterScheduleOnExecCtx(
     void* arg, grpc_error_handle error) {
   HttpCliRequest* req = static_cast<HttpCliRequest*>(arg);
-  grpc_core::MutexLock lock(&req->mu_);
+  MutexLock lock(&req->mu_);
   if (error == GRPC_ERROR_NONE) {
     req->OnWritten();
   } else {
@@ -231,7 +231,7 @@ void HttpCliRequest::StartWrite() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mu_) {
 
 void HttpCliRequest::OnHandshakeDone(void* arg, grpc_endpoint* ep) {
   HttpCliRequest* req = static_cast<HttpCliRequest*>(arg);
-  grpc_core::MutexLock lock(&req->mu_);
+  MutexLock lock(&req->mu_);
   req->own_endpoint_ = true;
   if (!ep) {
     req->NextAddress(
@@ -248,7 +248,7 @@ void HttpCliRequest::OnConnected(void* arg, grpc_error_handle error) {
   const char* host;
   grpc_millis deadline;
   {
-    grpc_core::MutexLock lock(&req->mu_);
+    MutexLock lock(&req->mu_);
     if (!req->ep_) {
       req->NextAddress(GRPC_ERROR_REF(error));
       return;
@@ -289,7 +289,7 @@ void HttpCliRequest::NextAddress(grpc_error_handle error)
 
 void HttpCliRequest::OnResolved(
     absl::StatusOr<std::vector<grpc_resolved_address>> addresses_or) {
-  grpc_core::MutexLock lock(&mu_);
+  MutexLock lock(&mu_);
   dns_request_.reset();
   if (!addresses_or.ok()) {
     Finish(absl_status_to_grpc_error(addresses_or.status()));

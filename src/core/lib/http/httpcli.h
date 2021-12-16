@@ -133,7 +133,7 @@ class HttpCliRequest : public InternallyRefCounted<HttpCliRequest> {
                  grpc_closure* on_done, grpc_polling_entity* pollent,
                  const char* name);
 
-  ~HttpCliRequest();
+  ~HttpCliRequest() override;
 
   void Start();
 
@@ -162,7 +162,7 @@ class HttpCliRequest : public InternallyRefCounted<HttpCliRequest> {
   static void ContinueOnReadAfterScheduleOnExecCtx(void* user_data,
                                                    grpc_error_handle error) {
     HttpCliRequest* req = static_cast<HttpCliRequest*>(user_data);
-    grpc_core::MutexLock lock(&req->mu_);
+    MutexLock lock(&req->mu_);
     req->OnReadInternal(error);
   }
 
@@ -200,7 +200,7 @@ class HttpCliRequest : public InternallyRefCounted<HttpCliRequest> {
   grpc_closure continue_done_write_after_schedule_on_exec_ctx_;
   grpc_closure connected_;
   grpc_endpoint* ep_ = nullptr;
-  grpc_core::Mutex mu_;
+  Mutex mu_;
   bool own_endpoint_ ABSL_GUARDED_BY(mu_) = true;
   bool cancelled_ ABSL_GUARDED_BY(mu_) = false;
   grpc_slice request_text_ ABSL_GUARDED_BY(mu_);
