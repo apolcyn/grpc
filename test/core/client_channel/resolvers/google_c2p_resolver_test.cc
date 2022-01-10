@@ -70,10 +70,7 @@ TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
           kWaitForClientToSendFirstBytes,
       grpc_core::testing::FakeUdpAndTcpServer::CloseSocketUponCloseFromPeer);
   std::vector<std::unique_ptr<std::thread>> threads;
-  // 100 is picked for number of threads just
-  // because it's enough to reproduce a certain crash almost 100%
-  // at this time of writing.
-  const int kNumThreads = 1;
+  const int kNumThreads = 100;
   threads.reserve(kNumThreads);
   for (int i = 0; i < kNumThreads; i++) {
     threads.emplace_back(
