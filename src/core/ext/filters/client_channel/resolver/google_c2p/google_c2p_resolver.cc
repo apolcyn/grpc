@@ -53,6 +53,9 @@ class GoogleCloud2ProdResolver : public Resolver {
    private:
     static void OnHttpRequestDone(void* arg, grpc_error_handle error);
 
+    // Calls OnDone() if not already called.  Releases a ref.
+    void MaybeCallOnDone(grpc_error_handle error);
+
     // If error is not GRPC_ERROR_NONE, then it's not safe to look at response.
     virtual void OnDone(GoogleCloud2ProdResolver* resolver,
                         const grpc_http_response* response,
@@ -62,6 +65,7 @@ class GoogleCloud2ProdResolver : public Resolver {
     OrphanablePtr<HttpCli> httpcli_;
     grpc_httpcli_response response_;
     grpc_closure on_done_;
+    std::atomic<bool> on_done_called_{false};
   };
 
   // A metadata server query to get the zone.
@@ -137,17 +141,36 @@ GoogleCloud2ProdResolver::MetadataQuery::~MetadataQuery() {
   grpc_http_response_destroy(&response_);
 }
 
-void GoogleCloud2ProdResolver::MetadataQuery::Orphan() { httpcli_.reset(); }
+void GoogleCloud2ProdResolver::MetadataQuery::Orphan() {
+  // TODO(roth): Once the HTTP client library supports cancellation,
+  // use that here.
+  MaybeCallOnDone(GRPC_ERROR_CANCELLED);
+}
 
 void GoogleCloud2ProdResolver::MetadataQuery::OnHttpRequestDone(
     void* arg, grpc_error_handle error) {
   auto* self = static_cast<MetadataQuery*>(arg);
+  self->MaybeCallOnDone(GRPC_ERROR_REF(error));
+}
+
+void GoogleCloud2ProdResolver::MetadataQuery::MaybeCallOnDone(
+    grpc_error_handle error) {
+  bool expected = false;
+  if (!on_done_called_.compare_exchange_strong(expected, true,
+                                               std::memory_order_relaxed,
+                                               std::memory_order_relaxed)) {
+    gpr_log(GPR_DEBUG, "apolcyn md req: %p We've already called OnDone(), so just clean up", this);
+    GRPC_ERROR_UNREF(error);
+    Unref();
+    return;
+  }
+  gpr_log(GPR_DEBUG, "apolcyn md req: %p call OnDone()", this);
   // Hop back into WorkSerializer to call OnDone().
   // Note: We implicitly pass our ref to the callback here.
-  self->resolver_->work_serializer_->Run(
-      [self, error]() {
-        self->OnDone(self->resolver_.get(), &self->response_, error);
-        self->Unref();
+  resolver_->work_serializer_->Run(
+      [this, error]() {
+        OnDone(resolver_.get(), &response_, error);
+        Unref();
       },
       DEBUG_LOCATION);
 }
@@ -221,6 +244,7 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
       false);
   bool running_on_gcp =
       test_only_pretend_running_on_gcp || grpc_alts_is_running_on_gcp();
+  gpr_log(GPR_DEBUG, "apolcyn c2p resolver: %p running_on_gcp: %d", this, running_on_gcp);
   if (!running_on_gcp ||
       // If the client is already using xDS, we can't use it here, because
       // they may be talking to a completely different xDS server than we
@@ -228,6 +252,7 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
       // TODO(roth): When we implement xDS federation, remove this constraint.
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP")) != nullptr ||
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP_CONFIG")) != nullptr) {
+    gpr_log(GPR_DEBUG, "apolcyn c2p resolver: %p falling back to dns", this);
     using_dns_ = true;
     child_resolver_ = ResolverRegistry::CreateResolver(
         absl::StrCat("dns:", name_to_resolve).c_str(), args.args,
@@ -358,7 +383,8 @@ class GoogleCloud2ProdResolverFactory : public ResolverFactory {
     return MakeOrphanable<GoogleCloud2ProdResolver>(std::move(args));
   }
 
-  // TODO(roth): Remove experimental suffix once this code is proven stable.
+  // TODO(roth): Remove experimental suffix once this code is proven stable,
+  // and update the scheme in google_c2p_resolver_test.cc when doing so.
   const char* scheme() const override { return "google-c2p-experimental"; }
 };
 
