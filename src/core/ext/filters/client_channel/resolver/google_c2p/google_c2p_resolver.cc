@@ -21,11 +21,11 @@
 #include "src/core/ext/filters/client_channel/resolver_registry.h"
 #include "src/core/ext/xds/xds_client.h"
 #include "src/core/lib/gpr/env.h"
-#include "src/core/lib/transport/error_utils.h"
 #include "src/core/lib/gpr/string.h"
 #include "src/core/lib/http/httpcli.h"
 #include "src/core/lib/iomgr/polling_entity.h"
 #include "src/core/lib/security/credentials/alts/check_gcp_environment.h"
+#include "src/core/lib/transport/error_utils.h"
 
 namespace grpc_core {
 
@@ -35,9 +35,7 @@ class GoogleCloud2ProdResolver : public Resolver {
  public:
   explicit GoogleCloud2ProdResolver(ResolverArgs args);
 
-  ~GoogleCloud2ProdResolver() {
-    grpc_channel_args_destroy(channel_args_);
-  }
+  ~GoogleCloud2ProdResolver() { grpc_channel_args_destroy(channel_args_); }
 
   void StartLocked() override;
   void RequestReresolutionLocked() override;
@@ -57,9 +55,6 @@ class GoogleCloud2ProdResolver : public Resolver {
 
    private:
     static void OnHttpRequestDone(void* arg, grpc_error_handle error);
-
-    // Calls OnDone() if not already called.  Releases a ref.
-    //void MaybeCallOnDone(grpc_error_handle error);
 
     // If error is not GRPC_ERROR_NONE, then it's not safe to look at response.
     virtual void OnDone(GoogleCloud2ProdResolver* resolver,
@@ -153,9 +148,7 @@ GoogleCloud2ProdResolver::MetadataQuery::~MetadataQuery() {
 
 void GoogleCloud2ProdResolver::MetadataQuery::Orphan() {
   httpcli_.reset();
-  //// TODO(roth): Once the HTTP client library supports cancellation,
-  //// use that here.
-  //MaybeCallOnDone(GRPC_ERROR_CANCELLED);
+  Unref();
 }
 
 void GoogleCloud2ProdResolver::MetadataQuery::OnHttpRequestDone(
@@ -171,32 +164,6 @@ void GoogleCloud2ProdResolver::MetadataQuery::OnHttpRequestDone(
       },
       DEBUG_LOCATION);
 }
-
-//void GoogleCloud2ProdResolver::MetadataQuery::MaybeCallOnDone(
-//    grpc_error_handle error) {
-//  bool expected = false;
-//  if (!on_done_called_.compare_exchange_strong(expected, true,
-//                                               std::memory_order_relaxed,
-//                                               std::memory_order_relaxed)) {
-//    gpr_log(GPR_DEBUG, "apolcyn md req: %p We've already called OnDone(), so just clean up", this);
-//    GRPC_ERROR_UNREF(error);
-//    Unref();
-//    return;
-//  }
-//  gpr_log(GPR_DEBUG, "apolcyn md req: %p call OnDone()", this);
-//  // Hop back into WorkSerializer to call OnDone().
-//  // Note: We implicitly pass our ref to the callback here.
-//  resolver_->work_serializer_->Run(
-//      [this, error]() {
-//        OnDone(resolver_.get(), &response_, error);
-//        Unref();
-//      },
-//      DEBUG_LOCATION);
-//}
-
-//
-// GoogleCloud2ProdResolver::ZoneQuery
-//
 
 GoogleCloud2ProdResolver::ZoneQuery::ZoneQuery(
     RefCountedPtr<GoogleCloud2ProdResolver> resolver, const char* address,
@@ -215,12 +182,14 @@ void GoogleCloud2ProdResolver::ZoneQuery::OnDone(
   if (error != GRPC_ERROR_NONE) {
     zone = grpc_error_to_absl_status(error);
   } else if (response->status != 200) {
-    zone = absl::UnknownError(absl::StrFormat("response status: %d", response->status));
+    zone = absl::UnknownError(
+        absl::StrFormat("response status: %d", response->status));
   } else {
     absl::string_view body(response->body, response->body_length);
     size_t i = body.find_last_of('/');
     if (i == body.npos) {
-      zone = absl::UnknownError(absl::StrCat("could not parse zone from metadata server: ", body));
+      zone = absl::UnknownError(
+          absl::StrCat("could not parse zone from metadata server: ", body));
       gpr_log(GPR_ERROR, "%s", zone.status().ToString().c_str());
     } else {
       zone = std::string(body.substr(i + 1));
@@ -252,7 +221,8 @@ void GoogleCloud2ProdResolver::IPv6Query::OnDone(
   if (error != GRPC_ERROR_NONE) {
     status = grpc_error_to_absl_status(error);
   } else if (response->status != 200) {
-    status = absl::UnknownError(absl::StrFormat("response status: %d", response->status));
+    status = absl::UnknownError(
+        absl::StrFormat("response status: %d", response->status));
   } else {
     status = absl::OkStatus();
   }
@@ -277,7 +247,6 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
       false);
   bool running_on_gcp =
       test_only_pretend_running_on_gcp || grpc_alts_is_running_on_gcp();
-  gpr_log(GPR_DEBUG, "apolcyn c2p resolver: %p running_on_gcp: %d", this, running_on_gcp);
   if (!running_on_gcp ||
       // If the client is already using xDS, we can't use it here, because
       // they may be talking to a completely different xDS server than we
@@ -285,7 +254,6 @@ GoogleCloud2ProdResolver::GoogleCloud2ProdResolver(ResolverArgs args)
       // TODO(roth): When we implement xDS federation, remove this constraint.
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP")) != nullptr ||
       UniquePtr<char>(gpr_getenv("GRPC_XDS_BOOTSTRAP_CONFIG")) != nullptr) {
-    gpr_log(GPR_DEBUG, "apolcyn c2p resolver: %p falling back to dns", this);
     using_dns_ = true;
     child_resolver_ = ResolverRegistry::CreateResolver(
         absl::StrCat("dns:", name_to_resolve_).c_str(), channel_args_,
@@ -349,8 +317,9 @@ void GoogleCloud2ProdResolver::IPv6QueryDone(absl::Status ipv6_supported) {
 void GoogleCloud2ProdResolver::StartXdsResolver() {
   if (shutdown_) {
     Result result;
-    absl::Status status = absl::CancelledError(absl::StrFormat("C2P resolver shutdown, IPv6 query status: %s, zone query status: %s",
-                                                               supports_ipv6_.value().ToString(), zone_.value().status().ToString()));
+    absl::Status status = absl::CancelledError(absl::StrFormat(
+        "C2P resolver shutdown, IPv6 query status: %s, zone query status: %s",
+        supports_ipv6_.value().ToString(), zone_.value().status().ToString()));
     result.addresses = status;
     result.service_config = status;
     result_handler_->ReportResult(std::move(result));

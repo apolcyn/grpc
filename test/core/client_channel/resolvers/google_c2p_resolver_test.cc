@@ -61,9 +61,10 @@ void TryConnectAndDestroy(const char* fake_metadata_server_address) {
   channel.reset();
 };
 
+// Exercise the machinery involved with shutting down the C2P resolver while
+// it's waiting for its initial metadata server queries to finish.
 TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
      LoopTryConnectAndDestroy) {
-  grpc_init();
   // Create a fake metadata server which hangs.
   grpc_core::testing::FakeUdpAndTcpServer fake_metadata_server(
       grpc_core::testing::FakeUdpAndTcpServer::AcceptMode::
@@ -79,7 +80,6 @@ TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
   for (size_t i = 0; i < threads.size(); i++) {
     threads[i]->join();
   }
-  grpc_shutdown();
 }
 
 }  // namespace
@@ -87,8 +87,10 @@ TEST(DestroyGoogleC2pChannelWithActiveConnectStressTest,
 int main(int argc, char** argv) {
   grpc::testing::TestEnvironment env(argc, argv);
   gpr_setenv("GRPC_EXPERIMENTAL_GOOGLE_C2P_RESOLVER", "true");
-//  gpr_setenv("GRPC_ABORT_ON_LEAKS", "true");
+  gpr_setenv("GRPC_ABORT_ON_LEAKS", "true");
   ::testing::InitGoogleTest(&argc, argv);
+  grpc_init();
   auto result = RUN_ALL_TESTS();
-  return result + 1;
+  grpc_shutdown();
+  return result;
 }
