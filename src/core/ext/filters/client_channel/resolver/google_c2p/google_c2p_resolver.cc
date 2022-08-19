@@ -454,15 +454,17 @@ class ExperimentalGoogleCloud2ProdResolverFactory : public ResolverFactory {
   }
 };
 
-};
+}  // namespace;
 
-}  // namespace
+}  // namespace grpc_core
 
-void RegisterCloud2ProdResolver(CoreConfiguration::Builder* builder) {
+void RegisterCloud2ProdResolver(
+    grpc_core::CoreConfiguration::Builder* builder) {
   builder->resolver_registry()->RegisterResolverFactory(
-      absl::make_unique<GoogleCloud2ProdResolverFactory>());
+      absl::make_unique<grpc_core::GoogleCloud2ProdResolverFactory>());
   builder->resolver_registry()->RegisterResolverFactory(
-      absl::make_unique<ExperimentalGoogleCloud2ProdResolverFactory>());
+      absl::make_unique<
+          grpc_core::ExperimentalGoogleCloud2ProdResolverFactory>());
 }
 
 }  // namespace grpc_core
