@@ -90,7 +90,8 @@ void grpc_winsocket_shutdown(grpc_winsocket* winsocket) {
             utf8_message);
     gpr_free(utf8_message);
   }
-  gpr_log(GPR_INFO, "apolcyn grpc_winsocket_shutdown winsocket=%p closesocket", winsocket);
+  gpr_log(GPR_INFO, "apolcyn grpc_winsocket_shutdown winsocket=%p closesocket",
+          winsocket);
   closesocket(winsocket->socket);
 }
 
@@ -113,8 +114,11 @@ void grpc_winsocket_destroy(grpc_winsocket* winsocket) {
   GPR_ASSERT(!winsocket->destroy_called);
   winsocket->destroy_called = true;
   bool should_destroy = check_destroyable(winsocket);
-  gpr_log(GPR_INFO, "apolcyn grpc_winsocket_destroy winsocket=%p should_destroy=%d destroy_called=%d write_info.closure=%p read_info.closure=%p",
-          winsocket, should_destroy, winsocket->destroy_called, winsocket->write_info.closure, winsocket->read_info.closure);
+  gpr_log(GPR_INFO,
+          "apolcyn grpc_winsocket_destroy winsocket=%p should_destroy=%d "
+          "destroy_called=%d write_info.closure=%p read_info.closure=%p",
+          winsocket, should_destroy, winsocket->destroy_called,
+          winsocket->write_info.closure, winsocket->read_info.closure);
   gpr_mu_unlock(&winsocket->state_mu);
   if (should_destroy) destroy(winsocket);
 }
