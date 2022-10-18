@@ -274,7 +274,11 @@ class GoLanguage:
         return ['go', 'run', 'server.go'] + args
 
     def global_env(self):
-      return {'GO111MODULE': 'on', 'GRPC_GO_LOG_VERBOSITY_LEVEL': '99', 'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO'}
+        return {
+            'GO111MODULE': 'on',
+            'GRPC_GO_LOG_VERBOSITY_LEVEL': '99',
+            'GRPC_GO_LOG_SEVERITY_LEVEL': 'INFO'
+        }
 
     def unimplemented_test_cases(self):
         return _SKIP_COMPRESSION + \
