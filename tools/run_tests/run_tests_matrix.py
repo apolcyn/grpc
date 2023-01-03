@@ -253,9 +253,30 @@ def _create_test_jobs(extra_args=[], inner_jobs=_DEFAULT_INNER_JOBS):
         inner_jobs=inner_jobs,
         timeout_seconds=_CPP_RUNTESTS_TIMEOUT)
 
+    # Ruby and PHP linux tests
+    for ruby_version in ['ruby2.7', 'ruby3.0', 'ruby3.1', 'ruby3.2']:
+        test_jobs += _generate_jobs(languages=['ruby'],
+                                    configs=['dbg', 'opt'],
+                                    platforms=['linux'],
+                                    arch='default',
+                                    compiler=ruby_version,
+                                    labels=['basictests', 'multilang'],
+                                    extra_args=extra_args +
+                                    ['--report_multi_target'],
+                                    inner_jobs=inner_jobs)
+
+    test_jobs += _generate_jobs(languages=['php7'],
+                                configs=['dbg', 'opt'],
+                                platforms=['linux'],
+                                labels=['basictests', 'multilang'],
+                                extra_args=extra_args +
+                                ['--report_multi_target'],
+                                inner_jobs=inner_jobs)
+
+    # Ruby and PHP macos tests
     test_jobs += _generate_jobs(languages=['ruby', 'php7'],
                                 configs=['dbg', 'opt'],
-                                platforms=['linux', 'macos'],
+                                platforms=['macos'],
                                 labels=['basictests', 'multilang'],
                                 extra_args=extra_args +
                                 ['--report_multi_target'],
