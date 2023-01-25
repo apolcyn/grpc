@@ -447,7 +447,7 @@ static int create_socket(grpc_socket_factory* factory, int domain, int type,
         "might not have a sufficient file descriptor limit for the number "
         "of connections we want to open (which is a function of the LB policy, "
         "number of channels, and number of backends to load balance across).",
-        domain, type, protocol, res, grpc_core::StrError(errno));
+        domain, type, protocol, res, grpc_core::StrError(errno).c_str());
   }
 }
 
