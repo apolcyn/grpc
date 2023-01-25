@@ -441,11 +441,13 @@ static int create_socket(grpc_socket_factory* factory, int domain, int type,
                 ? grpc_socket_factory_socket(factory, domain, type, protocol)
                 : socket(domain, type, protocol);
   if (res < 0 && errno == EMFILE) {
-    gpr_log(GPR_ERROR,
-            "socket(%d, %d, %d) returned %d with error: |%s|. This process "
-            "might not have a sufficient file descriptor limit for the number "
-            "of connections we want to open.",
-            domain, type, protocol, grpc_core::StrError(errno));
+    GRPC_LOG_EVERY_N_SEC(
+        10,
+        "socket(%d, %d, %d) returned %d with error: |%s|. This process "
+        "might not have a sufficient file descriptor limit for the number "
+        "of connections we want to open (which is a function of the LB policy, "
+        "number of channels, and number of backends to load balance across).",
+        domain, type, protocol, grpc_core::StrError(errno));
   }
 }
 
