@@ -438,10 +438,14 @@ grpc_error_handle grpc_create_dualstack_socket(
 static int create_socket(grpc_socket_factory* factory, int domain, int type,
                          int protocol) {
   int res = (factory != nullptr)
-             ? grpc_socket_factory_socket(factory, domain, type, protocol)
-             : socket(domain, type, protocol);
+                ? grpc_socket_factory_socket(factory, domain, type, protocol)
+                : socket(domain, type, protocol);
   if (res < 0 && errno == EMFILE) {
-    gpr_log(GPR_ERROR, "socket(%d, %d, %d) returned %d with error: |%s|. This process might not have a sufficient file descriptor limit for the number of connections we want to open.", grpc_core::StrError(errno));
+    gpr_log(GPR_ERROR,
+            "socket(%d, %d, %d) returned %d with error: |%s|. This process "
+            "might not have a sufficient file descriptor limit for the number "
+            "of connections we want to open.",
+            grpc_core::StrError(errno));
   }
 }
 
