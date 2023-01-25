@@ -441,6 +441,7 @@ static int create_socket(grpc_socket_factory* factory, int domain, int type,
                 ? grpc_socket_factory_socket(factory, domain, type, protocol)
                 : socket(domain, type, protocol);
   if (res < 0 && errno == EMFILE) {
+    int prev_errno = errno;
     GRPC_LOG_EVERY_N_SEC(
         10,
         "socket(%d, %d, %d) returned %d with error: |%s|. This process "
@@ -448,7 +449,9 @@ static int create_socket(grpc_socket_factory* factory, int domain, int type,
         "of connections we want to open (which is a function of the LB policy, "
         "number of channels, and number of backends to load balance across).",
         domain, type, protocol, res, grpc_core::StrError(errno).c_str());
+    errno = prev_errno;
   }
+  return res;
 }
 
 grpc_error_handle grpc_create_dualstack_socket_using_factory(
