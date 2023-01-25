@@ -96,8 +96,8 @@ absl::Status ErrorForFd(
 
 int CreateSocket(std::function<int(int, int, int)> socket_factory, int family,
                  int type, int protocol) {
-  int rest = socket_factory != nullptr ? socket_factory(family, type, protocol)
-                                       : socket(family, type, protocol);
+  int res = socket_factory != nullptr ? socket_factory(family, type, protocol)
+                                      : socket(family, type, protocol);
   if (res < 0 && errno == EMFILE) {
     GRPC_LOG_EVERY_N_SEC(
         10,
