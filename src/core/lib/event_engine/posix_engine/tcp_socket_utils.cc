@@ -103,7 +103,7 @@ int CreateSocket(std::function<int(int, int, int)> socket_factory, int family,
             "socket(%d, %d, %d) returned %d with error: |%s|. This process "
             "might not have a sufficient file descriptor limit for the number "
             "of connections we want to open.",
-            grpc_core::StrError(errno));
+            family, type, protocol, grpc_core::StrError(errno));
   }
 }
 
