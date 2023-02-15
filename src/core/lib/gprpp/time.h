@@ -34,13 +34,16 @@
 
 #define GRPC_LOG_EVERY_N_SEC(n, format, ...)                    \
   do {                                                          \
-    static std::atomic<uint64_t> prev{0};                       \
+    static thread_local uint64_t prev(0)                        \
+    static thread_local bool first_call(true)                   \
     uint64_t now = grpc_core::Timestamp::FromTimespecRoundDown( \
                        gpr_now(GPR_CLOCK_MONOTONIC))            \
                        .milliseconds_after_process_epoch();     \
-    if ((now - prev.exchange(now)) > (n)*1000) {                \
+    if (first_call || now - prev > (n)*1000) {                  \
       gpr_log(GPR_INFO, format, __VA_ARGS__);                   \
     }                                                           \
+    prev = now;                                                 \
+    first_call = false;                                         \
   } while (0)
 
 namespace grpc_core {
