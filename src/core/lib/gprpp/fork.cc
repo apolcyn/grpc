@@ -21,9 +21,9 @@
 #include "src/core/lib/gprpp/fork.h"
 
 #include <grpc/support/atm.h>
+#include <grpc/support/log.h>
 #include <grpc/support/sync.h>
 #include <grpc/support/time.h>
-#include <grpc/support/log.h>
 
 #include "src/core/lib/config/config_vars.h"
 #include "src/core/lib/event_engine/thread_local.h"
@@ -193,20 +193,23 @@ void Fork::DoDecExecCtxCount() {
 void Fork::SetResetChildPollingEngineFunc(
     Fork::child_postfork_func reset_child_polling_engine) {
   if (reset_child_polling_engine_ == nullptr) {
-    gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc create new callback list");
+    gpr_log(GPR_INFO,
+            "apolcyn SetResetChildPollingEngineFunc create new callback list");
     reset_child_polling_engine_ = new std::set<Fork::child_postfork_func>();
   }
   // TODO(apolcyn): should we allow removal of a callback?
   GPR_ASSERT(reset_child_polling_engine != nullptr);
-  gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc set callback; %p", reset_child_polling_engine);
+  gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc set callback; %p",
+          reset_child_polling_engine);
   reset_child_polling_engine_->insert(reset_child_polling_engine);
-  //if (reset_child_polling_engine == nullptr) {
-  //  gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc clear callbacks");
-  //  reset_child_polling_engine_->clear();
-  //} else {
-  //  gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc add new callback; %p", reset_child_polling_engine);
-  //  reset_child_polling_engine_->emplace_back(reset_child_polling_engine);
-  //}
+  // if (reset_child_polling_engine == nullptr) {
+  //   gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc clear
+  //   callbacks"); reset_child_polling_engine_->clear();
+  // } else {
+  //   gpr_log(GPR_INFO, "apolcyn SetResetChildPollingEngineFunc add new
+  //   callback; %p", reset_child_polling_engine);
+  //   reset_child_polling_engine_->emplace_back(reset_child_polling_engine);
+  // }
 }
 
 const std::set<Fork::child_postfork_func>&
