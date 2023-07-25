@@ -17,10 +17,18 @@
 //
 #include <grpc/support/port_platform.h>
 
+#include <ares_build.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <memory>
+#include <set>
 #include <string>
+#include <utility>
 
 #include "absl/base/thread_annotations.h"
+
+#include <grpc/support/log.h>
 
 #include "src/core/lib/gprpp/sync.h"
 #include "src/core/lib/iomgr/closure.h"
@@ -29,7 +37,6 @@
 #include "src/core/lib/iomgr/port.h"
 #if GRPC_ARES == 1 && defined(GRPC_POSIX_SOCKET_ARES_EV_DRIVER)
 
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 
@@ -99,7 +106,7 @@ class GrpcPolledFdPosix : public GrpcPolledFd {
 
 class GrpcPolledFdFactoryPosix : public GrpcPolledFdFactory {
  public:
-  ~GrpcPolledFdFactoryPosix() {
+  ~GrpcPolledFdFactoryPosix() override {
     for (auto& fd : owned_fds_) {
       close(fd);
     }
