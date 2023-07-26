@@ -374,7 +374,7 @@ TEST_F(CancelDuringAresQuery,
           kWaitForClientToSendFirstBytes,
       grpc_core::testing::FakeUdpAndTcpServer::CloseSocketUponCloseFromPeer);
   grpc_status_code expected_status_code = GRPC_STATUS_DEADLINE_EXCEEDED;
-  std::string expected_error_message_substring = "";
+  std::string expected_error_message_substring;
   // The RPC deadline should go off well before the DNS resolution
   // timeout fires.
   gpr_timespec rpc_deadline = grpc_timeout_milliseconds_to_deadline(100);
@@ -421,7 +421,7 @@ TEST_F(
           kWaitForClientToSendFirstBytes,
       grpc_core::testing::FakeUdpAndTcpServer::CloseSocketUponCloseFromPeer);
   grpc_status_code expected_status_code = GRPC_STATUS_DEADLINE_EXCEEDED;
-  std::string expected_error_message_substring = "";
+  std::string expected_error_message_substring;
   // The RPC deadline should go off well before the DNS resolution
   // timeout fires.
   gpr_timespec rpc_deadline = grpc_timeout_milliseconds_to_deadline(100);
