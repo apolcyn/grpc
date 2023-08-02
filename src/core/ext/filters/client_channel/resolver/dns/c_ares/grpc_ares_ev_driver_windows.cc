@@ -343,9 +343,8 @@ class GrpcPolledFdWindows {
       wsa_error_ctx->SetWSAError(wsa_error_code);
       char* msg = gpr_format_message(wsa_error_code);
       write_state_ = WRITE_PENDING;
-      GRPC_CARES_TRACE_LOG(
-          "fd:|%s| SendV SendWriteBuf error code:%d msg:|%s|", GetName(),
-          wsa_error_code, msg);
+      GRPC_CARES_TRACE_LOG("fd:|%s| SendV SendWriteBuf error code:%d msg:|%s|",
+                           GetName(), wsa_error_code, msg);
       gpr_free(msg);
       return -1;
     }
