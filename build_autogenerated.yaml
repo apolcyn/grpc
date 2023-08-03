@@ -4345,10 +4345,6 @@ targets:
   deps:
   - grpc++_test_config
   - grpc++_test_util
-  platforms:
-  - linux
-  - posix
-  - mac
 - name: address_sorting_test_unsecure
   gtest: true
   build: test
@@ -4391,10 +4387,6 @@ targets:
   - grpc++_unsecure
   - grpc_test_util_unsecure
   - grpc++_test_config
-  platforms:
-  - linux
-  - posix
-  - mac
 - name: admin_services_end2end_test
   gtest: true
   build: test
