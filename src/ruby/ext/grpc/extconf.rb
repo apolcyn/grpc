@@ -94,9 +94,6 @@ output_dir = File.expand_path(RbConfig::CONFIG['topdir'])
 grpc_lib_dir = File.join(output_dir, 'libs', grpc_config)
 ENV['BUILDDIR'] = output_dir
 
-strip_tool = RbConfig::CONFIG['STRIP']
-strip_tool += ' -x' if apple_toolchain
-
 unless windows
   puts 'Building internal gRPC into ' + grpc_lib_dir
   nproc = 4
@@ -116,10 +113,6 @@ unless windows
     rm_obj_cmd = "rm -rf #{File.join(output_dir, 'objs')}"
     puts "Removing grpc object files: #{rm_obj_cmd}"
     system(rm_obj_cmd)
-    exit 1 unless $? == 0
-    strip_cmd = "#{strip_tool} #{grpc_lib_dir}/*.a"
-    puts "Stripping grpc native library: #{strip_cmd}"
-    system(strip_cmd)
     exit 1 unless $? == 0
   end
 end
