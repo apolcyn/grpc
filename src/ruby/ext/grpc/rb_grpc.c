@@ -39,10 +39,10 @@
 #include "rb_xds_channel_credentials.h"
 #include "rb_xds_server_credentials.h"
 
+#include <grpc/event_engine/internal/save_default_engine.h>
 #include <grpc/grpc.h>
 #include <grpc/support/log.h>
 #include <grpc/support/time.h>
-#include <grpc/event_engine/internal/save_default_engine.h>
 
 #ifdef GPR_LINUX
 #include <sys/syscall.h>
