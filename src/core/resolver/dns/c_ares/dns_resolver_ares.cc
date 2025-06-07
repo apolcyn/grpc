@@ -236,7 +236,8 @@ void AresClientChannelDNSResolver::AresRequestWrapper::OnHostnameResolved(
   if (error.ok()) {
     GRPC_TRACE_VLOG(cares_resolver, 2)
         << "(c-ares resover) resolver:" << self
-        << " OnHostnameResolved addresses_: " << (self->addresses_ != nullptr ? "non-null addresses" : "nullptr");
+        << " OnHostnameResolved addresses_: "
+        << (self->addresses_ != nullptr ? "non-null addresses" : "nullptr");
   } else {
     GRPC_TRACE_VLOG(cares_resolver, 2)
         << "(c-ares resover) resolver:" << self
